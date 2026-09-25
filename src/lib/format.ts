@@ -11,7 +11,7 @@ export function timeAgo(date: Date, now = new Date()): string {
 }
 
 export const STATUS_STYLE: Record<string, string> = {
-  open: "bg-accent-soft text-accent",
-  pending: "bg-warn-soft text-warn",
-  closed: "bg-line/60 text-muted",
+  open: "pill bg-accent-soft text-accent",
+  pending: "pill bg-warn-soft text-warn",
+  closed: "pill bg-surface-2 text-muted",
 };
