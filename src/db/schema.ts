@@ -31,6 +31,13 @@ export const orgs = pgTable("orgs", {
   // already emailed to admins for aiNoticeMonth, so each goes out once.
   aiNoticeMonth: text("ai_notice_month"),
   aiNoticeLevel: integer("ai_notice_level").notNull().default(0),
+  // Stripe billing. One subscription per org, quantity = seats (Clerk members).
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  subscriptionStatus: text("subscription_status"), // Stripe's status: trialing, active, past_due, canceled...
+  billedSeats: integer("billed_seats"),
+  currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
+  overageBilledMonth: text("overage_billed_month"), // last month whose AI overage was added to an invoice
   nextTicketNumber: integer("next_ticket_number").notNull().default(1),
   // Customers' email reaches the org at <inboundKey>@INBOUND_DOMAIN. Teams
   // forward their own support address there.
