@@ -1,69 +1,79 @@
-import Image from "next/image";
+import Link from "next/link";
+import WaitlistForm from "@/components/WaitlistForm";
+import { PLAN, competitorById, competitorMonthly, flatdeskMonthly, usd } from "@/lib/pricing";
+
+const EXAMPLE = { agents: 10, resolutions: 1500 };
 
 export default function Home() {
+  const fin = competitorMonthly(competitorById("fin-advanced"), EXAMPLE.agents, EXAMPLE.resolutions);
+  const ours = flatdeskMonthly(EXAMPLE.agents, EXAMPLE.resolutions);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
+    <div className="mx-auto grid max-w-5xl gap-16 px-4 py-12">
+      <section className="grid gap-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-center">
+        <div className="grid gap-5">
+          <p className="num text-xs uppercase tracking-widest text-muted">Help desk for teams of 5–20 agents</p>
+          <h1 className="font-display text-4xl leading-tight sm:text-5xl">
+            {usd(PLAN.seatPrice)} per agent. AI included. The same bill every month.
           </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+          <p className="max-w-xl text-lg text-muted">
+            Every seat includes {PLAN.includedPerAgent} AI resolutions a month, shared across your team. When they run out, the AI pauses and
+            your team takes over. You only pay more if you turn overage on yourself.
           </p>
+          <div className="flex flex-wrap gap-3">
+            <Link href="/calculator" className="rounded-md bg-accent px-4 py-2 font-medium text-accent-ink">
+              Compare your current bill
+            </Link>
+            <Link href="/pricing" className="rounded-md border border-line bg-surface px-4 py-2">
+              See pricing
+            </Link>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+        <figure className="num grid gap-1 rounded-xl border border-dashed border-line bg-surface p-5 text-sm">
+          <figcaption className="mb-2 font-sans text-muted">A 10-agent team with 1,500 AI resolutions a month</figcaption>
+          <div className="flex justify-between gap-4"><span>Fin Advanced, seats</span><span>{usd(fin.seats)}</span></div>
+          <div className="flex justify-between gap-4"><span>Fin outcomes, 1,500 × $0.99</span><span>{usd(fin.ai)}</span></div>
+          <div className="mb-3 flex justify-between gap-4 border-t border-line pt-2 font-medium"><span>Fin total</span><span>{usd(fin.total)}</span></div>
+          <div className="flex justify-between gap-4"><span>Flatdesk, 10 × {usd(PLAN.seatPrice)}</span><span>{usd(ours.seats)}</span></div>
+          <div className="flex justify-between gap-4 text-muted"><span>1,000 AI resolutions</span><span>included</span></div>
+          <div className="flex justify-between gap-4 text-muted"><span>500 more, if you turn overage on</span><span>{usd(ours.withOverage - ours.seats)}</span></div>
+          <div className="flex justify-between gap-4 border-t border-line pt-2 font-medium text-accent"><span>Flatdesk total</span><span>{usd(ours.capped)}–{usd(ours.withOverage)}</span></div>
+          <p className="mt-2 font-sans text-xs text-muted">Fin list prices with annual billing, checked Sep 2026.</p>
+        </figure>
+      </section>
+
+      <section className="grid gap-6 sm:grid-cols-3">
+        {[
+          ["One number on the invoice", `Seats × ${usd(PLAN.seatPrice)}. No meters, no add-on tiers, no "contact sales".`],
+          ["A cap that's on by default", `AI stops at your included resolutions unless an admin opts in to ${usd(PLAN.overageRate, true)} each. We never turn it on for you.`],
+          ["Leave whenever you like", "Export every ticket, customer and macro as CSV or JSON from settings, any time, without asking us."],
+        ].map(([title, body]) => (
+          <div key={title} className="grid content-start gap-2">
+            <h2 className="font-medium">{title}</h2>
+            <p className="text-muted">{body}</p>
+          </div>
+        ))}
+      </section>
+
+      <section className="grid gap-3">
+        <h2 className="font-display text-2xl">What the first release includes</h2>
+        <ul className="grid gap-2 text-muted sm:grid-cols-2">
+          <li>Shared inbox for email and a website chat widget, with assignment, statuses and internal notes</li>
+          <li>Canned replies and simple rules, such as &quot;if tagged billing, assign to Sam&quot;</li>
+          <li>AI that answers routine questions and drafts replies for your team</li>
+          <li>One reporting dashboard: volume, response and resolution times, agent load</li>
+          <li>Zendesk import of tickets, tags, macros and assignments, done for you</li>
+        </ul>
+      </section>
+
+      <section id="waitlist" className="grid scroll-mt-8 gap-4 rounded-xl border border-line bg-surface p-6">
+        <div className="grid gap-1">
+          <h2 className="font-display text-2xl">Get early access</h2>
+          <p className="text-muted">We&apos;re onboarding a small group of teams first. Early teams get 50% off for their first 12 months, and we run the Zendesk import for them.</p>
         </div>
-      </main>
+        <WaitlistForm />
+      </section>
     </div>
   );
 }
