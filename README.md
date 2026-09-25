@@ -13,19 +13,34 @@ The public marketing site, built first so it can collect leads while the app is 
 
 All prices live in `src/lib/pricing.ts`. Every competitor number there must have a source, and `CHECKED_ON` must be updated whenever they are re-checked.
 
+## The app (`/app`)
+
+- Shared inbox with views (assigned to me, unassigned, open, pending, closed)
+- Ticket view: replies, internal notes, status, assignee, tags
+- Macros (saved replies that can add tags and set status) and tag-based assignment rules
+- Team accounts via Clerk organizations; each member is a seat
+
+Not built yet: sending replies by email and receiving email, the chat widget, AI answers, Stripe billing, reporting, Zendesk import, data export.
+
 ## Running locally
 
 ```bash
 npm install
-npm run dev
+# Postgres: any local database works
+export DATABASE_URL=postgres://postgres@localhost:5432/flatdesk
+npx drizzle-kit migrate
+npx tsx scripts/seed.ts        # optional demo data
+DEV_AUTH=1 npm run dev         # signs you in as a demo admin without Clerk
 ```
 
 ## Environment variables
 
 | Name | Needed for |
 | --- | --- |
-| `DATABASE_URL` | Waitlist signups (Neon Postgres). Without it the waitlist returns 503. |
+| `DATABASE_URL` | Postgres (Neon in production). Without it the waitlist returns 503. |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY` | Sign-in and team accounts. Set automatically by the Clerk integration on Vercel. |
+| `DEV_AUTH` | Local development only. `1` signs in as a demo admin when Clerk keys are missing. Ignored in production. |
 
 ## Next up
 
-The app itself: org signup (Clerk), shared inbox, macros, capped AI resolutions (Claude API), Stripe seat billing, reporting, Zendesk import and one-click export.
+Email in and out, the chat widget, capped AI resolutions (Claude API), Stripe seat billing, reporting, Zendesk import and one-click export.
