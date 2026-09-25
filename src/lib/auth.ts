@@ -23,9 +23,8 @@ export const requireSession = cache(async (): Promise<Session> => {
     await ensureRows(DEV_SESSION, "Demo Support Team", "dev@example.com");
     return DEV_SESSION;
   }
-  if (!clerkEnabled) {
-    throw new Error("Sign-in is not configured. Set the Clerk keys, or DEV_AUTH=1 for local development.");
-  }
+  // Before Clerk is connected, the app isn't open yet: send people to the waitlist.
+  if (!clerkEnabled) redirect("/#waitlist");
 
   const { userId, orgId, orgRole } = await auth();
   if (!userId) redirect("/sign-in");
