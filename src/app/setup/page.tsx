@@ -12,12 +12,14 @@ export default function SetupPage() {
     <div className="mx-auto grid max-w-3xl gap-8 px-4 py-12">
       <div className="grid gap-3">
         <Logo />
+        <p className="eyebrow">Step 1 of 5</p>
         <h1 className="font-display text-4xl">Set up your support team</h1>
         <p className="text-muted">Create a team for your company, or join one you&apos;ve been invited to. Each teammate you add is one seat.</p>
       </div>
       <div className="grid gap-6 md:grid-cols-2">
-        <OrganizationList hidePersonal afterSelectOrganizationUrl="/app" afterCreateOrganizationUrl="/app" />
-        <CreateOrganization afterCreateOrganizationUrl="/app" skipInvitationScreen={false} />
+        <OrganizationList hidePersonal afterSelectOrganizationUrl="/app" afterCreateOrganizationUrl="/app/welcome" />
+        {/* Invites happen on the next screen, alongside importing and connecting email. */}
+        <CreateOrganization afterCreateOrganizationUrl="/app/welcome" skipInvitationScreen />
       </div>
     </div>
   );

@@ -23,6 +23,9 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
   const data = await getTicket(s.orgId, number);
   if (!data) notFound();
   const { ticket, customer, thread } = data;
+  // "Imported from" first; Postgres returns jsonb keys in its own order.
+  const fieldEntries = Object.entries(ticket.fields).sort(([a], [b]) => Number(b === "Imported from") - Number(a === "Imported from"));
+  const customerFields = Object.entries(customer.fields);
   const [agents, macros] = await Promise.all([
     listAgents(s.orgId),
     db.select().from(schema.macros).where(and(eq(schema.macros.orgId, s.orgId))).orderBy(asc(schema.macros.name)),
@@ -42,7 +45,15 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
 
         <ol className="grid gap-4">
           {thread.map((m) => {
-            const who = m.authorType === "customer" ? customer.name || customer.email : m.authorType === "ai" ? "AI assistant" : m.authorType === "system" ? "Flatdesk" : m.agentName ?? "Agent";
+            // Imported messages can come from people who aren't the customer or on the team (a CC, a former agent).
+            const who =
+              m.authorType === "customer"
+                ? (m.authorId !== customer.id && m.authorName) || customer.name || customer.email
+                : m.authorType === "ai"
+                  ? "AI assistant"
+                  : m.authorType === "system"
+                    ? (m.authorName ?? "Flatdesk")
+                    : (m.agentName ?? m.authorName ?? "Agent");
             const tone = m.internal
               ? "border-warn/40 bg-warn-soft"
               : m.authorType === "customer"
@@ -87,6 +98,16 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
               {customer.name && <p className="break-all text-muted">{customer.email}</p>}
             </div>
           </div>
+          {customerFields.length > 0 && (
+            <dl className="grid gap-1.5 pt-1">
+              {customerFields.map(([k, v]) => (
+                <div key={k} className="grid gap-0.5">
+                  <dt className="text-xs text-muted">{k}</dt>
+                  <dd className="break-words">{v}</dd>
+                </div>
+              ))}
+            </dl>
+          )}
         </section>
 
         <form key={`status-${ticket.status}`} action={updateTicketAction} className="grid gap-1.5 border-t border-line pt-4">
@@ -119,6 +140,20 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
             <button className="btn btn-secondary btn-sm">Save</button>
           </div>
         </form>
+
+        {fieldEntries.length > 0 && (
+          <section className="grid gap-2 border-t border-line pt-4">
+            <h2 className={heading}>{ticket.source ? "Original fields" : "Fields"}</h2>
+            <dl className="grid gap-2">
+              {fieldEntries.map(([k, v]) => (
+                <div key={k} className="grid gap-0.5">
+                  <dt className="text-xs text-muted">{k}</dt>
+                  <dd className="break-words">{v}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        )}
 
         <section className="grid gap-1 border-t border-line pt-4 text-muted">
           <p>Opened {timeAgo(ticket.createdAt)}</p>

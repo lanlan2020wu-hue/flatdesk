@@ -3,13 +3,14 @@ import AccountMenu from "@/components/AccountMenu";
 import Logo from "@/components/Logo";
 import NavLink from "@/components/NavLink";
 import { requireSession } from "@/lib/auth";
+import { getOnboarding } from "@/lib/onboarding";
 import { VIEWS, viewCounts } from "@/lib/tickets";
 
 export const metadata = { title: { default: "Inbox", template: "%s · Flatdesk" } };
 
 export default async function AppLayout({ children }: LayoutProps<"/app">) {
   const s = await requireSession();
-  const counts = await viewCounts(s.orgId, s.userId);
+  const [counts, onboarding] = await Promise.all([viewCounts(s.orgId, s.userId), s.role === "admin" ? getOnboarding(s.orgId) : null]);
 
   return (
     <div className="grid min-h-screen flex-1 md:grid-cols-[248px_minmax(0,1fr)]">
@@ -21,6 +22,19 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
           <svg viewBox="0 0 20 20" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M10 4v12M4 10h12" /></svg>
           New ticket
         </Link>
+        {onboarding?.visible && (
+          <Link href="/app/welcome" className="grid gap-1.5 rounded-lg border border-line bg-bg px-3 py-2.5 text-sm transition-colors hover:border-line-strong">
+            <span className="flex justify-between gap-2">
+              <span className="font-medium">Finish setup</span>
+              <span className="num text-xs text-muted">
+                {onboarding.doneCount}/{onboarding.steps.length}
+              </span>
+            </span>
+            <span className="h-1 overflow-hidden rounded-full bg-line" aria-hidden="true">
+              <span className="block h-full rounded-full bg-accent" style={{ width: `${(onboarding.doneCount / onboarding.steps.length) * 100}%` }} />
+            </span>
+          </Link>
+        )}
         <nav className="grid gap-0.5 text-sm" aria-label="Views">
           <p className="eyebrow px-2.5 pb-1.5">Inbox</p>
           {VIEWS.map((v) => (
@@ -33,6 +47,7 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
         <nav className="grid gap-0.5 text-sm" aria-label="Settings">
           <p className="eyebrow px-2.5 pb-1.5">Workspace</p>
           <NavLink href="/app/macros">Macros and rules</NavLink>
+          {s.role === "admin" && <NavLink href="/app/import">Import</NavLink>}
           <NavLink href="/app/settings">Settings</NavLink>
         </nav>
         <div className="mt-auto border-t border-line px-2 pt-4">
