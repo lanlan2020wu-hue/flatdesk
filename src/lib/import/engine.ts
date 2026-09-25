@@ -476,7 +476,7 @@ async function writeTicket(job: Job, adapter: Adapter, externalId: string, m: Ex
     tags,
     fields,
     source: adapter.id,
-    externalId,
+    externalId: `${adapter.id}:${externalId}`,
     createdAt: m.createdAt,
     updatedAt: m.updatedAt,
     closedAt: m.closedAt,
@@ -488,14 +488,17 @@ async function writeTicket(job: Job, adapter: Adapter, externalId: string, m: Ex
     // Serialises ticket numbering with live tickets arriving by email.
     const [org] = await tx.select({ next: schema.orgs.nextTicketNumber }).from(schema.orgs).where(eq(schema.orgs.id, orgId)).for("update");
 
-    const existing = prevMappedId ? await tx.query.tickets.findFirst({ columns: { id: true }, where: and(eq(t.orgId, orgId), eq(t.id, prevMappedId)) }) : null;
+    // Imported before, by this importer (prevMappedId) or by anything else that set the same external id.
+    const existing =
+      (prevMappedId ? await tx.query.tickets.findFirst({ columns: { id: true }, where: and(eq(t.orgId, orgId), eq(t.id, prevMappedId)) }) : null) ??
+      (await tx.query.tickets.findFirst({ columns: { id: true }, where: and(eq(t.orgId, orgId), eq(t.externalId, ticketValues.externalId)) }));
     if (existing) {
-      // Imported before: bring it up to date and add only messages not seen yet.
+      // Bring it up to date and add only messages not seen yet.
       await tx.update(t).set(ticketValues).where(eq(t.id, existing.id));
-      const seen = new Set(
-        (await tx.select({ id: schema.messages.externalId }).from(schema.messages).where(eq(schema.messages.ticketId, existing.id))).map((r) => r.id),
-      );
-      const fresh = rows.filter((r) => !seen.has(r.externalId));
+      const ids = (await tx.select({ id: schema.messages.externalId }).from(schema.messages).where(eq(schema.messages.ticketId, existing.id))).map((r) => r.id);
+      const seen = new Set(ids);
+      // Messages without ids came from an older import that didn't record them; don't guess which are new.
+      const fresh = ids.includes(null) ? [] : rows.filter((r) => !seen.has(r.externalId));
       if (fresh.length) await tx.insert(schema.messages).values(fresh.map((r) => ({ ...r, ticketId: existing.id })));
       return { mappedId: existing.id, imported: true, issues };
     }

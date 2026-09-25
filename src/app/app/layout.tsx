@@ -1,8 +1,11 @@
 import Link from "next/link";
 import AccountMenu from "@/components/AccountMenu";
+import { eq } from "drizzle-orm";
 import Logo from "@/components/Logo";
 import NavLink from "@/components/NavLink";
+import { db, schema } from "@/db";
 import { requireSession } from "@/lib/auth";
+import { billingConfigured, isActive, refreshSubscription, TRIAL_DAYS } from "@/lib/billing";
 import { getOnboarding } from "@/lib/onboarding";
 import { VIEWS, viewCounts } from "@/lib/tickets";
 
@@ -10,7 +13,17 @@ export const metadata = { title: { default: "Inbox", template: "%s · Flatdesk" 
 
 export default async function AppLayout({ children }: LayoutProps<"/app">) {
   const s = await requireSession();
-  const [counts, onboarding] = await Promise.all([viewCounts(s.orgId, s.userId), s.role === "admin" ? getOnboarding(s.orgId) : null]);
+  const [counts, org, onboarding] = await Promise.all([
+    viewCounts(s.orgId, s.userId),
+    db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) }),
+    s.role === "admin" ? getOnboarding(s.orgId) : null,
+  ]);
+  let status = org?.subscriptionStatus;
+  // Right after Checkout the row is stale; ask Stripe before showing the banner.
+  if (billingConfigured() && !isActive(status) && org?.stripeCustomerId) {
+    status = (await refreshSubscription(s.orgId).catch(() => org))?.subscriptionStatus;
+  }
+  const needsPlan = billingConfigured() && !isActive(status);
 
   return (
     <div className="grid min-h-screen flex-1 md:grid-cols-[248px_minmax(0,1fr)]">
@@ -46,6 +59,7 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
         </nav>
         <nav className="grid gap-0.5 text-sm" aria-label="Settings">
           <p className="eyebrow px-2.5 pb-1.5">Workspace</p>
+          <NavLink href="/app/reports">Reports</NavLink>
           <NavLink href="/app/macros">Macros and rules</NavLink>
           {s.role === "admin" && <NavLink href="/app/import">Import</NavLink>}
           <NavLink href="/app/settings">Settings</NavLink>
@@ -54,7 +68,21 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
           <AccountMenu fallbackName={s.name} />
         </div>
       </aside>
-      <div className="min-w-0">{children}</div>
+      <div className="min-w-0">
+        {needsPlan && (
+          <p className="border-b border-line bg-accent-soft px-4 py-2 text-sm md:px-8">
+            {s.role === "admin" ? (
+              <>
+                Your team doesn&apos;t have a plan yet.{" "}
+                <Link href="/app/settings" className="underline">Start the {TRIAL_DAYS}-day free trial</Link>
+              </>
+            ) : (
+              "Your team doesn't have a plan yet. Ask an admin to start the free trial in Settings."
+            )}
+          </p>
+        )}
+        {children}
+      </div>
     </div>
   );
 }

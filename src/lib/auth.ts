@@ -1,9 +1,10 @@
 import { auth, clerkClient, currentUser } from "@clerk/nextjs/server";
 import { and, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
-import { connection } from "next/server";
+import { after, connection } from "next/server";
 import { cache } from "react";
 import { db, schema } from "@/db";
+import { syncSeats } from "@/lib/billing";
 import { clerkEnabled, devAuthEnabled } from "./auth-config";
 import { linkImportedAgent } from "./import/link";
 
@@ -41,6 +42,7 @@ export const requireSession = cache(async (): Promise<Session> => {
   if (!existing || existing.role !== session.role || existing.name !== name) {
     const org = await (await clerkClient()).organizations.getOrganization({ organizationId: orgId });
     await ensureRows(session, org.name, user?.primaryEmailAddress?.emailAddress ?? "");
+    if (!existing) after(() => syncSeats(orgId).catch((err) => console.error("seat sync failed", err)));
   }
   return session;
 });

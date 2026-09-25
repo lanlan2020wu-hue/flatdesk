@@ -85,7 +85,7 @@ describe("Zendesk", () => {
     assert.ok(deleted?.raw);
 
     // Zendesk #1 collided with the live ticket.
-    const phone = await db.query.tickets.findFirst({ where: and(eq(schema.tickets.orgId, ORG), eq(schema.tickets.externalId, "1")) });
+    const phone = await db.query.tickets.findFirst({ where: and(eq(schema.tickets.orgId, ORG), eq(schema.tickets.externalId, "zendesk:1")) });
     assert.ok(phone && phone.number !== 1);
     assert.equal(phone.pendingAssigneeEmail, "bo@acme.com");
     assert.equal(phone.fields.Channel, "voice");
@@ -166,7 +166,7 @@ describe("Intercom", () => {
     assert.equal(job.status, "done", job.error ?? "");
     assert.ok(job.notes.some((n) => n.includes("doesn't share workflows")));
 
-    const t = await db.query.tickets.findFirst({ where: and(eq(schema.tickets.orgId, ORG), eq(schema.tickets.externalId, "900")) });
+    const t = await db.query.tickets.findFirst({ where: and(eq(schema.tickets.orgId, ORG), eq(schema.tickets.externalId, "intercom:900")) });
     assert.ok(t);
     assert.equal(t.status, "pending");
     assert.equal(t.channel, "chat");

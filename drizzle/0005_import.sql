@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX "tickets_org_external" ON "tickets" USING btree ("org_id","external_id");

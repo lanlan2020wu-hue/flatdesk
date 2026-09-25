@@ -6,7 +6,7 @@ import { db, schema } from "@/db";
 import { deliverReply, emailConfig, resend } from "@/lib/email";
 import { PLAN } from "@/lib/pricing";
 
-// The AI answers the first message of new email tickets. A reply counts as a
+// The AI answers the first message of new email and chat tickets. A reply counts as a
 // resolution unless the customer writes back, which hands the ticket to the
 // team and un-counts it (the pricing page promises exactly this). Each team
 // gets PLAN.includedPerAgent resolutions per agent per month; past that the AI
@@ -14,7 +14,7 @@ import { PLAN } from "@/lib/pricing";
 
 const MODEL = "claude-opus-5";
 const PRICE_PER_MTOK = { input: 5, output: 25 }; // USD, for internal cost logging
-const AI_FOOTER = "\n\n--\nThis reply was written by our AI assistant. Reply to this email to reach a person on our team.";
+const AI_FOOTER = "\n\n--\nThis reply was written by our AI assistant. Reply to reach a person on our team.";
 
 const { orgs, agents, tickets, messages, macros, aiEvents } = schema;
 
@@ -114,7 +114,7 @@ export async function answerNewTicket(orgId: string, ticketId: string) {
   if (!aiConfigured()) return;
   const org = await db.query.orgs.findFirst({ where: eq(orgs.id, orgId) });
   const ticket = await db.query.tickets.findFirst({ where: and(eq(tickets.orgId, orgId), eq(tickets.id, ticketId)) });
-  if (!org?.aiEnabled || !ticket || ticket.channel !== "email" || ticket.status !== "open") return;
+  if (!org?.aiEnabled || !ticket || ticket.status !== "open") return;
 
   const thread = await db.select().from(messages).where(eq(messages.ticketId, ticketId)).orderBy(asc(messages.createdAt));
   if (thread.length !== 1 || thread[0].authorType !== "customer") return;
