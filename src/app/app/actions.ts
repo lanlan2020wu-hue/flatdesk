@@ -120,3 +120,19 @@ export async function deleteRuleAction(form: FormData) {
   await db.delete(schema.rules).where(and(eq(schema.rules.orgId, s.orgId), eq(schema.rules.id, str(form, "id"))));
   revalidatePath("/app/macros");
 }
+
+export async function saveAiSettingsAction(form: FormData) {
+  const s = await requireAdmin();
+  const limit = str(form, "aiOverageMonthlyLimit");
+  const n = Number(limit);
+  await db
+    .update(schema.orgs)
+    .set({
+      aiEnabled: form.get("aiEnabled") === "on",
+      aiInstructions: str(form, "aiInstructions").slice(0, 20000),
+      aiOverageEnabled: form.get("aiOverageEnabled") === "on",
+      aiOverageMonthlyLimit: limit && Number.isInteger(n) && n >= 0 ? n : null,
+    })
+    .where(eq(schema.orgs.id, s.orgId));
+  revalidatePath("/app/settings");
+}

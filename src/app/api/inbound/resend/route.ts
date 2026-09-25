@@ -1,9 +1,14 @@
+import { after } from "next/server";
+import { answerNewTicket } from "@/lib/ai";
 import { emailConfig, htmlToText, resend } from "@/lib/email";
 import { handleInboundEmail } from "@/lib/inbound";
 
 // Resend calls this for every email sent to INBOUND_DOMAIN (event
 // "email.received"). The webhook carries metadata only, so the body is
 // fetched from the receiving API.
+// The AI answer runs after the response, within this limit.
+export const maxDuration = 300;
+
 export async function POST(request: Request) {
   if (!emailConfig.webhookSecret || !emailConfig.apiKey) {
     return Response.json({ error: "Inbound email is not configured." }, { status: 503 });
@@ -40,5 +45,10 @@ export async function POST(request: Request) {
     headers: email.headers,
     messageId: email.message_id,
   });
+  const { orgId, ticketId } = result;
+  if (orgId && ticketId) {
+    after(() => answerNewTicket(orgId, ticketId));
+    return Response.json({ ticket: result.ticket, action: result.action });
+  }
   return Response.json(result);
 }

@@ -36,12 +36,12 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
 
         <ol className="grid gap-3">
           {thread.map((m) => {
-            const who = m.authorType === "customer" ? customer.name || customer.email : m.authorType === "ai" ? "AI" : m.agentName ?? "Agent";
+            const who = m.authorType === "customer" ? customer.name || customer.email : m.authorType === "ai" ? "AI assistant" : m.authorType === "system" ? "Flatdesk" : m.agentName ?? "Agent";
             const tone = m.internal ? "border-warn bg-warn-soft" : m.authorType === "customer" ? "border-line bg-surface" : "border-accent/40 bg-accent-soft";
             return (
               <li key={m.id} className={`grid gap-1 rounded-lg border px-4 py-3 ${tone}`}>
                 <p className="flex flex-wrap justify-between gap-2 text-sm">
-                  <span className="font-medium">{who}{m.internal && <span className="ml-2 font-normal text-warn">Internal note</span>}</span>
+                  <span className="font-medium">{who}{m.internal && m.authorType !== "system" && <span className="ml-2 font-normal text-warn">Internal note</span>}</span>
                   <time className="text-muted" dateTime={m.createdAt.toISOString()} title={m.createdAt.toLocaleString("en-US")}>{timeAgo(m.createdAt)}</time>
                 </p>
                 <p className="whitespace-pre-wrap break-words">{m.body}</p>

@@ -23,6 +23,14 @@ export const orgs = pgTable("orgs", {
   // AI overage is off unless an admin turns it on. See PLAN in lib/pricing.ts.
   aiOverageEnabled: boolean("ai_overage_enabled").notNull().default(false),
   aiOverageMonthlyLimit: integer("ai_overage_monthly_limit"), // null = no extra limit
+  // The AI answers new email tickets when it can, using these notes and the
+  // team's macros as its knowledge. Admins can switch it off.
+  aiEnabled: boolean("ai_enabled").notNull().default(true),
+  aiInstructions: text("ai_instructions").notNull().default(""),
+  // Highest usage warning (80 or 100, percent of the included allowance)
+  // already emailed to admins for aiNoticeMonth, so each goes out once.
+  aiNoticeMonth: text("ai_notice_month"),
+  aiNoticeLevel: integer("ai_notice_level").notNull().default(0),
   nextTicketNumber: integer("next_ticket_number").notNull().default(1),
   // Customers' email reaches the org at <inboundKey>@INBOUND_DOMAIN. Teams
   // forward their own support address there.

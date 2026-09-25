@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { emailConfig, isAutoReply, matchRecipient, parseAddress, stripQuoted, ticketFromHeaders } from "@/lib/email";
+import { handBackToTeam } from "@/lib/ai";
 import { addCustomerMessage, createTicket } from "@/lib/tickets";
 
 export type Inbound = {
@@ -47,6 +48,7 @@ export async function handleInboundEmail(mail: Inbound) {
     // Only the ticket's own customer can add to it; anyone else starts a new ticket.
     if (ticket && customer && customer.email === sender.email) {
       await addCustomerMessage({ orgId: org.id, ticketId, customerId: customer.id, body, emailMessageId: mail.messageId });
+      await handBackToTeam(org.id, ticketId);
       return { ticket: ticket.number, action: "appended" };
     }
   }
@@ -61,5 +63,5 @@ export async function handleInboundEmail(mail: Inbound) {
     authorType: "customer",
     emailMessageId: mail.messageId,
   });
-  return { ticket: ticket.number, action: "created" };
+  return { ticket: ticket.number, action: "created", orgId: org.id, ticketId: ticket.id };
 }
