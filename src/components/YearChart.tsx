@@ -20,7 +20,7 @@ export default function YearChart() {
   const ticks = [0, top / 2, top];
 
   return (
-    <figure className="card grid gap-5 p-5 sm:p-6">
+    <figure className="chart card grid gap-5 p-5 sm:p-6">
       <figcaption className="grid gap-3">
         <div className="grid gap-1">
           <p className="font-medium">Monthly bill for a 10-agent team, one example year</p>
@@ -45,10 +45,10 @@ export default function YearChart() {
             <div key={t} className={`absolute inset-x-0 border-t ${t === 0 ? "border-line-strong" : "border-dashed border-line"}`} style={{ bottom: pct(t) }} />
           ))}
           <div className="absolute inset-0 grid grid-cols-12 gap-1 sm:gap-2">
-            {rows.map((r) => (
-              <div key={r.month} className="group relative flex items-end justify-center gap-[2px]">
-                <div className="w-full max-w-4 rounded-t-[4px] bg-chart-other transition-opacity group-hover:opacity-80" style={{ height: pct(r.fin) }} />
-                <div className="w-full max-w-4 rounded-t-[4px] bg-accent transition-opacity group-hover:opacity-80" style={{ height: pct(r.ours) }} />
+            {rows.map((r, i) => (
+              <div key={r.month} style={{ "--i": i } as React.CSSProperties} className="group relative flex items-end justify-center gap-[2px]">
+                <div className="bar w-full max-w-4 rounded-t-[4px] bg-chart-other transition-opacity group-hover:opacity-80" style={{ height: pct(r.fin) }} />
+                <div className="bar w-full max-w-4 rounded-t-[4px] bg-accent transition-opacity group-hover:opacity-80" style={{ height: pct(r.ours) }} />
                 <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 hidden w-max -translate-x-1/2 rounded-lg border border-line bg-surface px-3 py-2 text-xs shadow-md group-hover:block">
                   <p className="mb-1 font-medium">{r.month}: {r.resolutions.toLocaleString()} AI resolutions</p>
                   <p className="num flex justify-between gap-4"><span className="text-muted">{fin.vendor}</span>{usd(r.fin)}</p>

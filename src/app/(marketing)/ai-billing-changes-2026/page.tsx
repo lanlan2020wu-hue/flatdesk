@@ -88,7 +88,7 @@ const CHECKS: [string, string, string][] = [
 export default function ChangesPage() {
   return (
     <article className="mx-auto grid max-w-3xl gap-16 px-4 pt-14 sm:px-6 sm:pt-20">
-      <header className="grid gap-4">
+      <header className="enter grid gap-4">
         <p className="eyebrow">Last checked {CHECKED_ON}</p>
         <h1 className="font-display text-4xl sm:text-5xl">What changed in AI support billing in 2026</h1>
         <p className="text-lg text-muted">
@@ -99,10 +99,10 @@ export default function ChangesPage() {
 
       <section className="grid gap-6">
         <h2 className="font-display text-3xl">Timeline</h2>
-        <ol className="relative grid gap-8 pl-8 before:absolute before:top-2 before:bottom-2 before:left-[5px] before:w-px before:bg-line-strong">
+        <ol className="rail relative grid gap-8 pl-8 before:absolute before:top-2 before:bottom-2 before:left-[5px] before:w-px before:bg-line-strong">
           {TIMELINE.map((e) => (
             <li key={e.date + e.text} className="relative grid gap-1.5">
-              <span className="absolute top-1.5 -left-8 size-[11px] rounded-full border-2 border-accent bg-bg" aria-hidden="true" />
+              <span className="dot absolute top-1.5 -left-8 size-[11px] rounded-full border-2 border-accent bg-bg" aria-hidden="true" />
               <p className="flex flex-wrap items-center gap-2 text-sm">
                 <span className="num font-medium text-accent">{e.date}</span>
                 <span className="chip">{e.vendor}</span>
@@ -114,7 +114,7 @@ export default function ChangesPage() {
         </ol>
       </section>
 
-      <section className="grid gap-6">
+      <section className="reveal grid gap-6">
         <h2 className="font-display text-3xl">What to check on your account</h2>
         <dl className="grid gap-4">
           {CHECKS.map(([vendor, text, url]) => (
@@ -126,7 +126,7 @@ export default function ChangesPage() {
         </dl>
       </section>
 
-      <section className="card relative grid gap-4 overflow-hidden border-accent/30 bg-accent-soft p-6 sm:p-8">
+      <section className="reveal card relative grid gap-4 overflow-hidden border-accent/30 bg-accent-soft p-6 sm:p-8">
         <h2 className="font-display text-3xl">How Flatdesk bills AI</h2>
         <p>
           AI resolutions are part of the seat price: {PLAN.includedPerAgent} per agent per month, shared across the team, at{" "}

@@ -11,7 +11,7 @@ const NAV = [
 export default function MarketingLayout({ children }: LayoutProps<"/">) {
   return (
     <>
-      <header className="sticky top-0 z-30 border-b border-line bg-bg/80 backdrop-blur-md supports-[backdrop-filter]:bg-bg/70">
+      <header className="site-header sticky top-0 z-30 border-b border-line bg-bg/80 backdrop-blur-md supports-[backdrop-filter]:bg-bg/70">
         <nav className="mx-auto grid max-w-6xl grid-cols-[auto_1fr_auto] items-center gap-x-6 gap-y-2 px-4 py-3 sm:px-6">
           <Logo />
           <div className="col-span-3 row-start-2 -mx-1 flex gap-x-1 overflow-x-auto text-sm md:col-span-1 md:col-start-2 md:row-start-1">

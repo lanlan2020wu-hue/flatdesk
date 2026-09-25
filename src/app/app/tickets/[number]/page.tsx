@@ -41,7 +41,7 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
         </header>
 
         <ol className="grid gap-4">
-          {thread.map((m) => {
+          {thread.map((m, i) => {
             const who = m.authorType === "customer" ? customer.name || customer.email : m.authorType === "ai" ? "AI" : m.agentName ?? "Agent";
             const tone = m.internal
               ? "border-warn/40 bg-warn-soft"
@@ -49,7 +49,7 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
                 ? "border-line bg-surface"
                 : "border-accent/30 bg-accent-soft";
             return (
-              <li key={m.id} className="flex gap-3">
+              <li key={m.id} style={{ "--d": Math.min(i, 6) } as React.CSSProperties} className="enter flex gap-3">
                 <Avatar name={who} className="mt-1 size-8 text-[11px]" />
                 <div className={`grid min-w-0 flex-1 gap-1.5 rounded-2xl rounded-tl-md border px-4 py-3 shadow-sm ${tone}`}>
                   <p className="flex flex-wrap items-center justify-between gap-2 text-sm">
