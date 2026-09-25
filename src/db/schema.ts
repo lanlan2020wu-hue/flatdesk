@@ -89,7 +89,7 @@ export const tickets = pgTable(
     customerId: uuid("customer_id").notNull().references(() => customers.id),
     assigneeId: text("assignee_id"), // agents.user_id within the same org
     tags: text("tags").array().notNull().default(sql`'{}'::text[]`),
-    externalId: text("external_id"), // e.g. the Zendesk ticket id after import
+    externalId: text("external_id"), // "zendesk:<id>" for imported tickets
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     firstResponseAt: timestamp("first_response_at", { withTimezone: true }),
@@ -102,6 +102,8 @@ export const tickets = pgTable(
     uniqueIndex("tickets_org_number").on(t.orgId, t.number),
     index("tickets_org_status_updated").on(t.orgId, t.status, t.updatedAt),
     index("tickets_org_assignee").on(t.orgId, t.assigneeId),
+    // Makes imports safe to re-run: a ticket already imported is skipped.
+    uniqueIndex("tickets_org_external").on(t.orgId, t.externalId),
   ],
 );
 

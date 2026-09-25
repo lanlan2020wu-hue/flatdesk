@@ -77,7 +77,10 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
 
       <section className="grid gap-2">
         <h2 className="font-medium">Export</h2>
-        <p className="text-muted">Your data is yours. Download it any time, no need to ask us.</p>
+        <p className="text-muted">
+          Your data is yours. Download it any time, no need to ask us. Moving from Zendesk?{" "}
+          <a href="/app/import" className="underline">Import your tickets</a>.
+        </p>
         <ul className="grid gap-1 text-sm">
           {(["tickets", "messages", "customers", "macros"] as const).map((t) => (
             <li key={t} className="flex gap-3">

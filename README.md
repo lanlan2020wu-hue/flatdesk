@@ -28,7 +28,10 @@ All prices live in `src/lib/pricing.ts`. Every competitor number there must have
 - Website chat: `public/widget.js` adds a chat button to any site (`data-key` = the team's widget key, shown in Settings with the embed code). It opens `/chat/<key>` in an iframe; messages become chat tickets, the AI can answer them, and team replies show in the chat and are emailed too.
 - Export (`/app/export`): tickets, messages, customers and macros as CSV or JSON.
 
-Not built yet: attachments, reporting, Zendesk import.
+- Reports (`/app/reports`): new tickets by channel, median first response and close times, AI-answered share, and a per-agent table, over 7, 30 or 90 days.
+- Zendesk import (`/app/import`, `src/lib/zendesk.ts`): an admin enters their Zendesk subdomain, email and an API token (used once, never stored). Tickets, replies and internal notes come over with their dates, status and tags; re-running skips tickets already imported (`externalId` = `zendesk:<id>`) and continues a run that hit the time limit. Nothing is emailed and the AI skips imported tickets.
+
+Not built yet: attachments.
 
 ## Running locally
 
@@ -54,8 +57,9 @@ DEV_AUTH=1 npm run dev         # signs you in as a demo admin without Clerk
 | `ANTHROPIC_API_KEY` | AI answers. Without it every ticket goes to the team. |
 | `STRIPE_SECRET_KEY` | Billing. Set by the Stripe integration on Vercel. |
 | `CRON_SECRET` | Authorizes Vercel Cron's call to `/api/cron/daily`. |
+| `ZENDESK_API_URL` | Tests only. Points the Zendesk import at a local fake instead of `<subdomain>.zendesk.com`. |
 | `DEV_AUTH` | Local development only. `1` signs in as a demo admin when Clerk keys are missing. Ignored in production. |
 
 ## Next up
 
-Reporting, Zendesk import and one-click export.
+Attachments on email and chat tickets, and importing Zendesk attachments.

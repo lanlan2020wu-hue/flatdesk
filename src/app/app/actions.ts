@@ -8,6 +8,7 @@ import { db, schema } from "@/db";
 import { requireAdmin, requireSession } from "@/lib/auth";
 import { checkoutUrl, portalUrl } from "@/lib/billing";
 import { deliverReply } from "@/lib/email";
+import { importFromZendesk, validSubdomain, ZendeskError } from "@/lib/zendesk";
 import { addReply, createTicket, normalizeTags, updateTicket, type TicketStatus } from "@/lib/tickets";
 
 const STATUSES: TicketStatus[] = ["open", "pending", "closed"];
@@ -157,4 +158,28 @@ export async function startCheckoutAction() {
 export async function openBillingPortalAction() {
   const s = await requireAdmin();
   redirect(await portalUrl(s.orgId, await origin()));
+}
+
+export async function importZendeskAction(form: FormData) {
+  const s = await requireAdmin();
+  const subdomain = str(form, "subdomain").toLowerCase().replace(/^https?:\/\//, "").replace(/\.zendesk\.com.*$/, "");
+  const email = str(form, "email");
+  const token = str(form, "token");
+  const q = new URLSearchParams();
+  if (!validSubdomain(subdomain) || !email || !token) {
+    q.set("error", "Enter your Zendesk subdomain, the email of a Zendesk admin, and an API token.");
+  } else {
+    try {
+      const r = await importFromZendesk(s.orgId, { subdomain, email, token });
+      q.set("imported", String(r.imported));
+      q.set("skipped", String(r.skipped));
+      q.set("messages", String(r.messages));
+      if (!r.finished) q.set("more", "1");
+    } catch (err) {
+      console.error("zendesk import failed", err);
+      q.set("error", err instanceof ZendeskError ? err.message : "The import stopped with an unexpected error. Running it again continues where it left off.");
+    }
+  }
+  revalidatePath("/app", "layout");
+  redirect(`/app/import?${q}`);
 }
