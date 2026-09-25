@@ -24,6 +24,7 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
         </nav>
         <nav className="grid gap-0.5 text-sm" aria-label="Settings">
           <Link href="/app/macros" className="rounded-md px-2 py-1.5 hover:bg-bg">Macros and rules</Link>
+          <Link href="/app/settings" className="rounded-md px-2 py-1.5 hover:bg-bg">Settings</Link>
         </nav>
         <div className="mt-auto">
           <AccountMenu fallbackName={s.name} />

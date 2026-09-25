@@ -20,7 +20,9 @@ All prices live in `src/lib/pricing.ts`. Every competitor number there must have
 - Macros (saved replies that can add tags and set status) and tag-based assignment rules
 - Team accounts via Clerk organizations; each member is a seat
 
-Not built yet: sending replies by email and receiving email, the chat widget, AI answers, Stripe billing, reporting, Zendesk import, data export.
+- Email: incoming mail creates tickets or threads onto existing ones; agent replies are emailed to the customer
+
+Not built yet: attachments, the chat widget, AI answers, Stripe billing, reporting, Zendesk import, data export.
 
 ## Running locally
 
@@ -39,8 +41,12 @@ DEV_AUTH=1 npm run dev         # signs you in as a demo admin without Clerk
 | --- | --- |
 | `DATABASE_URL` | Postgres (Neon in production). Without it the waitlist returns 503. |
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY` | Sign-in and team accounts. Set automatically by the Clerk integration on Vercel. |
+| `RESEND_API_KEY` | Sending and receiving email through Resend. |
+| `EMAIL_FROM` | Address replies are sent from, on a domain verified in Resend (e.g. `support@mail.flatdesk.app`). |
+| `INBOUND_DOMAIN` | Resend receiving domain. Each team's inbox is `<key>@INBOUND_DOMAIN`, shown in Settings. |
+| `RESEND_WEBHOOK_SECRET` | Signing secret of the Resend webhook pointing at `/api/inbound/resend` (event `email.received`). |
 | `DEV_AUTH` | Local development only. `1` signs in as a demo admin when Clerk keys are missing. Ignored in production. |
 
 ## Next up
 
-Email in and out, the chat widget, capped AI resolutions (Claude API), Stripe seat billing, reporting, Zendesk import and one-click export.
+The chat widget, capped AI resolutions (Claude API), Stripe seat billing, reporting, Zendesk import and one-click export.

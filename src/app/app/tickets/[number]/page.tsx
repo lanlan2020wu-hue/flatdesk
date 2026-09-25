@@ -45,6 +45,7 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
                   <time className="text-muted" dateTime={m.createdAt.toISOString()} title={m.createdAt.toLocaleString("en-US")}>{timeAgo(m.createdAt)}</time>
                 </p>
                 <p className="whitespace-pre-wrap break-words">{m.body}</p>
+                {m.deliveryError && <p className="text-sm text-warn">This reply wasn&apos;t emailed: {m.deliveryError}</p>}
               </li>
             );
           })}

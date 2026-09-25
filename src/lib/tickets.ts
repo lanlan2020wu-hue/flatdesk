@@ -79,6 +79,7 @@ export async function getTicket(orgId: string, number: number) {
       authorId: messages.authorId,
       body: messages.body,
       internal: messages.internal,
+      deliveryError: messages.deliveryError,
       createdAt: messages.createdAt,
       agentName: agents.name,
     })
@@ -103,6 +104,7 @@ type NewTicket = {
   authorType: "customer" | "agent";
   authorId?: string | null;
   tags?: string[];
+  emailMessageId?: string | null;
 };
 
 export async function createTicket(input: NewTicket) {
@@ -143,6 +145,7 @@ export async function createTicket(input: NewTicket) {
       authorType: input.authorType,
       authorId: input.authorType === "customer" ? customer.id : input.authorId,
       body: input.body,
+      emailMessageId: input.emailMessageId ?? null,
     });
     return ticket;
   });
@@ -183,15 +186,17 @@ export async function addReply(opts: {
       .for("update");
     if (!ticket) throw new Error("Ticket not found.");
 
+    let messageId: string | null = null;
     if (opts.body.trim()) {
-      await tx.insert(messages).values({
+      const [inserted] = await tx.insert(messages).values({
         orgId: opts.orgId,
         ticketId: ticket.id,
         authorType: "agent",
         authorId: opts.userId,
         body: opts.body.trim(),
         internal: opts.internal,
-      });
+      }).returning({ id: messages.id });
+      messageId = inserted.id;
     }
 
     const now = new Date();
@@ -211,7 +216,25 @@ export async function addReply(opts: {
         closedAt: status === "closed" ? (ticket.closedAt ?? now) : null,
       })
       .where(eq(tickets.id, ticket.id));
-    return ticket;
+    return { ticket, messageId };
+  });
+}
+
+// A customer wrote again (usually an email reply): add it and reopen the ticket.
+export async function addCustomerMessage(opts: { orgId: string; ticketId: string; customerId: string; body: string; emailMessageId?: string | null }) {
+  await db.transaction(async (tx) => {
+    await tx.insert(messages).values({
+      orgId: opts.orgId,
+      ticketId: opts.ticketId,
+      authorType: "customer",
+      authorId: opts.customerId,
+      body: opts.body,
+      emailMessageId: opts.emailMessageId ?? null,
+    });
+    await tx
+      .update(tickets)
+      .set({ status: "open", closedAt: null, updatedAt: new Date() })
+      .where(and(eq(tickets.orgId, opts.orgId), eq(tickets.id, opts.ticketId)));
   });
 }
 

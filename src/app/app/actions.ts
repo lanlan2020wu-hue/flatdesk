@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db, schema } from "@/db";
 import { requireAdmin, requireSession } from "@/lib/auth";
+import { deliverReply } from "@/lib/email";
 import { addReply, createTicket, normalizeTags, updateTicket, type TicketStatus } from "@/lib/tickets";
 
 const STATUSES: TicketStatus[] = ["open", "pending", "closed"];
@@ -35,7 +36,7 @@ export async function replyAction(form: FormData) {
   const s = await requireSession();
   const ticketId = str(form, "ticketId");
   const number = str(form, "number");
-  await addReply({
+  const { messageId } = await addReply({
     orgId: s.orgId,
     ticketId,
     userId: s.userId,
@@ -44,6 +45,7 @@ export async function replyAction(form: FormData) {
     status: status(str(form, "status")),
     addTags: tagList(str(form, "addTags")),
   });
+  if (messageId) await deliverReply(s.orgId, messageId);
   revalidatePath(`/app/tickets/${number}`);
   revalidatePath("/app/inbox");
 }
