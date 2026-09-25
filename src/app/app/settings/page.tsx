@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { headers } from "next/headers";
 import { db, schema } from "@/db";
 import { requireSession } from "@/lib/auth";
 import { aiConfigured, aiUsage } from "@/lib/ai";
@@ -29,6 +30,9 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
   }
   const seats = await seatCount(s.orgId).catch(() => 1);
   const subscribed = isActive(org?.subscriptionStatus);
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
+  const siteOrigin = `${h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https")}://${host}`;
   const address = org ? inboundAddress(org.inboundKey) : null;
   const usage = await aiUsage(s.orgId);
   const pct = Math.min(100, Math.round((usage.used / usage.included) * 100));
@@ -53,6 +57,36 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
         ) : (
           <p className="text-muted">Email isn&apos;t connected on this server yet.</p>
         )}
+      </section>
+
+      {org && (
+        <section className="grid gap-2">
+          <h2 className="font-medium">Website chat</h2>
+          <p className="text-muted">
+            Paste this before the closing &lt;/body&gt; tag of your website. Visitors get a chat button; their messages become chat tickets
+            here, and your replies reach them in the chat and by email.
+          </p>
+          <pre className="num overflow-x-auto rounded-md border border-line bg-surface px-3 py-2 text-sm select-all">
+            {`<script src="${siteOrigin}/widget.js" data-key="${org.widgetKey}" async></script>`}
+          </pre>
+          <p className="text-sm text-muted">
+            <a href={`/chat/${org.widgetKey}`} target="_blank" className="underline">Open the chat window</a> to try it.
+          </p>
+        </section>
+      )}
+
+      <section className="grid gap-2">
+        <h2 className="font-medium">Export</h2>
+        <p className="text-muted">Your data is yours. Download it any time, no need to ask us.</p>
+        <ul className="grid gap-1 text-sm">
+          {(["tickets", "messages", "customers", "macros"] as const).map((t) => (
+            <li key={t} className="flex gap-3">
+              <span className="w-24 capitalize">{t}</span>
+              <a href={`/app/export?type=${t}`} className="underline">CSV</a>
+              <a href={`/app/export?type=${t}&format=json`} className="underline">JSON</a>
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section className="grid gap-3">
@@ -94,7 +128,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
         <div className="grid gap-1">
           <h2 className="font-medium">AI answers</h2>
           <p className="text-muted">
-            The AI answers new email tickets when your notes or macros cover the question, and hands everything else to your team. An
+            The AI answers new email and chat tickets when your notes or macros cover the question, and hands everything else to your team. An
             answer counts toward the allowance only if the customer doesn&apos;t write back.
           </p>
         </div>
@@ -122,7 +156,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
             <fieldset disabled={!isAdmin} className="grid gap-4">
               <label className="flex items-center gap-2">
                 <input type="checkbox" name="aiEnabled" defaultChecked={org.aiEnabled} />
-                Let the AI answer new email tickets
+                Let the AI answer new email and chat tickets
               </label>
               <label className="grid gap-1">
                 <span>What the AI should know</span>

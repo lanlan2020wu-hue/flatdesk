@@ -25,7 +25,10 @@ All prices live in `src/lib/pricing.ts`. Every competitor number there must have
 
 - Billing (`src/lib/billing.ts`): Stripe Checkout starts a 14-day trial of a per-seat subscription; seats follow Clerk membership; the customer portal handles cards and invoices. A daily Vercel Cron job (`/api/cron/daily`) refreshes subscriptions, fixes seat counts and adds last month's AI overage to the next invoice, once.
 
-Not built yet: attachments, the chat widget, reporting, Zendesk import, data export.
+- Website chat: `public/widget.js` adds a chat button to any site (`data-key` = the team's widget key, shown in Settings with the embed code). It opens `/chat/<key>` in an iframe; messages become chat tickets, the AI can answer them, and team replies show in the chat and are emailed too.
+- Export (`/app/export`): tickets, messages, customers and macros as CSV or JSON.
+
+Not built yet: attachments, reporting, Zendesk import.
 
 ## Running locally
 
@@ -55,4 +58,4 @@ DEV_AUTH=1 npm run dev         # signs you in as a demo admin without Clerk
 
 ## Next up
 
-The chat widget, reporting, Zendesk import and one-click export.
+Reporting, Zendesk import and one-click export.
