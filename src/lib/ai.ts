@@ -79,6 +79,7 @@ const Decision = z.object({
   decision: z.enum(["answer", "handoff"]),
   reply: z.string().describe("The email reply to the customer. Empty when handing off."),
   reason: z.string().describe("One sentence for the support team on why you answered or handed off."),
+  sources: z.array(z.string()).describe("Exact titles of the saved answers your reply relies on. Empty when handing off or when you used only the team notes."),
 });
 
 function systemPrompt(orgName: string, instructions: string, knowledge: { name: string; body: string }[]) {
@@ -158,8 +159,13 @@ export async function answerNewTicket(orgId: string, ticketId: string) {
     const metered = { model: response.model, inputTokens, outputTokens: usage.output_tokens, costUsd: costUsd.toFixed(5) };
 
     const out = response.stop_reason === "refusal" ? null : response.parsed_output;
+    // Keep only titles that name a real saved answer, so the receipt never cites something that doesn't exist.
+    // The prompt shows titles with double quotes swapped for single ones.
+    const titles = new Map(knowledge.map((k) => [k.name.replace(/"/g, "'"), k.name]));
+    const sources = [...new Set((out?.sources ?? []).map((t) => titles.get(t.trim())).filter((t) => t !== undefined))];
+    const reason = out?.reason?.slice(0, 500) || null;
     if (!out || out.decision === "handoff" || !out.reply.trim()) {
-      await db.update(aiEvents).set({ kind: "handoff", ...metered }).where(eq(aiEvents.id, slot.eventId));
+      await db.update(aiEvents).set({ kind: "handoff", reason, ...metered }).where(eq(aiEvents.id, slot.eventId));
       await note(orgId, ticketId, `AI handed this to the team: ${out?.reason || "it couldn't produce an answer."}`);
       return;
     }
@@ -187,11 +193,11 @@ export async function answerNewTicket(orgId: string, ticketId: string) {
         .update(tickets)
         .set({ status: "pending", resolvedByAi: true, firstResponseAt: now, updatedAt: now })
         .where(eq(tickets.id, ticketId));
-      await tx.update(aiEvents).set({ kind: "resolution", ...metered }).where(eq(aiEvents.id, slot.eventId));
+      await tx.update(aiEvents).set({ kind: "resolution", sources, reason, ...metered }).where(eq(aiEvents.id, slot.eventId));
       return m.id;
     });
     if (!messageId) {
-      await db.update(aiEvents).set({ kind: "handoff", ...metered }).where(eq(aiEvents.id, slot.eventId));
+      await db.update(aiEvents).set({ kind: "handoff", reason: "A person picked the ticket up first.", ...metered }).where(eq(aiEvents.id, slot.eventId));
       return;
     }
     await deliverReply(orgId, messageId);

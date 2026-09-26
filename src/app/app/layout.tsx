@@ -61,6 +61,7 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
           <nav className="grid gap-0.5 text-sm" aria-label="Settings">
             <p className="eyebrow px-2.5 pb-1.5">Workspace</p>
             <NavLink href="/app/reports">Reports</NavLink>
+            <NavLink href="/app/receipts">AI receipts</NavLink>
             <NavLink href="/app/macros">Macros and rules</NavLink>
             {s.role === "admin" && <NavLink href="/app/import">Import</NavLink>}
             <NavLink href="/app/settings">Settings</NavLink>

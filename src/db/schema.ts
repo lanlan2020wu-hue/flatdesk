@@ -187,7 +187,8 @@ export const rules = pgTable("rules", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
-export const aiEventKind = pgEnum("ai_event_kind", ["resolution", "draft", "handoff"]);
+// "refunded": an admin marked a resolution as wrong on the receipts page, so it no longer counts.
+export const aiEventKind = pgEnum("ai_event_kind", ["resolution", "draft", "handoff", "refunded"]);
 
 // Internal metering. Customers never see per-call costs, but we log every
 // call to check real cost per resolution against the $49 seat price.
@@ -204,6 +205,12 @@ export const aiEvents = pgTable(
     inputTokens: integer("input_tokens").notNull().default(0),
     outputTokens: integer("output_tokens").notNull().default(0),
     costUsd: numeric("cost_usd", { precision: 10, scale: 5 }).notNull().default("0"),
+    // Titles of the saved answers the AI relied on, shown on the receipt.
+    sources: text("sources").array().notNull().default(sql`'{}'::text[]`),
+    reason: text("reason"),
+    refundedAt: timestamp("refunded_at", { withTimezone: true }),
+    refundedBy: text("refunded_by"),
+    refundNote: text("refund_note"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("ai_events_org_month").on(t.orgId, t.month, t.kind)],
