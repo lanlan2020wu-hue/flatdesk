@@ -64,46 +64,46 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
       </section>
 
       {org && (
-        <section className="grid gap-2">
+        <section className="card grid gap-3 p-5 sm:p-6">
           <h2 className="font-medium">Website chat</h2>
           <p className="text-muted">
             Paste this before the closing &lt;/body&gt; tag of your website. Visitors get a chat button; their messages become chat tickets
             here, and your replies reach them in the chat and by email.
           </p>
-          <pre className="num overflow-x-auto rounded-md border border-line bg-surface px-3 py-2 text-sm select-all">
+          <pre className="num overflow-x-auto rounded-lg border border-dashed border-accent/40 bg-accent-soft px-3 py-2 text-sm select-all">
             {`<script src="${siteOrigin}/widget.js" data-key="${org.widgetKey}" async></script>`}
           </pre>
           <p className="text-sm text-muted">
-            <a href={`/chat/${org.widgetKey}`} target="_blank" className="underline">Open the chat window</a> to try it.
+            <a href={`/chat/${org.widgetKey}`} target="_blank" className="link text-accent">Open the chat window</a> to try it.
           </p>
         </section>
       )}
 
-      <section className="grid gap-2">
+      <section className="card grid gap-3 p-5 sm:p-6">
         <h2 className="font-medium">Export</h2>
         <p className="text-muted">
           Your data is yours. Download it any time, no need to ask us. Moving from another help desk?{" "}
-          <Link href="/app/import" className="underline">Import everything</Link>.
+          <Link href="/app/import" className="link text-accent">Import everything</Link>.
         </p>
-        <ul className="grid gap-1 text-sm">
+        <ul className="grid gap-1.5 text-sm">
           {(["tickets", "messages", "customers", "macros"] as const).map((t) => (
             <li key={t} className="flex gap-3">
-              <span className="w-24 capitalize">{t}</span>
-              <a href={`/app/export?type=${t}`} className="underline">CSV</a>
-              <a href={`/app/export?type=${t}&format=json`} className="underline">JSON</a>
+              <span className="w-24 font-medium capitalize">{t}</span>
+              <a href={`/app/export?type=${t}`} className="link text-accent">CSV</a>
+              <a href={`/app/export?type=${t}&format=json`} className="link text-accent">JSON</a>
             </li>
           ))}
         </ul>
       </section>
 
-      <section className="grid gap-3">
+      <section className="card grid gap-3 p-5 sm:p-6">
         <h2 className="font-medium">Plan and billing</h2>
-        {billing === "done" && <p className="rounded-md bg-accent-soft px-3 py-2 text-sm">Thanks, your plan is set up.</p>}
+        {billing === "done" && <p className="rounded-lg border border-accent/30 bg-accent-soft px-3 py-2 text-sm" role="status">Thanks, your plan is set up.</p>}
         {!billingConfigured() ? (
           <p className="text-muted">Billing isn&apos;t connected on this server yet.</p>
         ) : (
           <>
-            <div className="grid gap-1 rounded-lg border border-line bg-surface px-4 py-3">
+            <div className="grid gap-1 rounded-xl border border-line bg-surface-2/60 px-4 py-3">
               <p className="flex justify-between gap-2">
                 <span>{subscribed ? STATUS_TEXT[org?.subscriptionStatus ?? ""] ?? org?.subscriptionStatus : "No plan yet"}</span>
                 <span className="num">
@@ -120,7 +120,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
             </div>
             {isAdmin ? (
               <form action={subscribed ? openBillingPortalAction : startCheckoutAction}>
-                <button className="rounded-md bg-accent px-4 py-2 text-accent-ink">
+                <button className="btn btn-primary">
                   {subscribed ? "Manage billing and invoices" : `Start ${TRIAL_DAYS}-day free trial`}
                 </button>
               </form>
@@ -130,17 +130,19 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
           </>
         )}
       </section>
-
-      <section className="grid gap-4">
+      <section className="card grid gap-4 p-5 sm:p-6">
         <div className="grid gap-1">
-          <h2 className="font-medium">AI answers</h2>
+          <h2 className="flex items-center gap-2 font-medium">
+            <svg viewBox="0 0 24 24" className="size-8 rounded-lg bg-accent-soft p-1.5 text-accent" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.6L12 15l-1.8-4.4L5.5 9l4.7-1.4zM18 15l.9 2.1L21 18l-2.1.9L18 21l-.9-2.1L15 18l2.1-.9z" /></svg>
+            AI answers
+          </h2>
           <p className="text-muted">
             The AI answers new email and chat tickets when your notes or macros cover the question, and hands everything else to your team. An
             answer counts toward the allowance only if the customer doesn&apos;t write back.
           </p>
         </div>
 
-        <div className="grid gap-2 rounded-lg border border-line bg-surface px-4 py-3">
+        <div className="grid gap-2 rounded-xl border border-line bg-surface-2/60 px-4 py-3">
           <p className="flex justify-between gap-2 text-sm">
             <span>Used this month</span>
             <span className="num">
@@ -148,8 +150,8 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
               {usage.overage > 0 && ` (+${usage.overage} overage)`}
             </span>
           </p>
-          <div className="h-2 overflow-hidden rounded-full bg-line" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
-            <div className={`h-full ${pct >= 100 ? "bg-warn" : "bg-accent"}`} style={{ width: `${pct}%` }} />
+          <div className="h-2 overflow-hidden rounded-full bg-line/70" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100}>
+            <div className={`meter h-full rounded-full ${pct >= 100 ? "bg-warn" : "bg-accent"}`} style={{ width: `${pct}%` }} />
           </div>
           <p className="text-sm text-muted">
             {PLAN.includedPerAgent} per agent, shared by the team. Resets on the 1st. Admins get an email at 80% and 100%.
@@ -161,12 +163,12 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
         {org && (
           <form action={saveAiSettingsAction} className="grid gap-4">
             <fieldset disabled={!isAdmin} className="grid gap-4">
-              <label className="flex items-center gap-2">
-                <input type="checkbox" name="aiEnabled" defaultChecked={org.aiEnabled} />
+              <label className="flex items-center gap-2.5 font-medium">
+                <input type="checkbox" name="aiEnabled" defaultChecked={org.aiEnabled} className="size-4 accent-[var(--accent)]" />
                 Let the AI answer new email and chat tickets
               </label>
-              <label className="grid gap-1">
-                <span>What the AI should know</span>
+              <label className="grid gap-1.5">
+                <span className="label">What the AI should know</span>
                 <span className="text-sm text-muted">
                   Policies, product facts, hours, tone. Your macros are included too, so a good macro library makes a better AI.
                 </span>
@@ -175,27 +177,27 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
                   rows={8}
                   defaultValue={org.aiInstructions}
                   placeholder="Example: We ship from Portland within 2 business days. Refunds are handled by the team, never promised by the AI."
-                  className="rounded-md border border-line bg-surface px-3 py-2"
+                  className="field"
                 />
               </label>
-              <label className="flex items-start gap-2">
-                <input type="checkbox" name="aiOverageEnabled" defaultChecked={org.aiOverageEnabled} className="mt-1" />
+              <label className="flex items-start gap-2.5">
+                <input type="checkbox" name="aiOverageEnabled" defaultChecked={org.aiOverageEnabled} className="mt-1 size-4 accent-[var(--accent)]" />
                 <span>
                   Keep answering after the allowance is used, at {usd(PLAN.overageRate, true)} per resolution
                   <span className="block text-sm text-muted">Off by default. When off, the AI pauses and nothing extra is charged.</span>
                 </span>
               </label>
               <label className="grid w-max gap-1">
-                <span className="text-sm">Monthly overage limit (resolutions, blank for none)</span>
+                <span className="label">Monthly overage limit (resolutions, blank for none)</span>
                 <input
                   type="number"
                   min={0}
                   name="aiOverageMonthlyLimit"
                   defaultValue={org.aiOverageMonthlyLimit ?? ""}
-                  className="num w-40 rounded-md border border-line bg-surface px-3 py-2"
+                  className="field num w-40"
                 />
               </label>
-              {isAdmin && <button className="w-max rounded-md bg-accent px-4 py-2 text-accent-ink">Save AI settings</button>}
+              {isAdmin && <button className="btn btn-primary w-max">Save AI settings</button>}
             </fieldset>
             {!isAdmin && <p className="text-sm text-muted">Only admins can change these.</p>}
           </form>

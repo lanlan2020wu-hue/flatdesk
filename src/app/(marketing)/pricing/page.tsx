@@ -47,13 +47,13 @@ const INCLUDED = [
 export default function PricingPage() {
   return (
     <div className="mx-auto grid max-w-5xl gap-16 px-4 pt-14 sm:px-6 sm:pt-20">
-      <div className="grid max-w-2xl gap-3">
+      <div className="enter grid max-w-2xl gap-3">
         <p className="eyebrow">Pricing</p>
         <h1 className="font-display text-4xl sm:text-5xl">One plan. Every price is on this page.</h1>
         <p className="text-lg text-muted">No tiers, no add-ons and no sales call.</p>
       </div>
 
-      <section className="card grid overflow-hidden shadow-lg md:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+      <section style={{ "--d": 2 } as React.CSSProperties} className="enter card grid overflow-hidden shadow-lg md:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         <div className="grid content-start gap-6 p-6 sm:p-8">
           <div className="grid gap-1">
             <p className="font-medium text-accent">Flatdesk</p>
@@ -95,7 +95,7 @@ export default function PricingPage() {
         </div>
       </section>
 
-      <section className="grid gap-6 md:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">
+      <section className="reveal grid gap-6 md:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">
         <h2 className="font-display text-3xl">Questions about billing</h2>
         <div className="grid border-b border-line">
           {FAQ.map(([q, a]) => (

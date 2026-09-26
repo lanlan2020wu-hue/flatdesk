@@ -313,6 +313,149 @@ p {
   }
 }
 
+/* ---------- Motion ----------
+   Everything below is progressive: it only runs when the visitor hasn't asked
+   for reduced motion, and scroll-linked effects only where the browser supports
+   scroll-driven animations. Without either, every element is simply visible. */
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+}
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes print {
+  from {
+    clip-path: inset(0 0 100% 0);
+    transform: translateY(-14px);
+  }
+}
+@keyframes stamp {
+  0% {
+    opacity: 0;
+    transform: scale(1.9);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(0.94);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes grow-y {
+  from {
+    transform: scaleY(0);
+  }
+}
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes pop {
+  from {
+    transform: scale(0);
+  }
+}
+@keyframes header-lift {
+  to {
+    box-shadow: 0 8px 24px -12px rgb(20 32 27 / 0.18);
+    border-color: var(--line-strong);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Page-load entrance for the hero: a short, staggered rise. */
+  .enter {
+    animation: rise 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+    animation-delay: calc(var(--d, 0) * 90ms);
+  }
+  .enter-fade {
+    animation: fade 500ms ease both;
+  }
+
+  /* The receipt prints out of the top, then the "Flat" stamp lands on it. */
+  .print {
+    animation: print 1100ms cubic-bezier(0.3, 0.8, 0.25, 1) 250ms both;
+  }
+  .stamp {
+    animation: stamp 480ms cubic-bezier(0.3, 1.4, 0.5, 1) 1300ms both;
+  }
+
+  /* Hover affordances. */
+  .lift {
+    transition:
+      transform 200ms ease,
+      box-shadow 200ms ease;
+  }
+  .lift:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-md);
+  }
+  .btn .arrow {
+    transition: transform 180ms ease;
+  }
+  .btn:hover .arrow {
+    transform: translateX(3px);
+  }
+
+  @supports (animation-timeline: view()) {
+    /* Sections rise in as they scroll into view. */
+    .reveal {
+      animation: rise linear both;
+      animation-timeline: view();
+      animation-range: entry 5% cover 30%;
+    }
+
+    /* Chart bars grow from the baseline as the chart scrolls in, left to right. */
+    .chart {
+      view-timeline-name: --chart;
+    }
+    .chart .bar {
+      transform-origin: bottom;
+      animation: grow-y linear both;
+      animation-timeline: --chart;
+      animation-range: entry calc(20% + var(--i, 0) * 4%) cover calc(45% + var(--i, 0) * 2%);
+    }
+
+    /* Billing-changes timeline: the rail draws down and each dot pops as it arrives. */
+    .rail {
+      view-timeline-name: --rail;
+    }
+    .rail::before {
+      transform-origin: top;
+      animation: grow-y linear both;
+      animation-timeline: --rail;
+      animation-range: entry 10% cover 60%;
+    }
+    .rail .dot {
+      animation: pop linear both;
+      animation-timeline: view();
+      animation-range: entry 40% cover 35%;
+    }
+
+    /* Header gains a soft shadow once the page scrolls. */
+    .site-header {
+      animation: header-lift linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 120px;
+    }
+  }
+
+  /* Calculator bars and the savings figure ease between values. */
+  .meter {
+    transform-origin: left;
+    animation: grow-x 900ms cubic-bezier(0.2, 0.7, 0.2, 1) 200ms both;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

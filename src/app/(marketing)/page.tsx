@@ -50,21 +50,21 @@ export default function Home() {
         <div className="dots pointer-events-none absolute inset-0" aria-hidden="true" />
         <div className="relative mx-auto grid max-w-6xl gap-12 px-4 pt-14 pb-4 sm:px-6 sm:pt-20 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-center lg:gap-16">
           <div className="grid gap-6">
-            <p className="eyebrow flex w-max items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 shadow-sm">
+            <p style={{ "--d": 0 } as React.CSSProperties} className="enter eyebrow flex w-max items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 shadow-sm">
               <span className="size-1.5 rounded-full bg-accent" />
               Help desk for teams of 5–20 agents
             </p>
-            <h1 className="font-display text-[2.6rem] leading-[1.05] sm:text-6xl">
+            <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-[2.6rem] leading-[1.05] sm:text-6xl">
               {usd(PLAN.seatPrice)} per agent. AI included. <span className="hl italic">The same bill every month.</span>
             </h1>
-            <p className="max-w-xl text-lg text-muted">
+            <p style={{ "--d": 2 } as React.CSSProperties} className="enter max-w-xl text-lg text-muted">
               Every seat includes {PLAN.includedPerAgent} AI resolutions a month, shared across your team. When they run out, the AI pauses and
               your team takes over. You only pay more if you turn overage on yourself.
             </p>
-            <div className="flex flex-wrap gap-3">
+            <div style={{ "--d": 3 } as React.CSSProperties} className="enter flex flex-wrap gap-3">
               <Link href="/calculator" className="btn btn-primary">
                 Compare your current bill
-                <span aria-hidden="true">→</span>
+                <span aria-hidden="true" className="arrow">→</span>
               </Link>
               <Link href="/pricing" className="btn btn-secondary">
                 See pricing
@@ -73,7 +73,7 @@ export default function Home() {
           </div>
 
           <figure className="receipt-shadow relative mx-auto w-full max-w-md lg:rotate-[1.2deg]">
-            <div className="receipt num grid gap-1.5 px-6 pt-8 pb-9 text-[13px] sm:px-7">
+            <div className="print receipt num grid gap-1.5 px-6 pt-8 pb-9 text-[13px] sm:px-7">
               <figcaption className="mb-3 grid gap-1 text-center font-sans">
                 <span className="eyebrow">Monthly bill</span>
                 <span className="text-sm text-muted">A 10-agent team with 1,500 AI resolutions a month</span>
@@ -94,7 +94,7 @@ export default function Home() {
             </div>
             <span
               aria-hidden="true"
-              className="absolute -top-3 -right-2 rotate-12 rounded-md border-2 border-accent bg-surface px-2 py-0.5 font-mono text-[11px] font-medium tracking-[0.2em] text-accent uppercase shadow-sm"
+              className="stamp absolute -top-3 -right-2 rotate-12 rounded-md border-2 border-accent bg-surface px-2 py-0.5 font-mono text-[11px] font-medium tracking-[0.2em] text-accent uppercase shadow-sm"
             >
               Flat
             </span>
@@ -102,9 +102,9 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="mx-auto grid w-full max-w-6xl gap-6 px-4 sm:px-6 md:grid-cols-3">
+      <section className="reveal mx-auto grid w-full max-w-6xl gap-6 px-4 sm:px-6 md:grid-cols-3">
         {PRINCIPLES.map(([title, body, icon], i) => (
-          <div key={title} className="card grid content-start gap-3 p-6">
+          <div key={title} className="lift card grid content-start gap-3 p-6">
             <div className="flex items-center justify-between">
               <svg viewBox="0 0 24 24" className="size-9 rounded-lg bg-accent-soft p-2 text-accent" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 {icon}
@@ -117,7 +117,7 @@ export default function Home() {
         ))}
       </section>
 
-      <section className="mx-auto grid w-full max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] lg:items-center">
+      <section className="reveal mx-auto grid w-full max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] lg:items-center">
         <div className="grid gap-3">
           <p className="eyebrow">Why flat matters</p>
           <h2 className="font-display text-3xl sm:text-4xl">Per-resolution pricing follows your busiest month.</h2>
@@ -130,7 +130,7 @@ export default function Home() {
         <YearChart />
       </section>
 
-      <section className="mx-auto grid w-full max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">
+      <section className="reveal mx-auto grid w-full max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">
         <div className="grid content-start gap-3">
           <p className="eyebrow">First release</p>
           <h2 className="font-display text-3xl sm:text-4xl">What the first release includes</h2>
@@ -148,7 +148,7 @@ export default function Home() {
       </section>
 
       <section id="waitlist" className="mx-auto w-full max-w-6xl scroll-mt-24 px-4 sm:px-6">
-        <div className="card relative grid gap-6 overflow-hidden p-6 shadow-lg sm:p-10">
+        <div className="reveal card relative grid gap-6 overflow-hidden p-6 shadow-lg sm:p-10">
           <div
             className="pointer-events-none absolute -top-40 -right-32 size-96 rounded-full bg-accent/15 blur-3xl"
             aria-hidden="true"

@@ -25,7 +25,7 @@ export default async function InboxPage({ searchParams }: PageProps<"/app/inbox"
           <p className="font-medium">No tickets here.</p>
         </div>
       ) : (
-        <ul className="card divide-y divide-line overflow-hidden">
+        <ul className="enter-fade card divide-y divide-line overflow-hidden">
           {rows.map((t) => (
             <li key={t.id}>
               <Link href={`/app/tickets/${t.number}`} className="group grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 gap-y-1 px-4 py-3.5 transition-colors hover:bg-surface-2/70 sm:grid-cols-[auto_minmax(0,1fr)_auto] sm:items-center sm:gap-x-4">

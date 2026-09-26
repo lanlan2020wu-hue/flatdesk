@@ -18,7 +18,7 @@ export default async function CalculatorPage({ searchParams }: PageProps<"/calcu
 
   return (
     <div className="mx-auto grid max-w-6xl gap-10 px-4 pt-14 sm:px-6 sm:pt-20">
-      <div className="grid max-w-2xl gap-3">
+      <div className="enter grid max-w-2xl gap-3">
         <p className="eyebrow">Bill calculator</p>
         <h1 className="font-display text-4xl sm:text-5xl">What is your support tool really costing you?</h1>
         <p className="text-lg text-muted">

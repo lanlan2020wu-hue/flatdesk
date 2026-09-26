@@ -58,7 +58,7 @@ export default function Calculator({ initialTool, initialAgents, initialResoluti
   const bar = (n: number) => `${Math.max(2, (n / barMax) * 100)}%`;
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+    <div style={{ "--d": 2 } as React.CSSProperties} className="enter grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
       <form className="card grid content-start gap-5 self-start p-5 sm:p-6 lg:sticky lg:top-24" onSubmit={(e) => e.preventDefault()}>
         <p className="eyebrow">Your numbers</p>
         <label className="grid gap-1.5" htmlFor="tool">
@@ -113,11 +113,11 @@ export default function Calculator({ initialTool, initialAgents, initialResoluti
         <div className="card grid gap-3 p-5 sm:p-6" aria-hidden="true">
           <div className="grid gap-1.5">
             <div className="flex justify-between text-sm"><span className="text-muted">{tool.vendor}</span><span className="num">{usd(today.total)}</span></div>
-            <div className="h-3 overflow-hidden rounded-full bg-surface-2"><div className="h-full rounded-full bg-chart-other transition-[width] duration-300" style={{ width: bar(today.total) }} /></div>
+            <div className="h-3 overflow-hidden rounded-full bg-surface-2"><div className="meter h-full rounded-full bg-chart-other transition-[width] duration-300" style={{ width: bar(today.total) }} /></div>
           </div>
           <div className="grid gap-1.5">
             <div className="flex justify-between text-sm"><span className="text-muted">Flatdesk</span><span className="num">{usd(ours.capped)}</span></div>
-            <div className="h-3 overflow-hidden rounded-full bg-surface-2"><div className="h-full rounded-full bg-accent transition-[width] duration-300" style={{ width: bar(ours.capped) }} /></div>
+            <div className="h-3 overflow-hidden rounded-full bg-surface-2"><div className="meter h-full rounded-full bg-accent transition-[width] duration-300" style={{ width: bar(ours.capped) }} /></div>
           </div>
         </div>
 
