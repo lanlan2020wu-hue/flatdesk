@@ -1,16 +1,38 @@
 import { eq } from "drizzle-orm";
+import { headers } from "next/headers";
 import { db, schema } from "@/db";
 import { requireSession } from "@/lib/auth";
 import { aiConfigured, aiUsage } from "@/lib/ai";
+import { billingConfigured, isActive, refreshSubscription, seatCount, TRIAL_DAYS } from "@/lib/billing";
 import { emailConfig, inboundAddress } from "@/lib/email";
 import { PLAN, usd } from "@/lib/pricing";
-import { saveAiSettingsAction } from "../actions";
+import { openBillingPortalAction, saveAiSettingsAction, startCheckoutAction } from "../actions";
 
 export const metadata = { title: "Settings" };
 
-export default async function SettingsPage() {
+const STATUS_TEXT: Record<string, string> = {
+  trialing: "Free trial",
+  active: "Active",
+  past_due: "Payment failed, retrying",
+  canceled: "Cancelled",
+  unpaid: "Unpaid",
+  incomplete: "Waiting for payment",
+  incomplete_expired: "Checkout expired",
+  paused: "Paused",
+};
+
+export default async function SettingsPage({ searchParams }: PageProps<"/app/settings">) {
   const s = await requireSession();
-  const org = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) });
+  const { billing } = await searchParams;
+  let org = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) });
+  if (org?.stripeCustomerId && billingConfigured()) {
+    org = await refreshSubscription(s.orgId).catch(() => org);
+  }
+  const seats = await seatCount(s.orgId).catch(() => 1);
+  const subscribed = isActive(org?.subscriptionStatus);
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
+  const siteOrigin = `${h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https")}://${host}`;
   const address = org ? inboundAddress(org.inboundKey) : null;
   const usage = await aiUsage(s.orgId);
   const pct = Math.min(100, Math.round((usage.used / usage.included) * 100));
@@ -40,6 +62,73 @@ export default async function SettingsPage() {
         )}
       </section>
 
+      {org && (
+        <section className="card grid gap-3 p-5 sm:p-6">
+          <h2 className="font-medium">Website chat</h2>
+          <p className="text-muted">
+            Paste this before the closing &lt;/body&gt; tag of your website. Visitors get a chat button; their messages become chat tickets
+            here, and your replies reach them in the chat and by email.
+          </p>
+          <pre className="num overflow-x-auto rounded-lg border border-dashed border-accent/40 bg-accent-soft px-3 py-2 text-sm select-all">
+            {`<script src="${siteOrigin}/widget.js" data-key="${org.widgetKey}" async></script>`}
+          </pre>
+          <p className="text-sm text-muted">
+            <a href={`/chat/${org.widgetKey}`} target="_blank" className="link text-accent">Open the chat window</a> to try it.
+          </p>
+        </section>
+      )}
+
+      <section className="card grid gap-3 p-5 sm:p-6">
+        <h2 className="font-medium">Export</h2>
+        <p className="text-muted">
+          Your data is yours. Download it any time, no need to ask us. Moving from Zendesk?{" "}
+          <a href="/app/import" className="link text-accent">Import your tickets</a>.
+        </p>
+        <ul className="grid gap-1.5 text-sm">
+          {(["tickets", "messages", "customers", "macros"] as const).map((t) => (
+            <li key={t} className="flex gap-3">
+              <span className="w-24 font-medium capitalize">{t}</span>
+              <a href={`/app/export?type=${t}`} className="link text-accent">CSV</a>
+              <a href={`/app/export?type=${t}&format=json`} className="link text-accent">JSON</a>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section className="card grid gap-3 p-5 sm:p-6">
+        <h2 className="font-medium">Plan and billing</h2>
+        {billing === "done" && <p className="rounded-lg border border-accent/30 bg-accent-soft px-3 py-2 text-sm" role="status">Thanks, your plan is set up.</p>}
+        {!billingConfigured() ? (
+          <p className="text-muted">Billing isn&apos;t connected on this server yet.</p>
+        ) : (
+          <>
+            <div className="grid gap-1 rounded-xl border border-line bg-surface-2/60 px-4 py-3">
+              <p className="flex justify-between gap-2">
+                <span>{subscribed ? STATUS_TEXT[org?.subscriptionStatus ?? ""] ?? org?.subscriptionStatus : "No plan yet"}</span>
+                <span className="num">
+                  {seats} {seats === 1 ? "seat" : "seats"} × {usd(PLAN.seatPrice)} = {usd(seats * PLAN.seatPrice)}/mo
+                </span>
+              </p>
+              {subscribed && org?.currentPeriodEnd && (
+                <p className="text-sm text-muted">
+                  {org.subscriptionStatus === "trialing" ? "Trial ends" : "Renews"}{" "}
+                  {org.currentPeriodEnd.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
+                </p>
+              )}
+              <p className="text-sm text-muted">Seats follow your team members: adding or removing someone updates the next bill.</p>
+            </div>
+            {isAdmin ? (
+              <form action={subscribed ? openBillingPortalAction : startCheckoutAction}>
+                <button className="btn btn-primary">
+                  {subscribed ? "Manage billing and invoices" : `Start ${TRIAL_DAYS}-day free trial`}
+                </button>
+              </form>
+            ) : (
+              <p className="text-sm text-muted">Only admins can change billing.</p>
+            )}
+          </>
+        )}
+      </section>
       <section className="card grid gap-4 p-5 sm:p-6">
         <div className="grid gap-1">
           <h2 className="flex items-center gap-2 font-medium">
@@ -47,7 +136,7 @@ export default async function SettingsPage() {
             AI answers
           </h2>
           <p className="text-muted">
-            The AI answers new email tickets when your notes or macros cover the question, and hands everything else to your team. An
+            The AI answers new email and chat tickets when your notes or macros cover the question, and hands everything else to your team. An
             answer counts toward the allowance only if the customer doesn&apos;t write back.
           </p>
         </div>
@@ -75,7 +164,7 @@ export default async function SettingsPage() {
             <fieldset disabled={!isAdmin} className="grid gap-4">
               <label className="flex items-center gap-2.5 font-medium">
                 <input type="checkbox" name="aiEnabled" defaultChecked={org.aiEnabled} className="size-4 accent-[var(--accent)]" />
-                Let the AI answer new email tickets
+                Let the AI answer new email and chat tickets
               </label>
               <label className="grid gap-1.5">
                 <span className="label">What the AI should know</span>

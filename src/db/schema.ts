@@ -23,7 +23,7 @@ export const orgs = pgTable("orgs", {
   // AI overage is off unless an admin turns it on. See PLAN in lib/pricing.ts.
   aiOverageEnabled: boolean("ai_overage_enabled").notNull().default(false),
   aiOverageMonthlyLimit: integer("ai_overage_monthly_limit"), // null = no extra limit
-  // The AI answers new email tickets when it can, using these notes and the
+  // The AI answers new email and chat tickets when it can, using these notes and the
   // team's macros as its knowledge. Admins can switch it off.
   aiEnabled: boolean("ai_enabled").notNull().default(true),
   aiInstructions: text("ai_instructions").notNull().default(""),
@@ -31,10 +31,19 @@ export const orgs = pgTable("orgs", {
   // already emailed to admins for aiNoticeMonth, so each goes out once.
   aiNoticeMonth: text("ai_notice_month"),
   aiNoticeLevel: integer("ai_notice_level").notNull().default(0),
+  // Stripe billing. One subscription per org, quantity = seats (Clerk members).
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  subscriptionStatus: text("subscription_status"), // Stripe's status: trialing, active, past_due, canceled...
+  billedSeats: integer("billed_seats"),
+  currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
+  overageBilledMonth: text("overage_billed_month"), // last month whose AI overage was added to an invoice
   nextTicketNumber: integer("next_ticket_number").notNull().default(1),
   // Customers' email reaches the org at <inboundKey>@INBOUND_DOMAIN. Teams
   // forward their own support address there.
   inboundKey: text("inbound_key").notNull().unique().default(sql`substr(md5(random()::text), 1, 10)`),
+  // Public id in the website chat widget's embed code.
+  widgetKey: text("widget_key").notNull().unique().default(sql`substr(md5(random()::text), 1, 12)`),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -80,17 +89,21 @@ export const tickets = pgTable(
     customerId: uuid("customer_id").notNull().references(() => customers.id),
     assigneeId: text("assignee_id"), // agents.user_id within the same org
     tags: text("tags").array().notNull().default(sql`'{}'::text[]`),
-    externalId: text("external_id"), // e.g. the Zendesk ticket id after import
+    externalId: text("external_id"), // "zendesk:<id>" for imported tickets
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     firstResponseAt: timestamp("first_response_at", { withTimezone: true }),
     closedAt: timestamp("closed_at", { withTimezone: true }),
     resolvedByAi: boolean("resolved_by_ai").notNull().default(false),
+    // Chat tickets: the visitor's browser holds this to read and continue the thread.
+    visitorToken: text("visitor_token"),
   },
   (t) => [
     uniqueIndex("tickets_org_number").on(t.orgId, t.number),
     index("tickets_org_status_updated").on(t.orgId, t.status, t.updatedAt),
     index("tickets_org_assignee").on(t.orgId, t.assigneeId),
+    // Makes imports safe to re-run: a ticket already imported is skipped.
+    uniqueIndex("tickets_org_external").on(t.orgId, t.externalId),
   ],
 );
 

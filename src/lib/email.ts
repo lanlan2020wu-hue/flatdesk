@@ -104,7 +104,8 @@ export async function deliverReply(orgId: string, messageId: string): Promise<vo
     .innerJoin(schema.customers, eq(schema.customers.id, schema.tickets.customerId))
     .innerJoin(schema.orgs, eq(schema.orgs.id, schema.messages.orgId))
     .where(and(eq(schema.messages.orgId, orgId), eq(schema.messages.id, messageId)));
-  if (!row || row.message.internal || row.ticket.channel !== "email") return;
+  // Chat replies are emailed too, so a visitor who closed the tab still gets them.
+  if (!row || row.message.internal) return;
 
   // Thread onto the conversation the customer already has.
   const earlier = await db

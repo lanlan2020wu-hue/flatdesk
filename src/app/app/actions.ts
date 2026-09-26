@@ -2,10 +2,13 @@
 
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { db, schema } from "@/db";
 import { requireAdmin, requireSession } from "@/lib/auth";
+import { checkoutUrl, portalUrl } from "@/lib/billing";
 import { deliverReply } from "@/lib/email";
+import { importFromZendesk, validSubdomain, ZendeskError } from "@/lib/zendesk";
 import { addReply, createTicket, normalizeTags, updateTicket, type TicketStatus } from "@/lib/tickets";
 
 const STATUSES: TicketStatus[] = ["open", "pending", "closed"];
@@ -135,4 +138,48 @@ export async function saveAiSettingsAction(form: FormData) {
     })
     .where(eq(schema.orgs.id, s.orgId));
   revalidatePath("/app/settings");
+}
+
+async function origin() {
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host");
+  const proto = h.get("x-forwarded-proto") ?? (host?.startsWith("localhost") ? "http" : "https");
+  return `${proto}://${host}`;
+}
+
+export async function startCheckoutAction() {
+  const s = await requireAdmin();
+  const admin = await db.query.agents.findFirst({
+    where: and(eq(schema.agents.orgId, s.orgId), eq(schema.agents.userId, s.userId)),
+  });
+  redirect(await checkoutUrl(s.orgId, admin?.email ?? "", await origin()));
+}
+
+export async function openBillingPortalAction() {
+  const s = await requireAdmin();
+  redirect(await portalUrl(s.orgId, await origin()));
+}
+
+export async function importZendeskAction(form: FormData) {
+  const s = await requireAdmin();
+  const subdomain = str(form, "subdomain").toLowerCase().replace(/^https?:\/\//, "").replace(/\.zendesk\.com.*$/, "");
+  const email = str(form, "email");
+  const token = str(form, "token");
+  const q = new URLSearchParams();
+  if (!validSubdomain(subdomain) || !email || !token) {
+    q.set("error", "Enter your Zendesk subdomain, the email of a Zendesk admin, and an API token.");
+  } else {
+    try {
+      const r = await importFromZendesk(s.orgId, { subdomain, email, token });
+      q.set("imported", String(r.imported));
+      q.set("skipped", String(r.skipped));
+      q.set("messages", String(r.messages));
+      if (!r.finished) q.set("more", "1");
+    } catch (err) {
+      console.error("zendesk import failed", err);
+      q.set("error", err instanceof ZendeskError ? err.message : "The import stopped with an unexpected error. Running it again continues where it left off.");
+    }
+  }
+  revalidatePath("/app", "layout");
+  redirect(`/app/import?${q}`);
 }
