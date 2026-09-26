@@ -77,6 +77,7 @@ export async function getTicket(orgId: string, number: number) {
       id: messages.id,
       authorType: messages.authorType,
       authorId: messages.authorId,
+      authorName: messages.authorName,
       body: messages.body,
       internal: messages.internal,
       deliveryError: messages.deliveryError,

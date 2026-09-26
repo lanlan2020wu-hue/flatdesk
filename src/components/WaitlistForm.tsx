@@ -34,19 +34,24 @@ export default function WaitlistForm() {
   }
 
   if (state === "done") {
-    return <p className="rounded-lg bg-accent-soft px-4 py-3">You&apos;re on the list. We&apos;ll email you when your spot opens.</p>;
+    return (
+      <p className="flex items-center gap-3 rounded-xl border border-accent/30 bg-accent-soft px-4 py-3" role="status">
+        <svg viewBox="0 0 20 20" className="size-5 shrink-0 text-accent" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 10.5l3 3 7-7" /></svg>
+        You&apos;re on the list. We&apos;ll email you when your spot opens.
+      </p>
+    );
   }
 
-  const field = "rounded-md border border-line bg-surface px-3 py-2 text-ink";
+  const field = "field";
   return (
-    <form onSubmit={onSubmit} className="grid gap-3 sm:grid-cols-[2fr_1.5fr_0.8fr_auto] sm:items-end">
-      <label className="grid gap-1 text-sm" htmlFor="wl-email">
+    <form onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-[2fr_1.5fr_0.8fr_auto] sm:items-end">
+      <label className="grid gap-1.5 text-sm font-medium" htmlFor="wl-email">
         Work email
-        <input id="wl-email" name="email" type="email" required autoComplete="email" className={field} />
+        <input id="wl-email" name="email" type="email" required autoComplete="email" className={`${field} font-normal`} />
       </label>
-      <label className="grid gap-1 text-sm" htmlFor="wl-tool">
+      <label className="grid gap-1.5 text-sm font-medium" htmlFor="wl-tool">
         Current help desk
-        <select id="wl-tool" name="tool" className={field} defaultValue="">
+        <select id="wl-tool" name="tool" className={`${field} font-normal`} defaultValue="">
           <option value="">Choose one</option>
           {[...new Set(COMPETITORS.map((c) => c.vendor))].map((v) => (
             <option key={v} value={v}>{v}</option>
@@ -54,11 +59,11 @@ export default function WaitlistForm() {
           <option value="other">Something else</option>
         </select>
       </label>
-      <label className="grid gap-1 text-sm" htmlFor="wl-agents">
+      <label className="grid gap-1.5 text-sm font-medium" htmlFor="wl-agents">
         Agents
-        <input id="wl-agents" name="agents" type="number" min={1} className={`${field} num`} />
+        <input id="wl-agents" name="agents" type="number" min={1} className={`${field} num font-normal`} />
       </label>
-      <button type="submit" disabled={state === "sending"} className="rounded-md bg-accent px-4 py-2 font-medium text-accent-ink disabled:opacity-60">
+      <button type="submit" disabled={state === "sending"} className="btn btn-primary">
         {state === "sending" ? "Joining…" : "Join the waitlist"}
       </button>
       {state === "error" && <p className="text-sm text-warn sm:col-span-4">{message}</p>}

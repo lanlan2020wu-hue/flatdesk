@@ -8,7 +8,7 @@ type Macro = { id: string; name: string; body: string; addTags: string[]; setSta
 function SendButton({ internal }: { internal: boolean }) {
   const { pending } = useFormStatus();
   return (
-    <button disabled={pending} className="rounded-md bg-accent px-4 py-2 text-sm font-medium text-accent-ink disabled:opacity-60">
+    <button disabled={pending} className="btn btn-primary btn-sm">
       {pending ? "Saving…" : internal ? "Add note" : "Send reply"}
     </button>
   );
@@ -52,19 +52,19 @@ export default function Composer({
         setAddTags("");
         setStatusChoice(null);
       }}
-      className={`grid gap-3 rounded-lg border p-3 ${internal ? "border-warn bg-warn-soft" : "border-line bg-surface"}`}
+      className={`grid gap-3 rounded-2xl border p-3 shadow-md transition-colors focus-within:ring-2 focus-within:ring-accent/25 ${internal ? "border-warn/50 bg-warn-soft" : "border-line bg-surface"}`}
     >
       <input type="hidden" name="ticketId" value={ticketId} />
       <input type="hidden" name="number" value={number} />
       <input type="hidden" name="addTags" value={addTags} />
       <div className="flex flex-wrap items-center gap-3 text-sm">
-        <div role="radiogroup" aria-label="Message type" className="flex overflow-hidden rounded-md border border-line">
-          <button type="button" role="radio" aria-checked={!internal} onClick={() => setInternal(false)} className={`px-3 py-1 ${!internal ? "bg-ink text-bg" : ""}`}>Reply</button>
-          <button type="button" role="radio" aria-checked={internal} onClick={() => setInternal(true)} className={`px-3 py-1 ${internal ? "bg-ink text-bg" : ""}`}>Internal note</button>
+        <div role="radiogroup" aria-label="Message type" className="flex gap-0.5 rounded-lg bg-surface-2 p-0.5">
+          <button type="button" role="radio" aria-checked={!internal} onClick={() => setInternal(false)} className={`rounded-md px-3 py-1 transition-colors ${!internal ? "bg-surface font-medium shadow-sm" : "text-muted hover:text-ink"}`}>Reply</button>
+          <button type="button" role="radio" aria-checked={internal} onClick={() => setInternal(true)} className={`rounded-md px-3 py-1 transition-colors ${internal ? "bg-surface font-medium text-warn shadow-sm" : "text-muted hover:text-ink"}`}>Internal note</button>
         </div>
         {internal && <input type="hidden" name="internal" value="on" />}
         {macros.length > 0 && (
-          <select aria-label="Insert macro" className="rounded-md border border-line bg-surface px-2 py-1" value="" onChange={(e) => applyMacro(e.target.value)}>
+          <select aria-label="Insert macro" className="field field-sm w-auto" value="" onChange={(e) => applyMacro(e.target.value)}>
             <option value="">Insert macro…</option>
             {macros.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
           </select>
@@ -81,13 +81,13 @@ export default function Composer({
           if ((e.metaKey || e.ctrlKey) && e.key === "Enter") formRef.current?.requestSubmit();
         }}
         placeholder={internal ? "Only your team sees this." : "Write your reply…"}
-        className="w-full rounded-md border border-line bg-surface px-3 py-2"
+        className="w-full resize-y rounded-lg bg-transparent px-2 py-1 focus:outline-none"
       />
-      <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3 text-sm">
         <span className="text-muted">{addTags && <>Adds tags: {addTags}</>}</span>
         <div className="flex items-center gap-2">
           <label htmlFor="nextStatus" className="text-muted">then set to</label>
-          <select id="nextStatus" name="status" value={nextStatus} onChange={(e) => setStatusChoice(e.target.value)} className="rounded-md border border-line bg-surface px-2 py-1">
+          <select id="nextStatus" name="status" value={nextStatus} onChange={(e) => setStatusChoice(e.target.value)} className="field field-sm w-auto">
             <option value="open">Open</option>
             <option value="pending">Pending</option>
             <option value="closed">Closed</option>

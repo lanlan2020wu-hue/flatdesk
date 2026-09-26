@@ -1,30 +1,47 @@
 @import "tailwindcss";
 
+/* Warm "paper and ink" palette: a ledger feel for a product about predictable bills. */
 :root {
-  --bg: #f6f7f9;
-  --surface: #ffffff;
-  --ink: #16202a;
-  --muted: #5a6672;
-  --line: #dce1e6;
-  --accent: #1d6b55;
+  --bg: #f6f4ef;
+  --surface: #fffdf9;
+  --surface-2: #f0ede5;
+  --ink: #14201b;
+  --muted: #5b6660;
+  --line: #e3ded3;
+  --line-strong: #cfc8b9;
+  --accent: #17624b;
+  --accent-hover: #0f4f3c;
   --accent-ink: #ffffff;
-  --accent-soft: #e3f1ec;
+  --accent-soft: #e2efe8;
   --warn: #9a5b0c;
   --warn-soft: #fbf0de;
+  --highlight: #dff28f;
+  --chart-other: #a8a193;
+  --shadow-sm: 0 1px 2px rgb(20 32 27 / 0.05), 0 1px 1px rgb(20 32 27 / 0.03);
+  --shadow-md: 0 1px 2px rgb(20 32 27 / 0.04), 0 6px 16px -4px rgb(20 32 27 / 0.08);
+  --shadow-lg: 0 2px 4px rgb(20 32 27 / 0.04), 0 24px 48px -16px rgb(20 32 27 / 0.18);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #11161b;
-    --surface: #182028;
-    --ink: #e6ebef;
-    --muted: #9aa7b2;
-    --line: #2a3540;
-    --accent: #5cc4a2;
-    --accent-ink: #0d1a15;
-    --accent-soft: #17342c;
+    --bg: #0e1412;
+    --surface: #151d1a;
+    --surface-2: #1b2521;
+    --ink: #e8ede9;
+    --muted: #9aa8a1;
+    --line: #25312c;
+    --line-strong: #34423c;
+    --accent: #5fcaa3;
+    --accent-hover: #80d9b8;
+    --accent-ink: #07140f;
+    --accent-soft: #16302a;
     --warn: #e7b062;
     --warn-soft: #3a2d16;
+    --highlight: rgb(206 240 90 / 0.28);
+    --chart-other: #6c7a73;
+    --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+    --shadow-md: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 20px -6px rgb(0 0 0 / 0.45);
+    --shadow-lg: 0 2px 4px rgb(0 0 0 / 0.3), 0 28px 56px -16px rgb(0 0 0 / 0.6);
     color-scheme: dark;
   }
 }
@@ -32,14 +49,21 @@
 @theme inline {
   --color-bg: var(--bg);
   --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
   --color-ink: var(--ink);
   --color-muted: var(--muted);
   --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
   --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
   --color-accent-ink: var(--accent-ink);
   --color-accent-soft: var(--accent-soft);
   --color-warn: var(--warn);
   --color-warn-soft: var(--warn-soft);
+  --color-chart-other: var(--chart-other);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
   --font-sans: var(--font-plex-sans), system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
   --font-display: var(--font-fraunces), Georgia, serif;
@@ -50,10 +74,19 @@ body {
   color: var(--ink);
 }
 
+::selection {
+  background: var(--highlight);
+  color: var(--ink);
+}
+
 h1,
 h2,
 h3 {
   text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
 }
 
 .num {
@@ -64,4 +97,227 @@ h3 {
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
+}
+
+@layer components {
+  .font-display {
+    letter-spacing: -0.015em;
+  }
+
+  .eyebrow {
+    font-family: var(--font-mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  /* Marker-pen highlight for the one phrase that matters on a page. */
+  .hl {
+    background: linear-gradient(transparent 58%, var(--highlight) 58%, var(--highlight) 92%, transparent 92%);
+    padding-inline: 0.08em;
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 0.625rem;
+    border: 1px solid transparent;
+    padding: 0.625rem 1.05rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    line-height: 1.25;
+    white-space: nowrap;
+    transition:
+      background-color 150ms ease,
+      border-color 150ms ease,
+      box-shadow 150ms ease,
+      transform 150ms ease;
+  }
+  .btn:active:not(:disabled) {
+    transform: translateY(1px);
+  }
+  .btn:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+  .btn-sm {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.82rem;
+    border-radius: 0.5rem;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: var(--accent-ink);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.14),
+      var(--shadow-sm);
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: var(--accent-hover);
+  }
+  .btn-secondary {
+    background: var(--surface);
+    border-color: var(--line-strong);
+    color: var(--ink);
+    box-shadow: var(--shadow-sm);
+  }
+  .btn-secondary:hover:not(:disabled) {
+    border-color: var(--muted);
+  }
+
+  .field {
+    width: 100%;
+    border-radius: 0.5rem;
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    padding: 0.55rem 0.75rem;
+    color: var(--ink);
+    box-shadow: inset 0 1px 1px rgb(20 32 27 / 0.03);
+    transition:
+      border-color 150ms ease,
+      box-shadow 150ms ease;
+  }
+  .field:hover {
+    border-color: var(--muted);
+  }
+  .field:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+  }
+  .field::placeholder {
+    color: color-mix(in srgb, var(--muted) 75%, transparent);
+  }
+  .field-sm {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.875rem;
+  }
+
+  .card {
+    border-radius: 1rem;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    box-shadow: var(--shadow-sm);
+  }
+
+  .label {
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  .link {
+    text-decoration: underline;
+    text-decoration-color: color-mix(in srgb, currentColor 35%, transparent);
+    text-underline-offset: 3px;
+    transition: text-decoration-color 150ms ease;
+  }
+  .link:hover {
+    text-decoration-color: currentColor;
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border-radius: 999px;
+    padding: 0.15rem 0.55rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.3;
+  }
+  .pill::before {
+    content: "";
+    width: 0.4rem;
+    height: 0.4rem;
+    border-radius: 999px;
+    background: currentColor;
+  }
+
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 0.375rem;
+    border: 1px solid var(--line);
+    background: var(--surface-2);
+    padding: 0.05rem 0.4rem;
+    font-size: 0.72rem;
+    color: var(--muted);
+  }
+
+  /* Receipt paper: a perforated top and bottom edge. */
+  .receipt {
+    --notch: 7px;
+    background: var(--surface);
+    -webkit-mask:
+      radial-gradient(circle var(--notch) at 50% 0, #0000 98%, #000) 50% 0 / calc(var(--notch) * 3) 51% repeat-x,
+      radial-gradient(circle var(--notch) at 50% 100%, #0000 98%, #000) 50% 100% / calc(var(--notch) * 3) 51% repeat-x;
+    mask:
+      radial-gradient(circle var(--notch) at 50% 0, #0000 98%, #000) 50% 0 / calc(var(--notch) * 3) 51% repeat-x,
+      radial-gradient(circle var(--notch) at 50% 100%, #0000 98%, #000) 50% 100% / calc(var(--notch) * 3) 51% repeat-x;
+  }
+  .receipt-shadow {
+    filter: drop-shadow(0 1px 1px rgb(20 32 27 / 0.06)) drop-shadow(0 18px 30px rgb(20 32 27 / 0.12));
+  }
+  @media (prefers-color-scheme: dark) {
+    .receipt-shadow {
+      filter: drop-shadow(0 18px 30px rgb(0 0 0 / 0.5));
+    }
+  }
+
+  .rule-dashed {
+    border-top: 1px dashed var(--line-strong);
+  }
+
+  /* Soft dotted backdrop for hero areas. */
+  .dots {
+    background-image: radial-gradient(color-mix(in srgb, var(--ink) 11%, transparent) 1px, transparent 1px);
+    background-size: 22px 22px;
+    mask-image: radial-gradient(ellipse 70% 60% at 60% 30%, #000 20%, transparent 75%);
+  }
+
+  .nav-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    border-radius: 0.5rem;
+    padding: 0.4rem 0.6rem;
+    color: var(--muted);
+    transition:
+      background-color 120ms ease,
+      color 120ms ease;
+  }
+  .nav-link:hover {
+    background: var(--surface-2);
+    color: var(--ink);
+  }
+  .nav-link[aria-current="page"] {
+    background: var(--accent-soft);
+    color: var(--ink);
+    font-weight: 500;
+  }
+
+  details > summary {
+    list-style: none;
+  }
+  details > summary::-webkit-details-marker {
+    display: none;
+  }
+  details[open] .chevron {
+    transform: rotate(180deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none !important;
+    animation: none !important;
+  }
 }

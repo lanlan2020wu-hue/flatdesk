@@ -1,68 +1,77 @@
+import Link from "next/link";
 import { requireSession } from "@/lib/auth";
-import { importZendeskAction } from "../actions";
-import SubmitButton from "@/components/SubmitButton";
+import { timeAgo } from "@/lib/format";
+import { ADAPTERS } from "@/lib/import/engine";
+import { IMPORT_STATUS, listImports } from "@/lib/import/report";
 
 export const metadata = { title: "Import" };
-// The import runs inside the form submission.
-export const maxDuration = 300;
 
-export default async function ImportPage({ searchParams }: PageProps<"/app/import">) {
+
+const WHAT: Record<string, string> = {
+  zendesk: "Tickets (archived ones too), macros, triggers and automations, tags, custom fields, users and organizations",
+  intercom: "Conversations with every reply and note, macros, tags, contacts, companies and teammates",
+  freshdesk: "Tickets with conversations, canned responses, scenarios, automation rules, contacts, companies and agents",
+  helpscout: "Conversations with every thread, saved replies, workflows, tags, custom fields, customers and users",
+};
+
+export default async function ImportPage() {
   const s = await requireSession();
-  const q = await searchParams;
-  const one = (k: string) => (typeof q[k] === "string" ? (q[k] as string) : undefined);
-  const imported = one("imported");
-  const error = one("error");
+  const past = await listImports(s.orgId);
 
   return (
-    <div className="grid max-w-2xl gap-6 px-4 py-6 md:px-8">
-      <div className="grid gap-2">
-        <h1 className="font-display text-2xl">Import from Zendesk</h1>
+    <div className="grid max-w-3xl gap-6 px-4 py-6 md:px-8 md:py-8">
+      <header className="grid gap-2">
+        <p className="eyebrow">Workspace</p>
+        <h1 className="font-display text-3xl">Bring your help desk with you</h1>
         <p className="text-muted">
-          Brings over your Zendesk tickets with every reply and internal note, their status, tags and dates. Nothing is sent to your
-          customers, and the AI leaves imported tickets alone.
+          Flatdesk copies everything it can read and keeps the original of every record, so nothing is dropped. Anything that doesn&apos;t
+          have a place in Flatdesk yet is listed in a report instead of disappearing. Your old help desk isn&apos;t changed.
         </p>
-      </div>
-
-      {error && <p className="rounded-md bg-warn-soft px-3 py-2 text-sm text-warn" role="alert">{error}</p>}
-      {imported !== undefined && (
-        <p className="rounded-md bg-accent-soft px-3 py-2 text-sm" role="status">
-          {imported === "0"
-            ? "No new tickets to import."
-            : `Imported ${imported} tickets with ${one("messages")} messages.`}{" "}
-          {Number(one("skipped")) > 0 && `Skipped ${one("skipped")} that were already here or deleted in Zendesk. `}
-          {one("more") ? "There are more tickets left. Run the import again to continue where it stopped." : "That's everything."}
-        </p>
-      )}
+      </header>
 
       {s.role !== "admin" ? (
-        <p className="text-muted">Only admins can import.</p>
+        <p className="card p-5 text-muted">Ask an admin on your team to run the import.</p>
       ) : (
-        <form action={importZendeskAction} className="grid gap-4">
-          <label className="grid gap-1">
-            <span>Zendesk subdomain</span>
-            <span className="flex items-center gap-1">
-              <input name="subdomain" required placeholder="yourcompany" autoComplete="off" className="w-48 rounded-md border border-line bg-surface px-3 py-2" />
-              <span className="text-muted">.zendesk.com</span>
-            </span>
-          </label>
-          <label className="grid gap-1">
-            <span>Zendesk admin email</span>
-            <input name="email" type="email" required autoComplete="off" className="rounded-md border border-line bg-surface px-3 py-2" />
-          </label>
-          <label className="grid gap-1">
-            <span>API token</span>
-            <span className="text-sm text-muted">
-              In Zendesk, go to Admin Center, Apps and integrations, Zendesk API, and add a token. We use it for this import only and
-              don&apos;t store it. Delete it in Zendesk when you&apos;re done.
-            </span>
-            <input name="token" type="password" required autoComplete="off" className="rounded-md border border-line bg-surface px-3 py-2" />
-          </label>
-          <SubmitButton pending="Importing, this can take a few minutes…">Import tickets</SubmitButton>
-          <p className="text-sm text-muted">
-            Large accounts import in parts of a few minutes each. Running it again skips tickets already imported. Attachments aren&apos;t
-            copied yet.
-          </p>
-        </form>
+        <ul className="grid gap-3 sm:grid-cols-2">
+          {Object.values(ADAPTERS).map((a) => (
+            <li key={a.id}>
+              <Link href={`/app/import/new/${a.id}`} className="card group grid h-full gap-2 p-5 transition-shadow hover:shadow-md">
+                <span className="flex items-center justify-between gap-2">
+                  <span className="font-medium">{a.name}</span>
+                  <span aria-hidden="true" className="text-muted transition-transform group-hover:translate-x-0.5">→</span>
+                </span>
+                <span className="text-sm text-muted">{WHAT[a.id]}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {past.length > 0 && (
+        <section className="grid gap-3">
+          <h2 className="eyebrow">Past imports</h2>
+          <ul className="card divide-y divide-line">
+            {past.map((j) => {
+              const tickets = j.counts.ticket;
+              return (
+                <li key={j.id}>
+                  <Link href={`/app/import/${j.id}`} className="flex flex-wrap items-center justify-between gap-2 px-5 py-3 text-sm hover:bg-surface-2">
+                    <span className="grid gap-0.5">
+                      <span className="font-medium">
+                        {ADAPTERS[j.source].name} · {j.account}
+                      </span>
+                      <span className="text-muted">
+                        Started {timeAgo(j.createdAt)}
+                        {tickets ? ` · ${tickets.imported} tickets` : ""}
+                      </span>
+                    </span>
+                    <span className={`pill ${IMPORT_STATUS[j.status].tone}`}>{IMPORT_STATUS[j.status].label}</span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
       )}
     </div>
   );

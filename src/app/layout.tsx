@@ -19,8 +19,18 @@ const plexMono = IBM_Plex_Mono({
 const fraunces = Fraunces({
   variable: "--font-fraunces",
   subsets: ["latin"],
-  weight: ["600"],
+  weight: ["500", "600"],
+  style: ["normal", "italic"],
 });
+
+// Keeps Clerk's sign-in, team and account screens in Flatdesk's colors and type.
+const clerkAppearance = {
+  variables: {
+    colorPrimary: "#17624b",
+    fontFamily: "var(--font-plex-sans), system-ui, sans-serif",
+    borderRadius: "0.625rem",
+  },
+};
 
 export const metadata: Metadata = {
   title: {
@@ -38,7 +48,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${plexSans.variable} ${plexMono.variable} ${fraunces.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans text-[15px] leading-relaxed">
-        {clerkEnabled ? <ClerkProvider>{children}</ClerkProvider> : children}
+        {clerkEnabled ? <ClerkProvider appearance={clerkAppearance}>{children}</ClerkProvider> : children}
       </body>
     </html>
   );

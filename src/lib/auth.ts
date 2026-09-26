@@ -6,6 +6,7 @@ import { cache } from "react";
 import { db, schema } from "@/db";
 import { syncSeats } from "@/lib/billing";
 import { clerkEnabled, devAuthEnabled } from "./auth-config";
+import { linkImportedAgent } from "./import/link";
 
 export type Session = {
   orgId: string;
@@ -64,4 +65,6 @@ async function ensureRows(session: Session, orgName: string, email: string) {
       target: [schema.agents.orgId, schema.agents.userId],
       set: { name: session.name, role: session.role, ...(email ? { email } : {}) },
     });
+  // Tickets and rules imported from the team's old help desk wait for their agent by email.
+  if (email) await linkImportedAgent(session.orgId, session.userId, email);
 }
