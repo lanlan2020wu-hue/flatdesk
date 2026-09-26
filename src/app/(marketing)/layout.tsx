@@ -3,6 +3,7 @@ import Logo from "@/components/Logo";
 import { CHECKED_ON } from "@/lib/pricing";
 
 const NAV = [
+  { href: "/#features", label: "Product" },
   { href: "/calculator", label: "Bill calculator" },
   { href: "/pricing", label: "Pricing" },
   { href: "/ai-billing-changes-2026", label: "2026 AI billing changes" },
@@ -22,11 +23,12 @@ export default function MarketingLayout({ children }: LayoutProps<"/">) {
             ))}
           </div>
           <div className="col-start-3 row-start-1 flex items-center gap-2">
-            <Link href="/app" className="rounded-md px-2.5 py-1.5 text-sm text-muted transition-colors hover:text-ink">
+            <Link href="/sign-in" className="whitespace-nowrap rounded-md px-2.5 py-1.5 text-sm text-muted transition-colors hover:text-ink">
               Sign in
             </Link>
-            <Link href="/#waitlist" className="btn btn-primary btn-sm">
-              Join the waitlist
+            <Link href="/sign-up" className="btn btn-primary btn-sm">
+              Start free trial
+              <span aria-hidden="true" className="arrow">→</span>
             </Link>
           </div>
         </nav>

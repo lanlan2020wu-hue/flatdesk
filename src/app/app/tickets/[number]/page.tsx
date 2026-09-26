@@ -1,4 +1,5 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, desc, eq } from "drizzle-orm";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import AutoSubmitSelect from "@/components/AutoSubmitSelect";
 import Avatar from "@/components/Avatar";
@@ -6,6 +7,7 @@ import Composer from "@/components/Composer";
 import { db, schema } from "@/db";
 import { requireSession } from "@/lib/auth";
 import { STATUS_STYLE, timeAgo } from "@/lib/format";
+import { STATUS_LABEL } from "@/lib/receipts";
 import { getTicket, listAgents } from "@/lib/tickets";
 import { replyAction, updateTicketAction } from "../../actions";
 
@@ -26,10 +28,25 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
   // "Imported from" first; Postgres returns jsonb keys in its own order.
   const fieldEntries = Object.entries(ticket.fields).sort(([a], [b]) => Number(b === "Imported from") - Number(a === "Imported from"));
   const customerFields = Object.entries(customer.fields);
-  const [agents, macros] = await Promise.all([
+  const [agents, macros, [aiEvent]] = await Promise.all([
     listAgents(s.orgId),
     db.select().from(schema.macros).where(and(eq(schema.macros.orgId, s.orgId))).orderBy(asc(schema.macros.name)),
+    db
+      .select()
+      .from(schema.aiEvents)
+      .where(and(eq(schema.aiEvents.orgId, s.orgId), eq(schema.aiEvents.ticketId, ticket.id)))
+      .orderBy(desc(schema.aiEvents.createdAt))
+      .limit(1),
   ]);
+  // The receipt line for this ticket's AI answer, shown under that answer.
+  const receipt =
+    aiEvent && aiEvent.kind !== "draft"
+      ? aiEvent.kind === "refunded"
+        ? STATUS_LABEL.refunded
+        : aiEvent.kind === "resolution"
+          ? STATUS_LABEL[aiEvent.overage ? "overage" : "included"]
+          : STATUS_LABEL["customer-replied"]
+      : null;
 
   return (
     <div className="grid gap-6 px-4 py-6 md:px-8 md:py-8 xl:grid-cols-[minmax(0,1fr)_280px]">
@@ -72,6 +89,14 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
                   </p>
                   <p className="whitespace-pre-wrap break-words">{m.body}</p>
                   {m.deliveryError && <p className="text-sm text-warn">This reply wasn&apos;t emailed: {m.deliveryError}</p>}
+                  {m.authorType === "ai" && receipt && aiEvent && (
+                    <p className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-accent/20 pt-2 text-xs text-muted">
+                      <span className="num">Receipt</span>
+                      <span>{receipt}</span>
+                      {aiEvent.sources.length > 0 && <span>· used {aiEvent.sources.join(", ")}</span>}
+                      <Link href={`/app/receipts?month=${aiEvent.month}#e-${aiEvent.id}`} className="link ml-auto">View</Link>
+                    </p>
+                  )}
                 </div>
               </li>
             );
