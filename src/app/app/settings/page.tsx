@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { db, schema } from "@/db";
@@ -81,8 +82,8 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
       <section className="card grid gap-3 p-5 sm:p-6">
         <h2 className="font-medium">Export</h2>
         <p className="text-muted">
-          Your data is yours. Download it any time, no need to ask us. Moving from Zendesk?{" "}
-          <a href="/app/import" className="link text-accent">Import your tickets</a>.
+          Your data is yours. Download it any time, no need to ask us. Moving from another help desk?{" "}
+          <Link href="/app/import" className="link text-accent">Import everything</Link>.
         </p>
         <ul className="grid gap-1.5 text-sm">
           {(["tickets", "messages", "customers", "macros"] as const).map((t) => (

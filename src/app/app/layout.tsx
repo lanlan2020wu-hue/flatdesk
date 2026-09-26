@@ -1,18 +1,23 @@
 import Link from "next/link";
 import AccountMenu from "@/components/AccountMenu";
 import { eq } from "drizzle-orm";
-import { db, schema } from "@/db";
 import Logo from "@/components/Logo";
 import NavLink from "@/components/NavLink";
+import { db, schema } from "@/db";
 import { requireSession } from "@/lib/auth";
 import { billingConfigured, isActive, refreshSubscription, TRIAL_DAYS } from "@/lib/billing";
+import { getOnboarding } from "@/lib/onboarding";
 import { VIEWS, viewCounts } from "@/lib/tickets";
 
 export const metadata = { title: { default: "Inbox", template: "%s · Flatdesk" } };
 
 export default async function AppLayout({ children }: LayoutProps<"/app">) {
   const s = await requireSession();
-  const [counts, org] = await Promise.all([viewCounts(s.orgId, s.userId), db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) })]);
+  const [counts, org, onboarding] = await Promise.all([
+    viewCounts(s.orgId, s.userId),
+    db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) }),
+    s.role === "admin" ? getOnboarding(s.orgId) : null,
+  ]);
   let status = org?.subscriptionStatus;
   // Right after Checkout the row is stale; ask Stripe before showing the banner.
   if (billingConfigured() && !isActive(status) && org?.stripeCustomerId) {
@@ -31,6 +36,19 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
             <svg viewBox="0 0 20 20" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M10 4v12M4 10h12" /></svg>
             New ticket
           </Link>
+          {onboarding?.visible && (
+            <Link href="/app/welcome" className="grid gap-1.5 rounded-lg border border-line bg-bg px-3 py-2.5 text-sm transition-colors hover:border-line-strong">
+              <span className="flex justify-between gap-2">
+                <span className="font-medium">Finish setup</span>
+                <span className="num text-xs text-muted">
+                  {onboarding.doneCount}/{onboarding.steps.length}
+                </span>
+              </span>
+              <span className="h-1 overflow-hidden rounded-full bg-line" aria-hidden="true">
+                <span className="block h-full rounded-full bg-accent" style={{ width: `${(onboarding.doneCount / onboarding.steps.length) * 100}%` }} />
+              </span>
+            </Link>
+          )}
           <nav className="grid gap-0.5 text-sm" aria-label="Views">
             <p className="eyebrow px-2.5 pb-1.5">Inbox</p>
             {VIEWS.map((v) => (
@@ -44,7 +62,7 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
             <p className="eyebrow px-2.5 pb-1.5">Workspace</p>
             <NavLink href="/app/reports">Reports</NavLink>
             <NavLink href="/app/macros">Macros and rules</NavLink>
-            <NavLink href="/app/import">Import</NavLink>
+            {s.role === "admin" && <NavLink href="/app/import">Import</NavLink>}
             <NavLink href="/app/settings">Settings</NavLink>
           </nav>
           <div className="mt-auto border-t border-line px-2 pt-4">
