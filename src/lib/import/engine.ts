@@ -1,5 +1,6 @@
 import { and, asc, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { INBOUND_FILE_LIMIT, MAX_FILES, saveAttachments, type NewFile } from "@/lib/attachments";
 import { normalizeTags } from "@/lib/tickets";
 import { seal, unseal } from "./crypto";
 import { ApiError, makeGetter, RateLimited, type FetchLike } from "./http";
@@ -7,7 +8,7 @@ import { freshdesk } from "./sources/freshdesk";
 import { helpscout } from "./sources/helpscout";
 import { intercom } from "./sources/intercom";
 import { zendesk } from "./sources/zendesk";
-import type { Adapter, Ctx, Kind, Mapped, Msg, Phase, Raw, SourceId } from "./types";
+import { ATTACHMENTS_LINKED, type Adapter, type Attachment, type Ctx, type Kind, type Mapped, type Msg, type Phase, type Raw, type SourceId } from "./types";
 
 // Runs imports in short steps so each fits in one serverless request: the
 // import page calls runStep() in a loop, and an import resumes where it
@@ -34,10 +35,17 @@ export function isSource(v: unknown): v is SourceId {
 async function makeCtx(orgId: string, adapter: Adapter, creds: Record<string, string>, notes: Set<string>, fetchImpl?: FetchLike): Promise<Ctx> {
   const conn = await adapter.connect(creds, fetchImpl);
   const cache = new Map<string, Raw | null>();
+  const apiHost = new URL(conn.base).host;
+  const doFetch = fetchImpl ?? fetch;
   return {
     source: adapter.id,
     creds,
     get: makeGetter(conn.base, conn.headers, fetchImpl),
+    download(url: string) {
+      const u = new URL(url, conn.base);
+      if (u.protocol !== "https:") throw new Error("Only https links are copied");
+      return doFetch(u.toString(), { headers: u.host === apiHost ? conn.headers : {}, signal: AbortSignal.timeout(15_000) });
+    },
     async lookup(kind: Kind, externalId: string) {
       const key = `${kind}:${externalId}`;
       if (!cache.has(key)) {
@@ -253,6 +261,7 @@ async function processRecord(job: Job, adapter: Adapter, phase: Phase, ctx: Ctx,
     const mapped = await phase.map(full, ctx);
     const prev = await db.query.importRecords.findFirst({ columns: { mappedId: true }, where });
     const written = await write(job, adapter, externalId, mapped, prev?.mappedId ?? null);
+    if (written.copy) written.issues.push(...(await copyAttachments(ctx, job.orgId, written.copy, count)));
     result = { ...written, issues: [...new Set([...mapped.issues, ...written.issues])], label: mapped.label.slice(0, 300) };
   } catch (e) {
     // A bad token or rate limit stops the step; anything about one record is
@@ -269,7 +278,9 @@ async function processRecord(job: Job, adapter: Adapter, phase: Phase, ctx: Ctx,
   count(phase.kind, result.imported ? "imported" : "kept");
 }
 
-type Written = { mappedId: string | null; imported: boolean; issues: string[] };
+// copy: messages just added whose files should now be copied into Flatdesk.
+type Written = { mappedId: string | null; imported: boolean; issues: string[]; copy?: Copy[] };
+type Copy = { ticketId: string; messageId: string; msg: Msg };
 const lower = (v: string | null | undefined) => (v ? v.trim().toLowerCase() : null);
 const placeholderEmail = (source: SourceId, id: string) => `${source}-${id.replace(/[^a-zA-Z0-9._-]/g, "")}@no-email.invalid`;
 const NO_EMAIL = "Has no email address; kept with a placeholder, so replies to them can't be emailed";
@@ -382,10 +393,61 @@ async function upsertCustomer(orgId: string, email: string, name: string | null,
   return row.id;
 }
 
-function withAttachments(m: Msg) {
-  const body = m.body.trim() || "(empty message)";
-  if (!m.attachments.length) return body;
-  return `${body}\n\nAttachments:\n${m.attachments.map((a) => `- ${a.name}${a.url ? `: ${a.url}` : ""}`).join("\n")}`;
+// A message's files are listed with their links first, then copied after the
+// message is saved; the list shrinks to whatever couldn't be copied. If a step
+// dies halfway, the links are still there.
+function withAttachments(m: Msg, files = m.attachments) {
+  const body = m.body.trim() || (m.attachments.length ? "" : "(empty message)");
+  if (!files.length) return body;
+  const list = `${files === m.attachments ? "Attachments" : "Attachments that couldn't be copied"}:\n${files.map((a) => `- ${a.name}${a.url ? `: ${a.url}` : ""}`).join("\n")}`;
+  return body ? `${body}\n\n${list}` : list;
+}
+
+async function fetchAttachment(ctx: Ctx, a: Attachment): Promise<NewFile | null> {
+  if (a.size && a.size > INBOUND_FILE_LIMIT) return null;
+  try {
+    let data: Buffer;
+    if (a.dataPath) {
+      const { data: json } = await ctx.get(a.dataPath);
+      data = Buffer.from(String(json.data ?? ""), "base64");
+    } else {
+      if (!a.url) return null;
+      const res = await ctx.download(a.url);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      if (Number(res.headers.get("content-length")) > INBOUND_FILE_LIMIT) return null;
+      data = Buffer.from(await res.arrayBuffer());
+    }
+    if (!data.length || data.length > INBOUND_FILE_LIMIT) return null;
+    return { filename: a.name, contentType: a.contentType || "application/octet-stream", data };
+  } catch (e) {
+    // A rate limit or revoked token stops the step like any other call.
+    if (e instanceof RateLimited || (e instanceof ApiError && (e.status === 401 || e.status === 403))) throw e;
+    console.error("import attachment failed", a.name, e);
+    return null;
+  }
+}
+
+// Time one ticket may spend downloading, so a step stays inside its request.
+const COPY_BUDGET_MS = 20_000;
+
+async function copyAttachments(ctx: Ctx, orgId: string, copies: Copy[], count: Count): Promise<string[]> {
+  let missed = false;
+  const deadline = Date.now() + COPY_BUDGET_MS;
+  for (const { ticketId, messageId, msg } of copies) {
+    const files: NewFile[] = [];
+    const left: Attachment[] = [];
+    for (const a of msg.attachments) {
+      const file = files.length < MAX_FILES && Date.now() < deadline ? await fetchAttachment(ctx, a) : null;
+      if (file) files.push(file);
+      else left.push(a);
+    }
+    await saveAttachments(orgId, ticketId, messageId, files);
+    await db.update(schema.messages).set({ body: withAttachments(msg, left) }).where(eq(schema.messages.id, messageId));
+    for (let i = 0; i < files.length; i++) count("file", "imported");
+    for (let i = 0; i < left.length; i++) count("file", "kept");
+    if (left.length) missed = true;
+  }
+  return missed ? [ATTACHMENTS_LINKED] : [];
 }
 
 async function writeTicket(job: Job, adapter: Adapter, externalId: string, m: Extract<Mapped, { kind: "ticket" }>, prevMappedId: string | null): Promise<Written> {
@@ -483,6 +545,13 @@ async function writeTicket(job: Job, adapter: Adapter, externalId: string, m: Ex
     firstResponseAt: firstResponse?.createdAt ?? null,
   };
 
+  const byExternalId = new Map(m.messages.map((msg) => [msg.externalId, msg]));
+  const toCopy = (ticketId: string, added: { id: string; externalId: string | null }[]) =>
+    added.flatMap((row) => {
+      const msg = row.externalId ? byExternalId.get(row.externalId) : undefined;
+      return msg?.attachments.length ? [{ ticketId, messageId: row.id, msg }] : [];
+    });
+
   const t = schema.tickets;
   return db.transaction(async (tx) => {
     // Serialises ticket numbering with live tickets arriving by email.
@@ -499,8 +568,10 @@ async function writeTicket(job: Job, adapter: Adapter, externalId: string, m: Ex
       const seen = new Set(ids);
       // Messages without ids came from an older import that didn't record them; don't guess which are new.
       const fresh = ids.includes(null) ? [] : rows.filter((r) => !seen.has(r.externalId));
-      if (fresh.length) await tx.insert(schema.messages).values(fresh.map((r) => ({ ...r, ticketId: existing.id })));
-      return { mappedId: existing.id, imported: true, issues };
+      const added = fresh.length
+        ? await tx.insert(schema.messages).values(fresh.map((r) => ({ ...r, ticketId: existing.id }))).returning({ id: schema.messages.id, externalId: schema.messages.externalId })
+        : [];
+      return { mappedId: existing.id, imported: true, issues, copy: toCopy(existing.id, added) };
     }
 
     // Keep the old ticket number when it's free, so "#4521" still means the same ticket.
@@ -518,7 +589,9 @@ async function writeTicket(job: Job, adapter: Adapter, externalId: string, m: Ex
       .set({ nextTicketNumber: sql`greatest(${schema.orgs.nextTicketNumber}, ${number + 1})` })
       .where(eq(schema.orgs.id, orgId));
     const [ticket] = await tx.insert(t).values({ orgId, number, ...ticketValues }).returning({ id: t.id });
-    if (rows.length) await tx.insert(schema.messages).values(rows.map((r) => ({ ...r, ticketId: ticket.id })));
-    return { mappedId: ticket.id, imported: true, issues };
+    const added = rows.length
+      ? await tx.insert(schema.messages).values(rows.map((r) => ({ ...r, ticketId: ticket.id }))).returning({ id: schema.messages.id, externalId: schema.messages.externalId })
+      : [];
+    return { mappedId: ticket.id, imported: true, issues, copy: toCopy(ticket.id, added) };
   });
 }

@@ -6,16 +6,26 @@ import type { SourceId } from "./types";
 export type Routes = Record<string, unknown>;
 
 // Answers GETs by path + query relative to the API base; anything else is a 404.
-export function fakeApi(base: string, routes: Routes): FetchLike & { calls: string[] } {
+// A route whose value is a FileBody answers with those bytes (an attachment download).
+export class FileBody {
+  constructor(public text: string) {}
+}
+
+// Answers GETs by path + query relative to the API base; anything else is a 404.
+// `authed` records which calls carried an Authorization header.
+export function fakeApi(base: string, routes: Routes): FetchLike & { calls: string[]; authed: string[] } {
   const calls: string[] = [];
+  const authed: string[] = [];
   const f = async (url: string, init?: RequestInit) => {
     if (init?.method === "POST") return Response.json({ access_token: "test-token" });
     const rel = url.startsWith(base) ? decodeURIComponent(url.slice(base.length)) : url;
     calls.push(rel);
+    if ((init?.headers as Record<string, string> | undefined)?.Authorization) authed.push(rel);
     if (!(rel in routes)) return new Response("not found", { status: 404 });
-    return Response.json(routes[rel]);
+    const value = routes[rel];
+    return value instanceof FileBody ? new Response(value.text) : Response.json(value);
   };
-  return Object.assign(f, { calls });
+  return Object.assign(f, { calls, authed });
 }
 
 const zendeskUsers = [
@@ -122,7 +132,11 @@ const zendeskRoutes: Routes = {
         plain_body: "I was charged twice.",
         public: true,
         created_at: "2024-01-02T10:00:00Z",
-        attachments: [{ file_name: "statement.png", content_url: "https://acme.zendesk.com/attachments/token/1" }],
+        attachments: [
+          { file_name: "statement.png", content_url: "https://acme.zendesk.com/attachments/token/1", content_type: "image/png", size: 13 },
+          { file_name: "gone.pdf", content_url: "https://acme.zendesk.com/attachments/token/2", content_type: "application/pdf", size: 10 },
+          { file_name: "huge.mov", content_url: "https://acme.zendesk.com/attachments/token/3", content_type: "video/quicktime", size: 900_000_000 },
+        ],
       },
       { id: 2, author_id: 11, plain_body: "Checking with finance.", public: false, created_at: "2024-01-02T11:00:00Z", attachments: [] },
       { id: 3, author_id: 10, plain_body: "Refunded, sorry!", public: true, created_at: "2024-01-02T12:00:00Z", attachments: [] },
@@ -130,6 +144,7 @@ const zendeskRoutes: Routes = {
     users: zendeskUsers,
     meta: { has_more: false },
   },
+  "https://acme.zendesk.com/attachments/token/1": new FileBody("png bytes 123"),
   "tickets/1/comments.json?page[size]=100&include=users": {
     comments: [{ id: 9, author_id: 601, plain_body: "Call me back", public: true, created_at: "2023-05-01T10:00:00Z", attachments: [] }],
     users: [{ id: 601, name: "Phone Only", role: "end-user" }],
@@ -262,7 +277,24 @@ const helpscoutRoutes: Routes = {
             threads: [
               { id: 3, type: "message", body: "<p>Fixed in 2.1</p>", createdBy: { id: 1, type: "user", email: "ana@acme.com", first: "Ana" }, createdAt: "2025-03-01T09:00:00Z" },
               { id: 4, type: "lineitem", action: { text: "Closed" }, createdAt: "2025-03-02T08:00:00Z" },
-              { id: 2, type: "customer", body: "<p>It crashes on launch</p>", createdBy: { id: 60, type: "customer", email: "kim@lo.dev" }, createdAt: "2025-03-01T08:00:00Z" },
+              {
+                id: 2,
+                type: "customer",
+                body: "<p>It crashes on launch</p>",
+                createdBy: { id: 60, type: "customer", email: "kim@lo.dev" },
+                createdAt: "2025-03-01T08:00:00Z",
+                _embedded: {
+                  attachments: [
+                    {
+                      id: 70,
+                      filename: "crash.log",
+                      mimeType: "text/plain",
+                      size: 9,
+                      _links: { data: { href: "https://api.helpscout.net/v2/attachments/70/data" }, web: { href: "https://secure.helpscout.net/file/70/crash.log" } },
+                    },
+                  ],
+                },
+              },
             ],
           },
         },
@@ -270,6 +302,7 @@ const helpscoutRoutes: Routes = {
     },
     page: { totalPages: 1 },
   },
+  "attachments/70/data": { data: Buffer.from("segfault!").toString("base64") },
 };
 
 export const FIXTURES: Record<SourceId, { base: string; creds: Record<string, string>; routes: Routes }> = {

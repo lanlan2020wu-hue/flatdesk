@@ -94,7 +94,7 @@ export default function PrivacyPage() {
         <p>
           Data is encrypted in transit and at rest by our hosting and database providers. Attachments can be downloaded only by your team, and
           by the chat visitor they were sent to. API keys for importing from another help desk are encrypted while an import runs and erased
-          when it ends.
+          when it ends. To stop spam, the chat widget and waitlist keep a one-way hash of the sender&apos;s IP address for a few days at most.
         </p>
       </Section>
 

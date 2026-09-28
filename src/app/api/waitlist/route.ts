@@ -1,4 +1,5 @@
 import { db, schema } from "@/db";
+import { hit, ipKey, LIMITS, tooMany } from "@/lib/rate-limit";
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -11,6 +12,10 @@ export async function POST(request: Request) {
   if (!process.env.DATABASE_URL) {
     return Response.json({ error: "The waitlist isn't open yet. Please try again soon." }, { status: 503 });
   }
+  // A hidden field only bots fill in: tell them it worked and keep nothing.
+  if (typeof body.website === "string" && body.website.trim()) return Response.json({ ok: true });
+  const verdict = await hit(LIMITS.waitlist(ipKey(request)));
+  if (!verdict.ok) return tooMany(verdict.retryAfter, "Too many sign-ups from your connection");
 
   const str = (v: unknown, max = 200) => (typeof v === "string" ? v.slice(0, max) : null);
   await db

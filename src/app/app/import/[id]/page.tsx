@@ -74,6 +74,8 @@ export default async function ImportDetailPage({ params }: PageProps<"/app/impor
                     {c.imported} imported
                     {c.kept > 0 && ` · ${c.kept} kept for reference`}
                     {state === "now" && c.found > c.imported + c.kept && ` · ${c.found - c.imported - c.kept} to go`}
+                    {p.kind === "ticket" && counts.file?.imported ? ` · ${counts.file.imported} files copied` : null}
+                    {p.kind === "ticket" && counts.file?.kept ? ` · ${counts.file.kept} linked` : null}
                   </>
                 ) : state === "done" ? (
                   "none"

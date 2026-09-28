@@ -68,7 +68,13 @@ describe("Zendesk", () => {
 
     const msgs = await messagesOf(t.id);
     assert.equal(msgs.length, 3);
-    assert.match(msgs[0].body, /Attachments:\n- statement\.png: https:\/\/acme\.zendesk\.com/);
+    // statement.png is copied; gone.pdf (404) and huge.mov (over the limit) stay as links.
+    assert.equal(msgs[0].body, "I was charged twice.\n\nAttachments that couldn't be copied:\n- gone.pdf: https://acme.zendesk.com/attachments/token/2\n- huge.mov: https://acme.zendesk.com/attachments/token/3");
+    const copied = await db.query.attachments.findMany({ where: eq(schema.attachments.messageId, msgs[0].id) });
+    assert.deepEqual(copied.map((f) => [f.filename, f.contentType, f.data.toString(), f.ticketId]), [["statement.png", "image/png", "png bytes 123", t.id]]);
+    assert.ok(api.authed.includes("https://acme.zendesk.com/attachments/token/1"), "Zendesk files are fetched with the API credentials");
+    assert.ok(!api.calls.includes("https://acme.zendesk.com/attachments/token/3"), "files over the limit aren't downloaded");
+    assert.deepEqual(job.counts.file, { found: 0, imported: 1, kept: 2 });
     assert.equal(msgs[0].authorType, "customer");
     assert.equal(msgs[1].internal, true);
     assert.equal(msgs[1].authorName, "Bo");
@@ -234,7 +240,10 @@ describe("Help Scout", () => {
     assert.equal(t.fields.Plan, "Business");
     assert.equal(t.fields.Inbox, "Support");
     const msgs = await messagesOf(t.id);
-    assert.deepEqual(msgs.map((m) => m.body), ["It crashes on launch", "Fixed in 2.1"]);
+    assert.deepEqual(msgs.map((m) => m.body), ["It crashes on launch", "Fixed in 2.1"], "a copied file isn't listed as a link");
+    const [log] = await db.query.attachments.findMany({ where: eq(schema.attachments.messageId, msgs[0].id) });
+    assert.equal(log?.filename, "crash.log");
+    assert.equal(log?.data.toString(), "segfault!", "Help Scout files come base64-encoded from the API");
     const macro = await db.query.macros.findFirst({ where: eq(schema.macros.orgId, ORG) });
     assert.equal(macro?.name, "Bug ack (Support)");
     assert.equal(macro?.body, "Thanks for the report, {%customer.firstName%}.");

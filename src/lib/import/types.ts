@@ -29,6 +29,19 @@ export type Ctx = {
   lookup(kind: Kind, externalId: string): Promise<Raw | null>;
   // A sentence about the import as a whole ("Help Scout doesn't share workflow conditions").
   note(text: string): void;
+  // Fetches a file. Credentials are sent only to the API's own host; signed
+  // links on other hosts (Intercom, Freshdesk storage) are fetched without them.
+  download(url: string): Promise<Response>;
+};
+
+export type Attachment = {
+  name: string;
+  // Where the file can be opened in the old help desk; kept in the message if copying fails.
+  url: string;
+  size?: number | null;
+  contentType?: string | null;
+  // An API path answering JSON with the file base64-encoded in `data` (Help Scout), used instead of url.
+  dataPath?: string | null;
 };
 
 export type ListResult = { records: { externalId: string; raw: Raw }[]; next: unknown | null };
@@ -42,7 +55,7 @@ export type Msg = {
   body: string;
   internal: boolean;
   createdAt: Date;
-  attachments: { name: string; url: string }[];
+  attachments: Attachment[];
 };
 
 export type Mapped = { label: string; issues: string[] } & (
@@ -124,4 +137,5 @@ export function fieldMap(entries: [string, unknown][]): Record<string, string> {
   return out;
 }
 
-export const ATTACHMENTS_LINKED = "Attachments are linked from the message, not copied into Flatdesk";
+// Engine issue when a file couldn't be downloaded or is over the size limit.
+export const ATTACHMENTS_LINKED = "Some attachments couldn't be copied, so the message links to them in the old help desk instead";

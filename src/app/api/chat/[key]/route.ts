@@ -1,17 +1,26 @@
 import { after } from "next/server";
 import { answerNewTicket } from "@/lib/ai";
-import { orgByWidgetKey, startConversation, validStart } from "@/lib/chat";
+import { isBot, orgByWidgetKey, readChatRequest, startConversation, validStart } from "@/lib/chat";
+import { hit, ipKey, LIMITS, tooMany } from "@/lib/rate-limit";
 
 export const maxDuration = 300;
 
-// Starts a chat conversation from the website widget.
+// Starts a chat conversation from the website widget, with any files attached.
 export async function POST(request: Request, ctx: RouteContext<"/api/chat/[key]">) {
   const { key } = await ctx.params;
   const org = await orgByWidgetKey(key);
   if (!org) return Response.json({ error: "Chat isn't set up for this site." }, { status: 404 });
-  const v = validStart(await request.json().catch(() => null));
+  const body = await readChatRequest(request);
+  if ("error" in body) return Response.json({ error: body.error }, { status: 400 });
+  if (isBot(body.fields)) return Response.json({ error: "Your message couldn't be sent." }, { status: 400 });
+  const v = validStart(body.fields);
   if ("error" in v) return Response.json({ error: v.error }, { status: 400 });
-  const { ticket, token } = await startConversation(org.id, v);
+
+  const ip = ipKey(request);
+  const verdict = await hit([...LIMITS.chatStart(ip, org.id), ...LIMITS.chatFiles(ip, body.files.length)]);
+  if (!verdict.ok) return tooMany(verdict.retryAfter);
+
+  const { ticket, token } = await startConversation(org.id, v, body.files);
   after(() => answerNewTicket(org.id, ticket.id));
   return Response.json({ number: ticket.number, token });
 }
