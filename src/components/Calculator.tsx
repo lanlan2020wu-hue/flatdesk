@@ -58,7 +58,7 @@ export default function Calculator({ initialTool, initialAgents, initialResoluti
   const bar = (n: number) => `${Math.max(2, (n / barMax) * 100)}%`;
 
   return (
-    <div style={{ "--d": 2 } as React.CSSProperties} className="enter grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+    <div data-play="" style={{ "--d": 2 } as React.CSSProperties} className="enter grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
       <form className="card grid content-start gap-5 self-start p-5 sm:p-6 lg:sticky lg:top-24" onSubmit={(e) => e.preventDefault()}>
         <p className="eyebrow">Your numbers</p>
         <label className="grid gap-1.5" htmlFor="tool">

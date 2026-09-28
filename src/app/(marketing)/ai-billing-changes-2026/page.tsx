@@ -114,8 +114,8 @@ export default function ChangesPage() {
         </ol>
       </section>
 
-      <section className="reveal grid gap-6">
-        <h2 className="font-display text-3xl">What to check on your account</h2>
+      <section data-play="" className="grid gap-6">
+        <h2 className="ink font-display text-3xl">What to check on your account</h2>
         <dl className="grid gap-4">
           {CHECKS.map(([vendor, text, url]) => (
             <div key={vendor} className="card grid gap-1.5 p-5">
@@ -126,8 +126,8 @@ export default function ChangesPage() {
         </dl>
       </section>
 
-      <section className="reveal card relative grid gap-4 overflow-hidden border-accent/30 bg-accent-soft p-6 sm:p-8">
-        <h2 className="font-display text-3xl">How Flatdesk bills AI</h2>
+      <section data-play="" className="card relative grid gap-4 overflow-hidden border-accent/30 bg-accent-soft p-6 sm:p-8">
+        <h2 className="ink font-display text-3xl">How Flatdesk bills AI</h2>
         <p>
           AI resolutions are part of the seat price: {PLAN.includedPerAgent} per agent per month, shared across the team, at{" "}
           {usd(PLAN.seatPrice)} per agent. At the limit the AI pauses. Overage at {usd(PLAN.overageRate, true)} per resolution exists only if

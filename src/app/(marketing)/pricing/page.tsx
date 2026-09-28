@@ -102,8 +102,8 @@ export default function PricingPage() {
         </div>
       </section>
 
-      <section className="reveal grid gap-6 md:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">
-        <h2 className="font-display text-3xl">Questions about billing</h2>
+      <section data-play="" className="grid gap-6 md:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">
+        <h2 className="ink font-display text-3xl">Questions about billing</h2>
         <div className="grid border-b border-line">
           {FAQ.map(([q, a]) => (
             <details key={q} className="group border-t border-line">

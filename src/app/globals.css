@@ -386,39 +386,107 @@ p {
 }
 
 /* ---------- Motion ----------
-   Everything below is progressive: it only runs when the visitor hasn't asked
-   for reduced motion, and scroll-linked effects only where the browser supports
-   scroll-driven animations. Without either, every element is simply visible. */
+   The motion is Flatdesk's own vocabulary rather than fades: paper printing out
+   line by line, a rubber stamp landing, ink wiping across a line of type, a
+   marker pen, line icons drawing themselves, and each product drawing acting
+   out what the feature does.
 
-@keyframes rise {
+   Everything is progressive. Nothing runs when the visitor asks for reduced
+   motion, and every "from" state is only held before and during an animation
+   (fill-mode backwards), so the resting state is always the element's own
+   and without the animation every element is simply visible.
+
+   Blocks marked [data-play] run once, when they scroll into view:
+   MotionObserver sets data-play="on". While scripting is available their
+   animations wait paused; without it they play on load. Only opacity,
+   transform and clip-path animate, so none of this triggers layout. */
+
+@keyframes ink {
   from {
-    opacity: 0;
-    transform: translateY(18px);
+    clip-path: inset(0 100% 0 0);
   }
-}
-@keyframes fade {
-  from {
-    opacity: 0;
+  to {
+    clip-path: inset(0 0 0 0);
   }
 }
 @keyframes print {
   from {
     clip-path: inset(0 0 100% 0);
-    transform: translateY(-14px);
+    transform: translateY(-16px);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+    transform: none;
+  }
+}
+@keyframes print-line {
+  from {
+    clip-path: inset(0 0 100% 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
+  }
+}
+@keyframes slot {
+  0%,
+  100% {
+    opacity: 0;
+  }
+  8%,
+  82% {
+    opacity: 1;
   }
 }
 @keyframes stamp {
   0% {
     opacity: 0;
-    transform: scale(1.9);
+    transform: scale(2.6);
   }
-  60% {
+  55% {
     opacity: 1;
-    transform: scale(0.94);
+    transform: scale(0.9);
+  }
+  75% {
+    transform: scale(1.05);
   }
   100% {
     opacity: 1;
     transform: scale(1);
+  }
+}
+@keyframes ink-ring {
+  from {
+    opacity: 0.55;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 0;
+    transform: scale(1.7);
+  }
+}
+@keyframes thud {
+  0%,
+  100% {
+    transform: none;
+  }
+  30% {
+    transform: translateY(3px) scaleY(0.992);
+  }
+}
+@keyframes marker {
+  from {
+    background-size: 0% 100%;
+  }
+  to {
+    background-size: 100% 100%;
+  }
+}
+@keyframes draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
   }
 }
 @keyframes grow-y {
@@ -436,6 +504,76 @@ p {
     transform: scale(0);
   }
 }
+@keyframes appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes arrive {
+  from {
+    background-color: var(--accent-soft);
+  }
+}
+@keyframes open-widget {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  70% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+@keyframes typing {
+  0%,
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes bounce-dot {
+  0%,
+  60%,
+  100% {
+    transform: none;
+  }
+  30% {
+    transform: translateY(-3px);
+  }
+}
+@keyframes twinkle {
+  0% {
+    transform: scale(0.4) rotate(-90deg);
+  }
+  60% {
+    transform: scale(1.3) rotate(10deg);
+  }
+  100% {
+    transform: none;
+  }
+}
+@keyframes pulse-ring {
+  from {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+  to {
+    box-shadow: 0 0 0 8px transparent;
+  }
+}
+@keyframes shimmer {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
 @keyframes drift {
   to {
     background-position: 100% 50%;
@@ -448,14 +586,75 @@ p {
   }
 }
 
+/* Pieces that exist only while they animate (the printer slot, typing dots,
+   the ink ring) are invisible by default. */
+.printer-slot,
+.typing,
+.stamp::after {
+  opacity: 0;
+}
+
+/* Paths opt in to being drawn with pathLength="1". */
+.draw path {
+  stroke-dasharray: 1;
+}
+
+.hl-draw {
+  background-repeat: no-repeat;
+}
+
+/* The slot the hero bill prints out of. */
+.printer-slot {
+  position: absolute;
+  top: -7px;
+  left: -14px;
+  right: -14px;
+  height: 12px;
+  border-radius: 999px;
+  background: linear-gradient(#2a3631, #121a17);
+  box-shadow: inset 0 -2px 0 rgb(0 0 0 / 0.5), 0 2px 6px rgb(20 32 27 / 0.25);
+  pointer-events: none;
+}
+
+/* The ink ring left around the stamp as it lands. */
+.stamp::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border: 2px solid var(--accent);
+  border-radius: 9px;
+}
+
+/* A line struck through, drawn rather than text-decoration so it can animate. */
+.strike {
+  position: relative;
+}
+.strike::after {
+  content: "";
+  position: absolute;
+  left: 0.4rem;
+  right: 0.4rem;
+  top: 50%;
+  height: 1.5px;
+  background: currentColor;
+  transform-origin: left;
+}
+
 @media (prefers-reduced-motion: no-preference) {
-  /* Page-load entrance for the hero: a short, staggered rise. */
+  /* Page-load entrance: each line of the hero is inked on from the left, like
+     a roller passing over type. The clip is dropped when it ends so shadows
+     around buttons aren't cut off. */
   .enter {
-    animation: rise 700ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
-    animation-delay: calc(var(--d, 0) * 90ms);
+    animation: ink 650ms cubic-bezier(0.65, 0, 0.35, 1) backwards;
+    animation-delay: calc(var(--d, 0) * 110ms);
   }
   .enter-fade {
-    animation: fade 500ms ease both;
+    animation: appear 600ms ease backwards;
+  }
+
+  /* The marker pen runs along the one phrase that matters. */
+  .hl-draw {
+    animation: marker 700ms cubic-bezier(0.6, 0, 0.3, 1) 900ms backwards;
   }
 
   /* The ribbon's colors drift slowly; slow enough to notice only on a second look. */
@@ -463,23 +662,39 @@ p {
     animation: drift 28s ease-in-out infinite alternate;
   }
 
-  /* The receipt prints out of the top, then the "Flat" stamp lands on it. */
-  .print {
-    animation: print 1100ms cubic-bezier(0.3, 0.8, 0.25, 1) 250ms both;
+  /* The hero bill feeds out of a printer slot in steps, like a till roll, then
+     the "Flat" stamp lands on it and the paper takes the knock. On phones the
+     bill sits below the fold, so it waits until it's scrolled to. */
+  [data-play] .print {
+    animation:
+      print 1400ms steps(16, end) 200ms backwards,
+      thud 260ms ease-out 1850ms;
   }
-  .stamp {
-    animation: stamp 480ms cubic-bezier(0.3, 1.4, 0.5, 1) 1300ms both;
+  [data-play] .printer-slot {
+    animation: slot 1700ms ease 100ms backwards;
+  }
+  [data-play] .stamp {
+    animation: stamp 460ms cubic-bezier(0.3, 0.9, 0.4, 1) 1600ms backwards;
+  }
+  [data-play] .stamp::after {
+    animation: ink-ring 700ms ease-out 1850ms;
   }
 
-  /* Hover affordances. */
+  /* Cards press like a stamp on hover instead of floating up. */
   .lift {
     transition:
-      transform 200ms ease,
-      box-shadow 200ms ease;
+      transform 160ms ease,
+      box-shadow 160ms ease,
+      border-color 160ms ease;
   }
   .lift:hover {
-    transform: translateY(-3px);
-    box-shadow: var(--shadow-md);
+    border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
+    box-shadow: 4px 4px 0 var(--accent-soft);
+    transform: translate(-2px, -2px);
+  }
+  .lift:active {
+    box-shadow: 1px 1px 0 var(--accent-soft);
+    transform: translate(0, 0);
   }
   .btn .arrow {
     transition: transform 180ms ease;
@@ -488,25 +703,119 @@ p {
     transform: translateX(3px);
   }
 
+  /* ----- Blocks that play once on scroll ----- */
+
+  /* Headings are inked on; markers and line icons draw in order of --i. */
+  [data-play] .ink {
+    animation: ink 800ms cubic-bezier(0.65, 0, 0.35, 1) backwards;
+  }
+  [data-play] .hl-draw {
+    animation-delay: 700ms;
+  }
+  [data-play] .draw path {
+    animation: draw 900ms cubic-bezier(0.6, 0, 0.3, 1) calc(200ms + var(--i, 0) * 140ms) backwards;
+  }
+
+  /* Printed lines, one after another. */
+  [data-play] .ln {
+    animation: print-line 360ms steps(6, end) var(--at, calc(150ms + var(--i, 0) * 220ms)) backwards;
+  }
+  /* A refunded line is struck through once the statement has printed. */
+  [data-play] .strike::after {
+    animation: grow-x 380ms cubic-bezier(0.6, 0, 0.3, 1) 1200ms backwards;
+  }
+
+  /* Self-writing macro: the sparkle catches, then the reply writes itself word
+     by word, and the save button pulses once it's finished. */
+  [data-play] .sparkle {
+    animation: twinkle 600ms cubic-bezier(0.3, 1.4, 0.5, 1) 200ms backwards;
+  }
+  [data-play] .word {
+    animation: appear 160ms ease-out calc(600ms + var(--w, 0) * 70ms) backwards;
+  }
+  [data-play] .save {
+    animation: pulse-ring 900ms ease-out calc(700ms + var(--words, 0) * 70ms) 2;
+  }
+
+  /* Import: each phase fills in turn and says "done" when it lands. The
+     running phase keeps a light sweeping across it. */
+  [data-play] .meter {
+    transform-origin: left;
+    animation: grow-x 650ms cubic-bezier(0.5, 0, 0.2, 1) var(--at, calc(200ms + var(--i, 0) * 450ms)) backwards;
+  }
+  [data-play] .phase-done {
+    animation: appear 200ms ease-out calc(850ms + var(--i, 0) * 450ms) backwards;
+  }
+  [data-play] .running {
+    position: relative;
+    overflow: hidden;
+  }
+  [data-play] .running::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    width: 40%;
+    background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.55), transparent);
+    animation: shimmer 1600ms ease-in-out 2200ms infinite backwards;
+  }
+
+  /* Inbox: tickets land one at a time, newest on top, each with a brief flash. */
+  [data-play] .ticket {
+    animation:
+      print-line 300ms steps(4, end) calc(150ms + var(--i, 0) * 260ms) backwards,
+      arrive 1400ms ease-out calc(150ms + var(--i, 0) * 260ms) backwards;
+  }
+
+  /* AI answer: the question, a moment of typing, the answer, then its receipt
+     line and the allowance meter. */
+  [data-play] .say {
+    animation: appear 250ms ease var(--at, 0ms) backwards;
+  }
+  [data-play] .typing {
+    animation: typing 900ms linear 500ms;
+  }
+  [data-play] .typing i {
+    animation: bounce-dot 450ms ease-in-out calc(500ms + var(--j, 0) * 120ms) 2;
+  }
+
+  /* Chat widget: the launcher pops, then the window opens out of it. */
+  [data-play] .launcher {
+    animation: pop 380ms cubic-bezier(0.3, 1.5, 0.5, 1) 150ms backwards;
+  }
+  [data-play] .widget {
+    transform-origin: bottom right;
+    animation: open-widget 480ms cubic-bezier(0.3, 0.9, 0.4, 1) 450ms backwards;
+  }
+
+  /* Charts: bars grow from the baseline left to right. */
+  [data-play] .bar {
+    transform-origin: bottom;
+    animation: grow-y 650ms cubic-bezier(0.3, 0.8, 0.3, 1) calc(150ms + var(--i, 0) * 70ms) backwards;
+  }
+  /* In the year chart the other vendor's bill climbs month by month while
+     Flatdesk's bars rise together, and a flat line is ruled across them. */
+  [data-play] .bar-flat {
+    animation-delay: 1100ms;
+  }
+  [data-play] .flatline {
+    transform-origin: left;
+    animation: grow-x 700ms cubic-bezier(0.6, 0, 0.3, 1) 1500ms backwards;
+  }
+  [data-play] .flatline-label {
+    animation: appear 300ms ease 2100ms backwards;
+  }
+
+  /* Hold everything above until the block scrolls into view. */
+  @media (scripting: enabled) {
+    [data-play]:not([data-play="on"]),
+    [data-play]:not([data-play="on"]) *,
+    [data-play]:not([data-play="on"]) *::before,
+    [data-play]:not([data-play="on"]) *::after {
+      animation-play-state: paused !important;
+    }
+  }
+
   @supports (animation-timeline: view()) {
-    /* Sections rise in as they scroll into view. */
-    .reveal {
-      animation: rise linear both;
-      animation-timeline: view();
-      animation-range: entry 5% cover 30%;
-    }
-
-    /* Chart bars grow from the baseline as the chart scrolls in, left to right. */
-    .chart {
-      view-timeline-name: --chart;
-    }
-    .chart .bar {
-      transform-origin: bottom;
-      animation: grow-y linear both;
-      animation-timeline: --chart;
-      animation-range: entry calc(20% + var(--i, 0) * 4%) cover calc(45% + var(--i, 0) * 2%);
-    }
-
     /* Billing-changes timeline: the rail draws down and each dot pops as it arrives. */
     .rail {
       view-timeline-name: --rail;
@@ -529,12 +838,6 @@ p {
       animation-timeline: scroll(root);
       animation-range: 0 120px;
     }
-  }
-
-  /* Calculator bars and the savings figure ease between values. */
-  .meter {
-    transform-origin: left;
-    animation: grow-x 900ms cubic-bezier(0.2, 0.7, 0.2, 1) 200ms both;
   }
 }
 

@@ -18,9 +18,11 @@ export default function YearChart() {
   const top = Math.ceil(max / 500) * 500;
   const pct = (n: number) => `${(n / top) * 100}%`;
   const ticks = [0, top / 2, top];
+  // With the cap on, Flatdesk's bill is the seat price every month.
+  const flat = rows[0].ours;
 
   return (
-    <figure className="chart card grid gap-5 p-5 sm:p-6">
+    <figure className="card grid gap-5 p-5 sm:p-6">
       <figcaption className="grid gap-3">
         <div className="grid gap-1">
           <p className="font-medium">Monthly bill for a 10-agent team, one example year</p>
@@ -48,7 +50,7 @@ export default function YearChart() {
             {rows.map((r, i) => (
               <div key={r.month} style={{ "--i": i } as React.CSSProperties} className="group relative flex items-end justify-center gap-[2px]">
                 <div className="bar w-full max-w-4 rounded-t-[4px] bg-chart-other transition-opacity group-hover:opacity-80" style={{ height: pct(r.fin) }} />
-                <div className="bar w-full max-w-4 rounded-t-[4px] bg-accent transition-opacity group-hover:opacity-80" style={{ height: pct(r.ours) }} />
+                <div className="bar bar-flat w-full max-w-4 rounded-t-[4px] bg-accent transition-opacity group-hover:opacity-80" style={{ height: pct(r.ours) }} />
                 <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 hidden w-max -translate-x-1/2 rounded-lg border border-line bg-surface px-3 py-2 text-xs shadow-md group-hover:block">
                   <p className="mb-1 font-medium">{r.month}: {r.resolutions.toLocaleString()} AI resolutions</p>
                   <p className="num flex justify-between gap-4"><span className="text-muted">{fin.vendor}</span>{usd(r.fin)}</p>
@@ -57,6 +59,10 @@ export default function YearChart() {
               </div>
             ))}
           </div>
+          <div className="flatline pointer-events-none absolute inset-x-0 border-t-2 border-accent" style={{ bottom: pct(flat) }} />
+          <span className="flatline-label num pointer-events-none absolute left-1 rounded border border-accent/30 shadow-sm bg-surface px-1.5 text-[11px] font-medium text-accent" style={{ bottom: `calc(${pct(flat)} + 4px)` }}>
+            {usd(flat)} every month
+          </span>
         </div>
         <div />
         <div className="num grid grid-cols-12 gap-1 text-center text-[11px] text-muted sm:gap-2">

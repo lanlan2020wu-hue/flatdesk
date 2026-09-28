@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Logo from "@/components/Logo";
+import MotionObserver from "@/components/MotionObserver";
 import { CHECKED_ON } from "@/lib/pricing";
 import { SITE } from "@/lib/site";
 
@@ -36,6 +37,7 @@ export default function MarketingLayout({ children }: LayoutProps<"/">) {
       </header>
       {/* Decorations (the receipt stamp) may poke past the edge; never let them cause sideways scrolling. */}
       <main className="flex-1 overflow-x-clip">{children}</main>
+      <MotionObserver />
       <footer className="mt-24 border-t border-line bg-surface-2/60">
         <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:grid-cols-[1.4fr_1fr] sm:px-6">
           <div className="grid content-start gap-3">
