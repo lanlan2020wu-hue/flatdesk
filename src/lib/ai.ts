@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import { and, asc, count, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, count, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema } from "@/db";
 import { attachmentsByMessage } from "@/lib/attachments";
@@ -16,10 +16,13 @@ import { PLAN } from "@/lib/pricing";
 // card gets PLAN.trialPerAgent for the whole trial and no overage, which caps
 // what an unpaid team can spend; adding a card lifts it to the full allowance.
 
-const MODEL = "claude-opus-5";
-// USD per million tokens, for internal cost logging. Prompt caching bills cache
-// writes (5-minute TTL) at 1.25x the input rate and cache reads at 0.1x.
-const PRICE_PER_MTOK = { input: 5, output: 25, cacheWrite: 6.25, cacheRead: 0.5 };
+const MODEL = "claude-opus-5-5";
+// USD per million tokens, for internal cost logging. The system prompt is cached
+// for an hour (small teams often go more than 5 minutes between tickets), which
+// bills cache writes at 2x the input rate; cache reads are $0.20.
+const PRICE_PER_MTOK = { input: 4, output: 20, cacheWrite: 8, cacheRead: 0.2 };
+// Keeps a hung call from outliving the serverless function that started it.
+const CALL_OPTIONS = { timeout: 120_000, maxRetries: 1 };
 
 export function callCost(usage: {
   input_tokens: number;
@@ -47,32 +50,48 @@ export function monthKey(d = new Date()) {
 }
 
 // "draft" rows are slots reserved while a call is in flight; they count toward
-// the cap so parallel tickets can't overshoot it.
-const COUNTED = ["resolution", "draft"] as const;
+// the cap so parallel tickets can't overshoot it. A draft older than this was
+// abandoned (the function was killed mid-call) and stops counting.
+const DRAFT_TTL_MINUTES = 15;
+// Handoffs and answers the customer replied to don't count toward the allowance,
+// but each one is still a paid model call. This bounds every call, counted or
+// not, at a multiple of the allowance.
+export const ATTEMPTS_PER_INCLUDED = 3;
+// A trial allowance is sized from everyone who signed in, capped so that
+// inviting lots of people during the trial can't inflate it.
+const TRIAL_AGENT_CAP = 10;
 
-export type Usage = { included: number; used: number; overage: number; month: string; trial: boolean };
+export type Usage = { included: number; used: number; overage: number; attempts: number; month: string; trial: boolean };
 type Org = typeof orgs.$inferSelect;
 
 // The allowance and what's used of it. During a no-card trial, usage counts
 // across the whole trial (it can span two months), not just this month.
 async function measure(q: Pick<typeof db, "select">, org: Org, month: string): Promise<Usage> {
   const trial = month === monthKey() && access(org).state === "trial";
-  const where = [eq(aiEvents.orgId, org.id), inArray(aiEvents.kind, [...COUNTED])];
+  const where = [eq(aiEvents.orgId, org.id)];
   if (!trial) where.push(eq(aiEvents.month, month));
-  const [[{ agentCount }], [{ used, overage }]] = await Promise.all([
+  const counted = sql`(${aiEvents.kind} = 'resolution' or (${aiEvents.kind} = 'draft' and ${aiEvents.createdAt} > now() - make_interval(mins => ${DRAFT_TTL_MINUTES})))`;
+  const [[{ agentCount }], [{ used, overage, attempts }]] = await Promise.all([
     q.select({ agentCount: count() }).from(agents).where(eq(agents.orgId, org.id)),
     q
-      .select({ used: count(), overage: sql<number>`count(*) filter (where ${aiEvents.overage})` })
+      .select({
+        used: sql<number>`count(*) filter (where ${counted})`,
+        overage: sql<number>`count(*) filter (where ${counted} and ${aiEvents.overage})`,
+        attempts: count(),
+      })
       .from(aiEvents)
       .where(and(...where)),
   ]);
-  const included = Math.max(1, agentCount) * (trial ? PLAN.trialPerAgent : PLAN.includedPerAgent);
-  return { included, used: Number(used), overage: Number(overage), month, trial };
+  // A paying team's allowance follows the seats it pays for. Agent rows are
+  // never deleted, so counting them would keep paying for people who left.
+  const seats = trial ? Math.min(Number(agentCount), TRIAL_AGENT_CAP) : (org.billedSeats ?? Number(agentCount));
+  const included = Math.max(1, seats) * (trial ? PLAN.trialPerAgent : PLAN.includedPerAgent);
+  return { included, used: Number(used), overage: Number(overage), attempts: Number(attempts), month, trial };
 }
 
 export async function aiUsage(orgId: string, month = monthKey()): Promise<Usage> {
   const org = await db.query.orgs.findFirst({ where: eq(orgs.id, orgId) });
-  if (!org) return { included: PLAN.includedPerAgent, used: 0, overage: 0, month, trial: false };
+  if (!org) return { included: PLAN.includedPerAgent, used: 0, overage: 0, attempts: 0, month, trial: false };
   return measure(db, org, month);
 }
 
@@ -85,7 +104,12 @@ export async function reserveSlot(orgId: string, ticketId: string): Promise<Slot
     const org = await tx.query.orgs.findFirst({ where: eq(orgs.id, orgId) });
     if (!org) return { paused: "missing org" };
     const month = monthKey();
-    const { included, used, overage, trial } = await measure(tx, org, month);
+    const { included, used, overage, attempts, trial } = await measure(tx, org, month);
+    // Overage extends the allowance, so it extends the attempt limit with it.
+    const overageRoom = org.aiOverageEnabled && !trial ? (org.aiOverageMonthlyLimit ?? included) : 0;
+    if (attempts >= (included + overageRoom) * ATTEMPTS_PER_INCLUDED) {
+      return { paused: "The AI has handed an unusually large number of tickets to the team this month, so it's paused until next month. Adding saved answers for common questions helps it answer more of them." };
+    }
     const isOverage = used >= included;
     if (isOverage && trial) {
       return { paused: `The AI has used the ${included} answers included in the free trial, so it's paused. Adding a card in Settings unlocks the full ${PLAN.includedPerAgent} per agent each month.` };
@@ -172,14 +196,15 @@ export async function answerNewTicket(orgId: string, ticketId: string) {
       .limit(100);
 
     const client = new Anthropic();
-    const response = await client.beta.messages.parse({
+    const response = await client.beta.messages.parse(
+      {
       model: MODEL,
       max_tokens: 16000,
       betas: ["server-side-fallback-2026-07-01"],
       fallbacks: "default",
       thinking: { type: "adaptive" },
       output_config: { effort: "medium", format: zodOutputFormat(Decision) },
-      system: [{ type: "text", text: systemPrompt(org.name, org.aiInstructions, knowledge), cache_control: { type: "ephemeral" } }],
+      system: [{ type: "text", text: systemPrompt(org.name, org.aiInstructions, knowledge), cache_control: { type: "ephemeral", ttl: "1h" } }],
       messages: [
         {
           role: "user",
@@ -188,7 +213,9 @@ export async function answerNewTicket(orgId: string, ticketId: string) {
           }\n\n${thread[0].body}`,
         },
       ],
-    });
+      },
+      CALL_OPTIONS,
+    );
 
     const usage = response.usage;
     const inputTokens = usage.input_tokens + (usage.cache_creation_input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0);
@@ -236,10 +263,18 @@ export async function answerNewTicket(orgId: string, ticketId: string) {
       await db.update(aiEvents).set({ kind: "handoff", reason: "A person picked the ticket up first.", ...metered }).where(eq(aiEvents.id, slot.eventId));
       return;
     }
-    await deliverReply(orgId, messageId);
-    await sendUsageNotice(orgId);
+    // The answer is saved and counted. A failed send is retried from the
+    // ticket like any reply, so it must not un-count the answer below.
+    try {
+      await deliverReply(orgId, messageId);
+      await sendUsageNotice(orgId);
+    } catch (err) {
+      console.error("AI answer saved but sending failed", err);
+      await note(orgId, ticketId, "The AI answered, but the email didn't go out. Resend it from the ticket.");
+    }
   } catch (err) {
-    await db.delete(aiEvents).where(eq(aiEvents.id, slot.eventId));
+    // Only a slot still in flight is released; a finished answer or handoff stays on record.
+    await db.delete(aiEvents).where(and(eq(aiEvents.id, slot.eventId), eq(aiEvents.kind, "draft")));
     const reason = err instanceof Anthropic.APIError ? `the AI service returned an error (${err.status ?? "network"})` : "of an internal error";
     console.error("AI answer failed", err);
     await note(orgId, ticketId, `AI didn't answer because ${reason}. The ticket is with the team.`);

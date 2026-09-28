@@ -39,8 +39,11 @@ export function makeGetter(base: string, headers: Record<string, string>, fetchI
         throw new ApiError(0, `Couldn't reach ${host}: ${(e as Error).message}`);
       }
       if (res.status === 429 || res.status === 503) {
+        // Retry-After is seconds; X-RateLimit-Reset is seconds on some APIs and a
+        // Unix timestamp on others (Intercom), so a big value is read as a time.
         const after = Number(res.headers.get("retry-after") ?? res.headers.get("x-ratelimit-reset") ?? 10);
-        const waitMs = (Number.isFinite(after) && after > 0 ? after : 10) * 1000;
+        const seconds = !Number.isFinite(after) || after <= 0 ? 10 : after > 1e9 ? after - Date.now() / 1000 : after;
+        const waitMs = Math.min(Math.max(seconds, 1), 3600) * 1000;
         if (waitMs <= MAX_INLINE_WAIT_MS && attempt < 3) {
           await new Promise((r) => setTimeout(r, waitMs));
           continue;

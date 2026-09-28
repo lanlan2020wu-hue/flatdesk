@@ -136,7 +136,7 @@ export default function Home() {
           <div className="grid gap-6">
             <p style={{ "--d": 0 } as React.CSSProperties} className="enter eyebrow flex w-max items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 shadow-sm">
               <span className="size-1.5 rounded-full bg-accent" />
-              Help desk for teams of 5–20 agents
+              Help desk for teams of 3–15 agents
             </p>
             <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-[2.6rem] leading-[1.05] sm:text-6xl">
               From {usd(PLAN.annualSeatPrice)} per agent. AI included. <span className="hl hl-draw italic">The same bill every month.</span>

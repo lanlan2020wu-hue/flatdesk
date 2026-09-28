@@ -84,7 +84,7 @@ export default async function RivalPage({ params }: PageProps<"/compare/[slug]">
         <h2 className="ink font-display text-2xl">Which should you pick?</h2>
         <p><span className="font-medium">Pick {r.name} if</span> {r.pickThem.charAt(0).toLowerCase() + r.pickThem.slice(1)}</p>
         <p>
-          <span className="font-medium">Pick Flatdesk if</span> you&apos;re an email and chat team of about 5 to 20 agents and want AI in the price, with a bill that doesn&apos;t move.
+          <span className="font-medium">Pick Flatdesk if</span> you&apos;re an email and chat team of about 3 to 15 agents and want AI in the price, with a bill that doesn&apos;t move.
           {r.canImport ? ` The import brings your ${r.name} history with you.` : ""}
         </p>
         <div className="mt-2 flex flex-wrap gap-3">
