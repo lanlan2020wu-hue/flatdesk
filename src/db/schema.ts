@@ -261,6 +261,14 @@ export const waitlist = pgTable("waitlist", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+// Counters for the public endpoints (chat widget, waitlist). One row per key
+// and window; rows past reset_at are reused or swept (see lib/rate-limit.ts).
+export const rateLimits = pgTable("rate_limits", {
+  key: text("key").primaryKey(),
+  count: integer("count").notNull().default(0),
+  resetAt: timestamp("reset_at", { withTimezone: true }).notNull(),
+});
+
 // ---- Import from other help desks ----------------------------------------
 
 export const importSource = pgEnum("import_source", ["zendesk", "intercom", "freshdesk", "helpscout"]);

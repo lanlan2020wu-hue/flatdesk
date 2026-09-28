@@ -1,6 +1,6 @@
 import { htmlToText } from "@/lib/email";
 import { ApiError } from "../http";
-import { ATTACHMENTS_LINKED, date, fieldMap, str, type Adapter, type Ctx, type Mapped, type Msg, type Raw, type Status } from "../types";
+import { date, fieldMap, str, type Adapter, type Ctx, type Mapped, type Msg, type Raw, type Status } from "../types";
 
 // Zendesk Support API v2. Auth: agent email + API token (Admin Center >
 // Apps and integrations > APIs > Zendesk API). Tickets come from the
@@ -272,8 +272,12 @@ export const zendesk: Adapter = {
         for (const c of comments) {
           const author = await person(c.author_id);
           const isCustomer = author ? (author.role ?? "end-user") === "end-user" : str(c.author_id) === str(r.requester_id);
-          const attachments = ((c.attachments ?? []) as Raw[]).map((a) => ({ name: str(a.file_name), url: str(a.content_url) }));
-          if (attachments.length) issues.push(ATTACHMENTS_LINKED);
+          const attachments = ((c.attachments ?? []) as Raw[]).map((a) => ({
+            name: str(a.file_name),
+            url: str(a.content_url),
+            size: Number(a.size) || null,
+            contentType: a.content_type ? str(a.content_type) : null,
+          }));
           messages.push({
             externalId: str(c.id),
             author: c.author_id === -1 ? "system" : isCustomer ? "customer" : "agent",

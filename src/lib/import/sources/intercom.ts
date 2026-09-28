@@ -1,6 +1,6 @@
 import { htmlToText } from "@/lib/email";
 import { ApiError } from "../http";
-import { ATTACHMENTS_LINKED, date, fieldMap, str, type Adapter, type Ctx, type Msg, type Raw, type Status } from "../types";
+import { date, fieldMap, str, type Adapter, type Ctx, type Msg, type Raw, type Status } from "../types";
 
 // Intercom (now Fin) REST API. Auth: an access token from a private app in
 // the Developer Hub. Conversations are listed, then each is fetched in full
@@ -174,7 +174,8 @@ export const intercom: Adapter = {
         const messages: Msg[] = [];
         const src: Raw = r.source ?? {};
         const first = await author(ctx, src.author);
-        const attach = (list: Raw[] | undefined) => (list ?? []).map((a) => ({ name: str(a.name), url: str(a.url) }));
+        const attach = (list: Raw[] | undefined) =>
+          (list ?? []).map((a) => ({ name: str(a.name), url: str(a.url), size: Number(a.filesize) || null, contentType: a.content_type ? str(a.content_type) : null }));
 
         messages.push({
           externalId: `source:${r.id}`,
@@ -206,7 +207,6 @@ export const intercom: Adapter = {
             attachments: attach(p.attachments),
           });
         }
-        if (messages.some((m) => m.attachments.length)) issues.push(ATTACHMENTS_LINKED);
         if (events) issues.push("Assignment and state-change events are kept in the import archive, not shown in the thread");
         const total = r.conversation_parts?.total_count ?? 0;
         if (total > (r.conversation_parts?.conversation_parts?.length ?? 0)) issues.push("Intercom returned only the latest 500 parts of this conversation");

@@ -1,6 +1,6 @@
 import { htmlToText } from "@/lib/email";
 import { ApiError } from "../http";
-import { ATTACHMENTS_LINKED, date, fieldMap, str, type Adapter, type Ctx, type Msg, type Raw, type Status } from "../types";
+import { date, fieldMap, str, type Adapter, type Ctx, type Msg, type Raw, type Status } from "../types";
 
 // Help Scout Inbox API 2. Auth: OAuth client credentials from a private app
 // (Your Profile > My Apps). Lists are HAL with page numbers.
@@ -182,10 +182,15 @@ export const helpscout: Adapter = {
             body: htmlToText(str(t.body)),
             internal: t.type === "note",
             createdAt: date(t.createdAt),
-            attachments: ((t._embedded?.attachments ?? []) as Raw[]).map((a) => ({ name: str(a.filename), url: str(a._links?.web?.href ?? a._links?.data?.href) })),
+            attachments: ((t._embedded?.attachments ?? []) as Raw[]).map((a) => ({
+              name: str(a.filename),
+              url: str(a._links?.web?.href ?? a._links?.data?.href),
+              size: Number(a.size) || null,
+              contentType: a.mimeType ? str(a.mimeType) : null,
+              dataPath: a._links?.data?.href ? str(a._links.data.href) : null,
+            })),
           });
         }
-        if (messages.some((m) => m.attachments.length)) issues.push(ATTACHMENTS_LINKED);
         if (events) issues.push("Assignment and state-change events are kept in the import archive, not shown in the thread");
 
         const mbox = await ctx.lookup("group", str(r.mailboxId));

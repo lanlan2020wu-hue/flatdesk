@@ -1,6 +1,6 @@
 import { htmlToText } from "@/lib/email";
 import { ApiError } from "../http";
-import { ATTACHMENTS_LINKED, date, fieldMap, str, type Adapter, type Ctx, type Mapped, type Msg, type Raw, type Status } from "../types";
+import { date, fieldMap, str, type Adapter, type Ctx, type Mapped, type Msg, type Raw, type Status } from "../types";
 
 // Freshdesk API v2. Auth: the API key from Profile settings, sent as the
 // Basic auth user. Lists use page numbers; the ticket list stops at page 300,
@@ -34,6 +34,8 @@ function domain(creds: Record<string, string>) {
 }
 
 const text = (plain: unknown, html: unknown) => str(plain) || (html ? htmlToText(str(html)) : "");
+const fdFiles = (list: Raw[] | undefined) =>
+  (list ?? []).map((a) => ({ name: str(a.name), url: str(a.attachment_url), size: Number(a.size) || null, contentType: a.content_type ? str(a.content_type) : null }));
 
 async function agentName(ctx: Ctx, id: unknown) {
   const a = id ? await ctx.lookup("agent", str(id)) : null;
@@ -182,7 +184,7 @@ export const freshdesk: Adapter = {
           const body = text(r.content, r.content_html);
           const issues: string[] = [];
           if (/\{\{.+?\}\}/.test(body)) issues.push("Uses placeholders like {{ticket.requester.name}}, kept as plain text");
-          if (r.attachments?.length) issues.push(ATTACHMENTS_LINKED);
+          if (r.attachments?.length) issues.push("Its attachments weren't added; Flatdesk macros are text only");
           return { kind: "macro", label: str(r.title), name: str(r.title), body, addTags: [], setStatus: null, notApplied: [], active: true, issues };
         }
         // Scenario automations are action bundles: Flatdesk keeps tags and status and lists the rest.
@@ -312,7 +314,7 @@ export const freshdesk: Adapter = {
             body: text(r.description_text, r.description),
             internal: false,
             createdAt: date(r.created_at),
-            attachments: ((r.attachments ?? []) as Raw[]).map((a) => ({ name: str(a.name), url: str(a.attachment_url) })),
+            attachments: fdFiles(r.attachments),
           },
         ];
         for (const c of (r._conversations ?? []) as Raw[]) {
@@ -327,10 +329,9 @@ export const freshdesk: Adapter = {
             body: text(c.body_text, c.body),
             internal: Boolean(c.private),
             createdAt: date(c.created_at),
-            attachments: ((c.attachments ?? []) as Raw[]).map((a) => ({ name: str(a.name), url: str(a.attachment_url) })),
+            attachments: fdFiles(c.attachments),
           });
         }
-        if (messages.some((m) => m.attachments.length)) issues.push(ATTACHMENTS_LINKED);
 
         return {
           kind: "ticket",

@@ -32,7 +32,8 @@ All prices live in `src/lib/pricing.ts`. Every competitor number there must have
 - Import (`/app/import`, `src/lib/import`): Zendesk, Intercom (Fin), Freshdesk and Help Scout, over their APIs. Tickets with full conversation history, macros and saved replies, tags, rules, custom fields, contacts, companies and agents. Every raw record is stored in `import_records`, so nothing is lost; what doesn't map is listed in a report (downloadable as CSV) and every original field stays on the ticket. Imports run in short resumable steps driven by the import page, pause on rate limits, and can be re-run without duplicating anything. Agents are matched by email, and tickets and tag rules for agents who haven't joined yet follow them when they do.
 - Onboarding (`/app/welcome`): a five-step checklist for new teams: create the team, invite agents (suggesting the ones found in an import), connect the support inbox (with Gmail's forwarding code shown when it arrives), import from the old tool, and send a real test email through forwarding, or a sample ticket.
 
-- Attachments: files on incoming email are kept on the ticket (up to 20 MB each, 30 MB per email; anything bigger is named in an internal note), agents can attach up to 4 MB per reply, and replies go out with their files. Chat visitors see and download files sent to them. Files live in Postgres (`attachments` table) and every download is checked against the team or the chat visitor. Imported attachments are linked, not copied.
+- Attachments: files on incoming email are kept on the ticket (up to 20 MB each, 30 MB per email; anything bigger is named in an internal note), agents can attach up to 4 MB per reply, and replies go out with their files. Chat visitors can attach files too (4 MB per message) and download files sent to them. Imports copy each message's files (up to 20 MB each); any that can't be fetched stay as links in the message and are counted in the import report. Files live in Postgres (`attachments` table) and every download is checked against the team or the chat visitor.
+- Spam limits (`src/lib/rate-limit.ts`, `rate_limits` table): new chats 5 per visitor per 10 minutes and 20 per day, 200 per team per hour; chat messages 30 per conversation per 5 minutes; visitor files 20 per hour; waitlist sign-ups 5 per visitor per hour. Visitors are keyed by a hash of their IP. The chat and waitlist forms also carry a hidden field that only bots fill in.
 - Trial and plan: a new team gets 14 days with no card. After that, without an active Stripe subscription, the app shows a paywall (exports stay open, email keeps arriving, the AI stops answering). Adding a card during the trial keeps the remaining days as a Stripe trial.
 - Legal: `/terms` and `/privacy`, linked from the footer and sign-up. Company details come from `LEGAL_NAME`, `CONTACT_EMAIL` and `GOVERNING_LAW`.
 
@@ -68,7 +69,3 @@ npm test                       # import and onboarding tests; point DATABASE_URL
 | `DEV_AUTH` | Local development only. `1` signs in as a demo admin when Clerk keys are missing. Ignored in production. |
 
 `/api/health` reports which services are connected, and whether Stripe and Clerk are in live or test mode.
-
-## Next up
-
-Chat visitors sending files, copying imported attachments, and rate limits on the public chat and waitlist endpoints.

@@ -2,7 +2,7 @@ import { randomBytes, timingSafeEqual } from "node:crypto";
 import { and, asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { handBackToTeam } from "@/lib/ai";
-import { attachmentsByMessage, type AttachmentInfo } from "@/lib/attachments";
+import { attachmentsByMessage, filesFromForm, saveAttachments, type AttachmentInfo, type NewFile } from "@/lib/attachments";
 import { addCustomerMessage, createTicket } from "@/lib/tickets";
 
 // The website chat widget. A visitor starts a conversation with their name,
@@ -18,6 +18,27 @@ export async function orgByWidgetKey(key: string) {
   return db.query.orgs.findFirst({ where: eq(schema.orgs.widgetKey, key), columns: { id: true, name: true } });
 }
 
+// The widget posts JSON, or multipart form data when the visitor attaches
+// files. Returns the fields and the files, or a readable error.
+export async function readChatRequest(request: Request): Promise<{ fields: Record<string, unknown>; files: NewFile[] } | { error: string }> {
+  if (!(request.headers.get("content-type") ?? "").includes("multipart/form-data")) {
+    const json = await request.json().catch(() => null);
+    return { fields: json && typeof json === "object" ? (json as Record<string, unknown>) : {}, files: [] };
+  }
+  const form = await request.formData().catch(() => null);
+  if (!form) return { error: "Those files couldn't be read. Please try again." };
+  try {
+    const files = await filesFromForm(form);
+    const fields = Object.fromEntries([...form.entries()].filter(([, v]) => typeof v === "string"));
+    return { fields, files };
+  } catch (e) {
+    return { error: (e as Error).message.replace("per reply", "per message").replace("one reply", "one message") };
+  }
+}
+
+// A hidden field people never see or fill in; form-filling bots usually do.
+export const isBot = (fields: Record<string, unknown>) => typeof fields.website === "string" && fields.website.trim() !== "";
+
 export function validStart(body: unknown) {
   const b = (body ?? {}) as Record<string, unknown>;
   const email = typeof b.email === "string" ? b.email.trim().toLowerCase() : "";
@@ -28,7 +49,7 @@ export function validStart(body: unknown) {
   return { email, name, message } as const;
 }
 
-export async function startConversation(orgId: string, v: { email: string; name: string; message: string }) {
+export async function startConversation(orgId: string, v: { email: string; name: string; message: string }, files: NewFile[] = []) {
   const token = randomBytes(24).toString("base64url");
   const firstLine = v.message.split("\n")[0].slice(0, 80);
   const ticket = await createTicket({
@@ -41,6 +62,7 @@ export async function startConversation(orgId: string, v: { email: string; name:
     authorType: "customer",
   });
   await db.update(schema.tickets).set({ visitorToken: token }).where(eq(schema.tickets.id, ticket.id));
+  await saveAttachments(orgId, ticket.id, ticket.messageId, files);
   return { ticket, token };
 }
 
@@ -86,7 +108,8 @@ export async function visitorThread(ticketId: string, link?: { orgId: string; ke
     }));
 }
 
-export async function visitorReply(orgId: string, ticket: { id: string; customerId: string }, message: string) {
-  await addCustomerMessage({ orgId, ticketId: ticket.id, customerId: ticket.customerId, body: message.slice(0, MAX_MESSAGE) });
+export async function visitorReply(orgId: string, ticket: { id: string; customerId: string }, message: string, files: NewFile[] = []) {
+  const messageId = await addCustomerMessage({ orgId, ticketId: ticket.id, customerId: ticket.customerId, body: message.slice(0, MAX_MESSAGE) });
+  await saveAttachments(orgId, ticket.id, messageId, files);
   await handBackToTeam(orgId, ticket.id);
 }

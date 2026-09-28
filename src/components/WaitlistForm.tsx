@@ -22,6 +22,7 @@ export default function WaitlistForm() {
           agents: Number(form.get("agents")) || null,
           source: params.get("utm_source") ?? params.get("ref") ?? "direct",
           referrer: document.referrer,
+          website: form.get("website"),
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -63,6 +64,12 @@ export default function WaitlistForm() {
         Agents
         <input id="wl-agents" name="agents" type="number" min={1} className={`${field} num font-normal`} />
       </label>
+      <div aria-hidden="true" className="sr-only">
+        <label>
+          Leave this empty
+          <input name="website" tabIndex={-1} autoComplete="off" />
+        </label>
+      </div>
       <button type="submit" disabled={state === "sending"} className="btn btn-primary">
         {state === "sending" ? "Joining…" : "Join the waitlist"}
       </button>
