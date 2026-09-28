@@ -108,7 +108,7 @@ export const SELLING_POINTS: SellingPoint[] = [
   {
     slug: "self-writing-macros",
     name: "Macros that write themselves",
-    short: "When your team sends the same answer on 5 tickets, Flatdesk offers it as a finished macro. A full library in your first week.",
+    short: "When your team sends the same answer on 5 tickets, Flatdesk offers it as a finished macro. Suggestions can start on day one from your imported history.",
     headline: "Macros that write themselves from the answers your team repeats",
     answer:
       "Flatdesk watches the replies your agents send. Once essentially the same answer has gone out on 5 different tickets, it offers it as a finished macro with the greeting, sign-off and customer's name taken out. One click saves it, and the AI can use it straight away. Suggestions don't use any AI allowance.",
@@ -150,7 +150,7 @@ export const SELLING_POINTS: SellingPoint[] = [
     name: "Lossless import",
     short: `Bring tickets, customers, macros and rules from ${IMPORT_SOURCES.join(", ").replace(/, ([^,]*)$/, " or $1")}. Every original record is archived, and anything that didn't map is listed.`,
     headline: `Move from ${IMPORT_SOURCES.slice(0, 3).join(", ")} or Help Scout without losing a ticket`,
-    answer: `Flatdesk imports tickets, messages, attachments, customers, tags, macros and rules from ${IMPORT_SOURCES.join(", ").replace(/, ([^,]*)$/, " and $1")}. Every original record is kept in an archive you can download, and anything that couldn't be mapped is listed in a report instead of being dropped. You can export everything again as CSV or JSON at any time.`,
+    answer: `Flatdesk imports tickets, messages, attachments, customers, tags, macros and rules from ${IMPORT_SOURCES.join(", ").replace(/, ([^,]*)$/, " and $1")}. Every original record is kept in an archive you can download, and anything that couldn't be mapped is listed in a report instead of being dropped. Intercom's API doesn't share workflows or assignment rules, so those are recreated by hand. You can export everything again as CSV or JSON at any time.`,
     metaTitle: "Lossless help desk import from Zendesk, Intercom, Freshdesk and Help Scout",
     metaDescription:
       "Import tickets, attachments, customers, macros and rules from Zendesk, Intercom, Freshdesk or Help Scout. Every raw record is archived and nothing is silently dropped.",
@@ -162,7 +162,7 @@ export const SELLING_POINTS: SellingPoint[] = [
     ],
     facts: [
       `Imports from ${IMPORT_SOURCES.join(", ")}`,
-      "Tickets, messages, attachments, customers, tags, macros and rules",
+      "Tickets, messages, attachments, customers, tags, macros and rules (rules from every source except Intercom, whose API doesn't share them)",
       "Every raw record archived and downloadable",
       "Unmapped items listed in a report, never silently dropped",
       "Export everything as CSV or JSON at any time, without asking us",
@@ -174,7 +174,7 @@ export const SELLING_POINTS: SellingPoint[] = [
       },
       {
         q: "What does the import bring over?",
-        a: "Agents, tags, macros, rules, customers and tickets with their messages and attachments. Anything that can't be mapped is listed in a report, and every original record is archived.",
+        a: "Agents, tags, macros, rules (not from Intercom, whose API doesn't share them), customers and tickets with their messages and attachments. Anything that can't be mapped is listed in a report, and every original record is archived.",
       },
       {
         q: "Can we run the import again?",

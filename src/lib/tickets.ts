@@ -115,7 +115,9 @@ export async function createTicket(input: NewTicket) {
       .values({ orgId: input.orgId, email: input.customerEmail.toLowerCase(), name: input.customerName || null })
       .onConflictDoUpdate({
         target: [customers.orgId, customers.email],
-        set: input.customerName ? { name: input.customerName } : { email: sql`excluded.email` },
+        // Fills in a missing name but never renames a known customer: anyone can
+        // start a chat with someone else's email address.
+        set: { name: sql`coalesce(${customers.name}, excluded.name)` },
       })
       .returning();
 

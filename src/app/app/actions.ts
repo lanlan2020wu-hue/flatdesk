@@ -7,10 +7,19 @@ import { redirect } from "next/navigation";
 import { db, schema } from "@/db";
 import { requireAdmin, requireSession } from "@/lib/auth";
 import { filesFromForm, saveAttachments } from "@/lib/attachments";
-import { checkoutUrl, portalUrl, switchToAnnual } from "@/lib/billing";
+import { access, checkoutUrl, portalUrl, switchToAnnual } from "@/lib/billing";
 import { deliverReply } from "@/lib/email";
 import { dismissSuggestion, saveSuggestedMacro } from "@/lib/macro-suggestions";
 import { addReply, createTicket, normalizeTags, updateTicket, type TicketStatus } from "@/lib/tickets";
+
+// The paywall hides the app once a trial ends without a card; this keeps
+// direct requests from doing work behind it. Export and billing stay open.
+async function requireOpenSession() {
+  const s = await requireSession();
+  const org = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) });
+  if (org && access(org).state === "locked") throw new Error("The free trial has ended. An admin can add a card in Settings.");
+  return s;
+}
 
 const STATUSES: TicketStatus[] = ["open", "pending", "closed"];
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
@@ -18,7 +27,7 @@ const status = (v: string): TicketStatus | null => (STATUSES.includes(v as Ticke
 const tagList = (v: string) => normalizeTags(v.split(","));
 
 export async function createTicketAction(form: FormData) {
-  const s = await requireSession();
+  const s = await requireOpenSession();
   const email = str(form, "email");
   const subject = str(form, "subject");
   const body = str(form, "body");
@@ -37,7 +46,7 @@ export async function createTicketAction(form: FormData) {
 }
 
 export async function replyAction(form: FormData) {
-  const s = await requireSession();
+  const s = await requireOpenSession();
   const ticketId = str(form, "ticketId");
   const number = str(form, "number");
   const files = await filesFromForm(form);
@@ -58,7 +67,7 @@ export async function replyAction(form: FormData) {
 }
 
 export async function updateTicketAction(form: FormData) {
-  const s = await requireSession();
+  const s = await requireOpenSession();
   const ticketId = str(form, "ticketId");
   const patch: Parameters<typeof updateTicket>[2] = {};
   if (form.has("status")) patch.status = status(str(form, "status")) ?? undefined;
@@ -79,7 +88,7 @@ export async function updateTicketAction(form: FormData) {
 }
 
 export async function saveMacroAction(form: FormData) {
-  const s = await requireSession();
+  const s = await requireOpenSession();
   const values = {
     name: str(form, "name"),
     body: str(form, "body"),
@@ -97,7 +106,7 @@ export async function saveMacroAction(form: FormData) {
 }
 
 export async function deleteMacroAction(form: FormData) {
-  const s = await requireSession();
+  const s = await requireOpenSession();
   await db.delete(schema.macros).where(and(eq(schema.macros.orgId, s.orgId), eq(schema.macros.id, str(form, "id"))));
   revalidatePath("/app/macros");
 }
@@ -105,7 +114,7 @@ export async function deleteMacroAction(form: FormData) {
 // A repeated reply Flatdesk spotted, saved as a macro (from the macros page or
 // the prompt under an agent's reply).
 export async function saveSuggestedMacroAction(form: FormData) {
-  const s = await requireSession();
+  const s = await requireOpenSession();
   const values = { name: str(form, "name"), body: str(form, "body"), addTags: tagList(str(form, "addTags")) };
   if (!values.name || !values.body) throw new Error("A macro needs a name and a reply.");
   await saveSuggestedMacro(s.orgId, values);
@@ -115,7 +124,7 @@ export async function saveSuggestedMacroAction(form: FormData) {
 }
 
 export async function dismissSuggestionAction(form: FormData) {
-  const s = await requireSession();
+  const s = await requireOpenSession();
   await dismissSuggestion(s.orgId, s.userId, str(form, "answer"));
   revalidatePath("/app/macros");
   const number = str(form, "number");
