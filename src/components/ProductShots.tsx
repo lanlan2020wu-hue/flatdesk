@@ -5,8 +5,8 @@ import { PLAN, usd } from "@/lib/pricing";
 
 export function FeatureIcon({ d, className = "size-9 p-2 bg-accent-soft" }: { d: string; className?: string }) {
   return (
-    <svg viewBox="0 0 24 24" className={`${className} shrink-0 rounded-lg text-accent`} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d={d} />
+    <svg viewBox="0 0 24 24" className={`draw ${className} shrink-0 rounded-lg text-accent`} fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={d} pathLength={1} />
     </svg>
   );
 }
@@ -21,6 +21,8 @@ function Bar({ title }: { title: string }) {
     </div>
   );
 }
+
+const at = (ms: number) => ({ "--at": `${ms}ms` }) as React.CSSProperties;
 
 const Dot = ({ className }: { className: string }) => <span className={`size-1.5 shrink-0 rounded-full ${className}`} />;
 
@@ -41,8 +43,8 @@ export function InboxShot() {
           ))}
         </div>
         <ul className="divide-y divide-line">
-          {rows.map(([n, subject, who, ch, owner]) => (
-            <li key={n} className="grid gap-0.5 px-3 py-2">
+          {rows.map(([n, subject, who, ch, owner], i) => (
+            <li key={n} style={{ "--i": rows.length - 1 - i } as React.CSSProperties} className="ticket grid gap-0.5 px-3 py-2">
               <span className="flex items-center justify-between gap-2">
                 <span className="truncate font-medium">{subject}</span>
                 <span className="chip shrink-0">{ch}</span>
@@ -59,6 +61,8 @@ export function InboxShot() {
   );
 }
 
+const MACRO_WORDS = "Hi there, refunds go back to the original card within 5 business days…".split(" ");
+
 export function MacroShot() {
   return (
     <div className="shot" aria-hidden="true">
@@ -66,7 +70,7 @@ export function MacroShot() {
       <div className="grid gap-3 p-3">
         <div className="grid gap-2 rounded-lg border border-accent/30 bg-accent-soft/70 p-2.5">
           <span className="flex items-center gap-1.5 text-[12px] font-medium text-accent">
-            <svg viewBox="0 0 24 24" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <svg viewBox="0 0 24 24" className="sparkle size-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z" />
             </svg>
             Flatdesk wrote this for you
@@ -76,10 +80,14 @@ export function MacroShot() {
               <span className="font-medium">Where&apos;s my refund</span>
               <span className="num text-[11px] text-muted">sent on 12 tickets this week</span>
             </span>
-            <span className="text-[12px] text-muted">Hi there, refunds go back to the original card within 5 business days…</span>
+            <span className="text-[12px] text-muted">
+              {MACRO_WORDS.map((w, i) => (
+                <span key={i} style={{ "--w": i } as React.CSSProperties} className="word">{w} </span>
+              ))}
+            </span>
           </span>
           <span className="flex items-center gap-2">
-            <span className="rounded-md bg-accent px-2 py-1 text-[11px] font-medium text-accent-ink">Save as macro</span>
+            <span style={{ "--words": MACRO_WORDS.length } as React.CSSProperties} className="save rounded-md bg-accent px-2 py-1 text-[11px] font-medium text-accent-ink">Save as macro</span>
             <span className="text-[11px] text-muted">Don&apos;t suggest this again</span>
           </span>
         </div>
@@ -103,20 +111,27 @@ export function AiShot() {
     <div className="shot" aria-hidden="true">
       <Bar title="#1042 · Can't reset my password" />
       <div className="grid gap-2.5 p-3">
-        <p className="rounded-xl rounded-tl-sm border border-line bg-surface px-3 py-2">The reset link says it expired. Can you help?</p>
-        <p className="rounded-xl rounded-tl-sm border border-accent/30 bg-accent-soft px-3 py-2">
-          Hi Ana, reset links last 30 minutes. Request a new one from the sign-in page and use it right away…
-          <span className="mt-1.5 flex items-center gap-1.5 border-t border-accent/20 pt-1.5 text-[11px] text-muted">
-            Receipt · Counted, included · used <span className="chip">Password reset</span>
+        <p style={at(0)} className="say rounded-xl rounded-tl-sm border border-line bg-surface px-3 py-2">The reset link says it expired. Can you help?</p>
+        <div className="relative">
+          <span className="typing absolute top-0 left-0 flex gap-1 rounded-xl rounded-tl-sm border border-accent/30 bg-accent-soft px-3 py-2.5">
+            {[0, 1, 2].map((j) => (
+              <i key={j} style={{ "--j": j } as React.CSSProperties} className="size-1.5 rounded-full bg-accent/70" />
+            ))}
           </span>
-        </p>
+          <p style={at(1400)} className="say rounded-xl rounded-tl-sm border border-accent/30 bg-accent-soft px-3 py-2">
+            Hi Ana, reset links last 30 minutes. Request a new one from the sign-in page and use it right away…
+            <span style={at(1800)} className="ln mt-1.5 flex items-center gap-1.5 border-t border-accent/20 pt-1.5 text-[11px] text-muted">
+              Receipt · Counted, included · used <span className="chip">Password reset</span>
+            </span>
+          </p>
+        </div>
         <div className="grid gap-1 pt-1">
           <span className="flex justify-between text-[11px] text-muted">
             <span>AI allowance this month</span>
             <span className="num">612 / 1,000</span>
           </span>
           <span className="h-1.5 overflow-hidden rounded-full bg-line">
-            <span className="meter block h-full w-[61%] rounded-full bg-accent" />
+            <span style={at(2100)} className="meter block h-full w-[61%] rounded-full bg-accent" />
           </span>
         </div>
       </div>
@@ -128,14 +143,14 @@ export function ReceiptShot() {
   const lines: [string, string, string, string][] = [
     ["#1042", "Can't reset my password", "Counted, included", "pill bg-accent-soft text-accent"],
     ["#1038", "Where is my order?", "Not counted, customer wrote back", "pill bg-surface-2 text-muted"],
-    ["#1035", "Change billing email", "Refunded", "pill bg-surface-2 text-muted line-through"],
+    ["#1035", "Change billing email", "Refunded", "pill strike bg-surface-2 text-muted"],
   ];
   return (
     <div className="shot" aria-hidden="true">
       <Bar title="AI receipts · September 2026" />
       <ol className="divide-y divide-line">
-        {lines.map(([n, subject, status, tone]) => (
-          <li key={n} className="grid gap-1 px-3 py-2.5">
+        {lines.map(([n, subject, status, tone], i) => (
+          <li key={n} style={{ "--i": i } as React.CSSProperties} className="ln grid gap-1 px-3 py-2.5">
             <span className="flex items-center justify-between gap-2">
               <span className="truncate">
                 <span className="num text-muted">{n}</span> <span className="font-medium">{subject}</span>
@@ -151,7 +166,7 @@ export function ReceiptShot() {
           </li>
         ))}
       </ol>
-      <div className="num flex justify-between border-t border-dashed border-line-strong bg-surface-2 px-3 py-2 text-[12px]">
+      <div style={{ "--i": lines.length } as React.CSSProperties} className="ln num flex justify-between border-t border-dashed border-line-strong bg-surface-2 px-3 py-2 text-[12px]">
         <span>AI charges this month</span>
         <span className="font-medium">{usd(0, true)}</span>
       </div>
@@ -162,18 +177,18 @@ export function ReceiptShot() {
 export function ChatShot() {
   return (
     <div className="relative h-full min-h-56" aria-hidden="true">
-      <div className="shot absolute right-12 bottom-12 w-[270px] max-w-[calc(100%-3rem)]">
+      <div className="widget shot absolute right-12 bottom-12 w-[270px] max-w-[calc(100%-3rem)]">
         <div className="flex items-center gap-2 bg-accent px-3 py-2 text-accent-ink">
           <Dot className="bg-accent-ink" />
           <span className="text-[12px] font-medium">Chat with Acme support</span>
         </div>
         <div className="grid gap-2 p-2.5 text-[12px]">
-          <p className="max-w-[85%] justify-self-start rounded-xl rounded-bl-sm bg-surface-2 px-2.5 py-1.5">Do you ship to Canada?</p>
-          <p className="max-w-[85%] justify-self-end rounded-xl rounded-br-sm bg-accent-soft px-2.5 py-1.5">Yes, 3–5 business days. Rates show at checkout.</p>
+          <p style={at(950)} className="say max-w-[85%] justify-self-start rounded-xl rounded-bl-sm bg-surface-2 px-2.5 py-1.5">Do you ship to Canada?</p>
+          <p style={at(1600)} className="say max-w-[85%] justify-self-end rounded-xl rounded-br-sm bg-accent-soft px-2.5 py-1.5">Yes, 3–5 business days. Rates show at checkout.</p>
           <p className="rounded-md border border-line px-2 py-1.5 text-muted">Write a message…</p>
         </div>
       </div>
-      <span className="absolute right-0 bottom-0 grid size-10 place-items-center rounded-full bg-accent text-accent-ink shadow-lg">
+      <span className="launcher absolute right-0 bottom-0 grid size-10 place-items-center rounded-full bg-accent text-accent-ink shadow-lg">
         <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z" /></svg>
       </span>
     </div>
@@ -219,13 +234,13 @@ export function ImportShot() {
     <div className="shot" aria-hidden="true">
       <Bar title="Import from Zendesk" />
       <div className="grid gap-2.5 p-3">
-        {phases.map(([label, pct]) => (
-          <div key={label} className="grid gap-1">
+        {phases.map(([label, pct], i) => (
+          <div key={label} style={{ "--i": i } as React.CSSProperties} className="grid gap-1">
             <span className="flex justify-between text-[12px]">
               <span>{label}</span>
-              <span className="num text-muted">{pct === 100 ? "done" : `${pct}%`}</span>
+              <span className="phase-done num text-muted">{pct === 100 ? "done" : `${pct}%`}</span>
             </span>
-            <span className="h-1.5 overflow-hidden rounded-full bg-line">
+            <span className={`h-1.5 overflow-hidden rounded-full bg-line ${pct < 100 ? "running" : ""}`}>
               <span className={`meter block h-full rounded-full ${pct === 100 ? "bg-accent" : "bg-accent/60"}`} style={{ width: `${pct}%` }} />
             </span>
           </div>

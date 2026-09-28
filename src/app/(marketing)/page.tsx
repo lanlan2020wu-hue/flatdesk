@@ -133,7 +133,7 @@ export default function Home() {
               Help desk for teams of 5–20 agents
             </p>
             <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-[2.6rem] leading-[1.05] sm:text-6xl">
-              {usd(PLAN.seatPrice)} per agent. AI included. <span className="hl italic">The same bill every month.</span>
+              {usd(PLAN.seatPrice)} per agent. AI included. <span className="hl hl-draw italic">The same bill every month.</span>
             </h1>
             <p style={{ "--d": 2 } as React.CSSProperties} className="enter max-w-xl text-lg text-muted">
               Every seat includes {PLAN.includedPerAgent} AI resolutions a month, shared across your team. When they run out, the AI pauses and
@@ -158,7 +158,8 @@ export default function Home() {
             </div>
           </div>
 
-          <figure className="receipt-shadow relative mx-auto w-full max-w-md lg:rotate-[1.2deg]">
+          <figure data-play="" className="receipt-shadow relative mx-auto w-full max-w-md lg:rotate-[1.2deg]">
+            <span aria-hidden="true" className="printer-slot" />
             <div className="print receipt num grid gap-1.5 px-6 pt-8 pb-9 text-[13px] sm:px-7">
               <figcaption className="mb-3 grid gap-1 text-center font-sans">
                 <span className="eyebrow">Monthly bill</span>
@@ -199,11 +200,11 @@ export default function Home() {
         </div>
       </section>
 
-      <section aria-labelledby="why-switch" className="reveal mx-auto grid w-full max-w-6xl gap-6 px-4 sm:px-6">
-        <h2 id="why-switch" className="eyebrow">Four reasons teams switch</h2>
+      <section data-play="" aria-labelledby="why-switch" className="mx-auto grid w-full max-w-6xl gap-6 px-4 sm:px-6">
+        <h2 id="why-switch" className="ink eyebrow w-max">Four reasons teams switch</h2>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {SELLING_POINTS.map((p, i) => (
-            <a key={p.title} href={p.href} className="lift card group flex flex-col gap-3 p-6">
+            <a key={p.title} href={p.href} style={{ "--i": i } as React.CSSProperties} className="lift card group flex flex-col gap-3 p-6">
               <span className="flex items-center justify-between">
                 <FeatureIcon d={p.icon} />
                 <span className="flex items-center gap-2">
@@ -221,10 +222,10 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="why-flat" className="reveal mx-auto grid w-full max-w-6xl scroll-mt-24 gap-8 px-4 sm:px-6 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] lg:items-center">
+      <section id="why-flat" data-play="" className="mx-auto grid w-full max-w-6xl scroll-mt-24 gap-8 px-4 sm:px-6 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] lg:items-center">
         <div className="grid gap-3">
           <p className="eyebrow">Why flat matters</p>
-          <h2 className="font-display text-3xl sm:text-4xl">Per-resolution pricing follows your busiest month.</h2>
+          <h2 className="ink font-display text-3xl sm:text-4xl">Per-resolution pricing follows your busiest month.</h2>
           <p className="text-muted">
             When AI is billed per conversation, a launch or a holiday rush shows up on the invoice. With Flatdesk the bill is your seat count,
             and the cap is on unless you change it.
@@ -235,20 +236,20 @@ export default function Home() {
       </section>
 
       <section id="features" className="mx-auto grid w-full max-w-6xl scroll-mt-24 gap-16 px-4 sm:px-6 sm:gap-24">
-        <div className="reveal grid max-w-2xl gap-3">
+        <div data-play="" className="grid max-w-2xl gap-3">
           <p className="eyebrow">The product</p>
-          <h2 className="font-display text-4xl sm:text-5xl">Everything a support team runs on. One price per seat.</h2>
+          <h2 className="ink font-display text-4xl sm:text-5xl">Everything a support team runs on. One price per seat.</h2>
           <p className="text-lg text-muted">No add-on tiers and no feature gates. Every seat gets every system below, starting with the ones teams switch for.</p>
         </div>
         {TOUR.map((f, i) => (
-          <article key={f.id} id={f.id} className="reveal grid scroll-mt-24 items-center gap-8 lg:grid-cols-2 lg:gap-16">
-            <div className={`grid content-start gap-4 ${i % 2 ? "lg:order-2" : ""}`}>
+          <article key={f.id} id={f.id} className="grid scroll-mt-24 items-center gap-8 lg:grid-cols-2 lg:gap-16">
+            <div data-play="" className={`grid content-start gap-4 ${i % 2 ? "lg:order-2" : ""}`}>
               <p className="eyebrow flex items-center gap-2">
                 <span className="num text-accent">{String(i + 1).padStart(2, "0")}</span>
                 {f.eyebrow}
                 {f.badge && <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] tracking-[0.12em] text-accent-ink">{f.badge}</span>}
               </p>
-              <h3 className="font-display text-3xl leading-tight">{f.title}</h3>
+              <h3 className="ink font-display text-3xl leading-tight">{f.title}</h3>
               <p className="text-muted">{f.body}</p>
               <ul className="grid gap-2 text-sm">
                 {f.points.map((p) => (
@@ -261,7 +262,7 @@ export default function Home() {
                 ))}
               </ul>
             </div>
-            <div className="relative">
+            <div data-play="" className="relative">
               <div className="pointer-events-none absolute -inset-6 -z-10 rounded-[2rem] bg-accent-soft/70" aria-hidden="true" />
               {f.shot}
             </div>
@@ -269,11 +270,11 @@ export default function Home() {
         ))}
       </section>
 
-      <section className="reveal mx-auto grid w-full max-w-6xl gap-10 px-4 sm:px-6">
+      <section data-play="" className="mx-auto grid w-full max-w-6xl gap-10 px-4 sm:px-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="grid max-w-xl gap-3">
             <p className="eyebrow">Included in every seat</p>
-            <h2 className="font-display text-3xl sm:text-4xl">The full list</h2>
+            <h2 className="ink font-display text-3xl sm:text-4xl">The full list</h2>
           </div>
           <Link href="/pricing" className="link text-sm font-medium text-accent">See pricing</Link>
         </div>
@@ -282,8 +283,8 @@ export default function Home() {
             <div key={g.id} className="grid content-start gap-4">
               <h3 className="eyebrow border-b border-line pb-2">{g.title}</h3>
               <ul className="grid gap-4">
-                {g.features.map((f) => (
-                  <li key={f.id} className="flex gap-3">
+                {g.features.map((f, i) => (
+                  <li key={f.id} style={{ "--i": i } as React.CSSProperties} className="flex gap-3">
                     <FeatureIcon d={f.icon} className="size-8 bg-accent-soft p-1.5" />
                     <span className="grid gap-0.5">
                       <span className="flex items-center gap-2 font-medium">
@@ -301,16 +302,16 @@ export default function Home() {
       </section>
 
       <section id="waitlist" className="mx-auto w-full max-w-6xl scroll-mt-24 px-4 sm:px-6">
-        <div className="reveal card relative grid gap-6 overflow-hidden p-6 shadow-lg sm:p-10">
+        <div data-play="" className="card relative grid gap-6 overflow-hidden p-6 shadow-lg sm:p-10">
           <div
             className="pointer-events-none absolute -top-40 -right-32 size-96 rounded-full bg-accent/15 blur-3xl"
             aria-hidden="true"
           />
           <div className="relative grid max-w-2xl gap-2">
             <p className="eyebrow">Early access</p>
-            <h2 className="font-display text-3xl sm:text-4xl">Get early access</h2>
+            <h2 className="ink font-display text-3xl sm:text-4xl">Get early access</h2>
             <p className="text-muted">
-              We&apos;re onboarding a small group of teams first. Early teams get <span className="hl text-ink">50% off for their first 12 months</span>, and we run
+              We&apos;re onboarding a small group of teams first. Early teams get <span className="hl hl-draw text-ink">50% off for their first 12 months</span>, and we run
               the Zendesk import for them.
             </p>
           </div>
