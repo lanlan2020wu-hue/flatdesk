@@ -5,19 +5,29 @@ import { CHECKED_ON } from "@/lib/pricing";
 import { SITE } from "@/lib/site";
 
 const NAV = [
-  { href: "/#features", label: "Product" },
-  { href: "/calculator", label: "Bill calculator" },
+  { href: "/features", label: "Product" },
+  { href: "/compare", label: "Compare" },
   { href: "/pricing", label: "Pricing" },
+  { href: "/calculator", label: "Bill calculator" },
   { href: "/ai-billing-changes-2026", label: "2026 AI billing changes" },
 ];
+const FOOTER = [...NAV, { href: "/faq", label: "FAQ" }];
+
+// The same observer MotionObserver sets up, but inline, so [data-play] blocks
+// (the calculator, the hero receipt) show before React hydrates, or if a
+// script chunk never loads. MotionObserver takes over for client navigations.
+const PLAY_EARLY = `(function(){var els=document.querySelectorAll("[data-play]:not([data-play='on'])");if(!("IntersectionObserver" in window)){els.forEach(function(e){e.dataset.play="on"});return}var io=new IntersectionObserver(function(es){es.forEach(function(e){if(!e.isIntersecting&&e.boundingClientRect.top>0)return;e.target.dataset.play="on";io.unobserve(e.target)})},{rootMargin:"0px 0px -18% 0px"});els.forEach(function(e){io.observe(e)})})();`;
 
 export default function MarketingLayout({ children }: LayoutProps<"/">) {
   return (
     <>
+      <a href="#main" className="sr-only z-50 rounded-md bg-surface px-3 py-2 text-sm focus:not-sr-only focus:fixed focus:left-4 focus:top-3">
+        Skip to content
+      </a>
       <header className="site-header sticky top-0 z-30 border-b border-line bg-bg/80 backdrop-blur-md supports-[backdrop-filter]:bg-bg/70">
         <nav className="mx-auto grid max-w-6xl grid-cols-[auto_1fr_auto] items-center gap-x-6 gap-y-2 px-4 py-3 sm:px-6">
           <Logo />
-          <div className="col-span-3 row-start-2 -mx-1 flex gap-x-1 overflow-x-auto text-sm md:col-span-1 md:col-start-2 md:row-start-1">
+          <div className="nav-scroll col-span-3 row-start-2 -mx-1 flex min-w-0 gap-x-1 overflow-x-auto text-sm md:col-span-1 md:col-start-2 md:row-start-1">
             {NAV.map((n) => (
               <Link key={n.href} href={n.href} className="whitespace-nowrap rounded-md px-2.5 py-1.5 text-muted transition-colors hover:bg-surface-2 hover:text-ink">
                 {n.label}
@@ -25,7 +35,7 @@ export default function MarketingLayout({ children }: LayoutProps<"/">) {
             ))}
           </div>
           <div className="col-start-3 row-start-1 flex items-center gap-2">
-            <Link href="/sign-in" className="whitespace-nowrap rounded-md px-2.5 py-1.5 text-sm text-muted transition-colors hover:text-ink">
+            <Link href="/sign-in" className="hidden whitespace-nowrap rounded-md px-2.5 py-1.5 text-sm text-muted transition-colors hover:text-ink sm:inline-flex">
               Sign in
             </Link>
             <Link href="/sign-up" className="btn btn-primary btn-sm">
@@ -36,7 +46,8 @@ export default function MarketingLayout({ children }: LayoutProps<"/">) {
         </nav>
       </header>
       {/* Decorations (the receipt stamp) may poke past the edge; never let them cause sideways scrolling. */}
-      <main className="flex-1 overflow-x-clip">{children}</main>
+      <main id="main" className="flex-1 overflow-x-clip">{children}</main>
+      <script dangerouslySetInnerHTML={{ __html: PLAY_EARLY }} />
       <MotionObserver />
       <footer className="mt-24 border-t border-line bg-surface-2/60">
         <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:grid-cols-[1.4fr_1fr] sm:px-6">
@@ -45,7 +56,7 @@ export default function MarketingLayout({ children }: LayoutProps<"/">) {
             <p className="max-w-xs text-sm text-muted">One flat price for support teams.</p>
           </div>
           <div className="grid content-start gap-2 text-sm">
-            {NAV.map((n) => (
+            {FOOTER.map((n) => (
               <Link key={n.href} href={n.href} className="w-max text-muted transition-colors hover:text-ink">
                 {n.label}
               </Link>
@@ -56,6 +67,7 @@ export default function MarketingLayout({ children }: LayoutProps<"/">) {
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-4 text-xs text-muted sm:px-6">
             <p className="num">Competitor prices last checked {CHECKED_ON}.</p>
             <p className="flex gap-4">
+              <Link href="/sign-in" className="transition-colors hover:text-ink">Sign in</Link>
               <Link href="/terms" className="transition-colors hover:text-ink">Terms</Link>
               <Link href="/privacy" className="transition-colors hover:text-ink">Privacy</Link>
               <a href={`mailto:${SITE.contactEmail}`} className="transition-colors hover:text-ink">{SITE.contactEmail}</a>

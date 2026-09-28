@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Calculator from "@/components/Calculator";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/calculator" },
   title: "Support bill calculator",
   description:
     "Enter your agent count and AI resolutions to compare your Zendesk, Fin (Intercom), Freshdesk or Help Scout bill with one flat price.",

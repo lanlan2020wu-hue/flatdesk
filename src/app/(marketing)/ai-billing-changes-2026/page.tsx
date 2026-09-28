@@ -3,6 +3,7 @@ import Link from "next/link";
 import { CHECKED_ON, PLAN, usd } from "@/lib/pricing";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/ai-billing-changes-2026" },
   title: "Zendesk and Fin (Intercom) AI billing changes in 2026",
   description:
     "A dated, sourced timeline of the 2026 changes to AI resolution billing at Zendesk and Fin (formerly Intercom), and what to check on your own account.",
