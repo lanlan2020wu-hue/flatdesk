@@ -1,6 +1,8 @@
 import { asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { SuggestionsSection } from "@/components/MacroSuggestion";
 import { requireSession } from "@/lib/auth";
+import { macroSuggestions } from "@/lib/macro-suggestions";
 import { listAgents } from "@/lib/tickets";
 import { deleteMacroAction, deleteRuleAction, saveMacroAction, saveRuleAction, toggleRuleAction } from "../actions";
 
@@ -11,11 +13,12 @@ const SOURCE_NAME: Record<string, string> = { zendesk: "Zendesk", intercom: "Int
 
 export default async function MacrosPage() {
   const s = await requireSession();
-  const [macros, rules, agents, imported] = await Promise.all([
+  const [macros, rules, agents, imported, suggestions] = await Promise.all([
     db.select().from(schema.macros).where(eq(schema.macros.orgId, s.orgId)).orderBy(asc(schema.macros.name)),
     db.select().from(schema.rules).where(eq(schema.rules.orgId, s.orgId)).orderBy(asc(schema.rules.createdAt)),
     listAgents(s.orgId),
     db.select().from(schema.importedRules).where(eq(schema.importedRules.orgId, s.orgId)).orderBy(asc(schema.importedRules.name)),
+    macroSuggestions(s.orgId),
   ]);
   // Imported rules that aren't running as a Flatdesk rule: shown for reference.
   const reference = imported.filter((r) => !r.flatdeskRuleId);
@@ -29,12 +32,18 @@ export default async function MacrosPage() {
           <p className="text-sm text-muted">Saved replies your team can insert into any ticket. A macro can also add tags and set the status.</p>
         </div>
 
+        <SuggestionsSection suggestions={suggestions} />
+
         {macros.map((m) => (
           <details key={m.id} className="card overflow-hidden">
             <summary className="flex cursor-pointer items-center justify-between gap-3 px-5 py-4 font-medium transition-colors hover:bg-surface-2/60">
               <span className="flex min-w-0 items-center gap-2">
                 <span className="truncate">{m.name}</span>
-                {m.source && <span className="chip shrink-0">From {SOURCE_NAME[m.source] ?? m.source}</span>}
+                {m.source === "suggested" ? (
+                  <span className="chip shrink-0">Written by Flatdesk</span>
+                ) : (
+                  m.source && <span className="chip shrink-0">From {SOURCE_NAME[m.source] ?? m.source}</span>
+                )}
                 {m.notApplied.length > 0 && <span className="pill shrink-0 bg-warn/15 text-xs font-normal text-warn">{m.notApplied.length} not applied</span>}
               </span>
               <svg viewBox="0 0 20 20" className="chevron size-4 shrink-0 text-muted transition-transform" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M5 8l5 5 5-5" /></svg>

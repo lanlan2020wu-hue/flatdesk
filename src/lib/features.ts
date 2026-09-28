@@ -1,7 +1,7 @@
 // Everything Flatdesk does, in one place, for the landing page and the
 // sign-in and sign-up screens. Only list what the product actually ships.
 
-export type Feature = { id: string; title: string; body: string; icon: string };
+export type Feature = { id: string; title: string; body: string; icon: string; isNew?: boolean };
 export type FeatureGroup = { id: string; title: string; features: Feature[] };
 
 // 24×24 stroke icons, drawn with currentColor.
@@ -22,6 +22,7 @@ const I = {
   note: "M5 4h14v12l-4 4H5zM15 20v-4h4",
   users: "M16 19v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1M9.5 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM21 19v-1a4 4 0 0 0-3-3.9M16 4.1a3 3 0 0 1 0 5.8",
   card: "M3 6h18v12H3zM3 10h18M7 15h3",
+  spark: "M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8zM18 15l.9 2.1L21 18l-2.1.9L18 21l-.9-2.1L15 18l2.1-.9z",
 };
 
 export const FEATURE_GROUPS: FeatureGroup[] = [
@@ -40,6 +41,7 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
     title: "Automation",
     features: [
       { id: "macros", title: "Macros", body: "Saved replies that can also add tags and set the status in one click.", icon: I.macro },
+      { id: "suggested-macros", title: "Macros that write themselves", body: "When your team sends the same answer on 5 tickets, Flatdesk offers it as a finished macro. No AI allowance used.", icon: I.spark, isNew: true },
       { id: "rules", title: "Assignment rules", body: 'When a ticket is tagged, rules like "if tagged billing, assign to Sam" pick who gets it.', icon: I.rule },
       { id: "tags", title: "Tags", body: "Tag tickets by hand, from a macro, or from your old help desk's data.", icon: I.tag },
     ],
@@ -50,14 +52,14 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
     features: [
       { id: "ai", title: "AI answers", body: "Answers routine questions from your macros and notes, and hands everything else to your team.", icon: I.ai },
       { id: "cap", title: "A cap that's on by default", body: "The AI pauses at your included resolutions. Admins get an email at 80% and at 100%.", icon: I.cap },
-      { id: "receipts", title: "AI receipts", body: "Every AI answer itemized, with the saved answers it used. Refund a wrong one and it stops counting.", icon: I.receipt },
+      { id: "receipts", title: "AI receipts", body: "Every AI answer itemized, with the saved answers it used. Refund a wrong one and it stops counting.", icon: I.receipt, isNew: true },
     ],
   },
   {
     id: "data",
     title: "Your data",
     features: [
-      { id: "import", title: "Import", body: "Bring tickets, customers, macros and rules from Zendesk, Intercom, Freshdesk or Help Scout.", icon: I.import },
+      { id: "import", title: "Lossless import", body: "Tickets, customers, macros and rules from Zendesk, Intercom, Freshdesk or Help Scout. Every original record is archived.", icon: I.import },
       { id: "export", title: "Export any time", body: "Tickets, messages, customers and macros as CSV or JSON, without asking us.", icon: I.export },
       { id: "reports", title: "Reports", body: "Volume, first response, time to close, AI share and per-agent load.", icon: I.report },
     ],

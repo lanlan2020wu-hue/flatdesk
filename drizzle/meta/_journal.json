@@ -57,6 +57,13 @@
       "when": 1790383101534,
       "tag": "0007_ai_receipts",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1790571738084,
+      "tag": "0008_macro_suggestions",
+      "breakpoints": true
     }
   ]
 }

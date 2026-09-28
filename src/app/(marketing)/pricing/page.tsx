@@ -38,9 +38,11 @@ const INCLUDED = [
   "Shared inbox",
   "Email and chat",
   "Macros and rules",
-  "AI answers",
+  "Macros that write themselves",
+  "AI answers, capped by default",
+  "AI receipts and refunds",
   "Reporting",
-  "Zendesk import",
+  "Lossless import from Zendesk, Intercom, Freshdesk or Help Scout",
   "Data export",
 ];
 
