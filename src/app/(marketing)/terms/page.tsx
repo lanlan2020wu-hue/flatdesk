@@ -41,8 +41,9 @@ export default function TermsPage() {
       <Section title="3. Price, trial and billing">
         <ul className="grid list-disc gap-2 pl-5">
           <li>
-            New teams get {TRIAL_DAYS} days free with no card. To keep using Flatdesk after that, an admin adds a card; the first charge is on
-            the day the trial ends.
+            New teams get {TRIAL_DAYS} days free with no card, with {PLAN.trialPerAgent} AI resolutions per agent for the whole trial and no
+            overage. To keep using Flatdesk after that, or to get the full monthly AI allowance sooner, an admin adds a card; the first charge
+            is on the day the trial ends.
           </li>
           <li>
             The plan is {usd(PLAN.seatPrice)} per agent per month, billed monthly in advance through Stripe. An agent is a member of your

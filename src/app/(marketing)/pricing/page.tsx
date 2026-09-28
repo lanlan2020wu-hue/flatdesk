@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 const FAQ: [string, string][] = [
   [
     "Is there a free trial?",
-    `Yes, ${TRIAL_DAYS} days with every feature and no card. If you add a card during the trial, the first charge still waits until the trial ends.`,
+    `Yes, ${TRIAL_DAYS} days with every feature and no card, including ${PLAN.trialPerAgent} AI resolutions per agent for the trial. Add a card at any point to get the full ${PLAN.includedPerAgent} per agent a month; the first charge still waits until the trial ends.`,
   ],
   [
     "What counts as an AI resolution?",

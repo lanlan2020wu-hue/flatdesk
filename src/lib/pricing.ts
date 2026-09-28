@@ -7,6 +7,7 @@ export const PLAN = {
   name: "Flatdesk",
   seatPrice: 49, // USD per agent per month
   includedPerAgent: 100, // AI resolutions per agent per month, pooled across the team
+  trialPerAgent: 25, // AI resolutions per agent for the whole no-card trial, pooled; no overage
   overageRate: 0.4, // USD per extra AI resolution, only when an admin turns overage on
 } as const;
 

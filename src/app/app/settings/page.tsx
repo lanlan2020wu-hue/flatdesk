@@ -152,7 +152,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
 
         <div className="grid gap-2 rounded-xl border border-line bg-surface-2/60 px-4 py-3">
           <p className="flex justify-between gap-2 text-sm">
-            <span>Used this month</span>
+            <span>{usage.trial ? "Used in your free trial" : "Used this month"}</span>
             <span className="num">
               {Math.min(usage.used, usage.included)} of {usage.included}
               {usage.overage > 0 && ` (+${usage.overage} overage)`}
@@ -162,7 +162,10 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
             <div className={`meter h-full rounded-full ${pct >= 100 ? "bg-warn" : "bg-accent"}`} style={{ width: `${pct}%` }} />
           </div>
           <p className="text-sm text-muted">
-            {PLAN.includedPerAgent} per agent, shared by the team. Resets on the 1st. Admins get an email at 80% and 100%.
+            {usage.trial
+              ? `${PLAN.trialPerAgent} per agent for the whole trial, shared by the team. Add a card to get the full ${PLAN.includedPerAgent} per agent each month; the first charge still waits until the trial ends.`
+              : `${PLAN.includedPerAgent} per agent, shared by the team. Resets on the 1st.`}{" "}
+            Admins get an email at 80% and 100%.
           </p>
         </div>
 
@@ -192,7 +195,9 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
                 <input type="checkbox" name="aiOverageEnabled" defaultChecked={org.aiOverageEnabled} className="mt-1 size-4 accent-[var(--accent)]" />
                 <span>
                   Keep answering after the allowance is used, at {usd(PLAN.overageRate, true)} per resolution
-                  <span className="block text-sm text-muted">Off by default. When off, the AI pauses and nothing extra is charged.</span>
+                  <span className="block text-sm text-muted">
+                    Off by default. When off, the AI pauses and nothing extra is charged.{usage.trial && " Overage only applies once your team has a card on file."}
+                  </span>
                 </span>
               </label>
               <label className="grid w-max gap-1">
