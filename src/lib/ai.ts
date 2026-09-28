@@ -12,7 +12,9 @@ import { PLAN } from "@/lib/pricing";
 // resolution unless the customer writes back, which hands the ticket to the
 // team and un-counts it (the pricing page promises exactly this). Each team
 // gets PLAN.includedPerAgent resolutions per agent per month; past that the AI
-// pauses unless an admin turned on overage.
+// pauses unless an admin turned on overage. A team on its free trial with no
+// card gets PLAN.trialPerAgent for the whole trial and no overage, which caps
+// what an unpaid team can spend; adding a card lifts it to the full allowance.
 
 const MODEL = "claude-opus-5";
 // USD per million tokens, for internal cost logging. Prompt caching bills cache
@@ -48,39 +50,46 @@ export function monthKey(d = new Date()) {
 // the cap so parallel tickets can't overshoot it.
 const COUNTED = ["resolution", "draft"] as const;
 
-export async function aiUsage(orgId: string, month = monthKey()) {
+export type Usage = { included: number; used: number; overage: number; month: string; trial: boolean };
+type Org = typeof orgs.$inferSelect;
+
+// The allowance and what's used of it. During a no-card trial, usage counts
+// across the whole trial (it can span two months), not just this month.
+async function measure(q: Pick<typeof db, "select">, org: Org, month: string): Promise<Usage> {
+  const trial = month === monthKey() && access(org).state === "trial";
+  const where = [eq(aiEvents.orgId, org.id), inArray(aiEvents.kind, [...COUNTED])];
+  if (!trial) where.push(eq(aiEvents.month, month));
   const [[{ agentCount }], [{ used, overage }]] = await Promise.all([
-    db.select({ agentCount: count() }).from(agents).where(eq(agents.orgId, orgId)),
-    db
-      .select({
-        used: count(),
-        overage: sql<number>`count(*) filter (where ${aiEvents.overage})`,
-      })
+    q.select({ agentCount: count() }).from(agents).where(eq(agents.orgId, org.id)),
+    q
+      .select({ used: count(), overage: sql<number>`count(*) filter (where ${aiEvents.overage})` })
       .from(aiEvents)
-      .where(and(eq(aiEvents.orgId, orgId), eq(aiEvents.month, month), inArray(aiEvents.kind, [...COUNTED]))),
+      .where(and(...where)),
   ]);
-  const included = Math.max(1, agentCount) * PLAN.includedPerAgent;
-  return { included, used: Number(used), overage: Number(overage), month };
+  const included = Math.max(1, agentCount) * (trial ? PLAN.trialPerAgent : PLAN.includedPerAgent);
+  return { included, used: Number(used), overage: Number(overage), month, trial };
+}
+
+export async function aiUsage(orgId: string, month = monthKey()): Promise<Usage> {
+  const org = await db.query.orgs.findFirst({ where: eq(orgs.id, orgId) });
+  if (!org) return { included: PLAN.includedPerAgent, used: 0, overage: 0, month, trial: false };
+  return measure(db, org, month);
 }
 
 type Slot = { eventId: string; overage: boolean } | { paused: string };
 
-async function reserveSlot(orgId: string, ticketId: string): Promise<Slot> {
+export async function reserveSlot(orgId: string, ticketId: string): Promise<Slot> {
   return db.transaction(async (tx) => {
     // One reservation at a time per org, so the count below stays true.
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${orgId}))`);
     const org = await tx.query.orgs.findFirst({ where: eq(orgs.id, orgId) });
     if (!org) return { paused: "missing org" };
     const month = monthKey();
-    const [[{ agentCount }], [{ used, overage }]] = await Promise.all([
-      tx.select({ agentCount: count() }).from(agents).where(eq(agents.orgId, orgId)),
-      tx
-        .select({ used: count(), overage: sql<number>`count(*) filter (where ${aiEvents.overage})` })
-        .from(aiEvents)
-        .where(and(eq(aiEvents.orgId, orgId), eq(aiEvents.month, month), inArray(aiEvents.kind, [...COUNTED]))),
-    ]);
-    const included = Math.max(1, agentCount) * PLAN.includedPerAgent;
-    const isOverage = Number(used) >= included;
+    const { included, used, overage, trial } = await measure(tx, org, month);
+    const isOverage = used >= included;
+    if (isOverage && trial) {
+      return { paused: `The AI has used the ${included} answers included in the free trial, so it's paused. Adding a card in Settings unlocks the full ${PLAN.includedPerAgent} per agent each month.` };
+    }
     if (isOverage) {
       if (!org.aiOverageEnabled) return { paused: "The AI has used this month's included answers, so it's paused until next month." };
       if (org.aiOverageMonthlyLimit != null && Number(overage) >= org.aiOverageMonthlyLimit) {
@@ -255,9 +264,11 @@ export async function handBackToTeam(orgId: string, ticketId: string) {
 
 // Emails admins once at 80% and once at 100% of the included allowance.
 export async function sendUsageNotice(orgId: string) {
-  const { included, used, month } = await aiUsage(orgId);
+  const { included, used, month: thisMonth, trial } = await aiUsage(orgId);
   const level = used >= included ? 100 : used >= included * 0.8 ? 80 : 0;
   if (!level) return;
+  // The trial allowance gets its own notices, separate from any month's.
+  const month = trial ? "trial" : thisMonth;
   const [claimed] = await db
     .update(orgs)
     .set({ aiNoticeMonth: month, aiNoticeLevel: level })
@@ -272,6 +283,20 @@ export async function sendUsageNotice(orgId: string) {
 
   const admins = await db.select({ email: agents.email }).from(agents).where(and(eq(agents.orgId, orgId), eq(agents.role, "admin")));
   if (admins.length === 0) return;
+  if (trial) {
+    const body =
+      level === 100
+        ? `Your team has used all ${included} AI answers included in the free trial, so the AI is paused and new tickets go to your team.`
+        : `Your team has used ${used} of the ${included} AI answers included in the free trial (${Math.round((used / included) * 100)}%).`;
+    const { error } = await resend().emails.send({
+      from: `Flatdesk <${emailConfig.from}>`,
+      to: admins.map((a) => a.email),
+      subject: level === 100 ? "Your trial's AI answers are used up" : "You've used 80% of your trial's AI answers",
+      text: `${body}\n\nAdd a card in Flatdesk under Settings to get the full ${PLAN.includedPerAgent} AI answers per agent each month. The first charge still waits until the trial ends.`,
+    });
+    if (error) console.error("usage notice failed", error);
+    return;
+  }
   const after = claimed.aiOverageEnabled
     ? `Overage is on, so the AI keeps answering at $${PLAN.overageRate.toFixed(2)} per resolution${claimed.aiOverageMonthlyLimit != null ? `, up to ${claimed.aiOverageMonthlyLimit} more this month` : ""}.`
     : "Overage is off, so once the allowance is used up the AI pauses and new tickets go to your team. Nothing extra is charged.";
