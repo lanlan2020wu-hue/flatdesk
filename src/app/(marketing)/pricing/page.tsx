@@ -1,47 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { TRIAL_DAYS } from "@/lib/billing";
+import { BILLING_FAQ } from "@/lib/faq";
 import { PLAN, PRICE_PHRASE, annualSavingsPct, usd } from "@/lib/pricing";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/pricing" },
   title: "Pricing",
   description: `${PRICE_PHRASE}, with ${PLAN.includedPerAgent} AI resolutions per agent included and capped by default.`,
 };
 
-const FAQ: [string, string][] = [
-  [
-    "Is there a free trial?",
-    `Yes, ${TRIAL_DAYS} days with every feature and no card, including ${PLAN.trialPerAgent} AI resolutions per agent for the trial. Add a card at any point to get the full ${PLAN.includedPerAgent} per agent a month; the first charge still waits until the trial ends.`,
-  ],
-  [
-    "What counts as an AI resolution?",
-    "A conversation the AI answers where the customer doesn't ask for a person afterwards. Conversations the AI hands to your team don't count. Each conversation counts at most once.",
-  ],
-  [
-    "What happens when we use all the included resolutions?",
-    "The AI stops answering for the rest of the month and new conversations go to your team as normal tickets. Nothing is charged. You get an email when you reach 80% and again at 100%.",
-  ],
-  [
-    "How does overage work?",
-    `Only an admin can turn it on, from billing settings. Each resolution past the included amount then costs ${usd(PLAN.overageRate, true)}. You can set a monthly limit, and you can turn overage off at any time.`,
-  ],
-  [
-    "Are the resolutions per agent or per team?",
-    `Per team. A 10-agent team gets ${(PLAN.includedPerAgent * 10).toLocaleString()} a month to share, however the tickets fall.`,
-  ],
-  [
-    "Is there a contract or a minimum?",
-    "No. Monthly billing has no contract: add or remove seats at any time and cancel from settings. Yearly billing is paid a year ahead for the lower price and runs to the end of the year you've paid for.",
-  ],
-  [
-    "Is there a discount for paying yearly?",
-    `Yes. Yearly billing is ${usd(PLAN.annualSeatPrice)} per agent per month, ${annualSavingsPct}% less than ${usd(PLAN.seatPrice)} month to month, charged as ${usd(PLAN.annualSeatPrice * 12)} per agent for the year. You get the same features and the same ${PLAN.includedPerAgent} AI resolutions per agent every month. Seats added mid-year are charged for the rest of the year; overage, if you turn it on, is billed monthly.`,
-  ],
-  [
-    "Can we take our data with us?",
-    "Yes. Settings has a one-click export of all tickets, customers, tags and macros as CSV or JSON. You never need to ask us for it.",
-  ],
-];
+const FAQ = BILLING_FAQ.map((f) => [f.q, f.a] as const);
 
 const INCLUDED = [
   "Shared inbox",
@@ -92,7 +60,7 @@ export default function PricingPage() {
             </div>
           </dl>
           <div className="flex flex-wrap gap-3">
-            <Link href="/#waitlist" className="btn btn-primary">Join the waitlist</Link>
+            <Link href="/sign-up" className="btn btn-primary">Start your free trial</Link>
             <Link href="/calculator" className="btn btn-secondary">Compare with your current bill</Link>
           </div>
         </div>

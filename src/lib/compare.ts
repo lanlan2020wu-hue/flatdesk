@@ -60,8 +60,11 @@ const sourcesFor = (...ids: string[]) => {
   return [...seen.values()];
 };
 
+// Intercom's API doesn't share workflows or assignment rules (see import/sources/intercom.ts).
 const importAnswer = (name: string) =>
-  `Yes. Flatdesk imports tickets, messages, attachments, customers, tags, macros and rules from ${name}, archives every original record, and lists anything that didn't map.`;
+  name === "Intercom"
+    ? "Yes. Flatdesk imports conversations, messages, attachments, contacts, tags and macros (where the API returns them) from Intercom, archives every original record, and lists anything that didn't map. Intercom's API doesn't share workflows or assignment rules, so those are recreated in Flatdesk."
+    : `Yes. Flatdesk imports tickets, messages, attachments, customers, tags, macros and rules from ${name}, archives every original record, and lists anything that didn't map.`;
 
 export const RIVALS: Rival[] = [
   {

@@ -4,7 +4,7 @@ import { usd } from "@/lib/pricing";
 // What two example teams would pay each month, Flatdesk first.
 export default function CostTable({ rows, caption }: { rows: ReturnType<typeof costRows>; caption: string }) {
   return (
-    <div className="card overflow-x-auto">
+    <div className="card overflow-x-auto" tabIndex={0} role="region" aria-label="Cost comparison">
       <table className="w-full min-w-[40rem] text-sm">
         <caption className="px-4 pt-4 text-left text-muted sm:px-5">{caption}</caption>
         <thead>

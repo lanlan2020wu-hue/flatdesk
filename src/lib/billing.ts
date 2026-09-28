@@ -1,5 +1,5 @@
 import { clerkClient } from "@clerk/nextjs/server";
-import { and, count, eq, isNotNull } from "drizzle-orm";
+import { and, count, eq, isNotNull, sql } from "drizzle-orm";
 import Stripe from "stripe";
 import { db, schema } from "@/db";
 import { clerkEnabled } from "@/lib/auth-config";
@@ -101,6 +101,11 @@ const seatPriceData = (interval: Interval) => ({
 });
 
 export async function checkoutUrl(orgId: string, email: string, origin: string, interval: Interval = "month") {
+  // A second Checkout (a double click, two tabs) would start a second
+  // subscription that seat sync never sees, so a team with a plan manages it
+  // in the portal instead.
+  const current = await refreshSubscription(orgId);
+  if (current.stripeSubscriptionId && isActive(current.subscriptionStatus)) return portalUrl(orgId, origin);
   const customer = await ensureCustomer(orgId, email);
   const org = await getOrg(orgId);
   // Stripe needs a trial end at least 48 hours out; closer than that, billing starts now.
@@ -192,9 +197,11 @@ export async function syncSeats(orgId: string) {
   const item = sub.items.data[0];
   if (!item || item.quantity === seats) return;
   // Monthly plans settle the difference on the next invoice. A yearly plan's
-  // next invoice can be months away, so it's invoiced now instead.
+  // next invoice can be months away, so an added seat is invoiced now. A
+  // removed yearly seat isn't refunded: the year runs to its end, as the FAQ says.
   const yearly = item.price.recurring?.interval === "year";
-  await stripe().subscriptionItems.update(item.id, { quantity: seats, proration_behavior: yearly ? "always_invoice" : "create_prorations" });
+  const proration_behavior = !yearly ? "create_prorations" : seats > (item.quantity ?? 0) ? "always_invoice" : "none";
+  await stripe().subscriptionItems.update(item.id, { quantity: seats, proration_behavior });
   await db.update(orgs).set({ billedSeats: seats }).where(eq(orgs.id, orgId));
 }
 
@@ -205,22 +212,37 @@ export async function billOverage(orgId: string, month = previousMonth()) {
   if (!billingConfigured()) return null;
   const org = await getOrg(orgId);
   if (!org.stripeCustomerId || (org.overageBilledMonth && org.overageBilledMonth >= month)) return null;
-  const [{ n }] = await db
-    .select({ n: count() })
+  // The overage flag is set when an answer starts, but answers the customer
+  // replied to stop counting later, which can bring the month back under the
+  // allowance. So the bill is what the month ended over the allowance, never
+  // more than the answers that ran as overage.
+  const [{ resolutions, flagged }] = await db
+    .select({ resolutions: count(), flagged: sql<number>`count(*) filter (where ${aiEvents.overage})` })
     .from(aiEvents)
-    .where(and(eq(aiEvents.orgId, orgId), eq(aiEvents.month, month), eq(aiEvents.kind, "resolution"), eq(aiEvents.overage, true)));
-  if (Number(n) > 0) {
-    // The idempotency key makes a retry after a failed update below safe.
-    await stripe().invoiceItems.create(
-      {
-        customer: org.stripeCustomerId,
-        currency: "usd",
-        amount: Math.round(Number(n) * PLAN.overageRate * 100),
-        description: `AI resolutions over the included allowance, ${month}: ${n} × $${PLAN.overageRate.toFixed(2)}`,
-      },
-      { idempotencyKey: `overage-${orgId}-${month}` },
-    );
-    if (org.billingInterval === "year") {
+    .where(and(eq(aiEvents.orgId, orgId), eq(aiEvents.month, month), eq(aiEvents.kind, "resolution")));
+  const { aiUsage } = await import("@/lib/ai"); // ai.ts imports this file
+  const { included } = await aiUsage(orgId, month);
+  const n = Math.min(Number(flagged), Math.max(0, Number(resolutions) - included));
+  if (n > 0) {
+    const customer = org.stripeCustomerId;
+    // A run killed between this charge and the update below would charge
+    // again the next day, after Stripe's idempotency keys expire, so look for
+    // the item first.
+    const existing = await stripe().invoiceItems.list({ customer, limit: 100 });
+    const already = existing.data.some((i) => i.metadata?.overageMonth === month);
+    if (!already) {
+      await stripe().invoiceItems.create(
+        {
+          customer,
+          currency: "usd",
+          amount: Math.round(n * PLAN.overageRate * 100),
+          description: `AI resolutions over the included allowance, ${month}: ${n} × $${PLAN.overageRate.toFixed(2)}`,
+          metadata: { orgId, overageMonth: month },
+        },
+        { idempotencyKey: `overage-${orgId}-${month}-${n}` },
+      );
+    }
+    if (org.billingInterval === "year" && !already) {
       await stripe().invoices.create(
         { customer: org.stripeCustomerId, pending_invoice_items_behavior: "include", auto_advance: true, description: `AI overage, ${month}` },
         { idempotencyKey: `overage-invoice-${orgId}-${month}` },
@@ -228,23 +250,39 @@ export async function billOverage(orgId: string, month = previousMonth()) {
     }
   }
   await db.update(orgs).set({ overageBilledMonth: month }).where(eq(orgs.id, orgId));
-  return Number(n);
+  return n;
 }
 
 // Daily job: refresh every paying team, fix seat counts, bill last month's overage.
-export async function dailyBilling() {
-  const rows = await db.select({ id: orgs.id }).from(orgs).where(isNotNull(orgs.stripeCustomerId));
+// Teams run a few at a time, and teams whose overage isn't billed yet go
+// first, so a run that hits the time limit still reaches everyone over a few days.
+export async function dailyBilling({ concurrency = 5, budgetMs = 240_000 } = {}) {
+  const started = Date.now();
+  const rows = await db
+    .select({ id: orgs.id })
+    .from(orgs)
+    .where(isNotNull(orgs.stripeCustomerId))
+    .orderBy(sql`${orgs.overageBilledMonth} asc nulls first`);
   const results: Record<string, string> = {};
-  for (const { id } of rows) {
-    try {
-      await refreshSubscription(id);
-      await syncSeats(id);
-      const billed = await billOverage(id);
-      results[id] = billed ? `billed ${billed} overage` : "ok";
-    } catch (err) {
-      console.error("daily billing failed", id, err);
-      results[id] = "error";
+  let next = 0;
+  const worker = async () => {
+    while (next < rows.length) {
+      const { id } = rows[next++];
+      if (Date.now() - started > budgetMs) {
+        results[id] = "skipped (time limit)";
+        continue;
+      }
+      try {
+        await refreshSubscription(id);
+        await syncSeats(id);
+        const billed = await billOverage(id);
+        results[id] = billed ? `billed ${billed} overage` : "ok";
+      } catch (err) {
+        console.error("daily billing failed", id, err);
+        results[id] = "error";
+      }
     }
-  }
+  };
+  await Promise.all(Array.from({ length: concurrency }, worker));
   return results;
 }

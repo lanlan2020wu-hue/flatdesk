@@ -8,7 +8,7 @@ import type { QA } from "@/lib/selling-points";
 export const GENERAL_FAQ: QA[] = [
   {
     q: "What is Flatdesk?",
-    a: `Flatdesk is a help desk for support teams of about 5 to 20 agents. Email and website chat land in one shared inbox, AI answers routine questions from your own macros, and the price is ${PRICE_PHRASE}, with AI included and capped.`,
+    a: `Flatdesk is a help desk for support teams of about 3 to 15 agents. Email and website chat land in one shared inbox, AI answers routine questions from your own macros, and the price is ${PRICE_PHRASE}, with AI included and capped.`,
   },
   {
     q: "Which channels does Flatdesk support?",
@@ -16,7 +16,7 @@ export const GENERAL_FAQ: QA[] = [
   },
   {
     q: "Does Flatdesk have a help center or knowledge base?",
-    a: "Not yet. The AI answers from your macros and internal notes.",
+    a: "Not yet. The AI answers from your macros and internal notes, and help center articles aren't imported. Teams moving from Zendesk or Intercom keep their existing help center running alongside Flatdesk for now.",
   },
   {
     q: "How can we tell if the AI is good enough before we pay?",
@@ -35,7 +35,7 @@ export const BILLING_FAQ: QA[] = [
   },
   {
     q: "What counts as an AI resolution?",
-    a: "A conversation the AI answers where the customer doesn't ask for a person afterwards. Conversations the AI hands to your team don't count. Each conversation counts at most once.",
+    a: "A conversation the AI answers where the customer doesn't write back. If they reply, the ticket goes to your team and stops counting. Conversations the AI hands to your team don't count either. Each conversation counts at most once.",
   },
   {
     q: "What happens when we use all the included resolutions?",

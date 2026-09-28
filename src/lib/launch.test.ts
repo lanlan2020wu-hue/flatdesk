@@ -85,10 +85,10 @@ test("a team gets 14 days without a card, then the app locks until a plan is act
 
 test("AI cost logging prices cache writes and reads at their own rates", async () => {
   const { callCost } = await import("./ai");
-  // 1M each of plain input, cache write, cache read and output: $5 + $6.25 + $0.50 + $25.
+  // 1M each of plain input, cache write (1-hour TTL), cache read and output: $4 + $8 + $0.20 + $20.
   const cost = callCost({ input_tokens: 1e6, cache_creation_input_tokens: 1e6, cache_read_input_tokens: 1e6, output_tokens: 1e6 });
-  assert.equal(cost.toFixed(2), "36.75");
-  assert.equal(callCost({ input_tokens: 100, output_tokens: 0 }), 0.0005);
+  assert.equal(cost.toFixed(2), "32.20");
+  assert.equal(callCost({ input_tokens: 100, output_tokens: 0 }), 0.0004);
 });
 
 test("a no-card trial gets a smaller AI allowance for the whole trial, with no overage; a card lifts it", async () => {
@@ -112,7 +112,7 @@ test("a no-card trial gets a smaller AI allowance for the whole trial, with no o
   ]);
 
   const usage = await aiUsage(T);
-  assert.deepEqual(usage, { included: 2 * PLAN.trialPerAgent, used: 49, overage: 0, month: monthKey(), trial: true });
+  assert.deepEqual(usage, { included: 2 * PLAN.trialPerAgent, used: 49, overage: 0, attempts: 49, month: monthKey(), trial: true });
   const last = await reserveSlot(T, null as unknown as string);
   assert.ok("eventId" in last, "the 50th answer still fits");
   const paused = await reserveSlot(T, null as unknown as string);
@@ -122,4 +122,33 @@ test("a no-card trial gets a smaller AI allowance for the whole trial, with no o
   const paid = await aiUsage(T);
   assert.deepEqual([paid.included, paid.used, paid.trial], [2 * PLAN.includedPerAgent, 40, false], "a card on file: this month only, full allowance");
   assert.ok("eventId" in (await reserveSlot(T, null as unknown as string)));
+});
+
+test("the allowance follows paid seats, abandoned slots expire, and handoffs are capped too", async () => {
+  process.env.STRIPE_SECRET_KEY ??= "sk_test_dummy";
+  const { db, schema } = await import("@/db");
+  const { ATTEMPTS_PER_INCLUDED, aiUsage, monthKey, reserveSlot } = await import("./ai");
+  const { PLAN } = await import("./pricing");
+  const T = "org_test_ai_limits";
+  await db.delete(schema.orgs).where(eq(schema.orgs.id, T));
+  // Five people signed in once, but the team pays for one seat.
+  await db.insert(schema.orgs).values({ id: T, name: "Limits team", subscriptionStatus: "active", billedSeats: 1 });
+  await db.insert(schema.agents).values(
+    Array.from({ length: 5 }, (_, i) => ({ orgId: T, userId: `user_l${i}`, name: "A", email: `l${i}@limits.dev`, role: "agent" as const })),
+  );
+  const month = monthKey();
+  const hourAgo = new Date(Date.now() - 3_600_000);
+  await db.insert(schema.aiEvents).values([
+    { orgId: T, kind: "draft", month, model: "test", createdAt: hourAgo }, // a call that died mid-flight
+    { orgId: T, kind: "draft", month, model: "test" }, // one in flight now
+  ]);
+  const usage = await aiUsage(T);
+  assert.deepEqual([usage.included, usage.used], [PLAN.includedPerAgent, 1], "one paid seat; the stale slot doesn't count");
+
+  // Handoffs don't count toward the allowance but do count toward the attempt limit.
+  const room = PLAN.includedPerAgent * ATTEMPTS_PER_INCLUDED - 2 - 1;
+  await db.insert(schema.aiEvents).values(Array.from({ length: room }, () => ({ orgId: T, kind: "handoff" as const, month, model: "test" })));
+  assert.ok("eventId" in (await reserveSlot(T, null as unknown as string)), "the last attempt fits");
+  const paused = await reserveSlot(T, null as unknown as string);
+  assert.ok("paused" in paused && /handed/.test(paused.paused), "then the AI pauses");
 });

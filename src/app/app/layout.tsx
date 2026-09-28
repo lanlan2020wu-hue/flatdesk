@@ -11,7 +11,7 @@ import { access, billingConfigured, isActive, refreshSubscription } from "@/lib/
 import { getOnboarding } from "@/lib/onboarding";
 import { VIEWS, viewCounts } from "@/lib/tickets";
 
-export const metadata = { title: { default: "Inbox", template: "%s · Flatdesk" } };
+export const metadata = { title: { default: "Inbox", template: "%s · Flatdesk" }, robots: { index: false } };
 
 export default async function AppLayout({ children }: LayoutProps<"/app">) {
   const s = await requireSession();

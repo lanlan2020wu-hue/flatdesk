@@ -5,7 +5,7 @@ import { clerkEnabled } from "@/lib/auth-config";
 import { TRIAL_DAYS } from "@/lib/billing";
 import { SignUp } from "@clerk/nextjs";
 
-export const metadata = { title: "Start your free trial" };
+export const metadata = { title: "Start your free trial", robots: { index: false } };
 
 export default function SignUpPage() {
   // Without Clerk keys (local dev), sign-in is handled by DEV_AUTH.

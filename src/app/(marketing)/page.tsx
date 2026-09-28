@@ -1,8 +1,11 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import JsonLd from "@/components/JsonLd";
 import WaitlistForm from "@/components/WaitlistForm";
 import YearChart from "@/components/YearChart";
 import { AiShot, ChatShot, FeatureIcon, ImportShot, InboxShot, MacroShot, ReceiptShot, ReportShot } from "@/components/ProductShots";
 import { FEATURE_GROUPS } from "@/lib/features";
+import { organization, software, website } from "@/lib/seo";
 import { PLAN, competitorById, competitorMonthly, flatdeskMonthly, usd } from "@/lib/pricing";
 
 const EXAMPLE = { agents: 10, resolutions: 1500 };
@@ -115,12 +118,15 @@ function Row({ label, value, className = "" }: { label: React.ReactNode; value: 
   );
 }
 
+export const metadata: Metadata = { alternates: { canonical: "/" } };
+
 export default function Home() {
   const fin = competitorMonthly(competitorById("fin-advanced"), EXAMPLE.agents, EXAMPLE.resolutions);
   const ours = flatdeskMonthly(EXAMPLE.agents, EXAMPLE.resolutions, "year");
 
   return (
     <div className="grid gap-24 sm:gap-28">
+      <JsonLd data={[organization(), website(), software()]} />
       <section className="relative overflow-hidden">
         <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
           <div className="ribbon enter-fade" />
@@ -130,7 +136,7 @@ export default function Home() {
           <div className="grid gap-6">
             <p style={{ "--d": 0 } as React.CSSProperties} className="enter eyebrow flex w-max items-center gap-2 rounded-full border border-line bg-surface px-3 py-1 shadow-sm">
               <span className="size-1.5 rounded-full bg-accent" />
-              Help desk for teams of 5–20 agents
+              Help desk for teams of 3–15 agents
             </p>
             <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-[2.6rem] leading-[1.05] sm:text-6xl">
               From {usd(PLAN.annualSeatPrice)} per agent. AI included. <span className="hl hl-draw italic">The same bill every month.</span>
