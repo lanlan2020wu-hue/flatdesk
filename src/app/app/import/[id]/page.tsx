@@ -141,6 +141,10 @@ export default async function ImportDetailPage({ params }: PageProps<"/app/impor
         <section className="card grid gap-3 p-5 sm:p-6">
           <h2 className="font-medium">Next</h2>
           <ul className="grid gap-2 text-sm">
+            <li>
+              <Link href="/app/test-drive" className="link font-medium">Test-drive the AI on your recent tickets</Link>
+              <span className="text-muted">: see its draft beside what your team actually sent. Nothing is sent, and it doesn&apos;t use your AI allowance.</span>
+            </li>
             {invitable.length > 0 && (
               <li>
                 <Link href="/app/welcome?step=invite" className="link">

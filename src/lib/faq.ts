@@ -19,6 +19,10 @@ export const GENERAL_FAQ: QA[] = [
     a: "Not yet. The AI answers from your macros and internal notes, and help center articles aren't imported. Teams moving from Zendesk or Intercom keep their existing help center running alongside Flatdesk for now.",
   },
   {
+    q: "How can we tell if the AI is good enough before we pay?",
+    a: "Run the AI test drive during your free trial. After you import your help desk, the AI drafts answers to your 50 most recent tickets using your macros, and shows each draft beside the reply your team actually sent. Nothing is sent to customers and it doesn't use your AI allowance.",
+  },
+  {
     q: "Who is Flatdesk a good fit for?",
     a: "Email and chat support teams that use AI for a real share of tickets and want the bill to stay the same every month, especially teams coming from per-resolution AI pricing.",
   },
