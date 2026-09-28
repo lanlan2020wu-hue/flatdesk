@@ -135,12 +135,15 @@ ${kb || "(none)"}
 </saved_answers>`;
 }
 
-// The team's saved answers, as the AI sees them.
-export function loadKnowledge(orgId: string) {
+// The team's saved answers, as the AI sees them. The test drive can leave out
+// macros Flatdesk suggested after a date (see lib/test-drive.ts).
+export function loadKnowledge(orgId: string, opts?: { skipSuggestedSince: Date }) {
+  const where = [eq(macros.orgId, orgId)];
+  if (opts) where.push(sql`not (${macros.source} is not distinct from 'suggested' and ${macros.createdAt} >= ${opts.skipSuggestedSince})`);
   return db
     .select({ name: macros.name, body: macros.body })
     .from(macros)
-    .where(eq(macros.orgId, orgId))
+    .where(and(...where))
     .orderBy(asc(macros.name))
     .limit(100);
 }

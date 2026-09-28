@@ -19,11 +19,13 @@ export const TEST_DRIVE = {
   tickets: 50,
   budgetUsd: 10,
   perStep: 3,
-  // Held back per call in flight, so parallel calls can't run far past the budget.
-  reserveUsd: 0.25,
+  // The most one call can cost: 16k output tokens plus a full cache write of
+  // the prompt with 100 macros. Held back per call in flight, and charged for a
+  // call that failed or died, since the API may still bill for it.
+  reserveUsd: 0.55,
   // A call that hasn't finished in this long died with its function; queue it again.
   staleMs: 5 * 60_000,
-  callTimeoutMs: 45_000,
+  callTimeoutMs: 110_000, // under the step route's maxDuration
 };
 
 const { orgs, tickets, messages, customers, agents, testDriveDrafts: drafts } = schema;
@@ -98,11 +100,14 @@ export async function runTestDriveStep(orgId: string, draft: typeof draftAnswer 
     await lock(tx, orgId);
     const org = await tx.query.orgs.findFirst({ where: eq(orgs.id, orgId) });
     if (!org || access(org).state === "locked") return [];
-    await tx
+    const stale = await tx
       .update(drafts)
       .set({ status: "queued", startedAt: null })
-      .where(and(eq(drafts.orgId, orgId), eq(drafts.status, "running"), lt(drafts.startedAt, new Date(Date.now() - TEST_DRIVE.staleMs))));
-    const left = TEST_DRIVE.budgetUsd - Number(org.testDriveSpentUsd);
+      .where(and(eq(drafts.orgId, orgId), eq(drafts.status, "running"), lt(drafts.startedAt, new Date(Date.now() - TEST_DRIVE.staleMs))))
+      .returning({ id: drafts.id });
+    const lost = stale.length * TEST_DRIVE.reserveUsd;
+    if (lost) await tx.update(orgs).set({ testDriveSpentUsd: sql`${orgs.testDriveSpentUsd} + ${lost}` }).where(eq(orgs.id, orgId));
+    const left = TEST_DRIVE.budgetUsd - Number(org.testDriveSpentUsd) - lost;
     if (left <= 0) {
       await tx
         .update(drafts)
@@ -132,10 +137,23 @@ export async function runTestDriveStep(orgId: string, draft: typeof draftAnswer 
   });
 
   if (claimed.length > 0) {
-    const [org, knowledge] = await Promise.all([db.query.orgs.findFirst({ where: eq(orgs.id, orgId) }), loadKnowledge(orgId)]);
+    const [org, knowledge] = await Promise.all([db.query.orgs.findFirst({ where: eq(orgs.id, orgId) }), fairKnowledge(orgId)]);
     await Promise.all(claimed.map((c) => draftOne(orgId, org!, knowledge, c, draft)));
   }
   return testDriveProgress(orgId);
+}
+
+// The team's macros minus any Flatdesk wrote from repeated replies after the
+// oldest ticket in the run: those may have been learned from the very replies
+// the drafts are compared with, which would flatter the score.
+export async function fairKnowledge(orgId: string) {
+  const [oldest] = await db
+    .select({ at: sql<Date | null>`min(${tickets.createdAt})` })
+    .from(drafts)
+    .innerJoin(tickets, eq(tickets.id, drafts.ticketId))
+    .where(eq(drafts.orgId, orgId));
+  const since = oldest?.at ? new Date(oldest.at) : null;
+  return loadKnowledge(orgId, since ? { skipSuggestedSince: since } : undefined);
 }
 
 async function draftOne(
@@ -176,6 +194,11 @@ async function draftOne(
       { timeout: TEST_DRIVE.callTimeoutMs, maxRetries: 0 },
     );
     await db.transaction(async (tx) => {
+      // The call cost money either way; the row only takes it if it's still ours.
+      await tx
+        .update(orgs)
+        .set({ testDriveSpentUsd: sql`${orgs.testDriveSpentUsd} + ${d.metered.costUsd}` })
+        .where(eq(orgs.id, orgId));
       await tx
         .update(drafts)
         .set({
@@ -189,15 +212,19 @@ async function draftOne(
           error: null,
           finishedAt: new Date(),
         })
-        .where(eq(drafts.id, row.id));
-      await tx
-        .update(orgs)
-        .set({ testDriveSpentUsd: sql`${orgs.testDriveSpentUsd} + ${d.metered.costUsd}` })
-        .where(eq(orgs.id, orgId));
+        .where(and(eq(drafts.id, row.id), eq(drafts.status, "running")));
     });
   } catch (err) {
     console.error("test drive draft failed", err);
-    await finish({ status: "failed", error: "The AI service didn't respond in time for this ticket." });
+    // We can't tell whether the API billed a failed call, so charge the most it could have cost.
+    await db.transaction(async (tx) => {
+      const [failed] = await tx
+        .update(drafts)
+        .set({ status: "failed", error: "The AI service didn't respond in time for this ticket.", costUsd: TEST_DRIVE.reserveUsd.toFixed(5), finishedAt: new Date() })
+        .where(and(eq(drafts.id, row.id), eq(drafts.status, "running")))
+        .returning({ id: drafts.id });
+      if (failed) await tx.update(orgs).set({ testDriveSpentUsd: sql`${orgs.testDriveSpentUsd} + ${TEST_DRIVE.reserveUsd}` }).where(eq(orgs.id, orgId));
+    });
   }
 }
 

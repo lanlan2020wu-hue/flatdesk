@@ -1,4 +1,6 @@
+import { eq } from "drizzle-orm";
 import Link from "next/link";
+import { db, schema } from "@/db";
 import TestDriveRunner from "@/components/TestDriveRunner";
 import { requireSession } from "@/lib/auth";
 import { aiConfigured } from "@/lib/ai";
@@ -102,7 +104,11 @@ export default async function TestDrivePage({ searchParams }: PageProps<"/app/te
   const s = await requireSession();
   const sp = await searchParams;
   const error = typeof sp.error === "string" ? sp.error : null;
-  const [rows, spent] = await Promise.all([testDriveDrafts(s.orgId), spentUsd(s.orgId)]);
+  const [rows, spent, org] = await Promise.all([
+    testDriveDrafts(s.orgId),
+    spentUsd(s.orgId),
+    db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId), columns: { aiEnabled: true } }),
+  ]);
   const isAdmin = s.role === "admin";
   const active = rows.some((r) => r.status === "queued" || r.status === "running");
   const canRun = aiConfigured() && spent < TEST_DRIVE.budgetUsd;
@@ -120,6 +126,13 @@ export default async function TestDrivePage({ searchParams }: PageProps<"/app/te
           beside the reply your team actually sent. Nothing is sent to customers, and none of it counts toward your AI allowance.
         </p>
       </header>
+
+      {org && !org.aiEnabled && (
+        <p className="rounded-lg border border-line bg-surface-2 px-4 py-3 text-sm text-muted">
+          The AI is switched off in <Link href="/app/settings" className="link text-accent">Settings</Link>, so it isn&apos;t answering live tickets.
+          The test drive still works, so you can judge it before turning it on.
+        </p>
+      )}
 
       {error && <p role="alert" className="rounded-lg border border-warn/40 bg-warn-soft px-4 py-3 text-sm text-warn">{error}</p>}
 
@@ -185,7 +198,8 @@ export default async function TestDrivePage({ searchParams }: PageProps<"/app/te
             {!active && (
               <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4 text-sm text-muted">
                 <p>
-                  Drafts that are wrong or need edits usually mean a missing macro.{" "}
+                  Macros Flatdesk wrote from these same replies are left out, so the score isn&apos;t flattered. Drafts that are wrong or need
+                  edits usually mean a missing macro.{" "}
                   <Link href="/app/macros" className="link text-accent">Add or fix macros</Link>, then run it again.
                 </p>
                 {isAdmin && canRun && (

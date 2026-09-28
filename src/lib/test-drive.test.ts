@@ -87,9 +87,9 @@ test("stops at the budget and skips the rest", async () => {
   await assert.rejects(startTestDrive(ORG), TestDriveError);
 });
 
-test("a failed call leaves the ticket marked failed and costs nothing", async () => {
+test("a failed call leaves the ticket marked failed and counts against the budget", async () => {
   await setup();
-  const { startTestDrive, runTestDriveStep, spentUsd } = await import("./test-drive");
+  const { startTestDrive, runTestDriveStep, spentUsd, TEST_DRIVE } = await import("./test-drive");
   await startTestDrive(ORG);
   let p = await runTestDriveStep(ORG, async () => {
     throw new Error("timeout");
@@ -98,5 +98,27 @@ test("a failed call leaves the ticket marked failed and costs nothing", async ()
     throw new Error("timeout");
   });
   assert.equal(p.failed, 4);
-  assert.equal(await spentUsd(ORG), 0);
+  assert.equal((await spentUsd(ORG)).toFixed(2), (4 * TEST_DRIVE.reserveUsd).toFixed(2), "a failed call may still be billed, so it's charged at the most it could cost");
+});
+
+test("leaves out macros Flatdesk suggested after the oldest test ticket, and requeues a stale call at the reserve cost", async () => {
+  const { db, schema } = await setup();
+  const { startTestDrive, fairKnowledge, runTestDriveStep, spentUsd, TEST_DRIVE } = await import("./test-drive");
+  await db.insert(schema.macros).values([
+    { orgId: ORG, name: "Old suggestion", body: "x", source: "suggested", createdAt: new Date(Date.now() - 86_400_000) },
+    { orgId: ORG, name: "Learned from these replies", body: "y", source: "suggested" },
+  ]);
+  await startTestDrive(ORG);
+  const names = (await fairKnowledge(ORG)).map((k) => k.name).sort();
+  assert.deepEqual(names, ["Old suggestion", "Password reset"]);
+
+  const [row] = await db.select().from(schema.testDriveDrafts).where(eq(schema.testDriveDrafts.orgId, ORG)).limit(1);
+  await db
+    .update(schema.testDriveDrafts)
+    .set({ status: "running", startedAt: new Date(Date.now() - TEST_DRIVE.staleMs - 1000) })
+    .where(eq(schema.testDriveDrafts.id, row.id));
+  let p = await runTestDriveStep(ORG, fakeDraft("0.01000"));
+  while (!p.finished) p = await runTestDriveStep(ORG, fakeDraft("0.01000"));
+  assert.equal(p.done, 4);
+  assert.equal((await spentUsd(ORG)).toFixed(2), (TEST_DRIVE.reserveUsd + 0.04).toFixed(2));
 });
