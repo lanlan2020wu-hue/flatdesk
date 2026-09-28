@@ -106,7 +106,7 @@ export default function Calculator({ initialTool, initialAgents, initialResoluti
               </label>
             ))}
           </div>
-          <span className="text-xs text-muted">Per agent per month. Yearly is {annualSavingsPct}% less. Most rivals' list prices are yearly too.</span>
+          <span className="text-xs text-muted">Per agent per month. Yearly is {annualSavingsPct}% less. Most rivals&rsquo; list prices are yearly too.</span>
         </fieldset>
       </form>
 

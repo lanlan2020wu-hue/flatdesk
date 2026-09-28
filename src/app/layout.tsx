@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Fraunces, IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import { clerkEnabled } from "@/lib/auth-config";
+import { clerkAppearance, clerkLocalization } from "@/lib/clerk-theme";
 import { PLAN, usd } from "@/lib/pricing";
 import { SITE } from "@/lib/site";
 import "./globals.css";
@@ -25,15 +26,6 @@ const fraunces = Fraunces({
   style: ["normal", "italic"],
 });
 
-// Keeps Clerk's sign-in, team and account screens in Flatdesk's colors and type.
-const clerkAppearance = {
-  variables: {
-    colorPrimary: "#17624b",
-    fontFamily: "var(--font-plex-sans), system-ui, sans-serif",
-    borderRadius: "0.625rem",
-  },
-};
-
 export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
   openGraph: { siteName: "Flatdesk", type: "website" },
@@ -52,7 +44,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${plexSans.variable} ${plexMono.variable} ${fraunces.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans text-[15px] leading-relaxed">
-        {clerkEnabled ? <ClerkProvider appearance={clerkAppearance}>{children}</ClerkProvider> : children}
+        {clerkEnabled ? <ClerkProvider appearance={clerkAppearance} localization={clerkLocalization}>{children}</ClerkProvider> : children}
       </body>
     </html>
   );
