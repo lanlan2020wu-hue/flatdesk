@@ -7,50 +7,43 @@ import { PLAN, competitorById, competitorMonthly, flatdeskMonthly, usd } from "@
 
 const EXAMPLE = { agents: 10, resolutions: 1500 };
 
-const PRINCIPLES: [string, string, React.ReactNode][] = [
-  [
-    "One number on the invoice",
-    `Seats × ${usd(PLAN.seatPrice)}. No meters, no add-on tiers, no "contact sales".`,
-    <path key="i" d="M7 4h10v16l-2.5-1.5L12 20l-2.5-1.5L7 20zM10 9h4M10 13h4" />,
-  ],
-  [
-    "A cap that's on by default",
-    `AI stops at your included resolutions unless an admin opts in to ${usd(PLAN.overageRate, true)} each. We never turn it on for you.`,
-    <path key="i" d="M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6zM9 12l2 2 4-4" />,
-  ],
-  [
-    "Leave whenever you like",
-    "Export every ticket, customer and macro as CSV or JSON from settings, any time, without asking us.",
-    <path key="i" d="M12 4v11m0 0l-4-4m4 4l4-4M5 19h14" />,
-  ],
+// The four reasons to switch, right under the hero. Each links to its part of the tour.
+const SELLING_POINTS: { title: string; body: string; href: string; icon: string; isNew?: boolean }[] = [
+  {
+    title: "One flat price",
+    body: `Seats × ${usd(PLAN.seatPrice)}, with ${PLAN.includedPerAgent} AI resolutions per seat. The AI pauses at the cap unless an admin opts in. No meters, no add-on tiers.`,
+    href: "#why-flat",
+    icon: "M7 4h10v16l-2.5-1.5L12 20l-2.5-1.5L7 20zM10 9h4M10 13h4",
+  },
+  {
+    title: "AI receipts",
+    body: "Every AI answer you're charged for, itemized with the saved answers it used. Refund a wrong one in a click and it stops counting.",
+    href: "#receipts",
+    icon: "M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6zM9 12l2 2 4-4",
+    isNew: true,
+  },
+  {
+    title: "Macros that write themselves",
+    body: "When your team sends the same answer on 5 tickets, Flatdesk offers it as a finished macro. A full library in your first week.",
+    href: "#macros",
+    icon: "M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8zM18 15l.9 2.1L21 18l-2.1.9L18 21l-.9-2.1L15 18l2.1-.9z",
+    isNew: true,
+  },
+  {
+    title: "Lossless import",
+    body: "Bring tickets, customers, macros and rules from your old help desk. Every original record is archived, and anything that didn't map is listed.",
+    href: "#import",
+    icon: "M12 4v11m0 0l-4-4m4 4l4-4M5 19h14",
+  },
 ];
 
 const SOURCES = ["Zendesk", "Intercom", "Freshdesk", "Help Scout"];
 
 // The feature tour: one row per system, each with a drawing of the real screen.
-const TOUR: { eyebrow: string; title: string; body: string; points: string[]; shot: React.ReactNode; badge?: string }[] = [
+// The selling points come first.
+const TOUR: { id: string; eyebrow: string; title: string; body: string; points: string[]; shot: React.ReactNode; badge?: string }[] = [
   {
-    eyebrow: "Shared inbox",
-    title: "Email and chat land in one queue.",
-    body: "Forward your support address and add the chat widget. Every conversation becomes a ticket your whole team can see, assign and close.",
-    points: ["Views for mine, unassigned, open, pending and closed", "Internal notes the customer never sees", "Replies thread back onto the same ticket"],
-    shot: <InboxShot />,
-  },
-  {
-    eyebrow: "Macros and rules",
-    title: "Answer the same question once.",
-    body: "Save replies as macros that can also tag the ticket and set its status. Rules route tagged tickets to the right person.",
-    points: ['"If tagged billing, assign to Sam"', "Macros insert, tag and set status in one click", "Rules and macros come over from your old help desk"],
-    shot: <MacroShot />,
-  },
-  {
-    eyebrow: "AI answers",
-    title: "AI takes the routine questions, and stops at your cap.",
-    body: `The AI answers from your own macros and notes, and hands anything account-specific, upset or unclear to your team. Each seat includes ${PLAN.includedPerAgent} resolutions a month, pooled.`,
-    points: ["Pauses at the included amount unless an admin opts in", "Emails admins at 80% and at 100%", "If the customer writes back, it doesn't count"],
-    shot: <AiShot />,
-  },
-  {
+    id: "receipts",
     eyebrow: "AI receipts",
     badge: "New",
     title: "See every AI answer you're charged for. Refund the wrong ones.",
@@ -59,6 +52,44 @@ const TOUR: { eyebrow: string; title: string; body: string; points: string[]; sh
     shot: <ReceiptShot />,
   },
   {
+    id: "macros",
+    eyebrow: "Macros that write themselves",
+    badge: "New",
+    title: "Your team answers it five times. Flatdesk writes the macro.",
+    body: "Flatdesk notices the answers your team keeps typing. Once the same reply has gone out on 5 tickets, it offers a finished macro with the customer's name taken out and the usual tags filled in. One click saves it, and the AI can use it right away.",
+    points: [
+      "Works from your imported history, so suggestions start on day one",
+      "Offers to save a reply right after you send it for the fifth time",
+      "Suggestions never use your AI allowance",
+    ],
+    shot: <MacroShot />,
+  },
+  {
+    id: "import",
+    eyebrow: "Lossless import and export",
+    title: "Bring your whole history. Nothing is left behind.",
+    body: "Bring tickets, customers, macros, tags and rules from your current help desk. Every original record is archived, anything that didn't map is listed in a report, and you can download the raw archive. Export everything as CSV or JSON at any time.",
+    points: [...SOURCES.map((s) => `Import from ${s}`), "Export any time, without asking us"],
+    shot: <ImportShot />,
+  },
+  {
+    id: "inbox",
+    eyebrow: "Shared inbox",
+    title: "Email and chat land in one queue.",
+    body: "Forward your support address and add the chat widget. Every conversation becomes a ticket your whole team can see, assign and close.",
+    points: ["Views for mine, unassigned, open, pending and closed", "Internal notes the customer never sees", 'Rules like "if tagged billing, assign to Sam"'],
+    shot: <InboxShot />,
+  },
+  {
+    id: "ai",
+    eyebrow: "AI answers",
+    title: "AI takes the routine questions, and stops at your cap.",
+    body: `The AI answers from your own macros and notes, and hands anything account-specific, upset or unclear to your team. Each seat includes ${PLAN.includedPerAgent} resolutions a month, pooled.`,
+    points: ["Pauses at the included amount unless an admin opts in", "Emails admins at 80% and at 100%", "If the customer writes back, it doesn't count"],
+    shot: <AiShot />,
+  },
+  {
+    id: "chat",
     eyebrow: "Chat widget",
     title: "Live chat with one script tag.",
     body: "Paste one line into your site and a chat bubble appears. Visitors get answers from the AI or your team, in the same inbox as email.",
@@ -66,18 +97,12 @@ const TOUR: { eyebrow: string; title: string; body: string; points: string[]; sh
     shot: <ChatShot />,
   },
   {
+    id: "reports",
     eyebrow: "Reports",
     title: "The numbers a team lead actually checks.",
     body: "Ticket volume by channel, median first response, median time to close, the share the AI answered, and each agent's load.",
     points: ["Last 7, 30 or 90 days", "Per-agent replies, closed and open", "AI answered versus handed off"],
     shot: <ReportShot />,
-  },
-  {
-    eyebrow: "Import and export",
-    title: "Bring your history. Take it with you if you leave.",
-    body: "Bring tickets, customers, macros, tags and rules from your current help desk. Every original record is archived, and anything that didn't map is listed. Export everything as CSV or JSON at any time.",
-    points: SOURCES.map((s) => `Import from ${s}`),
-    shot: <ImportShot />,
   },
 ];
 
@@ -113,6 +138,14 @@ export default function Home() {
             <p style={{ "--d": 2 } as React.CSSProperties} className="enter max-w-xl text-lg text-muted">
               Every seat includes {PLAN.includedPerAgent} AI resolutions a month, shared across your team. When they run out, the AI pauses and
               your team takes over. You only pay more if you turn overage on yourself.
+            </p>
+            <p style={{ "--d": 2 } as React.CSSProperties} className="enter flex flex-wrap gap-2 text-sm">
+              {["AI receipts", "Macros that write themselves", "Lossless import"].map((t) => (
+                <span key={t} className="flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1 shadow-sm">
+                  <svg viewBox="0 0 20 20" className="size-3.5 text-accent" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 10.5l3 3 7-7" /></svg>
+                  {t}
+                </span>
+              ))}
             </p>
             <div style={{ "--d": 3 } as React.CSSProperties} className="enter flex flex-wrap gap-3">
               <Link href="/sign-up" className="btn btn-primary">
@@ -166,22 +199,29 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="reveal mx-auto grid w-full max-w-6xl gap-6 px-4 sm:px-6 md:grid-cols-3">
-        {PRINCIPLES.map(([title, body, icon], i) => (
-          <div key={title} className="lift card grid content-start gap-3 p-6">
-            <div className="flex items-center justify-between">
-              <svg viewBox="0 0 24 24" className="size-9 rounded-lg bg-accent-soft p-2 text-accent" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                {icon}
-              </svg>
-              <span className="num text-xs text-muted">0{i + 1}</span>
-            </div>
-            <h2 className="text-lg font-medium">{title}</h2>
-            <p className="text-muted">{body}</p>
-          </div>
-        ))}
+      <section aria-labelledby="why-switch" className="reveal mx-auto grid w-full max-w-6xl gap-6 px-4 sm:px-6">
+        <h2 id="why-switch" className="eyebrow">Four reasons teams switch</h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {SELLING_POINTS.map((p, i) => (
+            <a key={p.title} href={p.href} className="lift card group flex flex-col gap-3 p-6">
+              <span className="flex items-center justify-between">
+                <FeatureIcon d={p.icon} />
+                <span className="flex items-center gap-2">
+                  {p.isNew && <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-medium tracking-[0.12em] text-accent-ink uppercase">New</span>}
+                  <span className="num text-xs text-muted">0{i + 1}</span>
+                </span>
+              </span>
+              <span className="text-lg font-medium">{p.title}</span>
+              <span className="text-muted">{p.body}</span>
+              <span className="mt-auto text-sm font-medium text-accent">
+                See how <span aria-hidden="true" className="arrow inline-block transition-transform group-hover:translate-x-0.5">→</span>
+              </span>
+            </a>
+          ))}
+        </div>
       </section>
 
-      <section className="reveal mx-auto grid w-full max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] lg:items-center">
+      <section id="why-flat" className="reveal mx-auto grid w-full max-w-6xl scroll-mt-24 gap-8 px-4 sm:px-6 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] lg:items-center">
         <div className="grid gap-3">
           <p className="eyebrow">Why flat matters</p>
           <h2 className="font-display text-3xl sm:text-4xl">Per-resolution pricing follows your busiest month.</h2>
@@ -198,10 +238,10 @@ export default function Home() {
         <div className="reveal grid max-w-2xl gap-3">
           <p className="eyebrow">The product</p>
           <h2 className="font-display text-4xl sm:text-5xl">Everything a support team runs on. One price per seat.</h2>
-          <p className="text-lg text-muted">No add-on tiers and no feature gates. Every seat gets every system below.</p>
+          <p className="text-lg text-muted">No add-on tiers and no feature gates. Every seat gets every system below, starting with the ones teams switch for.</p>
         </div>
         {TOUR.map((f, i) => (
-          <article key={f.eyebrow} className="reveal grid items-center gap-8 lg:grid-cols-2 lg:gap-16">
+          <article key={f.id} id={f.id} className="reveal grid scroll-mt-24 items-center gap-8 lg:grid-cols-2 lg:gap-16">
             <div className={`grid content-start gap-4 ${i % 2 ? "lg:order-2" : ""}`}>
               <p className="eyebrow flex items-center gap-2">
                 <span className="num text-accent">{String(i + 1).padStart(2, "0")}</span>
@@ -246,7 +286,10 @@ export default function Home() {
                   <li key={f.id} className="flex gap-3">
                     <FeatureIcon d={f.icon} className="size-8 bg-accent-soft p-1.5" />
                     <span className="grid gap-0.5">
-                      <span className="font-medium">{f.title}</span>
+                      <span className="flex items-center gap-2 font-medium">
+                        {f.title}
+                        {f.isNew && <span className="rounded-full bg-accent px-1.5 py-px text-[10px] font-medium text-accent-ink">New</span>}
+                      </span>
                       <span className="text-sm text-muted">{f.body}</span>
                     </span>
                   </li>

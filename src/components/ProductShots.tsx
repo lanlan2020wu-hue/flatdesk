@@ -64,22 +64,34 @@ export function MacroShot() {
     <div className="shot" aria-hidden="true">
       <Bar title="Macros and rules" />
       <div className="grid gap-3 p-3">
+        <div className="grid gap-2 rounded-lg border border-accent/30 bg-accent-soft/70 p-2.5">
+          <span className="flex items-center gap-1.5 text-[12px] font-medium text-accent">
+            <svg viewBox="0 0 24 24" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z" />
+            </svg>
+            Flatdesk wrote this for you
+          </span>
+          <span className="grid gap-1 rounded-md bg-surface p-2 shadow-sm">
+            <span className="flex items-center justify-between gap-2">
+              <span className="font-medium">Where&apos;s my refund</span>
+              <span className="num text-[11px] text-muted">sent on 12 tickets this week</span>
+            </span>
+            <span className="text-[12px] text-muted">Hi there, refunds go back to the original card within 5 business days…</span>
+          </span>
+          <span className="flex items-center gap-2">
+            <span className="rounded-md bg-accent px-2 py-1 text-[11px] font-medium text-accent-ink">Save as macro</span>
+            <span className="text-[11px] text-muted">Don&apos;t suggest this again</span>
+          </span>
+        </div>
         <div className="grid gap-1.5 rounded-lg border border-line p-2.5">
           <span className="flex items-center justify-between">
-            <span className="font-medium">Refund policy</span>
+            <span className="font-medium">Password reset</span>
             <span className="flex gap-1">
-              <span className="chip">+ billing</span>
+              <span className="chip">+ account</span>
               <span className="chip">→ pending</span>
             </span>
           </span>
-          <span className="text-[12px] text-muted">Hi {"{first name}"}, refunds go back to the original card within 5 business days…</span>
-        </div>
-        <div className="flex flex-wrap items-center gap-1.5 rounded-lg border border-dashed border-accent/40 bg-accent-soft/60 p-2.5 text-[12px]">
-          <span className="text-muted">If tagged</span>
-          <span className="chip">billing</span>
-          <span className="text-muted">assign to</span>
-          <span className="rounded-md bg-surface px-1.5 py-0.5 font-medium shadow-sm">Sam</span>
-          <span className="ml-auto pill bg-accent-soft text-accent">On</span>
+          <span className="text-[12px] text-muted">Hi there, reset links last 30 minutes. Request a new one from the sign-in page…</span>
         </div>
       </div>
     </div>
