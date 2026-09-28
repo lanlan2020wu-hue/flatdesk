@@ -1,11 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { TRIAL_DAYS } from "@/lib/billing";
-import { PLAN, usd } from "@/lib/pricing";
+import { PLAN, PRICE_PHRASE, annualSavingsPct, usd } from "@/lib/pricing";
 
 export const metadata: Metadata = {
   title: "Pricing",
-  description: `${usd(PLAN.seatPrice)} per agent per month, with ${PLAN.includedPerAgent} AI resolutions per agent included and capped by default.`,
+  description: `${PRICE_PHRASE}, with ${PLAN.includedPerAgent} AI resolutions per agent included and capped by default.`,
 };
 
 const FAQ: [string, string][] = [
@@ -31,7 +31,11 @@ const FAQ: [string, string][] = [
   ],
   [
     "Is there a contract or a minimum?",
-    "No. Billing is monthly, you can add or remove seats at any time, and you can cancel from settings.",
+    "No. Monthly billing has no contract: add or remove seats at any time and cancel from settings. Yearly billing is paid a year ahead for the lower price and runs to the end of the year you've paid for.",
+  ],
+  [
+    "Is there a discount for paying yearly?",
+    `Yes. Yearly billing is ${usd(PLAN.annualSeatPrice)} per agent per month, ${annualSavingsPct}% less than ${usd(PLAN.seatPrice)} month to month, charged as ${usd(PLAN.annualSeatPrice * 12)} per agent for the year. You get the same features and the same ${PLAN.includedPerAgent} AI resolutions per agent every month. Seats added mid-year are charged for the rest of the year; overage, if you turn it on, is billed monthly.`,
   ],
   [
     "Can we take our data with us?",
@@ -65,8 +69,12 @@ export default function PricingPage() {
           <div className="grid gap-1">
             <p className="font-medium text-accent">Flatdesk</p>
             <p className="flex items-baseline gap-2">
-              <span className="num text-6xl font-medium tracking-tight sm:text-7xl">{usd(PLAN.seatPrice)}</span>
-              <span className="text-muted">per agent per month</span>
+              <span className="num text-6xl font-medium tracking-tight sm:text-7xl">{usd(PLAN.annualSeatPrice)}</span>
+              <span className="text-muted">per agent per month, billed yearly</span>
+            </p>
+            <p className="text-muted">
+              Or <span className="num text-ink">{usd(PLAN.seatPrice)}</span> month to month with no contract. Yearly saves {annualSavingsPct}%
+              ({usd((PLAN.seatPrice - PLAN.annualSeatPrice) * 12)} per agent a year).
             </p>
           </div>
           <dl className="grid gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-3">

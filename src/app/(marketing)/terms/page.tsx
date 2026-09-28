@@ -46,13 +46,17 @@ export default function TermsPage() {
             is on the day the trial ends.
           </li>
           <li>
-            The plan is {usd(PLAN.seatPrice)} per agent per month, billed monthly in advance through Stripe. An agent is a member of your
-            team. Adding or removing members changes the next bill, prorated.
+            The plan is {usd(PLAN.seatPrice)} per agent per month billed monthly, or {usd(PLAN.annualSeatPrice)} per agent per month billed
+            yearly ({usd(PLAN.annualSeatPrice * 12)} per agent per year), in advance through Stripe. An agent is a member of your team.
+            On monthly billing, adding or removing members changes the next bill, prorated. On yearly billing, members added during the year
+            are charged right away for the rest of that year, and members removed are credited against future invoices. Switching from
+            monthly to yearly starts the year that day, with unused monthly time credited.
           </li>
           <li>
             Each month includes {PLAN.includedPerAgent} AI resolutions per agent, shared by the team. When they run out, AI answers pause
             until the next month and nothing extra is charged, unless an admin turns on overage. With overage on, each resolution past the
-            allowance costs {usd(PLAN.overageRate, true)} and is added to the next invoice. A resolution is an AI answer the customer
+            allowance costs {usd(PLAN.overageRate, true)} and is billed after the month ends: on the next invoice for monthly billing, or on
+            its own invoice for yearly billing. A resolution is an AI answer the customer
             didn&apos;t write back to; an admin can mark any AI answer as wrong on the AI receipts page and it stops counting.
           </li>
           <li>Prices exclude taxes, which are added where the law requires.</li>
@@ -66,8 +70,8 @@ export default function TermsPage() {
 
       <Section title="4. Cancelling">
         <p>
-          You can cancel any time from Settings, under billing. The plan runs to the end of the period you&apos;ve paid for and isn&apos;t
-          renewed. We don&apos;t refund partial months, except where the law says we must. You can export all of your data from Settings at
+          You can cancel any time from Settings, under billing. The plan runs to the end of the period you&apos;ve paid for (the month, or
+          the year on yearly billing) and isn&apos;t renewed. We don&apos;t refund partial periods, except where the law says we must. You can export all of your data from Settings at
           any time, before or after cancelling.
         </p>
       </Section>

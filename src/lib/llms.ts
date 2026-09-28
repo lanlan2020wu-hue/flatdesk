@@ -17,7 +17,7 @@ export function llmsTxt() {
     `> ${DESCRIPTION}`,
     "",
     "Key facts:",
-    `- Price: ${usd(PLAN.seatPrice)} per agent per month, one plan, every feature, billed monthly, no contract.`,
+    `- Price: ${usd(PLAN.seatPrice)} per agent per month billed monthly with no contract, or ${usd(PLAN.annualSeatPrice)} per agent per month billed yearly (${usd(PLAN.annualSeatPrice * 12)} per agent per year). One plan, every feature.`,
     `- AI: ${PLAN.includedPerAgent} AI resolutions per agent per month included, pooled across the team. The AI pauses at the cap unless an admin turns on overage (${usd(PLAN.overageRate, true)} per resolution).`,
     "- Channels: email and a website chat widget. No phone, SMS or social channels, and no help center yet.",
     "- Imports from Zendesk, Intercom, Freshdesk and Help Scout.",

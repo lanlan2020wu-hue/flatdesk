@@ -3,10 +3,10 @@
 
 import type { Metadata } from "next";
 import type { QA } from "@/lib/selling-points";
-import { PLAN } from "@/lib/pricing";
+import { PLAN, PRICE_PHRASE } from "@/lib/pricing";
 import { SITE } from "@/lib/site";
 
-export const DESCRIPTION = `Flatdesk is a help desk for teams of 5–20 agents: $${PLAN.seatPrice} per agent per month with ${PLAN.includedPerAgent} AI resolutions per agent included and capped, itemized AI receipts, macros that write themselves, and lossless import.`;
+export const DESCRIPTION = `Flatdesk is a help desk for teams of 5–20 agents: ${PRICE_PHRASE}, with ${PLAN.includedPerAgent} AI resolutions per agent included and capped, itemized AI receipts, macros that write themselves, and lossless import.`;
 
 // A page's openGraph replaces the layout's, image included, so every page
 // names its card: the site-wide one, or its own from /og/<kind>/<slug>.
@@ -51,19 +51,36 @@ export function software(): Json {
     url: SITE.url,
     description: DESCRIPTION,
     publisher: { "@id": ORG_ID },
-    offers: {
-      "@type": "Offer",
-      price: PLAN.seatPrice,
-      priceCurrency: "USD",
-      url: `${SITE.url}/pricing`,
-      priceSpecification: {
-        "@type": "UnitPriceSpecification",
+    offers: [
+      {
+        "@type": "Offer",
+        name: "Monthly billing",
         price: PLAN.seatPrice,
         priceCurrency: "USD",
-        unitText: "per agent per month",
-        billingDuration: "P1M",
+        url: `${SITE.url}/pricing`,
+        priceSpecification: {
+          "@type": "UnitPriceSpecification",
+          price: PLAN.seatPrice,
+          priceCurrency: "USD",
+          unitText: "per agent per month",
+          billingDuration: "P1M",
+        },
       },
-    },
+      {
+        "@type": "Offer",
+        name: "Yearly billing",
+        price: PLAN.annualSeatPrice * 12,
+        priceCurrency: "USD",
+        url: `${SITE.url}/pricing`,
+        priceSpecification: {
+          "@type": "UnitPriceSpecification",
+          price: PLAN.annualSeatPrice * 12,
+          priceCurrency: "USD",
+          unitText: "per agent per year",
+          billingDuration: "P1Y",
+        },
+      },
+    ],
   };
 }
 

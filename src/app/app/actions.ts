@@ -7,7 +7,7 @@ import { redirect } from "next/navigation";
 import { db, schema } from "@/db";
 import { requireAdmin, requireSession } from "@/lib/auth";
 import { filesFromForm, saveAttachments } from "@/lib/attachments";
-import { checkoutUrl, portalUrl } from "@/lib/billing";
+import { checkoutUrl, portalUrl, switchToAnnual } from "@/lib/billing";
 import { deliverReply } from "@/lib/email";
 import { dismissSuggestion, saveSuggestedMacro } from "@/lib/macro-suggestions";
 import { addReply, createTicket, normalizeTags, updateTicket, type TicketStatus } from "@/lib/tickets";
@@ -171,12 +171,19 @@ async function origin() {
   return `${proto}://${host}`;
 }
 
-export async function startCheckoutAction() {
+export async function startCheckoutAction(form: FormData) {
   const s = await requireAdmin();
   const admin = await db.query.agents.findFirst({
     where: and(eq(schema.agents.orgId, s.orgId), eq(schema.agents.userId, s.userId)),
   });
-  redirect(await checkoutUrl(s.orgId, admin?.email ?? "", await origin()));
+  const interval = form.get("interval") === "year" ? "year" : "month";
+  redirect(await checkoutUrl(s.orgId, admin?.email ?? "", await origin(), interval));
+}
+
+export async function switchToAnnualAction() {
+  const s = await requireAdmin();
+  await switchToAnnual(s.orgId);
+  redirect("/app/settings?billing=annual#billing");
 }
 
 export async function openBillingPortalAction() {

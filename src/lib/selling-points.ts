@@ -4,7 +4,7 @@
 
 import { TRIAL_DAYS } from "@/lib/billing";
 import { BILLING_FAQ } from "@/lib/faq";
-import { PLAN, usd } from "@/lib/pricing";
+import { PLAN, PRICE_PHRASE, usd } from "@/lib/pricing";
 
 export type QA = { q: string; a: string };
 
@@ -33,19 +33,19 @@ export const SELLING_POINTS: SellingPoint[] = [
   {
     slug: "flat-pricing",
     name: "One flat price",
-    short: `Seats × ${usd(PLAN.seatPrice)}, with ${PLAN.includedPerAgent} AI resolutions per seat. The AI pauses at the cap unless an admin opts in. No meters, no add-on tiers.`,
+    short: `Seats × ${usd(PLAN.annualSeatPrice)} billed yearly (${usd(PLAN.seatPrice)} monthly), with ${PLAN.includedPerAgent} AI resolutions per seat. The AI pauses at the cap unless an admin opts in. No meters, no add-on tiers.`,
     headline: "A help desk with AI included, and a bill that doesn't move",
-    answer: `Flatdesk costs ${usd(PLAN.seatPrice)} per agent per month, and every seat includes ${PLAN.includedPerAgent} AI resolutions a month, pooled across the team. When the team reaches the included amount, the AI pauses and new conversations go to your agents. Nothing extra is charged unless an admin turns overage on (${usd(PLAN.overageRate, true)} per resolution).`,
+    answer: `Flatdesk costs ${PRICE_PHRASE}, and every seat includes ${PLAN.includedPerAgent} AI resolutions a month, pooled across the team. When the team reaches the included amount, the AI pauses and new conversations go to your agents. Nothing extra is charged unless an admin turns overage on (${usd(PLAN.overageRate, true)} per resolution).`,
     metaTitle: "Flat-price help desk with AI included",
-    metaDescription: `${usd(PLAN.seatPrice)} per agent per month with ${PLAN.includedPerAgent} AI resolutions per agent included. The AI pauses at the cap, so the support bill is the same every month.`,
+    metaDescription: `${PRICE_PHRASE}, with ${PLAN.includedPerAgent} AI resolutions per agent included. The AI pauses at the cap, so the support bill is the same every month.`,
     steps: [
-      { title: "Pick your seats", body: `Every agent seat is ${usd(PLAN.seatPrice)} a month and gets every feature. There are no tiers or add-ons.` },
+      { title: "Pick your seats", body: `Every agent seat is ${usd(PLAN.seatPrice)} a month, or ${usd(PLAN.annualSeatPrice)} a month billed yearly, and gets every feature. There are no tiers or add-ons.` },
       { title: "Share the AI allowance", body: `Each seat adds ${PLAN.includedPerAgent} AI resolutions a month to one team pool, however the tickets fall.` },
       { title: "Hit the cap, not a surprise", body: "Admins get an email at 80% and at 100%. At 100% the AI pauses and your team answers as normal." },
       { title: "Opt in to more if you want", body: `An admin can turn on overage at ${usd(PLAN.overageRate, true)} per resolution and turn it off again at any time.` },
     ],
     facts: [
-      `${usd(PLAN.seatPrice)} per agent per month, billed monthly, no contract`,
+      `${usd(PLAN.seatPrice)} per agent per month billed monthly with no contract, or ${usd(PLAN.annualSeatPrice)} billed yearly`,
       `${PLAN.includedPerAgent} AI resolutions per agent per month, pooled`,
       "AI pauses at the included amount by default",
       "Conversations handed to your team don't count, and neither do ones where the customer writes back",
@@ -54,7 +54,7 @@ export const SELLING_POINTS: SellingPoint[] = [
     faq: [
       {
         q: "What does Flatdesk cost?",
-        a: `${usd(PLAN.seatPrice)} per agent per month. That includes every feature and ${PLAN.includedPerAgent} AI resolutions per agent each month, shared by the team.`,
+        a: `${PRICE_PHRASE}. Either way that includes every feature and ${PLAN.includedPerAgent} AI resolutions per agent each month, shared by the team.`,
       },
       {
         q: "Is Flatdesk the cheapest help desk?",

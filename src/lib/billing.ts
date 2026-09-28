@@ -3,12 +3,15 @@ import { and, count, eq, isNotNull } from "drizzle-orm";
 import Stripe from "stripe";
 import { db, schema } from "@/db";
 import { clerkEnabled } from "@/lib/auth-config";
-import { PLAN } from "@/lib/pricing";
+import { PLAN, type Interval, seatInvoiceAmount } from "@/lib/pricing";
 
 // Billing runs through Stripe Checkout and the customer portal, so card
 // details never touch this app. Each org has one subscription whose quantity
 // is its seat count. AI overage is added once a month as a pending invoice
-// item, which Stripe puts on the next invoice. There are no webhooks: state is
+// item, which Stripe puts on the next invoice (annual plans get their own
+// invoice for it straight away, so overage never waits a year). Seats are
+// monthly at PLAN.seatPrice or yearly at PLAN.annualSeatPrice × 12, priced
+// inline, so there are no Stripe Price objects to create. There are no webhooks: state is
 // refreshed from Stripe when someone returns from Checkout, opens billing
 // settings, or when the daily job runs.
 
@@ -91,7 +94,13 @@ async function ensureCustomer(orgId: string, email: string) {
   return customer.id;
 }
 
-export async function checkoutUrl(orgId: string, email: string, origin: string) {
+const seatPriceData = (interval: Interval) => ({
+  currency: "usd",
+  unit_amount: seatInvoiceAmount(interval) * 100,
+  recurring: { interval },
+});
+
+export async function checkoutUrl(orgId: string, email: string, origin: string, interval: Interval = "month") {
   const customer = await ensureCustomer(orgId, email);
   const org = await getOrg(orgId);
   // Stripe needs a trial end at least 48 hours out; closer than that, billing starts now.
@@ -105,9 +114,7 @@ export async function checkoutUrl(orgId: string, email: string, origin: string) 
       {
         quantity: await seatCount(orgId),
         price_data: {
-          currency: "usd",
-          unit_amount: PLAN.seatPrice * 100,
-          recurring: { interval: "month" },
+          ...seatPriceData(interval),
           product_data: { name: `${PLAN.name} seat`, description: `${PLAN.includedPerAgent} AI resolutions per seat included each month` },
         },
       },
@@ -119,6 +126,24 @@ export async function checkoutUrl(orgId: string, email: string, origin: string) 
   });
   if (!session.url) throw new Error("Stripe didn't return a checkout link.");
   return session.url;
+}
+
+// Moves a monthly subscription to yearly billing. Stripe starts the new year
+// today and credits the unused part of the current month on the first invoice.
+// During a Stripe trial nothing is charged until the trial ends.
+export async function switchToAnnual(orgId: string) {
+  const org = await getOrg(orgId);
+  if (!org.stripeSubscriptionId || !isActive(org.subscriptionStatus)) throw new Error("This team has no plan to switch.");
+  const sub = await stripe().subscriptions.retrieve(org.stripeSubscriptionId);
+  const item = sub.items.data[0];
+  if (!item) throw new Error("This plan has no seats to switch.");
+  if (item.price.recurring?.interval === "year") return refreshSubscription(orgId);
+  const product = typeof item.price.product === "string" ? item.price.product : item.price.product.id;
+  await stripe().subscriptions.update(sub.id, {
+    items: [{ id: item.id, quantity: item.quantity, price_data: { ...seatPriceData("year"), product } }],
+    proration_behavior: "always_invoice",
+  });
+  return refreshSubscription(orgId);
 }
 
 export async function portalUrl(orgId: string, origin: string) {
@@ -148,6 +173,7 @@ export async function refreshSubscription(orgId: string) {
       stripeSubscriptionId: sub?.id ?? null,
       subscriptionStatus: sub?.status ?? null,
       billedSeats: item?.quantity ?? null,
+      billingInterval: item?.price.recurring?.interval ?? null,
       currentPeriodEnd: item ? new Date(item.current_period_end * 1000) : null,
     })
     .where(eq(orgs.id, orgId))
@@ -165,7 +191,10 @@ export async function syncSeats(orgId: string) {
   const sub = await stripe().subscriptions.retrieve(org.stripeSubscriptionId);
   const item = sub.items.data[0];
   if (!item || item.quantity === seats) return;
-  await stripe().subscriptionItems.update(item.id, { quantity: seats, proration_behavior: "create_prorations" });
+  // Monthly plans settle the difference on the next invoice. A yearly plan's
+  // next invoice can be months away, so it's invoiced now instead.
+  const yearly = item.price.recurring?.interval === "year";
+  await stripe().subscriptionItems.update(item.id, { quantity: seats, proration_behavior: yearly ? "always_invoice" : "create_prorations" });
   await db.update(orgs).set({ billedSeats: seats }).where(eq(orgs.id, orgId));
 }
 
@@ -191,6 +220,12 @@ export async function billOverage(orgId: string, month = previousMonth()) {
       },
       { idempotencyKey: `overage-${orgId}-${month}` },
     );
+    if (org.billingInterval === "year") {
+      await stripe().invoices.create(
+        { customer: org.stripeCustomerId, pending_invoice_items_behavior: "include", auto_advance: true, description: `AI overage, ${month}` },
+        { idempotencyKey: `overage-invoice-${orgId}-${month}` },
+      );
+    }
   }
   await db.update(orgs).set({ overageBilledMonth: month }).where(eq(orgs.id, orgId));
   return Number(n);

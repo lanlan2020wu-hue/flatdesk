@@ -39,7 +39,7 @@ export default function ComparePage() {
 
       <section data-play="" aria-labelledby="costs" className="grid gap-6">
         <h2 id="costs" className="ink font-display text-3xl">Monthly cost, side by side</h2>
-        <CostTable rows={rows} caption={`List prices checked ${COMPARED_ON}. "~" marks estimates from third-party reports.`} />
+        <CostTable rows={rows} caption={`List prices checked ${COMPARED_ON}, with annual billing where the vendor offers it, Flatdesk included. "~" marks estimates from third-party reports.`} />
         <p className="text-sm text-muted">
           Vendors count AI differently (Freshdesk counts sessions, Gorgias interactions, Front conversations), so these are close rather than exact.{" "}
           <Link href="/calculator" className="link text-accent">Run your own numbers</Link>.

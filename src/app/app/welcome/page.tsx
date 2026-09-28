@@ -75,7 +75,7 @@ export default async function WelcomePage({ searchParams }: PageProps<"/app/welc
           <strong>{org.name}</strong> is ready and you&apos;re its admin.
         </p>
         <p className="text-muted">
-          Flatdesk is {usd(PLAN.seatPrice)} per agent a month, with {PLAN.includedPerAgent} AI resolutions per agent included. When they run out
+          Flatdesk is {usd(PLAN.seatPrice)} per agent a month ({usd(PLAN.annualSeatPrice)} billed yearly), with {PLAN.includedPerAgent} AI resolutions per agent included. When they run out
           the AI pauses, so the bill never surprises you. You can change that in <Link href="/app/settings" className="link">Settings</Link>.
         </p>
       </div>

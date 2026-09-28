@@ -2,13 +2,13 @@
 // their own. Selling-point questions live with each point in selling-points.ts.
 
 import { TRIAL_DAYS } from "@/lib/billing";
-import { PLAN, usd } from "@/lib/pricing";
+import { PLAN, PRICE_PHRASE, annualSavingsPct, usd } from "@/lib/pricing";
 import type { QA } from "@/lib/selling-points";
 
 export const GENERAL_FAQ: QA[] = [
   {
     q: "What is Flatdesk?",
-    a: `Flatdesk is a help desk for support teams of about 5 to 20 agents. Email and website chat land in one shared inbox, AI answers routine questions from your own macros, and the price is ${usd(PLAN.seatPrice)} per agent per month with AI included and capped.`,
+    a: `Flatdesk is a help desk for support teams of about 5 to 20 agents. Email and website chat land in one shared inbox, AI answers routine questions from your own macros, and the price is ${PRICE_PHRASE}, with AI included and capped.`,
   },
   {
     q: "Which channels does Flatdesk support?",
@@ -47,7 +47,11 @@ export const BILLING_FAQ: QA[] = [
   },
   {
     q: "Is there a contract or a minimum?",
-    a: "No. Billing is monthly, you can add or remove seats at any time, and you can cancel from settings.",
+    a: "No. Monthly billing has no contract: add or remove seats at any time and cancel from settings. Yearly billing is paid a year ahead for the lower price and runs to the end of the year you've paid for.",
+  },
+  {
+    q: "Is there a discount for paying yearly?",
+    a: `Yes. Yearly billing is ${usd(PLAN.annualSeatPrice)} per agent per month, ${annualSavingsPct}% less than ${usd(PLAN.seatPrice)} month to month, charged as ${usd(PLAN.annualSeatPrice * 12)} per agent for the year. You get the same features and the same ${PLAN.includedPerAgent} AI resolutions per agent every month. Seats added mid-year are charged for the rest of the year; overage, if you turn it on, is billed monthly.`,
   },
   {
     q: "Can we take our data with us?",

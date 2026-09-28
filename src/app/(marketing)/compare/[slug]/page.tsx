@@ -71,7 +71,7 @@ export default async function RivalPage({ params }: PageProps<"/compare/[slug]">
       </div>
 
       <section data-play="" aria-label="Monthly cost" className="grid gap-4">
-        <CostTable rows={costRows(r)} caption={`Monthly cost with the AI answering the stated number of conversations.${costRows(r).some((x) => x.approx) ? ' "~" marks estimates.' : ""}`} />
+        <CostTable rows={costRows(r)} caption={`Monthly cost with the AI answering the stated number of conversations, with annual billing where offered, Flatdesk included.${costRows(r).some((x) => x.approx) ? ' "~" marks estimates.' : ""}`} />
         <Link href="/calculator" className="link w-max text-sm font-medium text-accent">Try it with your own numbers</Link>
       </section>
 
