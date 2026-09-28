@@ -1,6 +1,7 @@
 import { after } from "next/server";
 import { answerNewTicket } from "@/lib/ai";
 import { emailConfig, htmlToText, resend } from "@/lib/email";
+import { downloadInbound } from "@/lib/attachments";
 import { handleInboundEmail } from "@/lib/inbound";
 
 // Resend calls this for every email sent to INBOUND_DOMAIN (event
@@ -44,6 +45,15 @@ export async function POST(request: Request) {
     text: email.text ?? (email.html ? htmlToText(email.html) : ""),
     headers: email.headers,
     messageId: email.message_id,
+    attachments: async () => {
+      if (!email.attachments?.length) return { files: [], skipped: [] };
+      const { data, error: listError } = await resend().emails.receiving.attachments.list({ emailId: email.id });
+      if (listError || !data) {
+        console.error("listing attachments failed", listError);
+        return { files: [], skipped: email.attachments.map((a) => a.filename ?? "attachment") };
+      }
+      return downloadInbound(data.data);
+    },
   });
   const { orgId, ticketId } = result;
   if (orgId && ticketId) {

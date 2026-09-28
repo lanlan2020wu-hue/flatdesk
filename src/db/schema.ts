@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   boolean,
+  customType,
   index,
   jsonb,
   integer,
@@ -160,6 +161,26 @@ export const messages = pgTable(
     index("messages_org_email_message_id").on(t.orgId, t.emailMessageId),
     index("messages_ticket_external").on(t.ticketId, t.externalId),
   ],
+);
+
+const bytea = customType<{ data: Buffer }>({ dataType: () => "bytea" });
+
+// Files on email and chat messages. Stored in Postgres so every download goes
+// through the same org and visitor checks as the rest of the ticket.
+export const attachments = pgTable(
+  "attachments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
+    ticketId: uuid("ticket_id").notNull().references(() => tickets.id, { onDelete: "cascade" }),
+    messageId: uuid("message_id").notNull().references(() => messages.id, { onDelete: "cascade" }),
+    filename: text("filename").notNull(),
+    contentType: text("content_type").notNull(),
+    size: integer("size").notNull(),
+    data: bytea("data").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("attachments_message").on(t.messageId), index("attachments_ticket").on(t.ticketId)],
 );
 
 export const macros = pgTable("macros", {

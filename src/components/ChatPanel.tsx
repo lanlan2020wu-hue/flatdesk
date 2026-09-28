@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-type Message = { id: string; from: string; mine: boolean; body: string; at: string };
+type Message = { id: string; from: string; mine: boolean; body: string; at: string; files?: { name: string; size: number; url: string }[] };
 type Saved = { number: number; token: string };
 
 const POLL_MS = 5000;
@@ -137,7 +137,13 @@ export default function ChatPanel({ widgetKey, teamName }: { widgetKey: string; 
             {messages.map((m) => (
               <li key={m.id} className={`max-w-[85%] rounded-lg px-3 py-2 ${m.mine ? "self-end bg-accent text-accent-ink" : "self-start border border-line bg-surface"}`}>
                 {!m.mine && <p className="text-xs font-medium text-muted">{m.from}</p>}
-                <p className="whitespace-pre-wrap break-words text-sm">{m.body}</p>
+                {m.body && <p className="whitespace-pre-wrap break-words text-sm">{m.body}</p>}
+                {m.files?.map((f) => (
+                  <a key={f.url} href={f.url} target="_blank" rel="noopener" className="mt-1 flex items-center gap-1.5 text-sm underline underline-offset-2">
+                    <svg viewBox="0 0 20 20" className="size-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M13.5 6.5 7.8 12.2a1.6 1.6 0 1 0 2.3 2.3l6-6a3.2 3.2 0 0 0-4.5-4.5l-6 6a4.8 4.8 0 0 0 6.8 6.8l5-5" /></svg>
+                    <span className="truncate">{f.name}</span>
+                  </a>
+                ))}
               </li>
             ))}
             {messages.length > 0 && messages.every((m) => m.mine) && (

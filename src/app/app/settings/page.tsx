@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { db, schema } from "@/db";
 import { requireSession } from "@/lib/auth";
 import { aiConfigured, aiUsage } from "@/lib/ai";
-import { billingConfigured, isActive, refreshSubscription, seatCount, TRIAL_DAYS } from "@/lib/billing";
+import { access, billingConfigured, isActive, refreshSubscription, seatCount, trialEndsAt } from "@/lib/billing";
 import { emailConfig, inboundAddress } from "@/lib/email";
 import { PLAN, usd } from "@/lib/pricing";
 import { openBillingPortalAction, saveAiSettingsAction, startCheckoutAction } from "../actions";
@@ -31,6 +31,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
   }
   const seats = await seatCount(s.orgId).catch(() => 1);
   const subscribed = isActive(org?.subscriptionStatus);
+  const plan = org ? access(org) : ({ state: "open" } as const);
   const h = await headers();
   const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
   const siteOrigin = `${h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https")}://${host}`;
@@ -96,8 +97,9 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
         </ul>
       </section>
 
-      <section className="card grid gap-3 p-5 sm:p-6">
+      <section id="billing" className="card grid scroll-mt-6 gap-3 p-5 sm:p-6">
         <h2 className="font-medium">Plan and billing</h2>
+        {billing === "cancelled" && !subscribed && <p className="rounded-lg border border-line bg-surface-2/60 px-3 py-2 text-sm" role="status">No card was added. You can do it whenever you&apos;re ready.</p>}
         {billing === "done" && <p className="rounded-lg border border-accent/30 bg-accent-soft px-3 py-2 text-sm" role="status">Thanks, your plan is set up.</p>}
         {!billingConfigured() ? (
           <p className="text-muted">Billing isn&apos;t connected on this server yet.</p>
@@ -105,11 +107,17 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
           <>
             <div className="grid gap-1 rounded-xl border border-line bg-surface-2/60 px-4 py-3">
               <p className="flex justify-between gap-2">
-                <span>{subscribed ? STATUS_TEXT[org?.subscriptionStatus ?? ""] ?? org?.subscriptionStatus : "No plan yet"}</span>
+                <span>{subscribed ? STATUS_TEXT[org?.subscriptionStatus ?? ""] ?? org?.subscriptionStatus : plan.state === "trial" ? `Free trial, ${plan.daysLeft} ${plan.daysLeft === 1 ? "day" : "days"} left` : "No plan"}</span>
                 <span className="num">
                   {seats} {seats === 1 ? "seat" : "seats"} × {usd(PLAN.seatPrice)} = {usd(seats * PLAN.seatPrice)}/mo
                 </span>
               </p>
+              {!subscribed && org && plan.state === "trial" && (
+                <p className="text-sm text-muted">
+                  No card needed until {trialEndsAt(org).toLocaleDateString("en-US", { month: "long", day: "numeric" })}. Add one now and the first charge
+                  still waits until then.
+                </p>
+              )}
               {subscribed && org?.currentPeriodEnd && (
                 <p className="text-sm text-muted">
                   {org.subscriptionStatus === "trialing" ? "Trial ends" : "Renews"}{" "}
@@ -121,7 +129,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
             {isAdmin ? (
               <form action={subscribed ? openBillingPortalAction : startCheckoutAction}>
                 <button className="btn btn-primary">
-                  {subscribed ? "Manage billing and invoices" : `Start ${TRIAL_DAYS}-day free trial`}
+                  {subscribed ? "Manage billing and invoices" : "Add a card"}
                 </button>
               </form>
             ) : (

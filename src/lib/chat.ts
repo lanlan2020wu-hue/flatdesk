@@ -2,6 +2,7 @@ import { randomBytes, timingSafeEqual } from "node:crypto";
 import { and, asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { handBackToTeam } from "@/lib/ai";
+import { attachmentsByMessage, type AttachmentInfo } from "@/lib/attachments";
 import { addCustomerMessage, createTicket } from "@/lib/tickets";
 
 // The website chat widget. A visitor starts a conversation with their name,
@@ -53,7 +54,7 @@ export async function ticketForVisitor(orgId: string, number: number, token: str
 }
 
 // What the visitor sees: never internal notes or system messages.
-export async function visitorThread(ticketId: string) {
+export async function visitorThread(ticketId: string, link?: { orgId: string; key: string; number: number; token: string }) {
   const rows = await db
     .select({
       id: schema.messages.id,
@@ -66,14 +67,22 @@ export async function visitorThread(ticketId: string) {
     .leftJoin(schema.agents, and(eq(schema.agents.orgId, schema.messages.orgId), eq(schema.agents.userId, schema.messages.authorId)))
     .where(and(eq(schema.messages.ticketId, ticketId), eq(schema.messages.internal, false)))
     .orderBy(asc(schema.messages.createdAt));
-  return rows
-    .filter((m) => m.authorType !== "system")
+  const visible = rows.filter((m) => m.authorType !== "system");
+  const files = link ? await attachmentsByMessage(link.orgId, visible.map((m) => m.id)) : new Map<string, AttachmentInfo[]>();
+  return visible
     .map((m) => ({
       id: m.id,
       from: m.authorType === "customer" ? "you" : m.authorType === "ai" ? "AI assistant" : (m.agentName?.split(" ")[0] ?? "Support"),
       mine: m.authorType === "customer",
       body: m.body,
       at: m.createdAt.toISOString(),
+      files: link
+        ? (files.get(m.id) ?? []).map((f) => ({
+            name: f.filename,
+            size: f.size,
+            url: `/api/chat/${link.key}/${link.number}/files/${f.id}?t=${encodeURIComponent(link.token)}`,
+          }))
+        : [],
     }));
 }
 

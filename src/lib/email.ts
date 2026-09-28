@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, inArray, isNotNull } from "drizzle-orm";
 import { Resend } from "resend";
 import { db, schema } from "@/db";
+import { emailAttachments } from "@/lib/attachments";
 
 // Email runs through Resend. Inbound mail for every org arrives at
 // <inboundKey>@INBOUND_DOMAIN; replies go out from EMAIL_FROM with a
@@ -131,6 +132,7 @@ export async function deliverReply(orgId: string, messageId: string): Promise<vo
     subject,
     text: row.message.body,
     headers,
+    attachments: await emailAttachments(row.message.id),
   });
 
   await db

@@ -64,6 +64,13 @@
       "when": 1790571738084,
       "tag": "0008_macro_suggestions",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1790572509962,
+      "tag": "0009_attachments",
+      "breakpoints": true
     }
   ]
 }

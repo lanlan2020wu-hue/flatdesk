@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Logo from "@/components/Logo";
 import { CHECKED_ON } from "@/lib/pricing";
+import { SITE } from "@/lib/site";
 
 const NAV = [
   { href: "/#features", label: "Product" },
@@ -33,7 +34,8 @@ export default function MarketingLayout({ children }: LayoutProps<"/">) {
           </div>
         </nav>
       </header>
-      <main className="flex-1">{children}</main>
+      {/* Decorations (the receipt stamp) may poke past the edge; never let them cause sideways scrolling. */}
+      <main className="flex-1 overflow-x-clip">{children}</main>
       <footer className="mt-24 border-t border-line bg-surface-2/60">
         <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:grid-cols-[1.4fr_1fr] sm:px-6">
           <div className="grid content-start gap-3">
@@ -49,7 +51,14 @@ export default function MarketingLayout({ children }: LayoutProps<"/">) {
           </div>
         </div>
         <div className="border-t border-line">
-          <p className="num mx-auto max-w-6xl px-4 py-4 text-xs text-muted sm:px-6">Competitor prices last checked {CHECKED_ON}.</p>
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-4 text-xs text-muted sm:px-6">
+            <p className="num">Competitor prices last checked {CHECKED_ON}.</p>
+            <p className="flex gap-4">
+              <Link href="/terms" className="transition-colors hover:text-ink">Terms</Link>
+              <Link href="/privacy" className="transition-colors hover:text-ink">Privacy</Link>
+              <a href={`mailto:${SITE.contactEmail}`} className="transition-colors hover:text-ink">{SITE.contactEmail}</a>
+            </p>
+          </div>
         </div>
       </footer>
     </>

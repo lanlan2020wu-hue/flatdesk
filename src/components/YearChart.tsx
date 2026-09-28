@@ -64,13 +64,16 @@ export default function YearChart() {
         </div>
       </div>
 
-      <table className="sr-only">
+      {/* Tables ignore sr-only's 1px width, so the wrapper carries it (otherwise phones scroll sideways). */}
+      <div className="sr-only">
+      <table>
         <caption>Monthly bill for a 10-agent team, one example year</caption>
         <thead><tr><th>Month</th><th>AI resolutions</th><th>{fin.vendor} {fin.plan}</th><th>Flatdesk</th></tr></thead>
         <tbody>
           {rows.map((r) => <tr key={r.month}><td>{r.month}</td><td>{r.resolutions}</td><td>{usd(r.fin)}</td><td>{usd(r.ours)}</td></tr>)}
         </tbody>
       </table>
+      </div>
 
       <p className="text-xs text-muted">
         {fin.vendor} at list price with annual billing. Flatdesk with the default cap: once the included resolutions are used, the AI pauses

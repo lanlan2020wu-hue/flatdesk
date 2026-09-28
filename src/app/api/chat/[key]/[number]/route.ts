@@ -6,7 +6,7 @@ async function load(ctx: RouteContext<"/api/chat/[key]/[number]">, token: string
   const org = await orgByWidgetKey(key);
   if (!org) return null;
   const ticket = await ticketForVisitor(org.id, Number(number), token);
-  return ticket ? { org, ticket } : null;
+  return ticket ? { org, ticket, link: { orgId: org.id, key, number: ticket.number, token } } : null;
 }
 
 // The visitor's view of their conversation.
@@ -16,7 +16,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/chat/[key]/[
   const found = await load(ctx, token);
   if (!found) return Response.json({ error: "Conversation not found." }, { status: 404 });
   return Response.json(
-    { status: found.ticket.status, messages: await visitorThread(found.ticket.id) },
+    { status: found.ticket.status, messages: await visitorThread(found.ticket.id, found.link) },
     { headers: { "cache-control": "no-store" } },
   );
 }
@@ -29,5 +29,5 @@ export async function POST(request: Request, ctx: RouteContext<"/api/chat/[key]/
   const message = typeof body?.message === "string" ? body.message.trim().slice(0, MAX_MESSAGE) : "";
   if (!message) return Response.json({ error: "Write a message first." }, { status: 400 });
   await visitorReply(found.org.id, found.ticket, message);
-  return Response.json({ messages: await visitorThread(found.ticket.id) });
+  return Response.json({ messages: await visitorThread(found.ticket.id, found.link) });
 }

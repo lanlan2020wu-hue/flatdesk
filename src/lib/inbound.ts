@@ -3,6 +3,7 @@ import { db, schema } from "@/db";
 import { emailConfig, isAutoReply, matchRecipient, parseAddress, stripQuoted, ticketFromHeaders } from "@/lib/email";
 import { handBackToTeam } from "@/lib/ai";
 import { TEST_TAG, updateOnboarding } from "@/lib/onboarding";
+import { saveAttachments, type NewFile } from "@/lib/attachments";
 import { addCustomerMessage, createTicket } from "@/lib/tickets";
 
 export type Inbound = {
@@ -12,7 +13,32 @@ export type Inbound = {
   text: string;
   headers: Record<string, string> | null;
   messageId: string | null;
+  // Fetches the email's files; only called once the email is known to become a message.
+  attachments?: () => Promise<{ files: NewFile[]; skipped: string[] }>;
 };
+
+async function storeFiles(mail: Inbound, orgId: string, ticketId: string, messageId: string) {
+  if (!mail.attachments) return;
+  let files: NewFile[] = [];
+  let skipped: string[] = [];
+  try {
+    ({ files, skipped } = await mail.attachments());
+    await saveAttachments(orgId, ticketId, messageId, files);
+  } catch (err) {
+    // The message is already saved; a retry of the webhook would be skipped as a duplicate.
+    console.error("saving attachments failed", err);
+    skipped = files.length ? files.map((f) => f.filename) : ["the email's attachments"];
+  }
+  if (skipped.length) {
+    await db.insert(schema.messages).values({
+      orgId,
+      ticketId,
+      authorType: "system",
+      internal: true,
+      body: `Some attachments on this email couldn't be kept (Flatdesk keeps up to 20 MB per file and 30 MB per email). Ask the customer to send them another way if you need them: ${skipped.join(", ")}`,
+    });
+  }
+}
 
 export async function handleInboundEmail(mail: Inbound) {
   const target = matchRecipient(mail.to);
@@ -46,6 +72,7 @@ export async function handleInboundEmail(mail: Inbound) {
       tags: [TEST_TAG],
       emailMessageId: mail.messageId,
     });
+    await storeFiles(mail, org.id, ticket.id, ticket.messageId);
     await updateOnboarding(org.id, (ob) => ({ ...ob, testToken: undefined }));
     return { ticket: ticket.number, action: "created" };
   }
@@ -77,7 +104,8 @@ export async function handleInboundEmail(mail: Inbound) {
     const customer = ticket && (await db.query.customers.findFirst({ where: eq(schema.customers.id, ticket.customerId) }));
     // Only the ticket's own customer can add to it; anyone else starts a new ticket.
     if (ticket && customer && customer.email === sender.email) {
-      await addCustomerMessage({ orgId: org.id, ticketId, customerId: customer.id, body, emailMessageId: mail.messageId });
+      const messageId = await addCustomerMessage({ orgId: org.id, ticketId, customerId: customer.id, body, emailMessageId: mail.messageId });
+      await storeFiles(mail, org.id, ticketId, messageId);
       await handBackToTeam(org.id, ticketId);
       return { ticket: ticket.number, action: "appended" };
     }
@@ -93,5 +121,6 @@ export async function handleInboundEmail(mail: Inbound) {
     authorType: "customer",
     emailMessageId: mail.messageId,
   });
+  await storeFiles(mail, org.id, ticket.id, ticket.messageId);
   return { ticket: ticket.number, action: "created", orgId: org.id, ticketId: ticket.id };
 }

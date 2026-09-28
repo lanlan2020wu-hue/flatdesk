@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Fraunces, IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import { clerkEnabled } from "@/lib/auth-config";
+import { SITE } from "@/lib/site";
 import "./globals.css";
 
 const plexSans = IBM_Plex_Sans({
@@ -33,6 +34,8 @@ const clerkAppearance = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE.url),
+  openGraph: { siteName: "Flatdesk", type: "website" },
   title: {
     default: "Flatdesk: the help desk with one flat price",
     template: "%s · Flatdesk",

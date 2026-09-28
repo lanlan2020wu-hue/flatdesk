@@ -2,10 +2,12 @@ import Link from "next/link";
 import AccountMenu from "@/components/AccountMenu";
 import { eq } from "drizzle-orm";
 import Logo from "@/components/Logo";
+import MobileNav from "@/components/MobileNav";
+import Paywall from "@/components/Paywall";
 import NavLink from "@/components/NavLink";
 import { db, schema } from "@/db";
 import { requireSession } from "@/lib/auth";
-import { billingConfigured, isActive, refreshSubscription, TRIAL_DAYS } from "@/lib/billing";
+import { access, billingConfigured, isActive, refreshSubscription } from "@/lib/billing";
 import { getOnboarding } from "@/lib/onboarding";
 import { VIEWS, viewCounts } from "@/lib/tickets";
 
@@ -18,18 +20,19 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
     db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) }),
     s.role === "admin" ? getOnboarding(s.orgId) : null,
   ]);
-  let status = org?.subscriptionStatus;
+  let current = org;
   // Right after Checkout the row is stale; ask Stripe before showing the banner.
-  if (billingConfigured() && !isActive(status) && org?.stripeCustomerId) {
-    status = (await refreshSubscription(s.orgId).catch(() => org))?.subscriptionStatus;
+  if (org && billingConfigured() && !isActive(org.subscriptionStatus) && org.stripeCustomerId) {
+    current = await refreshSubscription(s.orgId).catch(() => org);
   }
-  const needsPlan = billingConfigured() && !isActive(status);
+  const plan = current ? access(current) : ({ state: "open" } as const);
 
   return (
     <div className="grid min-h-screen flex-1 md:grid-cols-[248px_minmax(0,1fr)]">
       <div className="border-b border-line bg-surface md:border-r md:border-b-0">
-        <aside className="flex flex-col gap-6 px-3 py-4 md:sticky md:top-0 md:h-screen md:py-5">
-          <div className="px-2">
+        <MobileNav bar={<Logo href="/app/inbox" />}>
+        <aside className="flex w-full flex-col gap-6 px-3 pb-4 md:sticky md:top-0 md:h-screen md:py-5">
+          <div className="hidden px-2 md:block">
             <Logo href="/app/inbox" />
           </div>
           <Link href="/app/tickets/new" className="btn btn-primary w-full">
@@ -70,21 +73,20 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
             <AccountMenu fallbackName={s.name} />
           </div>
         </aside>
+        </MobileNav>
       </div>
       <div className="min-w-0">
-        {needsPlan && (
+        {plan.state === "trial" && (
           <p className="flex flex-wrap items-center gap-x-2 border-b border-accent/20 bg-accent-soft px-4 py-2.5 text-sm md:px-8">
+            {plan.daysLeft === 1 ? "Your free trial ends tomorrow." : `${plan.daysLeft} days left in your free trial.`}{" "}
             {s.role === "admin" ? (
-              <>
-                Your team doesn&apos;t have a plan yet.{" "}
-                <Link href="/app/settings" className="link font-medium text-accent">Start the {TRIAL_DAYS}-day free trial</Link>
-              </>
+              <Link href="/app/settings#billing" className="link font-medium text-accent">Add a card to keep going</Link>
             ) : (
-              "Your team doesn't have a plan yet. Ask an admin to start the free trial in Settings."
+              "Ask an admin to add a card in Settings."
             )}
           </p>
         )}
-        {children}
+        {plan.state === "locked" ? <Paywall isAdmin={s.role === "admin"} /> : children}
       </div>
     </div>
   );

@@ -140,15 +140,18 @@ export async function createTicket(input: NewTicket) {
       })
       .returning();
 
-    await tx.insert(messages).values({
-      orgId: input.orgId,
-      ticketId: ticket.id,
-      authorType: input.authorType,
-      authorId: input.authorType === "customer" ? customer.id : input.authorId,
-      body: input.body,
-      emailMessageId: input.emailMessageId ?? null,
-    });
-    return ticket;
+    const [message] = await tx
+      .insert(messages)
+      .values({
+        orgId: input.orgId,
+        ticketId: ticket.id,
+        authorType: input.authorType,
+        authorId: input.authorType === "customer" ? customer.id : input.authorId,
+        body: input.body,
+        emailMessageId: input.emailMessageId ?? null,
+      })
+      .returning({ id: messages.id });
+    return { ...ticket, messageId: message.id };
   });
 }
 
@@ -178,6 +181,7 @@ export async function addReply(opts: {
   internal: boolean;
   status?: TicketStatus | null;
   addTags?: string[];
+  hasFiles?: boolean; // a reply can be only attachments
 }) {
   return db.transaction(async (tx) => {
     const [ticket] = await tx
@@ -188,7 +192,8 @@ export async function addReply(opts: {
     if (!ticket) throw new Error("Ticket not found.");
 
     let messageId: string | null = null;
-    if (opts.body.trim()) {
+    const hasContent = Boolean(opts.body.trim()) || Boolean(opts.hasFiles);
+    if (hasContent) {
       const [inserted] = await tx.insert(messages).values({
         orgId: opts.orgId,
         ticketId: ticket.id,
@@ -213,7 +218,7 @@ export async function addReply(opts: {
         tags,
         assigneeId,
         updatedAt: now,
-        firstResponseAt: !opts.internal && opts.body.trim() && !ticket.firstResponseAt ? now : ticket.firstResponseAt,
+        firstResponseAt: !opts.internal && hasContent && !ticket.firstResponseAt ? now : ticket.firstResponseAt,
         closedAt: status === "closed" ? (ticket.closedAt ?? now) : null,
       })
       .where(eq(tickets.id, ticket.id));
@@ -223,19 +228,20 @@ export async function addReply(opts: {
 
 // A customer wrote again (usually an email reply): add it and reopen the ticket.
 export async function addCustomerMessage(opts: { orgId: string; ticketId: string; customerId: string; body: string; emailMessageId?: string | null }) {
-  await db.transaction(async (tx) => {
-    await tx.insert(messages).values({
+  return db.transaction(async (tx) => {
+    const [message] = await tx.insert(messages).values({
       orgId: opts.orgId,
       ticketId: opts.ticketId,
       authorType: "customer",
       authorId: opts.customerId,
       body: opts.body,
       emailMessageId: opts.emailMessageId ?? null,
-    });
+    }).returning({ id: messages.id });
     await tx
       .update(tickets)
       .set({ status: "open", closedAt: null, updatedAt: new Date() })
       .where(and(eq(tickets.orgId, opts.orgId), eq(tickets.id, opts.ticketId)));
+    return message.id;
   });
 }
 
