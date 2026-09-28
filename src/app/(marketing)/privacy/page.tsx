@@ -4,6 +4,7 @@ import LegalPage, { Section } from "@/components/LegalPage";
 import { LEGAL_UPDATED, SITE } from "@/lib/site";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/privacy" },
   title: "Privacy policy",
   description: "What Flatdesk collects, why, who processes it, and how to get it deleted.",
 };

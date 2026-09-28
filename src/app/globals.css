@@ -574,9 +574,10 @@ p {
     transform: translateX(250%);
   }
 }
-@keyframes drift {
-  to {
-    background-position: 100% 50%;
+/* A fade on the right edge of the scrolling header nav on phones, so it reads as scrollable. */
+@media (max-width: 767px) {
+  .nav-scroll {
+    mask-image: linear-gradient(to right, #000 85%, transparent);
   }
 }
 @keyframes header-lift {
@@ -657,10 +658,9 @@ p {
     animation: marker 700ms cubic-bezier(0.6, 0, 0.3, 1) 900ms backwards;
   }
 
-  /* The ribbon's colors drift slowly; slow enough to notice only on a second look. */
-  .ribbon {
-    animation: drift 28s ease-in-out infinite alternate;
-  }
+  /* The ribbon used to drift by animating background-position on six
+     gradients, which repainted the hero every frame (1.5 s of blocking time on
+     a mid-range phone). It stays still now, like the rest of the page between plays. */
 
   /* The hero bill feeds out of a printer slot in steps, like a till roll, then
      the "Flat" stamp lands on it and the paper takes the knock. On phones the

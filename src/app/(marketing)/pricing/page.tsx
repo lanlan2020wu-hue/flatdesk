@@ -4,6 +4,7 @@ import { BILLING_FAQ } from "@/lib/faq";
 import { PLAN, PRICE_PHRASE, annualSavingsPct, usd } from "@/lib/pricing";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/pricing" },
   title: "Pricing",
   description: `${PRICE_PHRASE}, with ${PLAN.includedPerAgent} AI resolutions per agent included and capped by default.`,
 };
@@ -59,7 +60,7 @@ export default function PricingPage() {
             </div>
           </dl>
           <div className="flex flex-wrap gap-3">
-            <Link href="/#waitlist" className="btn btn-primary">Join the waitlist</Link>
+            <Link href="/sign-up" className="btn btn-primary">Start your free trial</Link>
             <Link href="/calculator" className="btn btn-secondary">Compare with your current bill</Link>
           </div>
         </div>

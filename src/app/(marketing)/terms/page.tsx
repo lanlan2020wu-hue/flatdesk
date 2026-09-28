@@ -6,6 +6,7 @@ import { LEGAL_UPDATED, SITE } from "@/lib/site";
 import { TRIAL_DAYS } from "@/lib/billing";
 
 export const metadata: Metadata = {
+  alternates: { canonical: "/terms" },
   title: "Terms of service",
   description: "The agreement between Flatdesk and the teams that use it.",
 };

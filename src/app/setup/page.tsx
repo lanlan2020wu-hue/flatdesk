@@ -3,7 +3,7 @@ import Logo from "@/components/Logo";
 import { clerkEnabled } from "@/lib/auth-config";
 import { CreateOrganization, OrganizationList } from "@clerk/nextjs";
 
-export const metadata = { title: "Set up your team" };
+export const metadata = { title: "Set up your team", robots: { index: false } };
 
 export default function SetupPage() {
   // Without Clerk keys (local dev), sign-in is handled by DEV_AUTH.

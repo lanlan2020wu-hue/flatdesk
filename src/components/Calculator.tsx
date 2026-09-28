@@ -106,7 +106,7 @@ export default function Calculator({ initialTool, initialAgents, initialResoluti
               </label>
             ))}
           </div>
-          <span className="text-xs text-muted">Per agent per month. Yearly is {annualSavingsPct}% less. Most rivals' list prices are yearly too.</span>
+          <span className="text-xs text-muted">Per agent per month. Yearly is {annualSavingsPct}% less. Most rivals&rsquo; list prices are yearly too.</span>
         </fieldset>
       </form>
 
@@ -161,7 +161,7 @@ export default function Calculator({ initialTool, initialAgents, initialResoluti
         </p>
 
         <div className="flex flex-wrap items-center gap-3">
-          <Link href="/#waitlist" className="btn btn-primary">Join the waitlist</Link>
+          <Link href="/sign-up" className="btn btn-primary">Start your free trial</Link>
           <button type="button" onClick={copyLink} className="btn btn-secondary">
             {copied ? "Link copied" : "Copy link to these numbers"}
           </button>

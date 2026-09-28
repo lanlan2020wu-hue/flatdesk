@@ -3,7 +3,7 @@ import AuthShell from "@/components/AuthShell";
 import { clerkEnabled } from "@/lib/auth-config";
 import { SignIn } from "@clerk/nextjs";
 
-export const metadata = { title: "Sign in" };
+export const metadata = { title: "Sign in", robots: { index: false } };
 
 export default function SignInPage() {
   // Without Clerk keys (local dev), sign-in is handled by DEV_AUTH.
