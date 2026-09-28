@@ -3,6 +3,10 @@
 import { useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
 
+// Mirrors REPLY_UPLOAD_LIMIT and MAX_FILES in lib/attachments.ts (Vercel caps request bodies at 4.5 MB).
+const UPLOAD_LIMIT = 4 * 1024 * 1024;
+const MAX_FILES = 10;
+
 type Macro = { id: string; name: string; body: string; addTags: string[]; setStatus: string | null };
 
 function SendButton({ internal }: { internal: boolean }) {
@@ -32,6 +36,9 @@ export default function Composer({
   const [addTags, setAddTags] = useState("");
   // Replies default to "pending" (waiting on the customer); notes keep the current status.
   const [statusChoice, setStatusChoice] = useState<string | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const nextStatus = statusChoice ?? (internal ? status : "pending");
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -47,10 +54,19 @@ export default function Composer({
     <form
       ref={formRef}
       action={async (f) => {
-        await action(f);
+        f.delete("files");
+        for (const file of files) f.append("files", file);
+        if (!f.get("body")?.toString().trim() && files.length === 0) return setError("Write a reply or attach a file first.");
+        setError(null);
+        try {
+          await action(f);
+        } catch {
+          return setError("That didn't save. Check your connection and try again; your text is still here.");
+        }
         setBody("");
         setAddTags("");
         setStatusChoice(null);
+        setFiles([]);
       }}
       className={`grid gap-3 rounded-2xl border p-3 shadow-md transition-colors focus-within:ring-2 focus-within:ring-accent/25 ${internal ? "border-warn/50 bg-warn-soft" : "border-line bg-surface"}`}
     >
@@ -83,8 +99,40 @@ export default function Composer({
         placeholder={internal ? "Only your team sees this." : "Write your reply…"}
         className="w-full resize-y rounded-lg bg-transparent px-2 py-1 focus:outline-none"
       />
+      {files.length > 0 && (
+        <ul className="flex flex-wrap gap-2 px-2 text-sm" aria-label="Files to attach">
+          {files.map((f, i) => (
+            <li key={`${f.name}-${i}`} className="flex max-w-64 items-center gap-1.5 rounded-lg border border-line bg-bg py-1 pr-1 pl-2.5">
+              <span className="truncate">{f.name}</span>
+              <button type="button" aria-label={`Remove ${f.name}`} onClick={() => setFiles((all) => all.filter((_, j) => j !== i))} className="rounded px-1.5 text-muted hover:bg-surface-2 hover:text-ink">×</button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {error && <p className="px-2 text-sm text-warn" role="alert">{error}</p>}
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3 text-sm">
-        <span className="text-muted">{addTags && <>Adds tags: {addTags}</>}</span>
+        <span className="flex flex-wrap items-center gap-3 text-muted">
+          <label className="btn btn-secondary btn-sm cursor-pointer">
+            <svg viewBox="0 0 20 20" className="size-4" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M13.5 6.5 7.8 12.2a1.6 1.6 0 1 0 2.3 2.3l6-6a3.2 3.2 0 0 0-4.5-4.5l-6 6a4.8 4.8 0 0 0 6.8 6.8l5-5" /></svg>
+            Attach
+            <input
+              ref={fileRef}
+              type="file"
+              multiple
+              className="sr-only"
+              onChange={(e) => {
+                const picked = [...files, ...Array.from(e.target.files ?? [])];
+                e.target.value = "";
+                const total = picked.reduce((n, f) => n + f.size, 0);
+                if (picked.length > MAX_FILES) return setError(`Attach up to ${MAX_FILES} files per reply.`);
+                if (total > UPLOAD_LIMIT) return setError("Attachments on one reply can add up to 4 MB. Share bigger files as a link.");
+                setError(null);
+                setFiles(picked);
+              }}
+            />
+          </label>
+          {addTags && <span>Adds tags: {addTags}</span>}
+        </span>
         <div className="flex items-center gap-2">
           <label htmlFor="nextStatus" className="text-muted">then set to</label>
           <select id="nextStatus" name="status" value={nextStatus} onChange={(e) => setStatusChoice(e.target.value)} className="field field-sm w-auto">

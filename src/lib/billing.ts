@@ -14,7 +14,11 @@ import { PLAN } from "@/lib/pricing";
 
 const { orgs, agents, aiEvents } = schema;
 
+// A new team can use everything for TRIAL_DAYS without a card. Starting the
+// plan during that window keeps the rest of it as a Stripe trial, so the
+// first charge lands when the 14 days are up either way.
 export const TRIAL_DAYS = 14;
+const DAY = 24 * 60 * 60 * 1000;
 const ACTIVE = new Set(["trialing", "active", "past_due"]);
 
 export const billingConfigured = () => Boolean(process.env.STRIPE_SECRET_KEY);
@@ -32,6 +36,28 @@ function stripe(): Stripe {
 }
 
 export const isActive = (status: string | null | undefined) => Boolean(status && ACTIVE.has(status));
+
+export const trialEndsAt = (org: { createdAt: Date }) => new Date(org.createdAt.getTime() + TRIAL_DAYS * DAY);
+
+// "open": paid or trialing in Stripe (or billing isn't set up on this server).
+// "trial": inside the no-card window. "locked": the window is over with no plan.
+export type Access = { state: "open" } | { state: "trial"; daysLeft: number } | { state: "locked" };
+export function access(org: { createdAt: Date; subscriptionStatus: string | null }, now = new Date()): Access {
+  if (!billingConfigured() || isActive(org.subscriptionStatus)) return { state: "open" };
+  const left = trialEndsAt(org).getTime() - now.getTime();
+  return left > 0 ? { state: "trial", daysLeft: Math.ceil(left / DAY) } : { state: "locked" };
+}
+
+// Test-mode ids don't exist in live mode (and a deleted customer is gone), so
+// a missing Stripe object means "start over", not "fail forever".
+const isMissing = (err: unknown) => err instanceof Stripe.errors.StripeInvalidRequestError && err.code === "resource_missing";
+
+async function forgetStripe(orgId: string) {
+  await db
+    .update(orgs)
+    .set({ stripeCustomerId: null, stripeSubscriptionId: null, subscriptionStatus: null, billedSeats: null, currentPeriodEnd: null })
+    .where(eq(orgs.id, orgId));
+}
 
 // Seats are the org's Clerk members: someone removed in Clerk stops being billed.
 export async function seatCount(orgId: string): Promise<number> {
@@ -51,7 +77,15 @@ async function getOrg(orgId: string) {
 
 async function ensureCustomer(orgId: string, email: string) {
   const org = await getOrg(orgId);
-  if (org.stripeCustomerId) return org.stripeCustomerId;
+  if (org.stripeCustomerId) {
+    try {
+      const existing = await stripe().customers.retrieve(org.stripeCustomerId);
+      if (!existing.deleted) return org.stripeCustomerId;
+    } catch (err) {
+      if (!isMissing(err)) throw err;
+    }
+    await forgetStripe(orgId);
+  }
   const customer = await stripe().customers.create({ name: org.name, email: email || undefined, metadata: { orgId } });
   await db.update(orgs).set({ stripeCustomerId: customer.id }).where(eq(orgs.id, orgId));
   return customer.id;
@@ -59,6 +93,10 @@ async function ensureCustomer(orgId: string, email: string) {
 
 export async function checkoutUrl(orgId: string, email: string, origin: string) {
   const customer = await ensureCustomer(orgId, email);
+  const org = await getOrg(orgId);
+  // Stripe needs a trial end at least 48 hours out; closer than that, billing starts now.
+  const trialEnd = trialEndsAt(org);
+  const trial = trialEnd.getTime() - Date.now() > 2 * DAY + 60_000 ? { trial_end: Math.floor(trialEnd.getTime() / 1000) } : {};
   const session = await stripe().checkout.sessions.create({
     mode: "subscription",
     customer,
@@ -74,7 +112,7 @@ export async function checkoutUrl(orgId: string, email: string, origin: string) 
         },
       },
     ],
-    subscription_data: { trial_period_days: TRIAL_DAYS, metadata: { orgId } },
+    subscription_data: { ...trial, metadata: { orgId } },
     allow_promotion_codes: true,
     success_url: `${origin}/app/settings?billing=done&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/app/settings?billing=cancelled`,
@@ -94,7 +132,14 @@ export async function portalUrl(orgId: string, origin: string) {
 export async function refreshSubscription(orgId: string) {
   const org = await getOrg(orgId);
   if (!org.stripeCustomerId || !billingConfigured()) return org;
-  const subs = await stripe().subscriptions.list({ customer: org.stripeCustomerId, status: "all", limit: 5 });
+  let subs: Stripe.ApiList<Stripe.Subscription>;
+  try {
+    subs = await stripe().subscriptions.list({ customer: org.stripeCustomerId, status: "all", limit: 5 });
+  } catch (err) {
+    if (!isMissing(err)) throw err;
+    await forgetStripe(orgId);
+    return getOrg(orgId);
+  }
   const sub = subs.data.find((s) => isActive(s.status)) ?? subs.data[0];
   const item = sub?.items.data[0];
   const [updated] = await db

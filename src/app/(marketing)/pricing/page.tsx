@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { TRIAL_DAYS } from "@/lib/billing";
 import { PLAN, usd } from "@/lib/pricing";
 
 export const metadata: Metadata = {
@@ -8,6 +9,10 @@ export const metadata: Metadata = {
 };
 
 const FAQ: [string, string][] = [
+  [
+    "Is there a free trial?",
+    `Yes, ${TRIAL_DAYS} days with every feature and no card. If you add a card during the trial, the first charge still waits until the trial ends.`,
+  ],
   [
     "What counts as an AI resolution?",
     "A conversation the AI answers where the customer doesn't ask for a person afterwards. Conversations the AI hands to your team don't count. Each conversation counts at most once.",
@@ -36,11 +41,12 @@ const FAQ: [string, string][] = [
 
 const INCLUDED = [
   "Shared inbox",
-  "Email and chat",
+  "Email and chat, with attachments",
   "Macros and rules",
   "AI answers",
   "Reporting",
-  "Zendesk import",
+  "Import from Zendesk, Intercom, Freshdesk or Help Scout",
+  "AI receipts",
   "Data export",
 ];
 

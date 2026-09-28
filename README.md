@@ -32,7 +32,9 @@ All prices live in `src/lib/pricing.ts`. Every competitor number there must have
 - Import (`/app/import`, `src/lib/import`): Zendesk, Intercom (Fin), Freshdesk and Help Scout, over their APIs. Tickets with full conversation history, macros and saved replies, tags, rules, custom fields, contacts, companies and agents. Every raw record is stored in `import_records`, so nothing is lost; what doesn't map is listed in a report (downloadable as CSV) and every original field stays on the ticket. Imports run in short resumable steps driven by the import page, pause on rate limits, and can be re-run without duplicating anything. Agents are matched by email, and tickets and tag rules for agents who haven't joined yet follow them when they do.
 - Onboarding (`/app/welcome`): a five-step checklist for new teams: create the team, invite agents (suggesting the ones found in an import), connect the support inbox (with Gmail's forwarding code shown when it arrives), import from the old tool, and send a real test email through forwarding, or a sample ticket.
 
-Not built yet: attachments (imported ones are linked, not copied).
+- Attachments: files on incoming email are kept on the ticket (up to 20 MB each, 30 MB per email; anything bigger is named in an internal note), agents can attach up to 4 MB per reply, and replies go out with their files. Chat visitors see and download files sent to them. Files live in Postgres (`attachments` table) and every download is checked against the team or the chat visitor. Imported attachments are linked, not copied.
+- Trial and plan: a new team gets 14 days with no card. After that, without an active Stripe subscription, the app shows a paywall (exports stay open, email keeps arriving, the AI stops answering). Adding a card during the trial keeps the remaining days as a Stripe trial.
+- Legal: `/terms` and `/privacy`, linked from the footer and sign-up. Company details come from `LEGAL_NAME`, `CONTACT_EMAIL` and `GOVERNING_LAW`.
 
 ## Running locally
 
@@ -61,8 +63,12 @@ npm test                       # import and onboarding tests; point DATABASE_URL
 | `IMPORT_SECRET` | Optional. Key for encrypting help desk API keys while an import runs (erased when it ends). Falls back to `CLERK_SECRET_KEY`. |
 | `STRIPE_SECRET_KEY` | Billing. Set by the Stripe integration on Vercel. |
 | `CRON_SECRET` | Authorizes Vercel Cron's call to `/api/cron/daily`. |
+| `NEXT_PUBLIC_SITE_URL` | The public address, e.g. `https://flatdesk.app`. Used for sitemap, robots and link previews. Defaults to Vercel's production URL. |
+| `LEGAL_NAME`, `CONTACT_EMAIL`, `GOVERNING_LAW` | Shown in the terms and privacy policy and the footer. Pages are static, so redeploy after changing them. |
 | `DEV_AUTH` | Local development only. `1` signs in as a demo admin when Clerk keys are missing. Ignored in production. |
+
+`/api/health` reports which services are connected, and whether Stripe and Clerk are in live or test mode.
 
 ## Next up
 
-Attachments on email and chat tickets, and copying imported attachments.
+Chat visitors sending files, copying imported attachments, and rate limits on the public chat and waitlist endpoints.

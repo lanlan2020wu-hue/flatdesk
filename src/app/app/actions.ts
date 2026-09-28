@@ -6,6 +6,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { db, schema } from "@/db";
 import { requireAdmin, requireSession } from "@/lib/auth";
+import { filesFromForm, saveAttachments } from "@/lib/attachments";
 import { checkoutUrl, portalUrl } from "@/lib/billing";
 import { deliverReply } from "@/lib/email";
 import { addReply, createTicket, normalizeTags, updateTicket, type TicketStatus } from "@/lib/tickets";
@@ -38,6 +39,7 @@ export async function replyAction(form: FormData) {
   const s = await requireSession();
   const ticketId = str(form, "ticketId");
   const number = str(form, "number");
+  const files = await filesFromForm(form);
   const { messageId } = await addReply({
     orgId: s.orgId,
     ticketId,
@@ -46,7 +48,9 @@ export async function replyAction(form: FormData) {
     internal: form.get("internal") === "on",
     status: status(str(form, "status")),
     addTags: tagList(str(form, "addTags")),
+    hasFiles: files.length > 0,
   });
+  if (messageId && files.length) await saveAttachments(s.orgId, ticketId, messageId, files);
   if (messageId) await deliverReply(s.orgId, messageId);
   revalidatePath(`/app/tickets/${number}`);
   revalidatePath("/app/inbox");

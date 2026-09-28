@@ -5,6 +5,7 @@ import AutoSubmitSelect from "@/components/AutoSubmitSelect";
 import Avatar from "@/components/Avatar";
 import Composer from "@/components/Composer";
 import { db, schema } from "@/db";
+import { attachmentsByMessage, formatBytes } from "@/lib/attachments";
 import { requireSession } from "@/lib/auth";
 import { STATUS_STYLE, timeAgo } from "@/lib/format";
 import { STATUS_LABEL } from "@/lib/receipts";
@@ -28,7 +29,7 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
   // "Imported from" first; Postgres returns jsonb keys in its own order.
   const fieldEntries = Object.entries(ticket.fields).sort(([a], [b]) => Number(b === "Imported from") - Number(a === "Imported from"));
   const customerFields = Object.entries(customer.fields);
-  const [agents, macros, [aiEvent]] = await Promise.all([
+  const [agents, macros, [aiEvent], files] = await Promise.all([
     listAgents(s.orgId),
     db.select().from(schema.macros).where(and(eq(schema.macros.orgId, s.orgId))).orderBy(asc(schema.macros.name)),
     db
@@ -37,6 +38,7 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
       .where(and(eq(schema.aiEvents.orgId, s.orgId), eq(schema.aiEvents.ticketId, ticket.id)))
       .orderBy(desc(schema.aiEvents.createdAt))
       .limit(1),
+    attachmentsByMessage(s.orgId, thread.map((m) => m.id)),
   ]);
   // The receipt line for this ticket's AI answer, shown under that answer.
   const receipt =
@@ -87,7 +89,20 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
                     </span>
                     <time className="text-xs text-muted" dateTime={m.createdAt.toISOString()} title={m.createdAt.toLocaleString("en-US")}>{timeAgo(m.createdAt)}</time>
                   </p>
-                  <p className="whitespace-pre-wrap break-words">{m.body}</p>
+                  {m.body && <p className="whitespace-pre-wrap break-words">{m.body}</p>}
+                  {files.get(m.id) && (
+                    <ul className="flex flex-wrap gap-2 pt-1" aria-label="Attachments">
+                      {files.get(m.id)!.map((f) => (
+                        <li key={f.id}>
+                          <a href={`/app/attachments/${f.id}`} target="_blank" rel="noopener" className="flex max-w-64 items-center gap-2 rounded-lg border border-line bg-bg px-2.5 py-1.5 text-sm transition-colors hover:border-line-strong">
+                            <svg viewBox="0 0 20 20" className="size-4 shrink-0 text-muted" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true"><path d="M13.5 6.5 7.8 12.2a1.6 1.6 0 1 0 2.3 2.3l6-6a3.2 3.2 0 0 0-4.5-4.5l-6 6a4.8 4.8 0 0 0 6.8 6.8l5-5" /></svg>
+                            <span className="truncate">{f.filename}</span>
+                            <span className="num shrink-0 text-xs text-muted">{formatBytes(f.size)}</span>
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                   {m.deliveryError && <p className="text-sm text-warn">This reply wasn&apos;t emailed: {m.deliveryError}</p>}
                   {m.authorType === "ai" && receipt && aiEvent && (
                     <p className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-accent/20 pt-2 text-xs text-muted">

@@ -3,6 +3,8 @@ import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { and, asc, count, eq, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema } from "@/db";
+import { attachmentsByMessage } from "@/lib/attachments";
+import { access } from "@/lib/billing";
 import { deliverReply, emailConfig, resend } from "@/lib/email";
 import { PLAN } from "@/lib/pricing";
 
@@ -13,7 +15,25 @@ import { PLAN } from "@/lib/pricing";
 // pauses unless an admin turned on overage.
 
 const MODEL = "claude-opus-5";
-const PRICE_PER_MTOK = { input: 5, output: 25 }; // USD, for internal cost logging
+// USD per million tokens, for internal cost logging. Prompt caching bills cache
+// writes (5-minute TTL) at 1.25x the input rate and cache reads at 0.1x.
+const PRICE_PER_MTOK = { input: 5, output: 25, cacheWrite: 6.25, cacheRead: 0.5 };
+
+export function callCost(usage: {
+  input_tokens: number;
+  output_tokens: number;
+  cache_creation_input_tokens?: number | null;
+  cache_read_input_tokens?: number | null;
+}) {
+  const p = PRICE_PER_MTOK;
+  return (
+    (usage.input_tokens * p.input +
+      (usage.cache_creation_input_tokens ?? 0) * p.cacheWrite +
+      (usage.cache_read_input_tokens ?? 0) * p.cacheRead +
+      usage.output_tokens * p.output) /
+    1e6
+  );
+}
 const AI_FOOTER = "\n\n--\nThis reply was written by our AI assistant. Reply to reach a person on our team.";
 
 const { orgs, agents, tickets, messages, macros, aiEvents } = schema;
@@ -91,6 +111,7 @@ Answer only when the team's notes or saved answers below cover the question. Han
 - they ask for a refund, a cancellation, a billing change or any other action on their account
 - they ask for a person, are upset, or the message is a complaint, a legal matter or a security report
 - the message isn't a support question (spam, sales pitches, auto-generated mail)
+- the question depends on an attached file (a screenshot, an invoice, a log): you can see only the file names
 
 Never invent prices, policies, dates, links or promises. If the material covers part of the question, hand off rather than answer half.
 
@@ -116,10 +137,15 @@ export async function answerNewTicket(orgId: string, ticketId: string) {
   const org = await db.query.orgs.findFirst({ where: eq(orgs.id, orgId) });
   const ticket = await db.query.tickets.findFirst({ where: and(eq(tickets.orgId, orgId), eq(tickets.id, ticketId)) });
   if (!org?.aiEnabled || !ticket || ticket.status !== "open") return;
+  if (access(org).state === "locked") {
+    await note(orgId, ticketId, "The AI didn't answer because the free trial has ended. An admin can add a card in Settings.");
+    return;
+  }
 
   const thread = await db.select().from(messages).where(eq(messages.ticketId, ticketId)).orderBy(asc(messages.createdAt));
   if (thread.length !== 1 || thread[0].authorType !== "customer") return;
   const customer = await db.query.customers.findFirst({ where: eq(schema.customers.id, ticket.customerId) });
+  const attached = (await attachmentsByMessage(orgId, [thread[0].id])).get(thread[0].id) ?? [];
 
   const slot = await reserveSlot(orgId, ticketId);
   if ("paused" in slot) {
@@ -148,15 +174,16 @@ export async function answerNewTicket(orgId: string, ticketId: string) {
       messages: [
         {
           role: "user",
-          content: `From: ${customer?.name ? `${customer.name} <${customer.email}>` : customer?.email}\nSubject: ${ticket.subject}\n\n${thread[0].body}`,
+          content: `From: ${customer?.name ? `${customer.name} <${customer.email}>` : customer?.email}\nSubject: ${ticket.subject}${
+            attached.length ? `\nAttached files: ${attached.map((f) => f.filename).join(", ")}` : ""
+          }\n\n${thread[0].body}`,
         },
       ],
     });
 
     const usage = response.usage;
     const inputTokens = usage.input_tokens + (usage.cache_creation_input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0);
-    const costUsd = (inputTokens * PRICE_PER_MTOK.input + usage.output_tokens * PRICE_PER_MTOK.output) / 1e6;
-    const metered = { model: response.model, inputTokens, outputTokens: usage.output_tokens, costUsd: costUsd.toFixed(5) };
+    const metered = { model: response.model, inputTokens, outputTokens: usage.output_tokens, costUsd: callCost(usage).toFixed(5) };
 
     const out = response.stop_reason === "refusal" ? null : response.parsed_output;
     // Keep only titles that name a real saved answer, so the receipt never cites something that doesn't exist.
