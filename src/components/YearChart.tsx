@@ -12,7 +12,7 @@ export default function YearChart() {
     month: m,
     resolutions: RESOLUTIONS[i],
     fin: competitorMonthly(fin, AGENTS, RESOLUTIONS[i]).total,
-    ours: flatdeskMonthly(AGENTS, RESOLUTIONS[i]).capped,
+    ours: flatdeskMonthly(AGENTS, RESOLUTIONS[i], "year").capped,
   }));
   const max = Math.max(...rows.map((r) => r.fin));
   const top = Math.ceil(max / 500) * 500;
@@ -82,7 +82,7 @@ export default function YearChart() {
       </div>
 
       <p className="text-xs text-muted">
-        {fin.vendor} at list price with annual billing. Flatdesk with the default cap: once the included resolutions are used, the AI pauses
+        {fin.vendor} at list price with annual billing. Flatdesk with annual billing and the default cap: once the included resolutions are used, the AI pauses
         and your team answers the rest.
       </p>
     </figure>

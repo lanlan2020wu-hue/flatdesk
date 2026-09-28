@@ -11,7 +11,7 @@ const EXAMPLE = { agents: 10, resolutions: 1500 };
 const SELLING_POINTS: { title: string; body: string; href: string; icon: string; isNew?: boolean }[] = [
   {
     title: "One flat price",
-    body: `Seats × ${usd(PLAN.seatPrice)}, with ${PLAN.includedPerAgent} AI resolutions per seat. The AI pauses at the cap unless an admin opts in. No meters, no add-on tiers.`,
+    body: `Seats × ${usd(PLAN.annualSeatPrice)} billed yearly (${usd(PLAN.seatPrice)} monthly), with ${PLAN.includedPerAgent} AI resolutions per seat. The AI pauses at the cap unless an admin opts in. No meters, no add-on tiers.`,
     href: "#why-flat",
     icon: "M7 4h10v16l-2.5-1.5L12 20l-2.5-1.5L7 20zM10 9h4M10 13h4",
   },
@@ -117,7 +117,7 @@ function Row({ label, value, className = "" }: { label: React.ReactNode; value: 
 
 export default function Home() {
   const fin = competitorMonthly(competitorById("fin-advanced"), EXAMPLE.agents, EXAMPLE.resolutions);
-  const ours = flatdeskMonthly(EXAMPLE.agents, EXAMPLE.resolutions);
+  const ours = flatdeskMonthly(EXAMPLE.agents, EXAMPLE.resolutions, "year");
 
   return (
     <div className="grid gap-24 sm:gap-28">
@@ -133,11 +133,12 @@ export default function Home() {
               Help desk for teams of 5–20 agents
             </p>
             <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-[2.6rem] leading-[1.05] sm:text-6xl">
-              {usd(PLAN.seatPrice)} per agent. AI included. <span className="hl hl-draw italic">The same bill every month.</span>
+              From {usd(PLAN.annualSeatPrice)} per agent. AI included. <span className="hl hl-draw italic">The same bill every month.</span>
             </h1>
             <p style={{ "--d": 2 } as React.CSSProperties} className="enter max-w-xl text-lg text-muted">
-              Every seat includes {PLAN.includedPerAgent} AI resolutions a month, shared across your team. When they run out, the AI pauses and
-              your team takes over. You only pay more if you turn overage on yourself.
+              {usd(PLAN.annualSeatPrice)} a month billed yearly, or {usd(PLAN.seatPrice)} month to month. Every seat includes{" "}
+              {PLAN.includedPerAgent} AI resolutions a month, shared across your team. When they run out, the AI pauses and your team takes
+              over. You only pay more if you turn overage on yourself.
             </p>
             <p style={{ "--d": 2 } as React.CSSProperties} className="enter flex flex-wrap gap-2 text-sm">
               {["AI receipts", "Macros that write themselves", "Lossless import"].map((t) => (
@@ -170,14 +171,14 @@ export default function Home() {
               <Row label="Fin outcomes, 1,500 × $0.99" value={usd(fin.ai)} />
               <Row label="Fin total" value={usd(fin.total)} className="mt-1 border-t border-line pt-2 font-medium" />
               <div className="rule-dashed my-3" />
-              <Row label={`Flatdesk, 10 × ${usd(PLAN.seatPrice)}`} value={usd(ours.seats)} />
+              <Row label={`Flatdesk, 10 × ${usd(PLAN.annualSeatPrice)}`} value={usd(ours.seats)} />
               <Row label="1,000 AI resolutions" value="included" className="text-muted" />
               <Row label="500 more, if you turn overage on" value={usd(ours.withOverage - ours.seats)} className="text-muted" />
               <div className="mt-2 flex items-baseline justify-between gap-4 rounded-lg bg-accent-soft px-3 py-2.5 font-medium text-accent">
                 <span>Flatdesk total</span>
                 <span className="text-base">{usd(ours.capped)}–{usd(ours.withOverage)}</span>
               </div>
-              <p className="mt-3 text-center font-sans text-xs text-muted">Fin list prices with annual billing, checked Sep 2026.</p>
+              <p className="mt-3 text-center font-sans text-xs text-muted">Both with annual billing, Fin at list price checked Sep 2026.</p>
             </div>
             <span
               aria-hidden="true"

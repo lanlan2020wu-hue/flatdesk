@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Fraunces, IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import { clerkEnabled } from "@/lib/auth-config";
+import { PLAN, usd } from "@/lib/pricing";
 import { SITE } from "@/lib/site";
 import "./globals.css";
 
@@ -41,7 +42,7 @@ export const metadata: Metadata = {
     template: "%s · Flatdesk",
   },
   description:
-    "$49 per agent per month. AI resolutions included and capped, so your support bill is the same every month.",
+    `${usd(PLAN.seatPrice)} per agent per month, or ${usd(PLAN.annualSeatPrice)} billed yearly. AI resolutions included and capped, so your support bill is the same every month.`,
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

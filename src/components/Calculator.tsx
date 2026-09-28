@@ -5,9 +5,12 @@ import { useEffect, useMemo, useState } from "react";
 import {
   COMPETITORS,
   PLAN,
+  type Interval,
+  annualSavingsPct,
   competitorById,
   competitorMonthly,
   flatdeskMonthly,
+  seatPriceFor,
   usd,
 } from "@/lib/pricing";
 
@@ -15,14 +18,16 @@ type Props = {
   initialTool: string;
   initialAgents: number;
   initialResolutions: number;
+  initialInterval: Interval;
 };
 
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, Number.isFinite(n) ? n : lo));
 
-export default function Calculator({ initialTool, initialAgents, initialResolutions }: Props) {
+export default function Calculator({ initialTool, initialAgents, initialResolutions, initialInterval }: Props) {
   const [toolId, setToolId] = useState(competitorById(initialTool).id);
   const [agents, setAgents] = useState(initialAgents);
   const [resolutions, setResolutions] = useState(initialResolutions);
+  const [interval, setBilling] = useState<Interval>(initialInterval);
   const tool = competitorById(toolId);
   const [rate, setRate] = useState(tool.aiRate);
   const [copied, setCopied] = useState(false);
@@ -30,13 +35,13 @@ export default function Calculator({ initialTool, initialAgents, initialResoluti
   const a = clamp(agents, 1, 500);
   const r = clamp(resolutions, 0, 1_000_000);
   const today = useMemo(() => competitorMonthly(tool, a, r, rate), [tool, a, r, rate]);
-  const ours = useMemo(() => flatdeskMonthly(a, r), [a, r]);
+  const ours = useMemo(() => flatdeskMonthly(a, r, interval), [a, r, interval]);
   const yearlySavings = (today.total - ours.withOverage) * 12;
 
   useEffect(() => {
-    const qs = new URLSearchParams({ tool: toolId, agents: String(a), resolutions: String(r) });
+    const qs = new URLSearchParams({ tool: toolId, agents: String(a), resolutions: String(r), billing: interval === "year" ? "yearly" : "monthly" });
     window.history.replaceState(null, "", `?${qs}`);
-  }, [toolId, a, r]);
+  }, [toolId, a, r, interval]);
 
   function pickTool(id: string) {
     setToolId(id);
@@ -88,6 +93,21 @@ export default function Calculator({ initialTool, initialAgents, initialResoluti
             onChange={(e) => setRate(clamp(e.target.valueAsNumber, 0, 100))} />
           <span className={`text-xs ${tool.estimated ? "text-warn" : "text-muted"}`}>{tool.aiNote}</span>
         </label>
+        <fieldset className="grid gap-1.5">
+          <legend className="label mb-1.5">Flatdesk billing</legend>
+          <div className="grid grid-cols-2 gap-1 rounded-xl border border-line bg-surface-2 p-1 text-sm">
+            {([
+              ["year", `Yearly, ${usd(PLAN.annualSeatPrice)}`],
+              ["month", `Monthly, ${usd(PLAN.seatPrice)}`],
+            ] as const).map(([value, label]) => (
+              <label key={value} className={`cursor-pointer rounded-lg px-3 py-1.5 text-center transition-colors has-focus-visible:outline-2 has-focus-visible:outline-accent ${interval === value ? "bg-surface font-medium shadow-sm" : "text-muted hover:text-ink"}`}>
+                <input type="radio" name="interval" value={value} checked={interval === value} onChange={() => setBilling(value)} className="sr-only" />
+                {label}
+              </label>
+            ))}
+          </div>
+          <span className="text-xs text-muted">Per agent per month. Yearly is {annualSavingsPct}% less. Most rivals' list prices are yearly too.</span>
+        </fieldset>
       </form>
 
       <section aria-live="polite" className="grid content-start gap-5">
@@ -104,7 +124,7 @@ export default function Calculator({ initialTool, initialAgents, initialResoluti
             <p className="text-sm font-medium text-accent">Flatdesk</p>
             <p className="num mt-1 text-4xl tracking-tight">{usd(ours.capped)}<span className="text-base text-muted">/mo</span></p>
             <dl className="mt-4 grid gap-1.5 border-t border-accent/20 pt-3 text-sm">
-              <div className="flex justify-between gap-3"><dt className="text-muted">Seats, {a} × {usd(PLAN.seatPrice)}</dt><dd className="num">{usd(ours.seats)}</dd></div>
+              <div className="flex justify-between gap-3"><dt className="text-muted">Seats, {a} × {usd(seatPriceFor(interval))} ({interval === "year" ? "annual" : "monthly"})</dt><dd className="num">{usd(ours.seats)}</dd></div>
               <div className="flex justify-between gap-3"><dt className="text-muted">AI resolutions included</dt><dd className="num">{ours.included.toLocaleString()}</dd></div>
             </dl>
           </div>

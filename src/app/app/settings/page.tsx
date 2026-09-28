@@ -6,8 +6,8 @@ import { requireSession } from "@/lib/auth";
 import { aiConfigured, aiUsage } from "@/lib/ai";
 import { access, billingConfigured, isActive, refreshSubscription, seatCount, trialEndsAt } from "@/lib/billing";
 import { emailConfig, inboundAddress } from "@/lib/email";
-import { PLAN, usd } from "@/lib/pricing";
-import { openBillingPortalAction, saveAiSettingsAction, startCheckoutAction } from "../actions";
+import { PLAN, annualSavingsPct, usd } from "@/lib/pricing";
+import { openBillingPortalAction, saveAiSettingsAction, startCheckoutAction, switchToAnnualAction } from "../actions";
 
 export const metadata = { title: "Settings" };
 
@@ -39,6 +39,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
   const usage = await aiUsage(s.orgId);
   const pct = Math.min(100, Math.round((usage.used / usage.included) * 100));
   const isAdmin = s.role === "admin";
+  const yearly = subscribed && org?.billingInterval === "year";
 
   return (
     <div className="grid max-w-2xl gap-6 px-4 py-6 md:px-8 md:py-8">
@@ -100,6 +101,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
       <section id="billing" className="card grid scroll-mt-6 gap-3 p-5 sm:p-6">
         <h2 className="font-medium">Plan and billing</h2>
         {billing === "cancelled" && !subscribed && <p className="rounded-lg border border-line bg-surface-2/60 px-3 py-2 text-sm" role="status">No card was added. You can do it whenever you&apos;re ready.</p>}
+        {billing === "annual" && <p className="rounded-lg border border-accent/30 bg-accent-soft px-3 py-2 text-sm" role="status">You&apos;re on yearly billing now. Any unused time on the monthly plan is credited on the first yearly invoice.</p>}
         {billing === "done" && <p className="rounded-lg border border-accent/30 bg-accent-soft px-3 py-2 text-sm" role="status">Thanks, your plan is set up.</p>}
         {!billingConfigured() ? (
           <p className="text-muted">Billing isn&apos;t connected on this server yet.</p>
@@ -109,7 +111,9 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
               <p className="flex justify-between gap-2">
                 <span>{subscribed ? STATUS_TEXT[org?.subscriptionStatus ?? ""] ?? org?.subscriptionStatus : plan.state === "trial" ? `Free trial, ${plan.daysLeft} ${plan.daysLeft === 1 ? "day" : "days"} left` : "No plan"}</span>
                 <span className="num">
-                  {seats} {seats === 1 ? "seat" : "seats"} × {usd(PLAN.seatPrice)} = {usd(seats * PLAN.seatPrice)}/mo
+                  {yearly
+                    ? `${seats} × ${usd(PLAN.annualSeatPrice)}/mo, billed yearly = ${usd(seats * PLAN.annualSeatPrice * 12)}/yr`
+                    : `${seats} ${seats === 1 ? "seat" : "seats"} × ${usd(PLAN.seatPrice)} = ${usd(seats * PLAN.seatPrice)}/mo`}
                 </span>
               </p>
               {!subscribed && org && plan.state === "trial" && (
@@ -126,12 +130,36 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
               )}
               <p className="text-sm text-muted">Seats follow your team members: adding or removing someone updates the next bill.</p>
             </div>
-            {isAdmin ? (
-              <form action={subscribed ? openBillingPortalAction : startCheckoutAction}>
-                <button className="btn btn-primary">
-                  {subscribed ? "Manage billing and invoices" : "Add a card"}
-                </button>
-              </form>
+            {isAdmin && subscribed ? (
+              <div className="flex flex-wrap gap-3">
+                <form action={openBillingPortalAction}>
+                  <button className="btn btn-primary">Manage billing and invoices</button>
+                </form>
+                {!yearly && (
+                  <form action={switchToAnnualAction}>
+                    <button className="btn btn-secondary">
+                      Switch to yearly, {usd(PLAN.annualSeatPrice)}/mo per seat (save {annualSavingsPct}%)
+                    </button>
+                  </form>
+                )}
+              </div>
+            ) : isAdmin ? (
+              <div className="grid gap-2">
+                <div className="flex flex-wrap gap-3">
+                  <form action={startCheckoutAction}>
+                    <input type="hidden" name="interval" value="year" />
+                    <button className="btn btn-primary">Add a card, pay yearly</button>
+                  </form>
+                  <form action={startCheckoutAction}>
+                    <input type="hidden" name="interval" value="month" />
+                    <button className="btn btn-secondary">Add a card, pay monthly</button>
+                  </form>
+                </div>
+                <p className="text-sm text-muted">
+                  Yearly is {usd(PLAN.annualSeatPrice)} per seat a month, {usd(PLAN.annualSeatPrice * 12)} per seat a year, {annualSavingsPct}% less than
+                  monthly at {usd(PLAN.seatPrice)}. Same features and the same {PLAN.includedPerAgent} AI resolutions per seat each month.
+                </p>
+              </div>
             ) : (
               <p className="text-sm text-muted">Only admins can change billing.</p>
             )}

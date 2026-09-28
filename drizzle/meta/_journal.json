@@ -78,6 +78,13 @@
       "when": 1790604259835,
       "tag": "0010_rate_limits",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1790606761267,
+      "tag": "0011_billing_interval",
+      "breakpoints": true
     }
   ]
 }

@@ -1,11 +1,12 @@
 // Every number here is shown to visitors. Keep each one traceable to a
 // source URL, and update CHECKED_ON whenever competitor figures are re-checked.
 
-export const CHECKED_ON = "2026-09-25";
+export const CHECKED_ON = "2026-09-28";
 
 export const PLAN = {
   name: "Flatdesk",
-  seatPrice: 49, // USD per agent per month
+  seatPrice: 49, // USD per agent per month, billed monthly
+  annualSeatPrice: 39, // USD per agent per month when billed yearly (20% off); same allowance, same features
   includedPerAgent: 100, // AI resolutions per agent per month, pooled across the team
   trialPerAgent: 25, // AI resolutions per agent for the whole no-card trial, pooled; no overage
   overageRate: 0.4, // USD per extra AI resolution, only when an admin turns overage on
@@ -111,6 +112,22 @@ export const COMPETITORS: Competitor[] = [
     sources: FIN_SOURCES,
   },
   {
+    id: "freshdesk-growth",
+    vendor: "Freshdesk",
+    plan: "Growth",
+    seatPrice: 19,
+    billing: "annual",
+    aiRate: 0.49,
+    included: 500,
+    includedPer: "account",
+    estimated: false,
+    aiNote: "500 AI Agent sessions included, then $49 per pack of 100. Freshdesk bills sessions, which are not the same as resolutions.",
+    sources: [
+      { label: "Freshdesk pricing", url: "https://www.freshworks.com/freshdesk/pricing/" },
+      { label: "Drag: Freshdesk pricing 2026 (third party)", url: "https://www.dragapp.com/blog/freshdesk-pricing/" },
+    ],
+  },
+  {
     id: "freshdesk-pro",
     vendor: "Freshdesk",
     plan: "Pro",
@@ -122,6 +139,22 @@ export const COMPETITORS: Competitor[] = [
     estimated: false,
     aiNote: "500 AI Agent sessions included, then $49 per pack of 100. Freshdesk bills sessions, which are not the same as resolutions.",
     sources: [{ label: "Drag: Freshdesk pricing 2026 (third party)", url: "https://www.dragapp.com/blog/freshdesk-pricing/" }],
+  },
+  {
+    id: "helpscout-standard",
+    vendor: "Help Scout",
+    plan: "Standard",
+    seatPrice: 25,
+    billing: "monthly",
+    aiRate: 0.75,
+    included: 0,
+    includedPer: "account",
+    estimated: false,
+    aiNote: "$0.75 per AI resolution. Help Scout lets admins set a monthly spending cap.",
+    sources: [
+      { label: "Help Scout pricing", url: "https://www.helpscout.com/pricing/" },
+      { label: "Help Scout: AI resolutions pricing", url: "https://docs.helpscout.com/article/1746-ai-resolutions-pricing" },
+    ],
   },
   {
     id: "helpscout-plus",
@@ -142,7 +175,7 @@ export const COMPETITORS: Competitor[] = [
 ];
 
 export function competitorById(id: string): Competitor {
-  return COMPETITORS.find((c) => c.id === id) ?? COMPETITORS[3];
+  return COMPETITORS.find((c) => c.id === id) ?? COMPETITORS.find((c) => c.id === "fin-advanced")!;
 }
 
 export function competitorMonthly(c: Competitor, agents: number, resolutions: number, aiRate = c.aiRate) {
@@ -152,9 +185,19 @@ export function competitorMonthly(c: Competitor, agents: number, resolutions: nu
   return { seats, ai, total: seats + ai, included };
 }
 
-export function flatdeskMonthly(agents: number, resolutions: number) {
+export type Interval = "month" | "year";
+
+// What one seat costs per month on each billing interval.
+export const seatPriceFor = (interval: Interval) => (interval === "year" ? PLAN.annualSeatPrice : PLAN.seatPrice);
+
+// What one seat costs per invoice: a month, or twelve months up front.
+export const seatInvoiceAmount = (interval: Interval) => (interval === "year" ? PLAN.annualSeatPrice * 12 : PLAN.seatPrice);
+
+export const annualSavingsPct = Math.round((1 - PLAN.annualSeatPrice / PLAN.seatPrice) * 100);
+
+export function flatdeskMonthly(agents: number, resolutions: number, interval: Interval = "month") {
   const included = PLAN.includedPerAgent * agents;
-  const seats = PLAN.seatPrice * agents;
+  const seats = seatPriceFor(interval) * agents;
   const extra = Math.max(0, resolutions - included);
   return {
     seats,
@@ -172,3 +215,6 @@ export const usd = (n: number, cents = false) =>
     minimumFractionDigits: cents ? 2 : 0,
     maximumFractionDigits: cents ? 2 : 0,
   });
+
+// The price in one phrase, for copy that names it: "$49 per agent per month, or $39 billed yearly".
+export const PRICE_PHRASE = `${usd(PLAN.seatPrice)} per agent per month, or ${usd(PLAN.annualSeatPrice)} billed yearly`;

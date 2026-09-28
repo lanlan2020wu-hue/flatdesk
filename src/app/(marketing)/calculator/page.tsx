@@ -26,7 +26,10 @@ export default async function CalculatorPage({ searchParams }: PageProps<"/calcu
           month&apos;s likely bill next to one flat price.
         </p>
       </div>
-      <Calculator initialTool={tool} initialAgents={num(sp.agents, 10)} initialResolutions={num(sp.resolutions, 1500)} />
+      <Calculator
+        initialTool={tool} initialAgents={num(sp.agents, 10)} initialResolutions={num(sp.resolutions, 1500)}
+        initialInterval={sp.billing === "monthly" ? "month" : "year"}
+      />
     </div>
   );
 }

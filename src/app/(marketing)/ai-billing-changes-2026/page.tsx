@@ -130,7 +130,7 @@ export default function ChangesPage() {
         <h2 className="ink font-display text-3xl">How Flatdesk bills AI</h2>
         <p>
           AI resolutions are part of the seat price: {PLAN.includedPerAgent} per agent per month, shared across the team, at{" "}
-          {usd(PLAN.seatPrice)} per agent. At the limit the AI pauses. Overage at {usd(PLAN.overageRate, true)} per resolution exists only if
+          {usd(PLAN.seatPrice)} per agent a month ({usd(PLAN.annualSeatPrice)} billed yearly). At the limit the AI pauses. Overage at {usd(PLAN.overageRate, true)} per resolution exists only if
           an admin turns it on.
         </p>
         <div className="flex flex-wrap gap-3">

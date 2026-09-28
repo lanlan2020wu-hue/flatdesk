@@ -38,6 +38,7 @@ export const orgs = pgTable("orgs", {
   stripeSubscriptionId: text("stripe_subscription_id"),
   subscriptionStatus: text("subscription_status"), // Stripe's status: trialing, active, past_due, canceled...
   billedSeats: integer("billed_seats"),
+  billingInterval: text("billing_interval"), // "month" or "year", copied from the Stripe subscription
   currentPeriodEnd: timestamp("current_period_end", { withTimezone: true }),
   overageBilledMonth: text("overage_billed_month"), // last month whose AI overage was added to an invoice
   nextTicketNumber: integer("next_ticket_number").notNull().default(1),
