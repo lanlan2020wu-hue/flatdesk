@@ -169,13 +169,28 @@ export const macros = pgTable("macros", {
   body: text("body").notNull(),
   addTags: text("add_tags").array().notNull().default(sql`'{}'::text[]`),
   setStatus: ticketStatus("set_status"), // null = leave status unchanged
-  source: text("source"),
+  source: text("source"), // import source ("zendesk", ...) or "suggested" when saved from a repeated-reply suggestion
   externalId: text("external_id"),
   // Actions from the original macro that Flatdesk can't perform, in words
   // ("Set priority to High"). Shown on the macro so nothing is silently lost.
   notApplied: text("not_applied").array().notNull().default(sql`'{}'::text[]`),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+// Repeated replies an admin or agent chose not to turn into a macro. Kept as
+// the cleaned reply text so the same answer isn't suggested again, even after
+// its wording drifts a little. See lib/macro-suggestions.ts.
+export const macroSuggestionDismissals = pgTable(
+  "macro_suggestion_dismissals",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
+    text: text("text").notNull(),
+    dismissedBy: text("dismissed_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("macro_suggestion_dismissals_org").on(t.orgId)],
+);
 
 // v1 rules are deliberately narrow: "when a ticket has tag X, assign it to Y".
 export const rules = pgTable("rules", {

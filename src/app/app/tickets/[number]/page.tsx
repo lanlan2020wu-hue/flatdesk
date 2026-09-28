@@ -4,9 +4,11 @@ import { notFound } from "next/navigation";
 import AutoSubmitSelect from "@/components/AutoSubmitSelect";
 import Avatar from "@/components/Avatar";
 import Composer from "@/components/Composer";
+import { RepeatPrompt } from "@/components/MacroSuggestion";
 import { db, schema } from "@/db";
 import { requireSession } from "@/lib/auth";
 import { STATUS_STYLE, timeAgo } from "@/lib/format";
+import { repeatPrompt } from "@/lib/macro-suggestions";
 import { STATUS_LABEL } from "@/lib/receipts";
 import { getTicket, listAgents } from "@/lib/tickets";
 import { replyAction, updateTicketAction } from "../../actions";
@@ -28,7 +30,10 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
   // "Imported from" first; Postgres returns jsonb keys in its own order.
   const fieldEntries = Object.entries(ticket.fields).sort(([a], [b]) => Number(b === "Imported from") - Number(a === "Imported from"));
   const customerFields = Object.entries(customer.fields);
-  const [agents, macros, [aiEvent]] = await Promise.all([
+  // Right after this agent replies with an answer they keep sending, offer to save it as a macro.
+  const last = thread.at(-1);
+  const justReplied = last && last.authorType === "agent" && !last.internal && last.authorId === s.userId;
+  const [agents, macros, [aiEvent], repeat] = await Promise.all([
     listAgents(s.orgId),
     db.select().from(schema.macros).where(and(eq(schema.macros.orgId, s.orgId))).orderBy(asc(schema.macros.name)),
     db
@@ -37,6 +42,7 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
       .where(and(eq(schema.aiEvents.orgId, s.orgId), eq(schema.aiEvents.ticketId, ticket.id)))
       .orderBy(desc(schema.aiEvents.createdAt))
       .limit(1),
+    justReplied ? repeatPrompt(s.orgId, ticket.id, last) : null,
   ]);
   // The receipt line for this ticket's AI answer, shown under that answer.
   const receipt =
@@ -102,6 +108,8 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
             );
           })}
         </ol>
+
+        {repeat && <RepeatPrompt number={ticket.number} prompt={repeat} />}
 
         <Composer
           key={thread.length}

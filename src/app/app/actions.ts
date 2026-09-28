@@ -8,6 +8,7 @@ import { db, schema } from "@/db";
 import { requireAdmin, requireSession } from "@/lib/auth";
 import { checkoutUrl, portalUrl } from "@/lib/billing";
 import { deliverReply } from "@/lib/email";
+import { dismissSuggestion, saveSuggestedMacro } from "@/lib/macro-suggestions";
 import { addReply, createTicket, normalizeTags, updateTicket, type TicketStatus } from "@/lib/tickets";
 
 const STATUSES: TicketStatus[] = ["open", "pending", "closed"];
@@ -95,6 +96,26 @@ export async function deleteMacroAction(form: FormData) {
   const s = await requireSession();
   await db.delete(schema.macros).where(and(eq(schema.macros.orgId, s.orgId), eq(schema.macros.id, str(form, "id"))));
   revalidatePath("/app/macros");
+}
+
+// A repeated reply Flatdesk spotted, saved as a macro (from the macros page or
+// the prompt under an agent's reply).
+export async function saveSuggestedMacroAction(form: FormData) {
+  const s = await requireSession();
+  const values = { name: str(form, "name"), body: str(form, "body"), addTags: tagList(str(form, "addTags")) };
+  if (!values.name || !values.body) throw new Error("A macro needs a name and a reply.");
+  await saveSuggestedMacro(s.orgId, values);
+  revalidatePath("/app/macros");
+  const number = str(form, "number");
+  if (number) revalidatePath(`/app/tickets/${number}`);
+}
+
+export async function dismissSuggestionAction(form: FormData) {
+  const s = await requireSession();
+  await dismissSuggestion(s.orgId, s.userId, str(form, "answer"));
+  revalidatePath("/app/macros");
+  const number = str(form, "number");
+  if (number) revalidatePath(`/app/tickets/${number}`);
 }
 
 export async function saveRuleAction(form: FormData) {
