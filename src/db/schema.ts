@@ -51,6 +51,9 @@ export const orgs = pgTable("orgs", {
   // during onboarding. Used for the end-to-end test email.
   supportEmail: text("support_email"),
   onboarding: jsonb("onboarding").$type<Onboarding>().notNull().default({}),
+  // What the AI test drive has cost us so far, across every run. Capped at
+  // TEST_DRIVE.budgetUsd in lib/test-drive.ts.
+  testDriveSpentUsd: numeric("test_drive_spent_usd", { precision: 10, scale: 5 }).notNull().default("0"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -251,6 +254,36 @@ export const aiEvents = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("ai_events_org_month").on(t.orgId, t.month, t.kind)],
+);
+
+export const testDriveStatus = pgEnum("test_drive_status", ["queued", "running", "done", "failed", "skipped"]);
+export const testDriveVerdict = pgEnum("test_drive_verdict", ["send", "edit", "wrong"]);
+
+// The AI test drive: the AI drafts an answer to one of the team's past
+// tickets, shown beside the reply the team actually sent. Drafts are never
+// sent and never count toward the AI allowance. See lib/test-drive.ts.
+export const testDriveDrafts = pgTable(
+  "test_drive_drafts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
+    ticketId: uuid("ticket_id").notNull().references(() => tickets.id, { onDelete: "cascade" }),
+    status: testDriveStatus("status").notNull().default("queued"),
+    decision: text("decision"), // "answer" or "handoff"
+    draft: text("draft"),
+    reason: text("reason"),
+    sources: text("sources").array().notNull().default(sql`'{}'::text[]`),
+    error: text("error"),
+    model: text("model"),
+    costUsd: numeric("cost_usd", { precision: 10, scale: 5 }).notNull().default("0"),
+    // How the team rated the draft against what they actually sent.
+    verdict: testDriveVerdict("verdict"),
+    verdictBy: text("verdict_by"),
+    startedAt: timestamp("started_at", { withTimezone: true }),
+    finishedAt: timestamp("finished_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("test_drive_drafts_org_ticket").on(t.orgId, t.ticketId), index("test_drive_drafts_org_status").on(t.orgId, t.status)],
 );
 
 export const waitlist = pgTable("waitlist", {

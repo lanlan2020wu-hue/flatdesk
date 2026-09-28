@@ -135,6 +135,67 @@ ${kb || "(none)"}
 </saved_answers>`;
 }
 
+// The team's saved answers, as the AI sees them.
+export function loadKnowledge(orgId: string) {
+  return db
+    .select({ name: macros.name, body: macros.body })
+    .from(macros)
+    .where(eq(macros.orgId, orgId))
+    .orderBy(asc(macros.name))
+    .limit(100);
+}
+
+export type Draft = {
+  decision: "answer" | "handoff";
+  reply: string; // empty on a handoff
+  reason: string | null;
+  sources: string[];
+  metered: { model: string; inputTokens: number; outputTokens: number; costUsd: string };
+};
+
+// One model call: what the AI would do with a customer's first message. Used
+// for live answers and, unchanged, for the test drive, so what a team sees in
+// the test drive is what the AI would really send. Throws on API errors.
+export async function draftAnswer(
+  org: { name: string; aiInstructions: string },
+  knowledge: { name: string; body: string }[],
+  msg: { from: string; subject: string; body: string; attached: string[] },
+  options?: { timeout?: number; maxRetries?: number },
+): Promise<Draft> {
+  const client = new Anthropic();
+  const response = await client.beta.messages.parse(
+    {
+      model: MODEL,
+      max_tokens: 16000,
+      betas: ["server-side-fallback-2026-07-01"],
+      fallbacks: "default",
+      thinking: { type: "adaptive" },
+      output_config: { effort: "medium", format: zodOutputFormat(Decision) },
+      system: [{ type: "text", text: systemPrompt(org.name, org.aiInstructions, knowledge), cache_control: { type: "ephemeral" } }],
+      messages: [
+        {
+          role: "user",
+          content: `From: ${msg.from}\nSubject: ${msg.subject}${msg.attached.length ? `\nAttached files: ${msg.attached.join(", ")}` : ""}\n\n${msg.body}`,
+        },
+      ],
+    },
+    options,
+  );
+
+  const usage = response.usage;
+  const inputTokens = usage.input_tokens + (usage.cache_creation_input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0);
+  const metered = { model: response.model, inputTokens, outputTokens: usage.output_tokens, costUsd: callCost(usage).toFixed(5) };
+
+  const out = response.stop_reason === "refusal" ? null : response.parsed_output;
+  // Keep only titles that name a real saved answer, so the receipt never cites something that doesn't exist.
+  // The prompt shows titles with double quotes swapped for single ones.
+  const titles = new Map(knowledge.map((k) => [k.name.replace(/"/g, "'"), k.name]));
+  const sources = [...new Set((out?.sources ?? []).map((t) => titles.get(t.trim())).filter((t) => t !== undefined))];
+  const reason = out?.reason?.slice(0, 500) || null;
+  if (!out || out.decision === "handoff" || !out.reply.trim()) return { decision: "handoff", reply: "", reason, sources: [], metered };
+  return { decision: "answer", reply: out.reply.trim(), reason, sources, metered };
+}
+
 async function note(orgId: string, ticketId: string, body: string) {
   await db.insert(messages).values({ orgId, ticketId, authorType: "system", body, internal: true });
 }
@@ -164,45 +225,17 @@ export async function answerNewTicket(orgId: string, ticketId: string) {
   }
 
   try {
-    const knowledge = await db
-      .select({ name: macros.name, body: macros.body })
-      .from(macros)
-      .where(eq(macros.orgId, orgId))
-      .orderBy(asc(macros.name))
-      .limit(100);
-
-    const client = new Anthropic();
-    const response = await client.beta.messages.parse({
-      model: MODEL,
-      max_tokens: 16000,
-      betas: ["server-side-fallback-2026-07-01"],
-      fallbacks: "default",
-      thinking: { type: "adaptive" },
-      output_config: { effort: "medium", format: zodOutputFormat(Decision) },
-      system: [{ type: "text", text: systemPrompt(org.name, org.aiInstructions, knowledge), cache_control: { type: "ephemeral" } }],
-      messages: [
-        {
-          role: "user",
-          content: `From: ${customer?.name ? `${customer.name} <${customer.email}>` : customer?.email}\nSubject: ${ticket.subject}${
-            attached.length ? `\nAttached files: ${attached.map((f) => f.filename).join(", ")}` : ""
-          }\n\n${thread[0].body}`,
-        },
-      ],
+    const knowledge = await loadKnowledge(orgId);
+    const d = await draftAnswer(org, knowledge, {
+      from: customer?.name ? `${customer.name} <${customer.email}>` : (customer?.email ?? ""),
+      subject: ticket.subject,
+      body: thread[0].body,
+      attached: attached.map((f) => f.filename),
     });
-
-    const usage = response.usage;
-    const inputTokens = usage.input_tokens + (usage.cache_creation_input_tokens ?? 0) + (usage.cache_read_input_tokens ?? 0);
-    const metered = { model: response.model, inputTokens, outputTokens: usage.output_tokens, costUsd: callCost(usage).toFixed(5) };
-
-    const out = response.stop_reason === "refusal" ? null : response.parsed_output;
-    // Keep only titles that name a real saved answer, so the receipt never cites something that doesn't exist.
-    // The prompt shows titles with double quotes swapped for single ones.
-    const titles = new Map(knowledge.map((k) => [k.name.replace(/"/g, "'"), k.name]));
-    const sources = [...new Set((out?.sources ?? []).map((t) => titles.get(t.trim())).filter((t) => t !== undefined))];
-    const reason = out?.reason?.slice(0, 500) || null;
-    if (!out || out.decision === "handoff" || !out.reply.trim()) {
+    const { sources, reason, metered } = d;
+    if (d.decision === "handoff") {
       await db.update(aiEvents).set({ kind: "handoff", reason, ...metered }).where(eq(aiEvents.id, slot.eventId));
-      await note(orgId, ticketId, `AI handed this to the team: ${out?.reason || "it couldn't produce an answer."}`);
+      await note(orgId, ticketId, `AI handed this to the team: ${reason || "it couldn't produce an answer."}`);
       return;
     }
 
@@ -215,14 +248,14 @@ export async function answerNewTicket(orgId: string, ticketId: string) {
       if (!current || current.status !== "open" || Number(n) !== 1) return null;
       const [m] = await tx
         .insert(messages)
-        .values({ orgId, ticketId, authorType: "ai", body: out.reply.trim() + AI_FOOTER, createdAt: now })
+        .values({ orgId, ticketId, authorType: "ai", body: d.reply + AI_FOOTER, createdAt: now })
         .returning({ id: messages.id });
       await tx.insert(messages).values({
         orgId,
         ticketId,
         authorType: "system",
         internal: true,
-        body: `AI answered: ${out.reason}`,
+        body: `AI answered: ${reason ?? ""}`,
         createdAt: new Date(now.getTime() + 1), // sorts under the answer it explains
       });
       await tx
