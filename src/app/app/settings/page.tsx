@@ -7,7 +7,19 @@ import { aiConfigured, aiUsage } from "@/lib/ai";
 import { access, billingConfigured, isActive, refreshSubscription, seatCount, trialEndsAt } from "@/lib/billing";
 import { emailConfig, inboundAddress } from "@/lib/email";
 import { PLAN, annualSavingsPct, usd } from "@/lib/pricing";
-import { openBillingPortalAction, saveAiSettingsAction, setViewerAction, startCheckoutAction, switchToAnnualAction } from "../actions";
+import { webhookKind, webhookLabel } from "@/lib/alerts";
+import { DEFAULT_HOURS, TARGET_CHOICES } from "@/lib/sla";
+import { timeAgo } from "@/lib/format";
+import {
+  openBillingPortalAction,
+  saveAiSettingsAction,
+  saveAlertsAction,
+  saveServiceSettingsAction,
+  sendTestAlertAction,
+  setViewerAction,
+  startCheckoutAction,
+  switchToAnnualAction,
+} from "../actions";
 
 export const metadata = { title: "Settings" };
 
@@ -24,7 +36,7 @@ const STATUS_TEXT: Record<string, string> = {
 
 export default async function SettingsPage({ searchParams }: PageProps<"/app/settings">) {
   const s = await requireSession();
-  const { billing } = await searchParams;
+  const { billing, alerts: alertsNotice, service: serviceNotice } = await searchParams;
   let org = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) });
   if (org?.stripeCustomerId && billingConfigured()) {
     org = await refreshSubscription(s.orgId).catch(() => org);
@@ -40,6 +52,9 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
   const pct = Math.min(100, Math.round((usage.used / usage.included) * 100));
   const isAdmin = s.role === "admin";
   const yearly = subscribed && org?.billingInterval === "year";
+  const hours = org?.businessHours ?? DEFAULT_HOURS;
+  const clock = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+  const zones = Intl.supportedValuesOf("timeZone");
   const team = await db.select().from(schema.agents).where(eq(schema.agents.orgId, s.orgId)).orderBy(asc(schema.agents.name));
 
   return (
@@ -245,6 +260,143 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
           </form>
         )}
       </section>
+      {org && (
+        <section id="alerts" className="card grid scroll-mt-6 gap-4 p-5 sm:p-6">
+          <div className="grid gap-1">
+            <h2 className="flex items-center gap-2 font-medium">
+              <svg viewBox="0 0 24 24" className="size-8 rounded-lg bg-accent-soft p-1.5 text-accent" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0" /></svg>
+              Alerts in Slack or anywhere else
+            </h2>
+            <p className="text-muted">
+              Post to a Slack channel (or Discord, Google Chat, or any webhook) when a new ticket needs your team, and when a customer
+              writes back to an AI answer, so nobody has to sit watching the inbox.
+            </p>
+          </div>
+          {alertsNotice === "sent" && <p className="rounded-lg border border-accent/30 bg-accent-soft px-3 py-2 text-sm" role="status">Test alert sent. Check your channel.</p>}
+          {alertsNotice && alertsNotice !== "sent" && <p className="rounded-lg border border-warn/40 bg-warn-soft px-3 py-2 text-sm text-warn" role="alert">{alertsNotice}</p>}
+          <form action={saveAlertsAction} className="grid gap-4">
+            <fieldset disabled={!isAdmin} className="grid gap-4">
+              <label className="grid gap-1.5">
+                <span className="label">Webhook address</span>
+                <span className="text-sm text-muted">
+                  In Slack, create an incoming webhook for the channel (Slack&apos;s &quot;Incoming Webhooks&quot; app) and paste its address here.
+                  Leave blank to turn alerts off.
+                </span>
+                <input type="url" name="alertWebhookUrl" defaultValue={org.alertWebhookUrl ?? ""} placeholder="https://hooks.slack.com/services/…" className="field num text-sm" />
+              </label>
+              <div className="grid gap-2">
+                <span className="label">Post</span>
+                <label className="flex items-start gap-2.5">
+                  <input type="radio" name="alertOn" value="team" defaultChecked={org.alertOn !== "all"} className="mt-1 size-4 accent-[var(--accent)]" />
+                  <span>
+                    Only tickets that need a person
+                    <span className="block text-sm text-muted">New tickets the AI didn&apos;t answer, and AI answers the customer wrote back to.</span>
+                  </span>
+                </label>
+                <label className="flex items-start gap-2.5">
+                  <input type="radio" name="alertOn" value="all" defaultChecked={org.alertOn === "all"} className="mt-1 size-4 accent-[var(--accent)]" />
+                  <span>
+                    Every new ticket
+                    <span className="block text-sm text-muted">Each one says whether the AI answered it.</span>
+                  </span>
+                </label>
+              </div>
+              {isAdmin && <button className="btn btn-primary w-max">Save alerts</button>}
+            </fieldset>
+          </form>
+          {org.alertWebhookUrl && (
+            <div className="grid gap-2 rounded-xl border border-line bg-surface-2/60 px-4 py-3 text-sm">
+              <p className="flex flex-wrap items-center justify-between gap-2">
+                <span>
+                  {webhookLabel(org.alertWebhookUrl)}
+                  {org.alertLastAt ? (org.alertLastError ? <span className="text-warn">, last alert failed {timeAgo(org.alertLastAt)}: {org.alertLastError}</span> : `, last alert sent ${timeAgo(org.alertLastAt)}`) : ", nothing sent yet"}
+                </span>
+                {isAdmin && (
+                  <form action={sendTestAlertAction}>
+                    <button className="btn btn-secondary btn-sm">Send a test alert</button>
+                  </form>
+                )}
+              </p>
+              {isAdmin && webhookKind(org.alertWebhookUrl) === "generic" && (
+                <p className="text-muted">
+                  Your endpoint gets JSON with the event, the ticket and a link. Check it came from Flatdesk with the X-Flatdesk-Signature header:
+                  sha256= and the HMAC-SHA256 of the raw body with this secret: <span className="num select-all break-all text-ink">{org.alertSecret}</span>
+                </p>
+              )}
+            </div>
+          )}
+        </section>
+      )}
+
+      {org && (
+        <section id="service" className="card grid scroll-mt-6 gap-4 p-5 sm:p-6">
+          <div className="grid gap-1">
+            <h2 className="flex items-center gap-2 font-medium">
+              <svg viewBox="0 0 24 24" className="size-8 rounded-lg bg-accent-soft p-1.5 text-accent" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 21a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM12 9v4l2.5 2M9 2h6" /></svg>
+              Response target and ratings
+            </h2>
+            <p className="text-muted">
+              New tickets show how long is left for a first reply, turn amber near the target, and are flagged once they&apos;re overdue. Reports show how often you hit it.
+            </p>
+          </div>
+          {serviceNotice && <p className="rounded-lg border border-warn/40 bg-warn-soft px-3 py-2 text-sm text-warn" role="alert">{serviceNotice}</p>}
+          <form action={saveServiceSettingsAction} className="grid gap-4">
+            <fieldset disabled={!isAdmin} className="grid gap-4">
+              <label className="grid w-max gap-1">
+                <span className="label">First reply within</span>
+                <select name="firstResponseMinutes" defaultValue={String(org.firstResponseMinutes ?? "")} className="field">
+                  <option value="">No target</option>
+                  {TARGET_CHOICES.map((c) => <option key={c.minutes} value={c.minutes}>{c.label}</option>)}
+                </select>
+              </label>
+              <label className="flex items-center gap-2.5">
+                <input type="checkbox" name="useBusinessHours" defaultChecked={Boolean(org.businessHours)} className="size-4 accent-[var(--accent)]" />
+                Count only business hours
+              </label>
+              <div className="grid gap-3 rounded-xl border border-line bg-surface-2/60 px-4 py-3">
+                <div className="flex flex-wrap gap-3">
+                  <label className="grid gap-1">
+                    <span className="label">Time zone</span>
+                    <select name="tz" defaultValue={hours.tz} className="field field-sm">
+                      {zones.map((z) => <option key={z} value={z}>{z.replace(/_/g, " ")}</option>)}
+                    </select>
+                  </label>
+                  <label className="grid gap-1">
+                    <span className="label">Opens</span>
+                    <input type="time" name="start" defaultValue={clock(hours.start)} className="field field-sm num" />
+                  </label>
+                  <label className="grid gap-1">
+                    <span className="label">Closes</span>
+                    <input type="time" name="end" defaultValue={clock(Math.min(hours.end, 1439))} className="field field-sm num" />
+                  </label>
+                </div>
+                <fieldset className="flex flex-wrap gap-3 text-sm">
+                  <legend className="label mb-1">Days</legend>
+                  {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d, i) => (
+                    <label key={d} className="flex items-center gap-1.5">
+                      <input type="checkbox" name="days" value={i} defaultChecked={hours.days.includes(i)} className="size-4 accent-[var(--accent)]" />
+                      {d}
+                    </label>
+                  ))}
+                </fieldset>
+              </div>
+              <label className="flex items-start gap-2.5">
+                <input type="checkbox" name="csatEnabled" defaultChecked={org.csatEnabled} className="mt-1 size-4 accent-[var(--accent)]" />
+                <span>
+                  Ask customers to rate replies
+                  <span className="block text-sm text-muted">
+                    Every reply email, from your team or the AI, ends with Great, Okay and Not good. One click rates it; the rating shows on the reply and in
+                    Reports. A Not good on an AI answer sends the ticket to your team and it stops counting toward the AI allowance.
+                  </span>
+                </span>
+              </label>
+              {isAdmin && <button className="btn btn-primary w-max">Save</button>}
+            </fieldset>
+            {!isAdmin && <p className="text-sm text-muted">Only admins can change these.</p>}
+          </form>
+        </section>
+      )}
+
       <section className="card grid gap-4 p-5 sm:p-6">
         <div className="grid gap-1">
           <h2 className="flex items-center gap-2 font-medium">

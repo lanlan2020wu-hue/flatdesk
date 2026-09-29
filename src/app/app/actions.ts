@@ -7,9 +7,11 @@ import { redirect } from "next/navigation";
 import { db, schema } from "@/db";
 import { requireAdmin, requireEditor } from "@/lib/auth";
 import { filesFromForm, saveAttachments } from "@/lib/attachments";
+import { checkWebhookUrl, sendTestAlert } from "@/lib/alerts";
 import { access, checkoutUrl, portalUrl, switchToAnnual, syncSeats } from "@/lib/billing";
 import { deliverReply } from "@/lib/email";
 import { dismissSuggestion, saveSuggestedMacro } from "@/lib/macro-suggestions";
+import { TARGET_CHOICES, validHours } from "@/lib/sla";
 import { addReply, createTicket, normalizeTags, updateTicket, type TicketStatus } from "@/lib/tickets";
 
 // The paywall hides the app once a trial ends without a card; this keeps
@@ -186,6 +188,58 @@ export async function saveAiSettingsAction(form: FormData) {
     })
     .where(eq(schema.orgs.id, s.orgId));
   revalidatePath("/app/settings");
+}
+
+// Where alerts go. A blank address turns them off.
+export async function saveAlertsAction(form: FormData) {
+  const s = await requireAdmin();
+  const raw = str(form, "alertWebhookUrl");
+  const checked = raw ? checkWebhookUrl(raw) : { url: null };
+  if ("error" in checked) redirect(`/app/settings?alerts=${encodeURIComponent(checked.error)}#alerts`);
+  const org = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) });
+  const changed = checked.url !== org?.alertWebhookUrl;
+  await db
+    .update(schema.orgs)
+    .set({
+      alertWebhookUrl: checked.url,
+      alertOn: form.get("alertOn") === "all" ? "all" : "team",
+      ...(changed ? { alertLastAt: null, alertLastError: null } : {}),
+    })
+    .where(eq(schema.orgs.id, s.orgId));
+  revalidatePath("/app/settings");
+}
+
+export async function sendTestAlertAction() {
+  const s = await requireAdmin();
+  const org = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) });
+  if (!org?.alertWebhookUrl) redirect(`/app/settings?alerts=${encodeURIComponent("Save a webhook address first.")}#alerts`);
+  const error = await sendTestAlert(org);
+  redirect(`/app/settings?alerts=${error ? encodeURIComponent(`The test alert didn't arrive: ${error}`) : "sent"}#alerts`);
+}
+
+const hhmm = (v: string) => {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(v);
+  return m ? Number(m[1]) * 60 + Number(m[2]) : NaN;
+};
+
+// Satisfaction ratings and the first-reply target.
+export async function saveServiceSettingsAction(form: FormData) {
+  const s = await requireAdmin();
+  const target = Number(str(form, "firstResponseMinutes"));
+  const firstResponseMinutes = TARGET_CHOICES.some((c) => c.minutes === target) ? target : null;
+  let businessHours = null;
+  if (form.get("useBusinessHours") === "on") {
+    const end = str(form, "end") === "24:00" ? 1440 : hhmm(str(form, "end"));
+    const hours = { tz: str(form, "tz"), days: form.getAll("days").map(Number), start: hhmm(str(form, "start")), end };
+    if (!validHours(hours)) redirect(`/app/settings?service=${encodeURIComponent("Pick a time zone, at least one day, and opening hours that end after they start.")}#service`);
+    businessHours = hours;
+  }
+  await db
+    .update(schema.orgs)
+    .set({ csatEnabled: form.get("csatEnabled") === "on", firstResponseMinutes, businessHours })
+    .where(eq(schema.orgs.id, s.orgId));
+  revalidatePath("/app/settings");
+  revalidatePath("/app/inbox");
 }
 
 async function origin() {

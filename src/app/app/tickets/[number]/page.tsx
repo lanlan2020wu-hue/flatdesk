@@ -4,13 +4,16 @@ import { notFound } from "next/navigation";
 import AutoSubmitSelect from "@/components/AutoSubmitSelect";
 import Avatar from "@/components/Avatar";
 import Composer from "@/components/Composer";
+import SlaBadge from "@/components/SlaBadge";
 import { RepeatPrompt } from "@/components/MacroSuggestion";
 import { db, schema } from "@/db";
 import { attachmentsByMessage, formatBytes } from "@/lib/attachments";
 import { requireSession } from "@/lib/auth";
+import { RATING_LABEL, ratingsForTicket } from "@/lib/csat";
 import { STATUS_STYLE, timeAgo } from "@/lib/format";
 import { repeatPrompt } from "@/lib/macro-suggestions";
 import { STATUS_LABEL } from "@/lib/receipts";
+import { formatDue, shortDuration, slaState, targetLabel } from "@/lib/sla";
 import { getTicket, listAgents } from "@/lib/tickets";
 import { replyAction, updateTicketAction } from "../../actions";
 
@@ -34,7 +37,7 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
   // Right after this agent replies with an answer they keep sending, offer to save it as a macro.
   const last = thread.at(-1);
   const justReplied = last && last.authorType === "agent" && !last.internal && last.authorId === s.userId;
-  const [agents, macros, [aiEvent], repeat, files] = await Promise.all([
+  const [agents, macros, [aiEvent], repeat, files, ratings, org] = await Promise.all([
     listAgents(s.orgId),
     db.select().from(schema.macros).where(and(eq(schema.macros.orgId, s.orgId))).orderBy(asc(schema.macros.name)),
     db
@@ -45,7 +48,10 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
       .limit(1),
     justReplied ? repeatPrompt(s.orgId, ticket.id, last) : null,
     attachmentsByMessage(s.orgId, thread.map((m) => m.id)),
+    ratingsForTicket(s.orgId, ticket.id),
+    db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) }),
   ]);
+  const sla = org ? slaState(ticket, org) : null;
   // The receipt line for this ticket's AI answer, shown under that answer.
   const receipt =
     aiEvent && aiEvent.kind !== "draft"
@@ -64,6 +70,7 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
             <span className="num">#{ticket.number}</span>
             <span className="chip capitalize">{ticket.channel}</span>
             <span className={`capitalize ${STATUS_STYLE[ticket.status]}`}>{ticket.status}</span>
+            <SlaBadge state={sla} hours={org?.businessHours ?? null} />
           </p>
           <h1 className="font-display text-3xl">{ticket.subject}</h1>
         </header>
@@ -108,6 +115,12 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
                         </li>
                       ))}
                     </ul>
+                  )}
+                  {ratings.get(m.id) && (
+                    <p className="grid gap-0.5 border-t border-accent/20 pt-2 text-sm">
+                      <span className={ratings.get(m.id)!.rating === "bad" ? "text-warn" : "text-muted"}>Customer rated this reply {RATING_LABEL[ratings.get(m.id)!.rating]}</span>
+                      {ratings.get(m.id)!.comment && <span className="whitespace-pre-wrap break-words">&ldquo;{ratings.get(m.id)!.comment}&rdquo;</span>}
+                    </p>
                   )}
                   {m.deliveryError && <p className="text-sm text-warn">This reply wasn&apos;t emailed: {m.deliveryError}</p>}
                   {m.authorType === "ai" && receipt && aiEvent && (
@@ -212,6 +225,14 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
         <section className="grid gap-1 border-t border-line pt-4 text-muted">
           <p>Opened {timeAgo(ticket.createdAt)}</p>
           {ticket.firstResponseAt && <p>First reply {timeAgo(ticket.firstResponseAt)}</p>}
+          {sla && org?.firstResponseMinutes && (
+            <p className={sla.kind === "overdue" || sla.kind === "missed" ? "text-warn" : undefined}>
+              {sla.kind === "met" && `First reply in ${shortDuration(sla.took)}, within the target of ${targetLabel(org.firstResponseMinutes)}`}
+              {sla.kind === "missed" && `First reply in ${shortDuration(sla.took)}, past the target of ${targetLabel(org.firstResponseMinutes)}`}
+              {sla.kind === "waiting" && `First reply due ${formatDue(sla.due, org.businessHours)}`}
+              {sla.kind === "overdue" && `First reply overdue by ${shortDuration(sla.minutesLate)}`}
+            </p>
+          )}
         </section>
       </aside>
     </div>

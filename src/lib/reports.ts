@@ -1,5 +1,7 @@
-import { sql } from "drizzle-orm";
-import { db } from "@/db";
+import { and, eq, gte, isNull, sql } from "drizzle-orm";
+import { db, schema } from "@/db";
+import { csatReport, csatScore } from "@/lib/csat";
+import { slaState } from "@/lib/sla";
 
 // Numbers for the reports page, over a rolling window of days.
 
@@ -46,6 +48,7 @@ export async function teamReport(orgId: string, days: ReportRange) {
     from agents a where a.org_id = ${orgId}
     order by replies desc, a.name`);
 
+  const [csat, target] = await Promise.all([csatReport(orgId, since), targetReport(orgId, since)]);
   const created = Number(volume.created);
   const resolved = Number(ai.resolved);
   return {
@@ -60,14 +63,42 @@ export async function teamReport(orgId: string, days: ReportRange) {
     aiResolved: resolved,
     aiHandedOff: Number(ai.handed_off),
     aiShare: created > 0 ? resolved / created : null,
-    agents: agents.map((a) => ({
-      userId: String(a.user_id),
-      name: String(a.name),
-      replies: Number(a.replies),
-      closed: Number(a.closed),
-      openNow: Number(a.open_now),
-    })),
+    csat: { ...csat.all, score: csatScore(csat.all), ai: csatScore(csat.ai), team: csatScore(csat.team) },
+    target,
+    agents: agents.map((a) => {
+      const rated = csat.byAgent.get(String(a.user_id));
+      return {
+        userId: String(a.user_id),
+        name: String(a.name),
+        replies: Number(a.replies),
+        closed: Number(a.closed),
+        openNow: Number(a.open_now),
+        csat: rated ? csatScore(rated) : null,
+        rated: rated?.total ?? 0,
+      };
+    }),
   };
+}
+
+// How often new tickets got their first reply within the target. Tickets still
+// waiting count only once they're past it.
+async function targetReport(orgId: string, since: Date) {
+  const org = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, orgId) });
+  if (!org?.firstResponseMinutes) return null;
+  const tickets = await db
+    .select({ status: schema.tickets.status, createdAt: schema.tickets.createdAt, firstResponseAt: schema.tickets.firstResponseAt, source: schema.tickets.source })
+    .from(schema.tickets)
+    .where(and(eq(schema.tickets.orgId, orgId), gte(schema.tickets.createdAt, since), isNull(schema.tickets.source)))
+    .limit(20000);
+  const now = new Date();
+  let met = 0;
+  let missed = 0;
+  for (const t of tickets) {
+    const st = slaState(t, org, now);
+    if (st?.kind === "met") met++;
+    else if (st?.kind === "missed" || st?.kind === "overdue") missed++;
+  }
+  return { minutes: org.firstResponseMinutes, met, missed, share: met + missed > 0 ? met / (met + missed) : null };
 }
 
 export function duration(seconds: number | null): string {

@@ -1,7 +1,11 @@
+import { eq } from "drizzle-orm";
 import Link from "next/link";
 import Avatar from "@/components/Avatar";
+import SlaBadge from "@/components/SlaBadge";
+import { db, schema } from "@/db";
 import { requireSession } from "@/lib/auth";
 import { STATUS_STYLE, timeAgo } from "@/lib/format";
+import { slaState } from "@/lib/sla";
 import { VIEWS, isView, listTickets } from "@/lib/tickets";
 
 export const metadata = { title: "Inbox" };
@@ -10,14 +14,20 @@ export default async function InboxPage({ searchParams }: PageProps<"/app/inbox"
   const s = await requireSession();
   const sp = await searchParams;
   const view = isView(sp.view) ? sp.view : "open";
-  const rows = await listTickets(s.orgId, s.userId, view);
+  const [tickets, org] = await Promise.all([listTickets(s.orgId, s.userId, view), db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) })]);
+  const now = new Date();
+  const rows = tickets.map((t) => ({ ...t, sla: org ? slaState(t, org, now) : null }));
+  const overdue = rows.filter((t) => t.sla?.kind === "overdue").length;
   const label = VIEWS.find((v) => v.id === view)!.label;
 
   return (
     <div className="grid gap-5 px-4 py-6 md:px-8 md:py-8">
       <header className="flex flex-wrap items-baseline justify-between gap-2">
         <h1 className="font-display text-3xl">{label}</h1>
-        <p className="num text-sm text-muted">{rows.length} {rows.length === 1 ? "ticket" : "tickets"}</p>
+        <p className="num text-sm text-muted">
+          {rows.length} {rows.length === 1 ? "ticket" : "tickets"}
+          {overdue > 0 && <span className="text-warn">, {overdue} past the first-reply target</span>}
+        </p>
       </header>
       {rows.length === 0 ? (
         <div className="card grid place-items-center gap-2 border-dashed px-4 py-16 text-center shadow-none">
@@ -41,6 +51,7 @@ export default async function InboxPage({ searchParams }: PageProps<"/app/inbox"
                   </p>
                 </div>
                 <div className="col-start-2 flex flex-wrap items-center gap-3 text-sm text-muted sm:col-start-3">
+                  <SlaBadge state={t.sla} hours={org?.businessHours ?? null} />
                   <span className="whitespace-nowrap">{t.assigneeName ?? "Unassigned"}</span>
                   <span className={`capitalize ${STATUS_STYLE[t.status]}`}>{t.status}</span>
                   <span className="num w-16 whitespace-nowrap text-right text-xs">{timeAgo(t.updatedAt)}</span>

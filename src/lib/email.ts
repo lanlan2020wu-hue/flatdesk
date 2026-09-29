@@ -2,6 +2,7 @@ import { and, asc, desc, eq, inArray, isNotNull } from "drizzle-orm";
 import { Resend } from "resend";
 import { db, schema } from "@/db";
 import { emailAttachments } from "@/lib/attachments";
+import { csatText, replyHtml } from "@/lib/csat";
 
 // Email runs through Resend. Inbound mail for every org arrives at
 // <inboundKey>@INBOUND_DOMAIN; replies go out from EMAIL_FROM with a
@@ -124,13 +125,16 @@ export async function deliverReply(orgId: string, messageId: string): Promise<vo
     headers["References"] = refs.slice(-10).join(" ");
   }
 
+  const rateable = row.org.csatEnabled && (row.message.authorType === "agent" || row.message.authorType === "ai");
   const subject = /^re:/i.test(row.ticket.subject) ? row.ticket.subject : `Re: ${row.ticket.subject}`;
   const { error } = await resend().emails.send({
     from: `${row.org.name} <${emailConfig.from}>`,
     to: row.customer.email,
     replyTo: replyToAddress(row.org.inboundKey, row.ticket.number) ?? undefined,
     subject,
-    text: row.message.body,
+    // Agent and AI replies end with one-click rating links unless the team turned them off.
+    text: rateable ? row.message.body + csatText(row.message.id) : row.message.body,
+    html: replyHtml(row.message.body, rateable ? row.message.id : null),
     headers,
     attachments: await emailAttachments(row.message.id),
   });

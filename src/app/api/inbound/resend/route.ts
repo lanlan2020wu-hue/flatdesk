@@ -1,5 +1,6 @@
 import { after } from "next/server";
 import { answerNewTicket } from "@/lib/ai";
+import { alertNewTicket } from "@/lib/alerts";
 import { emailConfig, htmlToText, resend } from "@/lib/email";
 import { downloadInbound } from "@/lib/attachments";
 import { handleInboundEmail } from "@/lib/inbound";
@@ -57,7 +58,11 @@ export async function POST(request: Request) {
   });
   const { orgId, ticketId } = result;
   if (orgId && ticketId) {
-    after(() => answerNewTicket(orgId, ticketId));
+    const created = result.action === "created";
+    after(async () => {
+      await answerNewTicket(orgId, ticketId);
+      if (created) await alertNewTicket(orgId, ticketId);
+    });
     return Response.json({ ticket: result.ticket, action: result.action });
   }
   return Response.json(result);

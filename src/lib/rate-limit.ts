@@ -76,5 +76,7 @@ export const LIMITS = {
   ],
   // Files a visitor uploads, counted per file on top of the message limits.
   chatFiles: (ip: string, files: number): Limit[] => [{ key: `chat-files:ip:${ip}`, max: 20, windowSec: HOUR, cost: files }],
+  // Satisfaction ratings from the links in reply emails.
+  rate: (ip: string): Limit[] => [{ key: `rate:ip:${ip}`, max: 30, windowSec: 10 * MIN }],
   waitlist: (ip: string): Limit[] => [{ key: `waitlist:ip:${ip}`, max: 5, windowSec: HOUR }],
 };

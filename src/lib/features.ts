@@ -22,6 +22,9 @@ const I = {
   note: "M5 4h14v12l-4 4H5zM15 20v-4h4",
   users: "M16 19v-1a4 4 0 0 0-4-4H7a4 4 0 0 0-4 4v1M9.5 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM21 19v-1a4 4 0 0 0-3-3.9M16 4.1a3 3 0 0 1 0 5.8",
   card: "M3 6h18v12H3zM3 10h18M7 15h3",
+  bell: "M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0",
+  clock: "M12 21a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM12 9v4l2.5 2M9 2h6",
+  smile: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM8.5 14.5a4.5 4.5 0 0 0 7 0M9 9.5h.01M15 9.5h.01",
   spark: "M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8zM18 15l.9 2.1L21 18l-2.1.9L18 21l-.9-2.1L15 18l2.1-.9z",
 };
 
@@ -34,6 +37,9 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
       { id: "email", title: "Email in and out", body: "Forward your support address. Replies thread back onto the same ticket.", icon: I.mail },
       { id: "chat", title: "Website chat widget", body: "One script tag adds a chat bubble to your site. Chats become tickets.", icon: I.chat },
       { id: "notes", title: "Internal notes", body: "Talk it over on the ticket without the customer seeing it.", icon: I.note },
+      { id: "alerts", title: "Slack and webhook alerts", body: "Post to Slack, Discord, Google Chat or any webhook when a ticket needs a person, not for every one the AI already answered.", icon: I.bell, isNew: true },
+      { id: "first-reply-target", title: "First-reply targets", body: "Set a target like 4 business hours. New tickets count down in the inbox, turn amber near it and are flagged once overdue.", icon: I.clock, isNew: true },
+      { id: "ratings", title: "One-click ratings", body: "Every reply email, from your team or the AI, ends with Great, Okay or Not good. A Not good on an AI answer sends the ticket to your team.", icon: I.smile, isNew: true },
     ],
   },
   {
@@ -62,7 +68,7 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
     features: [
       { id: "import", title: "Lossless import", body: "Tickets, customers, macros and rules from Zendesk, Intercom, Freshdesk or Help Scout. Every original record is archived.", icon: I.import },
       { id: "export", title: "Export any time", body: "Tickets, messages, customers and macros as CSV or JSON, without asking us.", icon: I.export },
-      { id: "reports", title: "Reports", body: "Volume, first response, time to close, AI share and per-agent load.", icon: I.report },
+      { id: "reports", title: "Reports", body: "Volume, first response, time to close, first replies on target, ratings, AI share and per-agent load.", icon: I.report },
     ],
   },
   {
