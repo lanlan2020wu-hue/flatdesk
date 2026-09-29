@@ -69,6 +69,7 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
             <NavLink href="/app/receipts">AI receipts</NavLink>
             <NavLink href="/app/test-drive">AI test drive</NavLink>
             <NavLink href="/app/macros">Macros and rules</NavLink>
+            <NavLink href="/app/help">Help center</NavLink>
             {s.role === "admin" && <NavLink href="/app/import">Import</NavLink>}
             <NavLink href="/app/settings">Settings</NavLink>
           </nav>

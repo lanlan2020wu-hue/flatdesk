@@ -16,7 +16,7 @@ export const GENERAL_FAQ: QA[] = [
   },
   {
     q: "Does Flatdesk have a help center or knowledge base?",
-    a: "Not yet. The AI answers from your macros and internal notes, and help center articles aren't imported. Teams moving from Zendesk or Intercom keep their existing help center running alongside Flatdesk for now.",
+    a: "Yes, a simple one. Every team gets a public help center with search and writes its articles in the app. The AI answers from published articles as well as your macros, and links the customer to the right article. It doesn't have categories, multiple languages or a custom domain yet, and articles from your old help desk aren't imported.",
   },
   {
     q: "How can we tell if the AI is good enough before we pay?",

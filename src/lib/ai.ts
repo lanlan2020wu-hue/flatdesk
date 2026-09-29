@@ -7,6 +7,7 @@ import { alertHandedBack } from "@/lib/alerts";
 import { attachmentsByMessage } from "@/lib/attachments";
 import { access } from "@/lib/billing";
 import { deliverReply, emailConfig, resend } from "@/lib/email";
+import { articleKnowledge } from "@/lib/help";
 import { PLAN } from "@/lib/pricing";
 
 // The AI answers the first message of new email and chat tickets, and up to
@@ -162,7 +163,7 @@ Answer only when the team's notes or saved answers below cover the question. Han
 - the message isn't a support question (spam, sales pitches, auto-generated mail)
 - the question depends on an attached file (a screenshot, an invoice, a log): you can see only the file names
 
-Never invent prices, policies, dates, links or promises. If the material covers part of the question, hand off rather than answer half.
+Never invent prices, policies, dates, links or promises. When a saved answer ends with a help center article link, you can give the customer that link for more detail. If the material covers part of the question, hand off rather than answer half.
 
 When the conversation already has your earlier replies, answer the customer's latest message. Hand off if they say your answer didn't help or didn't work, repeat a question you already answered, or ask for a person.
 
@@ -177,17 +178,22 @@ ${kb || "(none)"}
 </saved_answers>`;
 }
 
-// The team's saved answers, as the AI sees them. The test drive can leave out
-// macros Flatdesk suggested after a date (see lib/test-drive.ts).
-export function loadKnowledge(orgId: string, opts?: { skipSuggestedSince: Date }) {
+// The team's saved answers, as the AI sees them: macros and published help
+// center articles. The test drive can leave out macros Flatdesk suggested
+// after a date (see lib/test-drive.ts).
+export async function loadKnowledge(orgId: string, opts?: { skipSuggestedSince: Date }) {
   const where = [eq(macros.orgId, orgId)];
   if (opts) where.push(sql`not (${macros.source} is not distinct from 'suggested' and ${macros.createdAt} >= ${opts.skipSuggestedSince})`);
-  return db
-    .select({ name: macros.name, body: macros.body })
-    .from(macros)
-    .where(and(...where))
-    .orderBy(asc(macros.name))
-    .limit(100);
+  const [saved, help] = await Promise.all([
+    db
+      .select({ name: macros.name, body: macros.body })
+      .from(macros)
+      .where(and(...where))
+      .orderBy(asc(macros.name))
+      .limit(100),
+    articleKnowledge(orgId),
+  ]);
+  return [...saved, ...help];
 }
 
 export type Draft = {
