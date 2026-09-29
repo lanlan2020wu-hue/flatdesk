@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import Calculator from "@/components/Calculator";
+import { Suspense } from "react";
+import Calculator, { CALCULATOR_DEFAULTS, CalculatorFromQuery } from "@/components/Calculator";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/calculator" },
@@ -8,15 +9,7 @@ export const metadata: Metadata = {
     "Enter your agent count and AI resolutions to compare your Zendesk, Fin (Intercom), Freshdesk or Help Scout bill with one flat price.",
 };
 
-const num = (v: string | string[] | undefined, fallback: number) => {
-  const n = Number(Array.isArray(v) ? v[0] : v);
-  return Number.isFinite(n) && n >= 0 ? n : fallback;
-};
-
-export default async function CalculatorPage({ searchParams }: PageProps<"/calculator">) {
-  const sp = await searchParams;
-  const tool = typeof sp.tool === "string" ? sp.tool : "fin-advanced";
-
+export default function CalculatorPage() {
   return (
     <div className="mx-auto grid max-w-6xl gap-10 px-4 pt-14 sm:px-6 sm:pt-20">
       <div className="enter grid max-w-2xl gap-3">
@@ -27,10 +20,10 @@ export default async function CalculatorPage({ searchParams }: PageProps<"/calcu
           month&apos;s likely bill next to one flat price.
         </p>
       </div>
-      <Calculator
-        initialTool={tool} initialAgents={num(sp.agents, 10)} initialResolutions={num(sp.resolutions, 1500)}
-        initialInterval={sp.billing === "monthly" ? "month" : "year"}
-      />
+      {/* The prerendered page shows the default numbers; shared links fill in on the client. */}
+      <Suspense fallback={<Calculator {...CALCULATOR_DEFAULTS} />}>
+        <CalculatorFromQuery />
+      </Suspense>
     </div>
   );
 }
