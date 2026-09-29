@@ -1,10 +1,11 @@
-// The four reasons teams switch, as one source for the homepage, the
+// The reasons teams switch, as one source for the homepage, the
 // /features pages, the FAQ, structured data and llms.txt. Every sentence here
 // is a claim about the shipped product, so keep it in step with the code.
 
 import { SWITCH_TRIAL_DAYS, TRIAL_DAYS } from "@/lib/billing";
 import { BILLING_FAQ } from "@/lib/faq";
 import { PLAN, PRICE_PHRASE, usd } from "@/lib/pricing";
+import { TEST_DRIVE } from "@/lib/test-drive";
 
 export type QA = { q: string; a: string };
 
@@ -103,6 +104,44 @@ export const SELLING_POINTS: SellingPoint[] = [
       },
     ],
     icon: "M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6zM9 12l2 2 4-4",
+    isNew: true,
+  },
+  {
+    slug: "ai-test-drive",
+    name: "AI test drive",
+    short: `Import your help desk and the AI drafts answers to your ${TEST_DRIVE.tickets} most recent tickets, each beside the reply your team actually sent. Judge the AI on your own customers before you pay.`,
+    headline: "Test the AI on your own past tickets before you switch",
+    answer: `During the free trial, Flatdesk's AI drafts answers to your ${TEST_DRIVE.tickets} most recent imported tickets using your macros, and shows each draft beside the reply your team actually sent. Your team marks each one as ready to send, needs edits, or wrong, and gets a scorecard. Nothing is sent to customers and it doesn't use your AI allowance.`,
+    metaTitle: "AI test drive: see AI answers to your own past tickets",
+    metaDescription: `Flatdesk drafts AI answers to your ${TEST_DRIVE.tickets} most recent tickets and shows them beside your team's real replies, so you can judge the AI before you switch.`,
+    steps: [
+      { title: "Import your history", body: "Connect Zendesk, Intercom, Freshdesk or Help Scout. The test drive starts from the tickets you bring." },
+      { title: "The AI drafts answers", body: `It answers your ${TEST_DRIVE.tickets} most recent customer questions with the same model and macros it would use live, or says it would hand the ticket to your team.` },
+      { title: "Compare side by side", body: "Each draft sits beside the first reply your team sent, so you can see where it matches and where it misses." },
+      { title: "Score it", body: "Mark each draft send, edit or wrong. The scorecard shows how many tickets the AI would have handled well." },
+    ],
+    facts: [
+      `Drafts for your ${TEST_DRIVE.tickets} most recent imported tickets`,
+      "Same model, prompt and macros as live AI answers",
+      "Nothing is sent to customers",
+      "Doesn't use your AI allowance or show up on receipts",
+      `Free during the ${TRIAL_DAYS}-day trial`,
+    ],
+    faq: [
+      {
+        q: "How can I tell if the AI is good enough before switching?",
+        a: `Run the AI test drive. After you import your help desk, the AI drafts answers to your ${TEST_DRIVE.tickets} most recent tickets and shows each beside the reply your team sent, so you judge it on your own customers.`,
+      },
+      {
+        q: "Does the test drive send anything to customers?",
+        a: "No. Drafts stay inside Flatdesk for your team to read and score.",
+      },
+      {
+        q: "Does the test drive cost anything?",
+        a: "No. It's part of the free trial and doesn't count toward your AI allowance.",
+      },
+    ],
+    icon: "M4 6h10M4 12h7M4 18h10M15 13l2.5 2.5L22 11",
     isNew: true,
   },
   {

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import AccountMenu from "@/components/AccountMenu";
+import AuthProvider from "@/components/AuthProvider";
 import { eq } from "drizzle-orm";
 import Logo from "@/components/Logo";
 import MobileNav from "@/components/MobileNav";
@@ -28,6 +29,7 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
   const plan = current ? access(current) : ({ state: "open" } as const);
 
   return (
+    <AuthProvider>
     <div className="grid min-h-screen flex-1 md:grid-cols-[248px_minmax(0,1fr)]">
       <div className="border-b border-line bg-surface md:border-r md:border-b-0">
         <MobileNav bar={<Logo href="/app/inbox" />}>
@@ -90,5 +92,6 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
         {plan.state === "locked" ? <Paywall isAdmin={s.role === "admin"} /> : children}
       </div>
     </div>
+    </AuthProvider>
   );
 }

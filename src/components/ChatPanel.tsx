@@ -107,6 +107,16 @@ export default function ChatPanel({ widgetKey, teamName }: { widgetKey: string; 
     listRef.current?.lastElementChild?.scrollIntoView({ block: "end" });
   }, [messages.length]);
 
+  // widget.js asks for focus when the chat opens, so keyboard users land in the first field.
+  useEffect(() => {
+    function onMessage(e: MessageEvent) {
+      if (e.source !== window.parent || e.data !== "flatdesk:focus") return;
+      document.querySelector<HTMLElement>('input[name="name"], #chat-message')?.focus();
+    }
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, []);
+
   async function start(form: FormData) {
     setSending(true);
     setError(null);

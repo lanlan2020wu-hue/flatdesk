@@ -106,6 +106,36 @@ export function MacroShot() {
   );
 }
 
+export function TestDriveShot() {
+  return (
+    <div className="shot" aria-hidden="true">
+      <Bar title="AI test drive" />
+      <div className="grid gap-3 p-3">
+        <span className="flex items-center justify-between gap-2 text-[12px]">
+          <span className="font-medium">#4127 Can I change my billing date?</span>
+          <span className="num text-muted">12 of 50</span>
+        </span>
+        <div className="grid grid-cols-2 gap-2">
+          <span className="grid content-start gap-1 rounded-lg border border-accent/30 bg-accent-soft/60 p-2">
+            <span className="eyebrow text-accent">AI draft</span>
+            <span className="text-[12px] text-muted">Yes. In Settings, Billing, pick a new date. The next invoice is prorated to it…</span>
+          </span>
+          <span className="grid content-start gap-1 rounded-lg border border-line p-2">
+            <span className="eyebrow">Your team sent</span>
+            <span className="text-[12px] text-muted">Hi Sam, you can move it under Settings, Billing. We prorate the first invoice…</span>
+          </span>
+        </div>
+        <span className="flex items-center gap-2 text-[11px]">
+          <span className="rounded-md bg-accent px-2 py-1 font-medium text-accent-ink">Would send</span>
+          <span className="rounded-md border border-line px-2 py-1 text-muted">Needs edits</span>
+          <span className="rounded-md border border-line px-2 py-1 text-muted">Wrong</span>
+          <span className="num ml-auto text-muted">31 would send</span>
+        </span>
+      </div>
+    </div>
+  );
+}
+
 export function AiShot() {
   return (
     <div className="shot" aria-hidden="true">

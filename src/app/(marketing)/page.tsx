@@ -26,10 +26,10 @@ const SELLING_POINTS: { title: string; body: string; href: string; icon: string;
     isNew: true,
   },
   {
-    title: "Macros that write themselves",
-    body: "When your team sends the same answer on 5 tickets, Flatdesk offers it as a finished macro. A full library in your first week.",
-    href: "#macros",
-    icon: "M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8zM18 15l.9 2.1L21 18l-2.1.9L18 21l-.9-2.1L15 18l2.1-.9z",
+    title: "AI test drive",
+    body: "Import your help desk and the AI drafts answers to your 50 most recent tickets, each beside the reply your team sent. Judge it before you switch.",
+    href: "/features/ai-test-drive",
+    icon: "M4 6h10M4 12h7M4 18h10M15 13l2.5 2.5L22 11",
     isNew: true,
   },
   {
@@ -139,7 +139,7 @@ export default function Home() {
               Help desk for teams of 3–15 agents
             </p>
             <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-[2.6rem] leading-[1.05] sm:text-6xl">
-              From {usd(PLAN.annualSeatPrice)} per agent. AI included. <span className="hl hl-draw italic">The same bill every month.</span>
+              From {usd(PLAN.annualSeatPrice)} per agent. AI included. <span className="hl hl-draw font-display-italic italic">The same bill every month.</span>
             </h1>
             <p style={{ "--d": 2 } as React.CSSProperties} className="enter max-w-xl text-lg text-muted">
               {usd(PLAN.annualSeatPrice)} a month billed yearly, or {usd(PLAN.seatPrice)} month to month. Every seat includes{" "}
@@ -147,7 +147,7 @@ export default function Home() {
               over. You only pay more if you turn overage on yourself.
             </p>
             <p style={{ "--d": 2 } as React.CSSProperties} className="enter flex flex-wrap gap-2 text-sm">
-              {["AI receipts", "Macros that write themselves", "Lossless import"].map((t) => (
+              {["AI test drive on your own tickets", "AI receipts", "Lossless import"].map((t) => (
                 <span key={t} className="flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1 shadow-sm">
                   <svg viewBox="0 0 20 20" className="size-3.5 text-accent" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 10.5l3 3 7-7" /></svg>
                   {t}
@@ -163,6 +163,10 @@ export default function Home() {
                 Compare your current bill
               </Link>
             </div>
+            <p style={{ "--d": 3 } as React.CSSProperties} className="enter text-sm text-muted">
+              Small team moving off Zendesk or Freshdesk?{" "}
+              <a href="#waitlist" className="link font-medium text-accent">Apply as a design partner</a> for half off and a done-for-you import.
+            </p>
           </div>
 
           <figure data-play="" className="receipt-shadow relative mx-auto w-full max-w-md lg:rotate-[1.2deg]">
@@ -318,8 +322,8 @@ export default function Home() {
             <p className="eyebrow">Early access</p>
             <h2 className="ink font-display text-3xl sm:text-4xl">Get early access</h2>
             <p className="text-muted">
-              We&apos;re onboarding a small group of teams first. Early teams get <span className="hl hl-draw text-ink">50% off for their first 12 months</span>, and we run
-              the Zendesk import for them.
+              We&apos;re onboarding a small group of design partners first. They get <span className="hl hl-draw text-ink">50% off monthly billing for their first 12 months</span>{" "}
+              ({usd(PLAN.seatPrice / 2)} per agent), and we run the import from their old help desk for them. The discount replaces the yearly price rather than adding to it.
             </p>
           </div>
           <div className="relative grid gap-4">
