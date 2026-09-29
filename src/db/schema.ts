@@ -69,6 +69,8 @@ export const orgs = pgTable("orgs", {
   // First-reply target in minutes (null = off), counted in business hours when set. See lib/sla.ts.
   firstResponseMinutes: integer("first_response_minutes").default(240),
   businessHours: jsonb("business_hours").$type<BusinessHours>(),
+  // Public help center at /help/<helpSlug>. Set the first time an admin opens it.
+  helpSlug: text("help_slug").unique(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -263,6 +265,24 @@ export const macroSuggestionDismissals = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("macro_suggestion_dismissals_org").on(t.orgId)],
+);
+
+// Help center articles. Published ones are public at /help/<org>/<slug> and
+// are part of what the AI answers from. See lib/help.ts.
+export const articles = pgTable(
+  "articles",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
+    // Set from the title when the article is created and kept, so links don't break on a rename.
+    slug: text("slug").notNull(),
+    title: text("title").notNull(),
+    body: text("body").notNull(), // plain text with a little markdown, see renderArticle()
+    published: boolean("published").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("articles_org_slug").on(t.orgId, t.slug), index("articles_org_published").on(t.orgId, t.published)],
 );
 
 // v1 rules are deliberately narrow: "when a ticket has tag X, assign it to Y".
