@@ -1,4 +1,5 @@
-import { connection } from "next/server";
+import { after, connection } from "next/server";
+import { answerFollowUp } from "@/lib/ai";
 import { MAX_MESSAGE, orgByWidgetKey, readChatRequest, ticketForVisitor, visitorReply, visitorThread } from "@/lib/chat";
 import { hit, ipKey, LIMITS, tooMany } from "@/lib/rate-limit";
 
@@ -36,5 +37,8 @@ export async function POST(request: Request, ctx: RouteContext<"/api/chat/[key]/
   if (!verdict.ok) return tooMany(verdict.retryAfter);
 
   await visitorReply(found.org.id, found.ticket, message, body.files);
+  // On a ticket the AI answered, it answers the follow-up or hands the ticket to the team.
+  const { org, ticket } = found;
+  if (ticket.resolvedByAi) after(() => answerFollowUp(org.id, ticket.id));
   return Response.json({ messages: await visitorThread(found.ticket.id, found.link) });
 }

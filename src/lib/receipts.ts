@@ -62,7 +62,7 @@ export async function refundOpen(orgId: string, month: string) {
 
 export async function receiptMonths(orgId: string) {
   const rows = await db.execute<{ month: string }>(
-    sql`select distinct month from ai_events where org_id = ${orgId} and kind <> 'draft' order by month desc limit 24`,
+    sql`select distinct month from ai_events where org_id = ${orgId} and kind not in ('draft', 'followup') order by month desc limit 24`,
   );
   const months = rows.rows.map((r) => r.month);
   const current = monthKey();
@@ -79,7 +79,7 @@ export async function monthReceipt(orgId: string, month: string) {
     left join tickets t on t.id = e.ticket_id
     left join customers c on c.id = t.customer_id
     left join agents a on a.org_id = e.org_id and a.user_id = e.refunded_by
-    where e.org_id = ${orgId} and e.month = ${month} and e.kind <> 'draft'
+    where e.org_id = ${orgId} and e.month = ${month} and e.kind not in ('draft', 'followup')
     order by e.created_at desc`);
 
   const lines: ReceiptLine[] = result.rows.map((r) => ({

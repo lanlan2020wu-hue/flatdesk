@@ -54,6 +54,9 @@ export const orgs = pgTable("orgs", {
   // What the AI test drive has cost us so far, across every run. Capped at
   // TEST_DRIVE.budgetUsd in lib/test-drive.ts.
   testDriveSpentUsd: numeric("test_drive_spent_usd", { precision: 10, scale: 5 }).notNull().default("0"),
+  // Length of the no-card trial. Finishing an import from another help desk
+  // extends it to SWITCH_TRIAL_DAYS (see lib/billing.ts).
+  trialDays: integer("trial_days").notNull().default(14),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -80,6 +83,8 @@ export const agents = pgTable(
     name: text("name").notNull(),
     email: text("email").notNull(),
     role: agentRole("role").notNull().default("agent"),
+    // A viewer reads tickets but can't change them, and isn't billed as a seat. Admins never are.
+    viewer: boolean("viewer").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.orgId, t.userId] })],
@@ -162,7 +167,8 @@ export const messages = pgTable(
   },
   (t) => [
     index("messages_ticket_created").on(t.ticketId, t.createdAt),
-    index("messages_org_email_message_id").on(t.orgId, t.emailMessageId),
+    // One copy of each inbound email, even when the provider delivers it twice at once.
+    uniqueIndex("messages_org_email_message_id").on(t.orgId, t.emailMessageId).where(sql`${t.emailMessageId} is not null`),
     index("messages_ticket_external").on(t.ticketId, t.externalId),
   ],
 );
@@ -228,7 +234,8 @@ export const rules = pgTable("rules", {
 });
 
 // "refunded": an admin marked a resolution as wrong on the receipts page, so it no longer counts.
-export const aiEventKind = pgEnum("ai_event_kind", ["resolution", "draft", "handoff", "refunded"]);
+// "followup": a call answering the customer again on a ticket that already counts; never counted itself.
+export const aiEventKind = pgEnum("ai_event_kind", ["resolution", "draft", "handoff", "refunded", "followup"]);
 
 // Internal metering. Customers never see per-call costs, but we log every
 // call to check real cost per resolution against the $49 seat price.

@@ -13,9 +13,10 @@ export type Session = {
   userId: string;
   role: "admin" | "agent";
   name: string;
+  viewer: boolean; // reads everything, changes nothing, isn't billed
 };
 
-const DEV_SESSION: Session = { orgId: "org_dev", userId: "user_dev", role: "admin", name: "Dev Agent" };
+const DEV_SESSION: Session = { orgId: "org_dev", userId: "user_dev", role: "admin", name: "Dev Agent", viewer: false };
 
 // Returns the signed-in agent and their org, creating local rows for them on
 // first visit. Every page and action under /app calls this first.
@@ -34,11 +35,11 @@ export const requireSession = cache(async (): Promise<Session> => {
 
   const user = await currentUser();
   const name = user?.fullName || user?.primaryEmailAddress?.emailAddress || "Agent";
-  const session: Session = { orgId, userId, role: orgRole === "org:admin" ? "admin" : "agent", name };
-
+  const role = orgRole === "org:admin" ? "admin" : "agent";
   const existing = await db.query.agents.findFirst({
     where: and(eq(schema.agents.orgId, orgId), eq(schema.agents.userId, userId)),
   });
+  const session: Session = { orgId, userId, role, name, viewer: role === "agent" && Boolean(existing?.viewer) };
   if (!existing || existing.role !== session.role || existing.name !== name) {
     const org = await (await clerkClient()).organizations.getOrganization({ organizationId: orgId });
     await ensureRows(session, org.name, user?.primaryEmailAddress?.emailAddress ?? "");
@@ -46,6 +47,13 @@ export const requireSession = cache(async (): Promise<Session> => {
   }
   return session;
 });
+
+// For anything that changes tickets, macros or replies.
+export async function requireEditor(): Promise<Session> {
+  const session = await requireSession();
+  if (session.viewer) throw new Error("You have a viewer seat, so you can read tickets but not change them. An admin can make you an agent in Settings.");
+  return session;
+}
 
 export async function requireAdmin(): Promise<Session> {
   const session = await requireSession();

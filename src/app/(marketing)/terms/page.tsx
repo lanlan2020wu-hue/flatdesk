@@ -3,7 +3,7 @@ import Link from "next/link";
 import LegalPage, { Section } from "@/components/LegalPage";
 import { PLAN, usd } from "@/lib/pricing";
 import { LEGAL_UPDATED, SITE } from "@/lib/site";
-import { TRIAL_DAYS } from "@/lib/billing";
+import { SWITCH_TRIAL_DAYS, TRIAL_DAYS } from "@/lib/billing";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/terms" },
@@ -44,7 +44,8 @@ export default function TermsPage() {
           <li>
             New teams get {TRIAL_DAYS} days free with no card, with {PLAN.trialPerAgent} AI resolutions per agent for the whole trial and no
             overage. To keep using Flatdesk after that, or to get the full monthly AI allowance sooner, an admin adds a card; the first charge
-            is on the day the trial ends.
+            is on the day the trial ends. A team that finishes importing tickets from another help desk during the trial gets{" "}
+            {SWITCH_TRIAL_DAYS} days from sign-up instead.
           </li>
           <li>
             The plan is {usd(PLAN.seatPrice)} per agent per month billed monthly, or {usd(PLAN.annualSeatPrice)} per agent per month billed
@@ -57,8 +58,8 @@ export default function TermsPage() {
             Each month includes {PLAN.includedPerAgent} AI resolutions per agent, shared by the team. When they run out, AI answers pause
             until the next month and nothing extra is charged, unless an admin turns on overage. With overage on, each resolution past the
             allowance costs {usd(PLAN.overageRate, true)} and is billed after the month ends: on the next invoice for monthly billing, or on
-            its own invoice for yearly billing. A resolution is an AI answer the customer
-            didn&apos;t write back to; an admin can mark any AI answer as wrong on the AI receipts page and it stops counting.
+            its own invoice for yearly billing. A resolution is a conversation the AI
+            finished without handing it to your team, including up to 3 follow-up answers; an admin can mark any AI answer as wrong on the AI receipts page and it stops counting.
           </li>
           <li>Prices exclude taxes, which are added where the law requires.</li>
           <li>

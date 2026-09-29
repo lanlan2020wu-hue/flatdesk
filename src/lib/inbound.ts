@@ -1,10 +1,18 @@
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { emailConfig, isAutoReply, matchRecipient, parseAddress, stripQuoted, ticketFromHeaders } from "@/lib/email";
-import { handBackToTeam } from "@/lib/ai";
 import { TEST_TAG, updateOnboarding } from "@/lib/onboarding";
 import { saveAttachments, type NewFile } from "@/lib/attachments";
 import { addCustomerMessage, createTicket } from "@/lib/tickets";
+
+// The same email delivered twice at once gets past the check above; the unique
+// index on (org, Message-ID) stops the second copy, which is then ignored.
+function duplicate(err: unknown): null {
+  const e = err as { code?: string; constraint?: string; cause?: { code?: string; constraint?: string } };
+  const pg = e?.code ? e : e?.cause;
+  if (pg?.code === "23505" && pg.constraint === "messages_org_email_message_id") return null;
+  throw err;
+}
 
 export type Inbound = {
   from: string;
@@ -104,10 +112,11 @@ export async function handleInboundEmail(mail: Inbound) {
     const customer = ticket && (await db.query.customers.findFirst({ where: eq(schema.customers.id, ticket.customerId) }));
     // Only the ticket's own customer can add to it; anyone else starts a new ticket.
     if (ticket && customer && customer.email === sender.email) {
-      const messageId = await addCustomerMessage({ orgId: org.id, ticketId, customerId: customer.id, body, emailMessageId: mail.messageId });
+      const messageId = await addCustomerMessage({ orgId: org.id, ticketId, customerId: customer.id, body, emailMessageId: mail.messageId }).catch(duplicate);
+      if (!messageId) return { ignored: "duplicate" };
       await storeFiles(mail, org.id, ticketId, messageId);
-      await handBackToTeam(org.id, ticketId);
-      return { ticket: ticket.number, action: "appended" };
+      // The route runs the AI next, which answers a follow-up or hands the ticket back.
+      return { ticket: ticket.number, action: "appended", orgId: org.id, ticketId };
     }
   }
 
@@ -120,7 +129,8 @@ export async function handleInboundEmail(mail: Inbound) {
     body,
     authorType: "customer",
     emailMessageId: mail.messageId,
-  });
+  }).catch(duplicate);
+  if (!ticket) return { ignored: "duplicate" };
   await storeFiles(mail, org.id, ticket.id, ticket.messageId);
   return { ticket: ticket.number, action: "created", orgId: org.id, ticketId: ticket.id };
 }

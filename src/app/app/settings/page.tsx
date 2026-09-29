@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { db, schema } from "@/db";
 import { requireSession } from "@/lib/auth";
@@ -7,7 +7,7 @@ import { aiConfigured, aiUsage } from "@/lib/ai";
 import { access, billingConfigured, isActive, refreshSubscription, seatCount, trialEndsAt } from "@/lib/billing";
 import { emailConfig, inboundAddress } from "@/lib/email";
 import { PLAN, annualSavingsPct, usd } from "@/lib/pricing";
-import { openBillingPortalAction, saveAiSettingsAction, startCheckoutAction, switchToAnnualAction } from "../actions";
+import { openBillingPortalAction, saveAiSettingsAction, setViewerAction, startCheckoutAction, switchToAnnualAction } from "../actions";
 
 export const metadata = { title: "Settings" };
 
@@ -40,6 +40,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
   const pct = Math.min(100, Math.round((usage.used / usage.included) * 100));
   const isAdmin = s.role === "admin";
   const yearly = subscribed && org?.billingInterval === "year";
+  const team = await db.select().from(schema.agents).where(eq(schema.agents.orgId, s.orgId)).orderBy(asc(schema.agents.name));
 
   return (
     <div className="grid max-w-2xl gap-6 px-4 py-6 md:px-8 md:py-8">
@@ -173,8 +174,8 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
             AI answers
           </h2>
           <p className="text-muted">
-            The AI answers new email and chat tickets when your notes or macros cover the question, and hands everything else to your team. An
-            answer counts toward the allowance only if the customer doesn&apos;t write back.
+            The AI answers new email and chat tickets when your notes or macros cover the question, and hands everything else to your team. It
+            answers up to 3 follow-ups on the same ticket. A ticket counts toward the allowance once, and not at all if the AI hands it to your team.
           </p>
         </div>
 
@@ -243,6 +244,39 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
             {!isAdmin && <p className="text-sm text-muted">Only admins can change these.</p>}
           </form>
         )}
+      </section>
+      <section className="card grid gap-4 p-5 sm:p-6">
+        <div className="grid gap-1">
+          <h2 className="flex items-center gap-2 font-medium">
+            <svg viewBox="0 0 24 24" className="size-8 rounded-lg bg-accent-soft p-1.5 text-accent" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 11a4 4 0 100-8 4 4 0 000 8zM2 21v-1a6 6 0 0112 0v1M16 3.5a4 4 0 010 7M18 14a6 6 0 014 6v1" /></svg>
+            Team
+          </h2>
+          <p className="text-muted">
+            Viewer seats are free. A viewer can read every ticket and report but can&apos;t reply, change tickets or edit macros. Good for managers,
+            founders and other teams who need to look in.
+          </p>
+        </div>
+        <ul className="grid divide-y divide-line">
+          {team.map((a) => (
+            <li key={a.userId} className="flex flex-wrap items-center justify-between gap-3 py-2.5">
+              <span className="grid min-w-0">
+                <span className="truncate font-medium">{a.name}</span>
+                <span className="truncate text-sm text-muted">{a.email}</span>
+              </span>
+              <span className="flex items-center gap-3">
+                <span className="text-sm text-muted">{a.role === "admin" ? "Admin, paid seat" : a.viewer ? "Viewer, free" : "Agent, paid seat"}</span>
+                {isAdmin && a.role === "agent" && (
+                  <form action={setViewerAction}>
+                    <input type="hidden" name="userId" value={a.userId} />
+                    <input type="hidden" name="viewer" value={String(!a.viewer)} />
+                    <button className="btn btn-secondary text-sm">{a.viewer ? "Make agent" : "Make viewer"}</button>
+                  </form>
+                )}
+              </span>
+            </li>
+          ))}
+        </ul>
+        <p className="text-sm text-muted">Admins always have a paid seat. People you invite show up here after they first sign in.</p>
       </section>
     </div>
   );
