@@ -6,11 +6,22 @@ import { after, before, test } from "node:test";
 import { eq } from "drizzle-orm";
 import { RIVALS } from "./compare";
 import { ATTEMPTS_PER_INCLUDED, callCost } from "./ai";
-import { COMPETITORS, PLAN, flatdeskMonthly, seatInvoiceAmount } from "./pricing";
+import { COMPETITORS, PLAN, competitorById, competitorMonthly, flatdeskMonthly, seatInvoiceAmount } from "./pricing";
 
 test("every plan a comparison page names exists, so none falls back to another vendor's prices", () => {
   const ids = new Set(COMPETITORS.map((c) => c.id));
   for (const r of RIVALS) for (const id of r.plans) assert.ok(ids.has(id), `${r.slug} names unknown plan ${id}`);
+});
+
+test("Freshdesk's 500 AI sessions are one-time, so a steady month pays for every session", () => {
+  const growth = competitorById("freshdesk-growth");
+  assert.equal(growth.id, "freshdesk-growth");
+  assert.equal(competitorMonthly(growth, 3, 150).total, 3 * 19 + 150 * 0.49);
+  // The compare page's teams: Flatdesk yearly wins both, and the stated break-even holds.
+  assert.ok(flatdeskMonthly(3, 150, "year").capped < competitorMonthly(growth, 3, 150).total);
+  assert.ok(flatdeskMonthly(10, 800, "year").capped < competitorMonthly(growth, 10, 800).total);
+  const breakEven = (PLAN.annualSeatPrice - growth.seatPrice) / growth.aiRate;
+  assert.equal(Math.round(breakEven), 41);
 });
 
 test("yearly billing is cheaper and still makes money on a seat that uses its whole AI allowance", () => {
