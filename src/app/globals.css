@@ -67,6 +67,7 @@
   --font-sans: var(--font-plex-sans), system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
   --font-display: var(--font-fraunces), Georgia, serif;
+  --font-display-italic: var(--font-fraunces-italic), var(--font-fraunces), Georgia, serif;
 }
 
 body {

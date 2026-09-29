@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
   COMPETITORS,
@@ -23,6 +24,29 @@ type Props = {
 
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, Number.isFinite(n) ? n : lo));
 
+const MAX_AGENTS = 500;
+
+export const CALCULATOR_DEFAULTS: Props = { initialTool: "fin-advanced", initialAgents: 10, initialResolutions: 1500, initialInterval: "year" };
+
+const num = (v: string | null, fallback: number) => {
+  const n = v === null ? NaN : Number(v);
+  return Number.isFinite(n) && n >= 0 ? n : fallback;
+};
+
+// Reads shared numbers from the query string on the client, so the page itself
+// can be prerendered. Render inside <Suspense>.
+export function CalculatorFromQuery() {
+  const sp = useSearchParams();
+  const d = CALCULATOR_DEFAULTS;
+  return (
+    <Calculator
+      initialTool={sp.get("tool") ?? d.initialTool} initialAgents={num(sp.get("agents"), d.initialAgents)}
+      initialResolutions={num(sp.get("resolutions"), d.initialResolutions)}
+      initialInterval={sp.get("billing") === "monthly" ? "month" : d.initialInterval}
+    />
+  );
+}
+
 export default function Calculator({ initialTool, initialAgents, initialResolutions, initialInterval }: Props) {
   const [toolId, setToolId] = useState(competitorById(initialTool).id);
   const [agents, setAgents] = useState(initialAgents);
@@ -32,7 +56,7 @@ export default function Calculator({ initialTool, initialAgents, initialResoluti
   const [rate, setRate] = useState(tool.aiRate);
   const [copied, setCopied] = useState(false);
 
-  const a = clamp(agents, 1, 500);
+  const a = clamp(agents, 1, MAX_AGENTS);
   const r = clamp(resolutions, 0, 1_000_000);
   const today = useMemo(() => competitorMonthly(tool, a, r, rate), [tool, a, r, rate]);
   const ours = useMemo(() => flatdeskMonthly(a, r, interval), [a, r, interval]);
@@ -78,8 +102,9 @@ export default function Calculator({ initialTool, initialAgents, initialResoluti
         </label>
         <label className="grid gap-1.5" htmlFor="agents">
           <span className="label">Agents</span>
-          <input id="agents" type="number" min={1} max={500} className={field} value={agents}
-            onChange={(e) => setAgents(e.target.valueAsNumber)} />
+          <input id="agents" type="number" min={1} max={MAX_AGENTS} className={field} value={agents}
+            onChange={(e) => setAgents(e.target.valueAsNumber)} aria-describedby={agents > MAX_AGENTS ? "agents-max" : undefined} />
+          {agents > MAX_AGENTS && <span id="agents-max" className="text-xs text-muted">Showing {MAX_AGENTS} agents, the most this calculator covers.</span>}
         </label>
         <label className="grid gap-1.5" htmlFor="resolutions">
           <span className="label">AI-resolved conversations per month</span>
@@ -110,7 +135,10 @@ export default function Calculator({ initialTool, initialAgents, initialResoluti
         </fieldset>
       </form>
 
-      <section aria-live="polite" className="grid content-start gap-5">
+      <section className="grid content-start gap-5">
+        <p className="sr-only" aria-live="polite">
+          {tool.vendor} {tool.plan} would cost about {usd(today.total)} a month; Flatdesk would cost {usd(ours.capped)} a month.
+        </p>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="card p-5 sm:p-6">
             <p className="text-sm text-muted">{tool.vendor} {tool.plan}, estimated</p>

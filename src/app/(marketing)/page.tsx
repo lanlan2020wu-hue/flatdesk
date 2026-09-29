@@ -139,7 +139,7 @@ export default function Home() {
               Help desk for teams of 3–15 agents
             </p>
             <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-[2.6rem] leading-[1.05] sm:text-6xl">
-              From {usd(PLAN.annualSeatPrice)} per agent. AI included. <span className="hl hl-draw italic">The same bill every month.</span>
+              From {usd(PLAN.annualSeatPrice)} per agent. AI included. <span className="hl hl-draw font-display-italic italic">The same bill every month.</span>
             </h1>
             <p style={{ "--d": 2 } as React.CSSProperties} className="enter max-w-xl text-lg text-muted">
               {usd(PLAN.annualSeatPrice)} a month billed yearly, or {usd(PLAN.seatPrice)} month to month. Every seat includes{" "}
