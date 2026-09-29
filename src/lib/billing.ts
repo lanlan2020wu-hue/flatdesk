@@ -125,7 +125,8 @@ export async function checkoutUrl(orgId: string, email: string, origin: string, 
       },
     ],
     subscription_data: { ...trial, metadata: { orgId } },
-    allow_promotion_codes: true,
+    // Design-partner codes are 50% off monthly; they don't stack with the yearly price.
+    allow_promotion_codes: interval === "month",
     success_url: `${origin}/app/settings?billing=done&session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/app/settings?billing=cancelled`,
   });

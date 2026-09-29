@@ -8,7 +8,7 @@ import { breadcrumbs, pageMeta, software } from "@/lib/seo";
 export const metadata = pageMeta({
   title: "Help desk features",
   description:
-    "Everything in Flatdesk: shared inbox, email and chat, AI answers with a cap, AI receipts, macros that write themselves, lossless import, reports and export. Every seat gets every feature.",
+    "Everything in Flatdesk: shared inbox, email and chat, AI answers with a cap, an AI test drive on your own tickets, AI receipts, macros that write themselves, lossless import, reports and export. Every seat gets every feature.",
   path: "/features",
 });
 
@@ -18,7 +18,7 @@ export default function FeaturesPage() {
       <JsonLd data={[software(), breadcrumbs([{ name: "Product", path: "/features" }])]} />
       <div className="grid max-w-2xl gap-3">
         <p className="enter eyebrow">Product</p>
-        <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-4xl sm:text-5xl">Four reasons teams switch, and everything else they need.</h1>
+        <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-4xl sm:text-5xl">Why teams switch, and everything else they need.</h1>
         <p style={{ "--d": 2 } as React.CSSProperties} className="enter text-lg text-muted">
           Flatdesk is a help desk for email and chat. Every seat gets every feature below, for one price per agent.
         </p>

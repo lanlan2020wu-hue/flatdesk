@@ -20,7 +20,8 @@ export type Competitor = {
   billing: "annual" | "monthly";
   aiRate: number; // USD per AI resolution beyond what's included
   included: number; // AI resolutions included
-  includedPer: "agent" | "account";
+  // "once" is a one-time starter pack, so a steady month includes none of it.
+  includedPer: "agent" | "account" | "once";
   estimated: boolean; // true when the vendor does not publish the AI rate
   aiNote: string;
   sources: { label: string; url: string }[];
@@ -119,11 +120,12 @@ export const COMPETITORS: Competitor[] = [
     billing: "annual",
     aiRate: 0.49,
     included: 500,
-    includedPer: "account",
+    includedPer: "once",
     estimated: false,
-    aiNote: "500 AI Agent sessions included, then $49 per pack of 100. Freshdesk bills sessions, which are not the same as resolutions.",
+    aiNote: "500 Freddy AI Agent sessions once, when you first buy a plan, then $49 per pack of 100 (49¢ a session). A session counts whenever the AI replies, resolved or not.",
     sources: [
       { label: "Freshdesk pricing", url: "https://www.freshworks.com/freshdesk/pricing/" },
+      { label: "Freshdesk: Freddy AI add-ons and sessions", url: "https://support.freshdesk.com/support/solutions/articles/50000011515-manage-freddy-ai-add-ons" },
       { label: "Drag: Freshdesk pricing 2026 (third party)", url: "https://www.dragapp.com/blog/freshdesk-pricing/" },
     ],
   },
@@ -135,10 +137,13 @@ export const COMPETITORS: Competitor[] = [
     billing: "annual",
     aiRate: 0.49,
     included: 500,
-    includedPer: "account",
+    includedPer: "once",
     estimated: false,
-    aiNote: "500 AI Agent sessions included, then $49 per pack of 100. Freshdesk bills sessions, which are not the same as resolutions.",
-    sources: [{ label: "Drag: Freshdesk pricing 2026 (third party)", url: "https://www.dragapp.com/blog/freshdesk-pricing/" }],
+    aiNote: "500 Freddy AI Agent sessions once, when you first buy a plan, then $49 per pack of 100 (49¢ a session). A session counts whenever the AI replies, resolved or not.",
+    sources: [
+      { label: "Freshdesk pricing", url: "https://www.freshworks.com/freshdesk/pricing/" },
+      { label: "Freshdesk: Freddy AI add-ons and sessions", url: "https://support.freshdesk.com/support/solutions/articles/50000011515-manage-freddy-ai-add-ons" },
+    ],
   },
   {
     id: "helpscout-standard",
@@ -179,7 +184,7 @@ export function competitorById(id: string): Competitor {
 }
 
 export function competitorMonthly(c: Competitor, agents: number, resolutions: number, aiRate = c.aiRate) {
-  const included = c.includedPer === "agent" ? c.included * agents : c.included;
+  const included = c.includedPer === "agent" ? c.included * agents : c.includedPer === "once" ? 0 : c.included;
   const seats = c.seatPrice * agents;
   const ai = Math.max(0, resolutions - included) * aiRate;
   return { seats, ai, total: seats + ai, included };
