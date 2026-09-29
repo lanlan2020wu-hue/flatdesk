@@ -128,13 +128,19 @@ describe("Zendesk", () => {
     assert.ok(rulesAfter.some((r) => r.ifTag === "refund" && r.assignTo === "user_bo"));
   });
 
-  test("running the import again adds nothing twice", async () => {
+  test("running the import again adds nothing twice, and keeps the team's changes since", async () => {
     const before = await db.$count(schema.messages, eq(schema.messages.orgId, ORG));
+    // The team works a ticket in Flatdesk after the first import.
+    const [worked] = await db.select().from(schema.tickets).where(and(eq(schema.tickets.orgId, ORG), eq(schema.tickets.source, "zendesk"))).limit(1);
+    await db.update(schema.tickets).set({ status: "closed", tags: ["done-here"], updatedAt: new Date() }).where(eq(schema.tickets.id, worked.id));
     const job = await runToEnd(ORG, "zendesk", { subdomain: "acme.zendesk.com", email: "ana@acme.com", token: "t" }, fakeApi(Z, routes));
     assert.equal(job.status, "done");
     assert.equal(await db.$count(schema.messages, eq(schema.messages.orgId, ORG)), before);
     assert.equal(await db.$count(schema.tickets, eq(schema.tickets.orgId, ORG)), 3);
     assert.equal(await db.$count(schema.macros, eq(schema.macros.orgId, ORG)), 1);
+    const kept = await db.query.tickets.findFirst({ where: eq(schema.tickets.id, worked.id) });
+    assert.equal(kept?.status, "closed");
+    assert.deepEqual(kept?.tags, ["done-here"]);
   });
 
   test("a rejected token fails with a clear message and creates nothing", async () => {

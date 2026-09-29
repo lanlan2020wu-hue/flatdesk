@@ -8,9 +8,10 @@ import { access } from "@/lib/billing";
 import { deliverReply, emailConfig, resend } from "@/lib/email";
 import { PLAN } from "@/lib/pricing";
 
-// The AI answers the first message of new email and chat tickets. A reply counts as a
-// resolution unless the customer writes back, which hands the ticket to the
-// team and un-counts it (the pricing page promises exactly this). Each team
+// The AI answers the first message of new email and chat tickets, and up to
+// MAX_FOLLOW_UPS more messages from the customer on the same ticket. The ticket
+// counts as one resolution unless the AI hands it to the team at any point,
+// which un-counts it (the pricing page promises exactly this). Each team
 // gets PLAN.includedPerAgent resolutions per agent per month; past that the AI
 // pauses unless an admin turned on overage. A team on its free trial with no
 // card gets PLAN.trialPerAgent for the whole trial and no overage, which caps
@@ -39,7 +40,9 @@ export function callCost(usage: {
     1e6
   );
 }
-const AI_FOOTER = "\n\n--\nThis reply was written by our AI assistant. Reply to reach a person on our team.";
+const AI_FOOTER = "\n\n--\nThis reply was written by our AI assistant. Reply if you need more help, or ask for a person and we'll pass you to our team.";
+// Customer messages the AI answers after its first reply, before the ticket goes to the team.
+export const MAX_FOLLOW_UPS = 3;
 
 const { orgs, agents, tickets, messages, macros, aiEvents } = schema;
 
@@ -53,8 +56,8 @@ export function monthKey(d = new Date()) {
 // the cap so parallel tickets can't overshoot it. A draft older than this was
 // abandoned (the function was killed mid-call) and stops counting.
 const DRAFT_TTL_MINUTES = 15;
-// Handoffs and answers the customer replied to don't count toward the allowance,
-// but each one is still a paid model call. This bounds every call, counted or
+// Handoffs, follow-up answers and answers later handed back don't count toward
+// the allowance, but each one is still a paid model call. This bounds every call, counted or
 // not, at a multiple of the allowance.
 export const ATTEMPTS_PER_INCLUDED = 3;
 // A trial allowance is sized from everyone who signed in, capped so that
@@ -95,9 +98,10 @@ export async function aiUsage(orgId: string, month = monthKey()): Promise<Usage>
   return measure(db, org, month);
 }
 
-type Slot = { eventId: string; overage: boolean } | { paused: string };
+type Slot = { eventId: string; overage: boolean } | { paused: string } | { busy: true };
 
-export async function reserveSlot(orgId: string, ticketId: string): Promise<Slot> {
+// A follow-up on a ticket that already counts reserves no allowance, only an attempt.
+export async function reserveSlot(orgId: string, ticketId: string, followUp = false): Promise<Slot> {
   return db.transaction(async (tx) => {
     // One reservation at a time per org, so the count below stays true.
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${orgId}))`);
@@ -109,6 +113,17 @@ export async function reserveSlot(orgId: string, ticketId: string): Promise<Slot
     const overageRoom = org.aiOverageEnabled && !trial ? (org.aiOverageMonthlyLimit ?? included) : 0;
     if (attempts >= (included + overageRoom) * ATTEMPTS_PER_INCLUDED) {
       return { paused: "The AI has handed an unusually large number of tickets to the team this month, so it's paused until next month. Adding saved answers for common questions helps it answer more of them." };
+    }
+    if (followUp) {
+      // One follow-up call per ticket at a time; the one in flight picks up newer messages.
+      const [inFlight] = await tx
+        .select({ id: aiEvents.id })
+        .from(aiEvents)
+        .where(and(eq(aiEvents.ticketId, ticketId), eq(aiEvents.kind, "followup"), eq(aiEvents.inputTokens, 0), sql`${aiEvents.createdAt} > now() - make_interval(mins => 3)`))
+        .limit(1);
+      if (inFlight) return { busy: true as const };
+      const [event] = await tx.insert(aiEvents).values({ orgId, ticketId, kind: "followup", month, model: MODEL }).returning({ id: aiEvents.id });
+      return { eventId: event.id, overage: false };
     }
     const isOverage = used >= included;
     if (isOverage && trial) {
@@ -147,6 +162,8 @@ Answer only when the team's notes or saved answers below cover the question. Han
 - the question depends on an attached file (a screenshot, an invoice, a log): you can see only the file names
 
 Never invent prices, policies, dates, links or promises. If the material covers part of the question, hand off rather than answer half.
+
+When the conversation already has your earlier replies, answer the customer's latest message. Hand off if they say your answer didn't help or didn't work, repeat a question you already answered, or ask for a person.
 
 When you answer: write plain text, no markdown. Greet the customer by first name if you know it, answer directly, keep it short, and sign off as "${orgName} support". Match the language the customer wrote in.
 
@@ -188,8 +205,22 @@ export async function draftAnswer(
   knowledge: { name: string; body: string }[],
   msg: { from: string; subject: string; body: string; attached: string[] },
   options?: { timeout?: number; maxRetries?: number },
+  // What came after the first message, oldest first, when this is a follow-up.
+  later: { from: "customer" | "ai"; body: string }[] = [],
 ): Promise<Draft> {
   const client = new Anthropic();
+  const turns: Anthropic.Beta.BetaMessageParam[] = [
+    {
+      role: "user",
+      content: `From: ${msg.from}\nSubject: ${msg.subject}${msg.attached.length ? `\nAttached files: ${msg.attached.join(", ")}` : ""}\n\n${msg.body}`,
+    },
+  ];
+  for (const m of later) {
+    const role = m.from === "ai" ? "assistant" : "user";
+    const last = turns[turns.length - 1];
+    if (last.role === role) last.content = `${last.content as string}\n\n${m.body}`;
+    else turns.push({ role, content: m.body });
+  }
   const response = await client.beta.messages.parse(
     {
       model: MODEL,
@@ -199,12 +230,7 @@ export async function draftAnswer(
       thinking: { type: "adaptive" },
       output_config: { effort: "medium", format: zodOutputFormat(Decision) },
       system: [{ type: "text", text: systemPrompt(org.name, org.aiInstructions, knowledge), cache_control: { type: "ephemeral", ttl: "1h" } }],
-      messages: [
-        {
-          role: "user",
-          content: `From: ${msg.from}\nSubject: ${msg.subject}${msg.attached.length ? `\nAttached files: ${msg.attached.join(", ")}` : ""}\n\n${msg.body}`,
-        },
-      ],
+      messages: turns,
     },
     options ?? CALL_OPTIONS,
   );
@@ -230,9 +256,10 @@ async function note(orgId: string, ticketId: string, body: string) {
 // Runs after the webhook has responded. Never throws: failures become an
 // internal note and the ticket stays with the team.
 export async function answerNewTicket(orgId: string, ticketId: string) {
+  const ticket = await db.query.tickets.findFirst({ where: and(eq(tickets.orgId, orgId), eq(tickets.id, ticketId)) });
+  if (ticket?.resolvedByAi) return answerFollowUp(orgId, ticketId);
   if (!aiConfigured()) return;
   const org = await db.query.orgs.findFirst({ where: eq(orgs.id, orgId) });
-  const ticket = await db.query.tickets.findFirst({ where: and(eq(tickets.orgId, orgId), eq(tickets.id, ticketId)) });
   if (!org?.aiEnabled || !ticket || ticket.status !== "open") return;
   if (access(org).state === "locked") {
     await note(orgId, ticketId, "The AI didn't answer because the free trial has ended. An admin can add a card in Settings.");
@@ -245,6 +272,7 @@ export async function answerNewTicket(orgId: string, ticketId: string) {
   const attached = (await attachmentsByMessage(orgId, [thread[0].id])).get(thread[0].id) ?? [];
 
   const slot = await reserveSlot(orgId, ticketId);
+  if ("busy" in slot) return;
   if ("paused" in slot) {
     await note(orgId, ticketId, slot.paused);
     await sendUsageNotice(orgId);
@@ -314,9 +342,107 @@ export async function answerNewTicket(orgId: string, ticketId: string) {
   }
 }
 
-// The customer wrote back after an AI answer: the ticket goes to the team and
-// the answer no longer counts as a resolution.
-export async function handBackToTeam(orgId: string, ticketId: string) {
+const stripFooter = (body: string) => (body.endsWith(AI_FOOTER) ? body.slice(0, -AI_FOOTER.length) : body);
+
+// Whether the AI may answer the customer's latest message on a ticket it already
+// answered: nobody on the team has replied, the latest message is the customer's,
+// and the AI hasn't used up its follow-ups. An answer sent before follow-ups
+// existed told the customer a reply reaches a person, so that promise stands.
+export function canFollowUp(thread: { authorType: string; internal: boolean; body: string }[]) {
+  const visible = thread.filter((m) => !m.internal && m.authorType !== "system");
+  const ai = visible.filter((m) => m.authorType === "ai");
+  const aiReplies = ai.length;
+  return (
+    aiReplies >= 1 &&
+    ai[ai.length - 1].body.endsWith(AI_FOOTER) &&
+    aiReplies <= MAX_FOLLOW_UPS &&
+    !visible.some((m) => m.authorType === "agent") &&
+    visible[visible.length - 1]?.authorType === "customer"
+  );
+}
+
+// The customer wrote back on a ticket the AI answered. The AI answers again if
+// it can; otherwise, or when it hands off, the ticket goes to the team and stops
+// counting. Never throws.
+export async function answerFollowUp(orgId: string, ticketId: string) {
+  const org = await db.query.orgs.findFirst({ where: eq(orgs.id, orgId) });
+  const ticket = await db.query.tickets.findFirst({ where: and(eq(tickets.orgId, orgId), eq(tickets.id, ticketId)) });
+  if (!org || !ticket?.resolvedByAi) return;
+  const thread = await db.select().from(messages).where(eq(messages.ticketId, ticketId)).orderBy(asc(messages.createdAt));
+  if (!aiConfigured() || !org.aiEnabled || access(org).state === "locked" || ticket.status !== "open" || !canFollowUp(thread)) {
+    return handBackToTeam(orgId, ticketId);
+  }
+  const slot = await reserveSlot(orgId, ticketId, true);
+  if ("busy" in slot) return;
+  if ("paused" in slot) return handBackToTeam(orgId, ticketId, slot.paused);
+
+  try {
+    const visible = thread.filter((m) => !m.internal && m.authorType !== "system");
+    const customer = await db.query.customers.findFirst({ where: eq(schema.customers.id, ticket.customerId) });
+    const files = await attachmentsByMessage(orgId, visible.filter((m) => m.authorType === "customer").map((m) => m.id));
+    const withFiles = (m: (typeof visible)[number]) => {
+      const names = (files.get(m.id) ?? []).map((f) => f.filename);
+      return names.length ? `${m.body}\n\nAttached files: ${names.join(", ")}` : m.body;
+    };
+    const [first, ...later] = visible;
+    const d = await draftAnswer(
+      org,
+      await loadKnowledge(orgId),
+      {
+        from: customer?.name ? `${customer.name} <${customer.email}>` : (customer?.email ?? ""),
+        subject: ticket.subject,
+        body: first.body,
+        attached: (files.get(first.id) ?? []).map((f) => f.filename),
+      },
+      undefined,
+      later.map((m) => (m.authorType === "ai" ? { from: "ai" as const, body: stripFooter(m.body) } : { from: "customer" as const, body: withFiles(m) })),
+    );
+    await db.update(aiEvents).set({ reason: d.reason, sources: d.sources, ...d.metered }).where(eq(aiEvents.id, slot.eventId));
+    if (d.decision === "handoff") return handBackToTeam(orgId, ticketId, `AI handed this to the team: ${d.reason || "it couldn't answer the follow-up."}`);
+
+    const now = new Date();
+    const messageId = await db.transaction(async (tx) => {
+      const [current] = await tx.select().from(tickets).where(eq(tickets.id, ticketId)).for("update");
+      const [{ n }] = await tx.select({ n: count() }).from(messages).where(eq(messages.ticketId, ticketId));
+      if (!current?.resolvedByAi || current.status !== "open" || Number(n) !== thread.length) return null;
+      const [m] = await tx.insert(messages).values({ orgId, ticketId, authorType: "ai", body: d.reply + AI_FOOTER, createdAt: now }).returning({ id: messages.id });
+      await tx.insert(messages).values({
+        orgId,
+        ticketId,
+        authorType: "system",
+        internal: true,
+        body: `AI answered a follow-up: ${d.reason ?? ""}`,
+        createdAt: new Date(now.getTime() + 1),
+      });
+      await tx.update(tickets).set({ status: "pending", updatedAt: now }).where(eq(tickets.id, ticketId));
+      return m.id;
+    });
+    if (!messageId) {
+      // Something changed while the model was thinking. An agent's reply wins; a
+      // newer customer message gets an answer that reads the whole thread.
+      const [fresh, now2] = await Promise.all([
+        db.select().from(messages).where(eq(messages.ticketId, ticketId)).orderBy(asc(messages.createdAt)),
+        db.query.tickets.findFirst({ where: eq(tickets.id, ticketId) }),
+      ]);
+      if (!now2?.resolvedByAi) return;
+      if (fresh.some((m) => m.authorType === "agent" && !m.internal)) return handBackToTeam(orgId, ticketId, "A person on the team replied.");
+      if (now2.status === "open" && canFollowUp(fresh)) return answerFollowUp(orgId, ticketId);
+      return;
+    }
+    try {
+      await deliverReply(orgId, messageId);
+    } catch (err) {
+      console.error("AI follow-up saved but sending failed", err);
+      await note(orgId, ticketId, "The AI answered, but the email didn't go out. Resend it from the ticket.");
+    }
+  } catch (err) {
+    console.error("AI follow-up failed", err);
+    await handBackToTeam(orgId, ticketId, "The AI couldn't answer the customer's follow-up, so this ticket is now with the team.");
+  }
+}
+
+// The ticket goes to the team and the AI's answer no longer counts as a resolution.
+export async function handBackToTeam(orgId: string, ticketId: string, why?: string) {
   const [ticket] = await db
     .update(tickets)
     .set({ resolvedByAi: false })
@@ -327,7 +453,11 @@ export async function handBackToTeam(orgId: string, ticketId: string) {
     .update(aiEvents)
     .set({ kind: "handoff" })
     .where(and(eq(aiEvents.orgId, orgId), eq(aiEvents.ticketId, ticketId), eq(aiEvents.kind, "resolution")));
-  await note(orgId, ticketId, "The customer replied to the AI answer, so this ticket is now with the team and doesn't count toward the AI allowance.");
+  await note(
+    orgId,
+    ticketId,
+    why ? `${why} It doesn't count toward the AI allowance.` : "The customer replied to the AI answer, so this ticket is now with the team and doesn't count toward the AI allowance.",
+  );
 }
 
 // Emails admins once at 80% and once at 100% of the included allowance.

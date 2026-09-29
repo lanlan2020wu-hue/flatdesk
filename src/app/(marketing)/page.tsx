@@ -88,7 +88,7 @@ const TOUR: { id: string; eyebrow: string; title: string; body: string; points: 
     eyebrow: "AI answers",
     title: "AI takes the routine questions, and stops at your cap.",
     body: `The AI answers from your own macros and notes, and hands anything account-specific, upset or unclear to your team. Each seat includes ${PLAN.includedPerAgent} resolutions a month, pooled.`,
-    points: ["Pauses at the included amount unless an admin opts in", "Emails admins at 80% and at 100%", "If the customer writes back, it doesn't count"],
+    points: ["Pauses at the included amount unless an admin opts in", "Emails admins at 80% and at 100%", "Answers up to 3 follow-ups; hand-offs don't count"],
     shot: <AiShot />,
   },
   {

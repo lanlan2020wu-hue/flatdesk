@@ -1,5 +1,6 @@
 import { and, asc, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { extendTrialForSwitch } from "@/lib/billing";
 import { INBOUND_FILE_LIMIT, MAX_FILES, saveAttachments, type NewFile } from "@/lib/attachments";
 import { normalizeTags } from "@/lib/tickets";
 import { seal, unseal } from "./crypto";
@@ -223,6 +224,8 @@ export async function runStep(orgId: string, id: string, opts: { budgetMs?: numb
     .set({ ...patch, phase: adapter.phases[phaseIdx]?.kind ?? job.phase, cursor, counts, notes: [...notes], lockedUntil: null, updatedAt: new Date() })
     .where(eq(imports.id, job.id))
     .returning();
+  // Switching shouldn't eat the trial: a finished import with tickets extends it.
+  if (after?.status === "done" && (counts.ticket?.imported ?? 0) > 0) await extendTrialForSwitch(orgId);
   return after;
 }
 
@@ -559,11 +562,19 @@ async function writeTicket(job: Job, adapter: Adapter, externalId: string, m: Ex
 
     // Imported before, by this importer (prevMappedId) or by anything else that set the same external id.
     const existing =
-      (prevMappedId ? await tx.query.tickets.findFirst({ columns: { id: true }, where: and(eq(t.orgId, orgId), eq(t.id, prevMappedId)) }) : null) ??
-      (await tx.query.tickets.findFirst({ columns: { id: true }, where: and(eq(t.orgId, orgId), eq(t.externalId, ticketValues.externalId)) }));
+      (prevMappedId ? await tx.query.tickets.findFirst({ columns: { id: true, updatedAt: true }, where: and(eq(t.orgId, orgId), eq(t.id, prevMappedId)) }) : null) ??
+      (await tx.query.tickets.findFirst({ columns: { id: true, updatedAt: true }, where: and(eq(t.orgId, orgId), eq(t.externalId, ticketValues.externalId)) }));
     if (existing) {
-      // Bring it up to date and add only messages not seen yet.
-      await tx.update(t).set(ticketValues).where(eq(t.id, existing.id));
+      // Bring it up to date and add only messages not seen yet. Status,
+      // assignee and tags follow whichever side changed the ticket last, so a
+      // re-import doesn't undo work the team did in Flatdesk since.
+      const { subject, channel, customerId, fields, source, externalId, createdAt } = ticketValues;
+      const sourceNewer = ticketValues.updatedAt.getTime() > existing.updatedAt.getTime();
+      const rest = { subject, channel, customerId, fields, source, externalId, createdAt };
+      await tx
+        .update(t)
+        .set(sourceNewer ? ticketValues : rest)
+        .where(eq(t.id, existing.id));
       const ids = (await tx.select({ id: schema.messages.externalId }).from(schema.messages).where(eq(schema.messages.ticketId, existing.id))).map((r) => r.id);
       const seen = new Set(ids);
       // Messages without ids came from an older import that didn't record them; don't guess which are new.

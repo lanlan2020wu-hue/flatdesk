@@ -5,9 +5,9 @@ import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { db, schema } from "@/db";
-import { requireAdmin, requireSession } from "@/lib/auth";
+import { requireAdmin, requireEditor } from "@/lib/auth";
 import { filesFromForm, saveAttachments } from "@/lib/attachments";
-import { access, checkoutUrl, portalUrl, switchToAnnual } from "@/lib/billing";
+import { access, checkoutUrl, portalUrl, switchToAnnual, syncSeats } from "@/lib/billing";
 import { deliverReply } from "@/lib/email";
 import { dismissSuggestion, saveSuggestedMacro } from "@/lib/macro-suggestions";
 import { addReply, createTicket, normalizeTags, updateTicket, type TicketStatus } from "@/lib/tickets";
@@ -15,7 +15,7 @@ import { addReply, createTicket, normalizeTags, updateTicket, type TicketStatus 
 // The paywall hides the app once a trial ends without a card; this keeps
 // direct requests from doing work behind it. Export and billing stay open.
 async function requireOpenSession() {
-  const s = await requireSession();
+  const s = await requireEditor();
   const org = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) });
   if (org && access(org).state === "locked") throw new Error("The free trial has ended. An admin can add a card in Settings.");
   return s;
@@ -155,6 +155,21 @@ export async function deleteRuleAction(form: FormData) {
   const s = await requireAdmin();
   await db.delete(schema.rules).where(and(eq(schema.rules.orgId, s.orgId), eq(schema.rules.id, str(form, "id"))));
   revalidatePath("/app/macros");
+}
+
+// Viewer seats are free: the member can read everything but change nothing.
+export async function setViewerAction(form: FormData) {
+  const s = await requireAdmin();
+  const userId = str(form, "userId");
+  const viewer = str(form, "viewer") === "true";
+  const [changed] = await db
+    .update(schema.agents)
+    .set({ viewer })
+    .where(and(eq(schema.agents.orgId, s.orgId), eq(schema.agents.userId, userId), eq(schema.agents.role, "agent")))
+    .returning({ userId: schema.agents.userId });
+  if (!changed) throw new Error("Admins always have a full seat. Pick an agent.");
+  await syncSeats(s.orgId).catch((err) => console.error("seat sync failed", err));
+  revalidatePath("/app/settings");
 }
 
 export async function saveAiSettingsAction(form: FormData) {

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireAdmin, requireSession } from "@/lib/auth";
+import { requireAdmin, requireEditor } from "@/lib/auth";
 import { rateDraft, startTestDrive, TestDriveError, VERDICT_LABEL, type Verdict } from "@/lib/test-drive";
 
 export async function startTestDriveAction() {
@@ -19,7 +19,7 @@ export async function startTestDriveAction() {
 }
 
 export async function rateDraftAction(form: FormData) {
-  const s = await requireSession();
+  const s = await requireEditor();
   const id = String(form.get("id") ?? "");
   const raw = String(form.get("verdict") ?? "");
   if (!/^[0-9a-f-]{36}$/i.test(id)) return;

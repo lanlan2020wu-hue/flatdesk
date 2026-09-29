@@ -1,7 +1,7 @@
 // Questions buyers (and AI answer engines) ask, with answers that stand on
 // their own. Selling-point questions live with each point in selling-points.ts.
 
-import { TRIAL_DAYS } from "@/lib/billing";
+import { SWITCH_TRIAL_DAYS, TRIAL_DAYS } from "@/lib/billing";
 import { PLAN, PRICE_PHRASE, annualSavingsPct, usd } from "@/lib/pricing";
 import type { QA } from "@/lib/selling-points";
 
@@ -31,11 +31,19 @@ export const GENERAL_FAQ: QA[] = [
 export const BILLING_FAQ: QA[] = [
   {
     q: "Is there a free trial?",
-    a: `Yes, ${TRIAL_DAYS} days with every feature and no card, including ${PLAN.trialPerAgent} AI resolutions per agent for the trial. Add a card at any point to get the full ${PLAN.includedPerAgent} per agent a month; the first charge still waits until the trial ends.`,
+    a: `Yes, ${TRIAL_DAYS} days with every feature and no card, including ${PLAN.trialPerAgent} AI resolutions per agent for the trial. Add a card at any point to get the full ${PLAN.includedPerAgent} per agent a month; the first charge still waits until the trial ends. Import your old help desk during the trial and it runs ${SWITCH_TRIAL_DAYS} days instead.`,
+  },
+  {
+    q: "Do we get longer to try Flatdesk if we're switching?",
+    a: `Yes. When an import of your tickets from Zendesk, Intercom, Freshdesk or Help Scout finishes during the free trial, the trial runs ${SWITCH_TRIAL_DAYS} days from sign-up instead of ${TRIAL_DAYS}, so moving over doesn't use it up. Your old help desk can keep running alongside until you're ready.`,
+  },
+  {
+    q: "Can viewers see tickets without paying for a seat?",
+    a: "Yes. An admin can make any non-admin member a viewer in Settings. Viewers read every ticket and report but can't reply or change anything, and they aren't billed.",
   },
   {
     q: "What counts as an AI resolution?",
-    a: "A conversation the AI answers where the customer doesn't write back. If they reply, the ticket goes to your team and stops counting. Conversations the AI hands to your team don't count either. Each conversation counts at most once.",
+    a: "A conversation the AI finishes without your team. If the customer writes back, the AI answers up to 3 follow-ups in the same conversation, still as one resolution. If it hands the conversation to your team at any point, including when the customer asks for a person, it stops counting. Each conversation counts at most once.",
   },
   {
     q: "What happens when we use all the included resolutions?",

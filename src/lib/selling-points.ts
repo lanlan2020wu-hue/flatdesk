@@ -2,7 +2,7 @@
 // /features pages, the FAQ, structured data and llms.txt. Every sentence here
 // is a claim about the shipped product, so keep it in step with the code.
 
-import { TRIAL_DAYS } from "@/lib/billing";
+import { SWITCH_TRIAL_DAYS, TRIAL_DAYS } from "@/lib/billing";
 import { BILLING_FAQ } from "@/lib/faq";
 import { PLAN, PRICE_PHRASE, usd } from "@/lib/pricing";
 
@@ -48,7 +48,7 @@ export const SELLING_POINTS: SellingPoint[] = [
       `${usd(PLAN.seatPrice)} per agent per month billed monthly with no contract, or ${usd(PLAN.annualSeatPrice)} billed yearly`,
       `${PLAN.includedPerAgent} AI resolutions per agent per month, pooled`,
       "AI pauses at the included amount by default",
-      "Conversations handed to your team don't count, and neither do ones where the customer writes back",
+      "The AI answers up to 3 follow-ups in one conversation, counted once; conversations it hands to your team don't count",
       `${TRIAL_DAYS}-day free trial without a card`,
     ],
     faq: [
@@ -166,6 +166,7 @@ export const SELLING_POINTS: SellingPoint[] = [
       "Every raw record archived and downloadable",
       "Unmapped items listed in a report, never silently dropped",
       "Export everything as CSV or JSON at any time, without asking us",
+      `Finishing an import during the free trial extends it to ${SWITCH_TRIAL_DAYS} days`,
     ],
     faq: [
       {

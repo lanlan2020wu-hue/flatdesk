@@ -126,6 +126,9 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
 
         {repeat && <RepeatPrompt number={ticket.number} prompt={repeat} />}
 
+        {s.viewer ? (
+          <p className="card p-4 text-sm text-muted">You have a viewer seat, so you can read this ticket but not reply. An admin can make you an agent in Settings.</p>
+        ) : (
         <Composer
           key={thread.length}
           action={replyAction}
@@ -134,6 +137,7 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
           status={ticket.status}
           macros={macros.map((m) => ({ id: m.id, name: m.name, body: m.body, addTags: m.addTags, setStatus: m.setStatus }))}
         />
+        )}
       </div>
 
       <aside className="card grid content-start gap-5 self-start p-5 text-sm xl:sticky xl:top-6">
@@ -158,6 +162,7 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
           )}
         </section>
 
+        <fieldset disabled={s.viewer} className="contents">
         <form key={`status-${ticket.status}`} action={updateTicketAction} className="grid gap-1.5 border-t border-line pt-4">
           <input type="hidden" name="ticketId" value={ticket.id} />
           <input type="hidden" name="number" value={ticket.number} />
@@ -188,6 +193,7 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
             <button className="btn btn-secondary btn-sm">Save</button>
           </div>
         </form>
+        </fieldset>
 
         {fieldEntries.length > 0 && (
           <section className="grid gap-2 border-t border-line pt-4">
