@@ -1,5 +1,6 @@
 import { after } from "next/server";
 import { answerNewTicket } from "@/lib/ai";
+import { alertNewTicket } from "@/lib/alerts";
 import { isBot, orgByWidgetKey, readChatRequest, startConversation, validStart } from "@/lib/chat";
 import { hit, ipKey, LIMITS, tooMany } from "@/lib/rate-limit";
 
@@ -21,6 +22,9 @@ export async function POST(request: Request, ctx: RouteContext<"/api/chat/[key]"
   if (!verdict.ok) return tooMany(verdict.retryAfter);
 
   const { ticket, token } = await startConversation(org.id, v, body.files);
-  after(() => answerNewTicket(org.id, ticket.id));
+  after(async () => {
+    await answerNewTicket(org.id, ticket.id);
+    await alertNewTicket(org.id, ticket.id);
+  });
   return Response.json({ number: ticket.number, token });
 }

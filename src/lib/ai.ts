@@ -3,6 +3,7 @@ import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { and, asc, count, eq, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema } from "@/db";
+import { alertHandedBack } from "@/lib/alerts";
 import { attachmentsByMessage } from "@/lib/attachments";
 import { access } from "@/lib/billing";
 import { deliverReply, emailConfig, resend } from "@/lib/email";
@@ -458,6 +459,7 @@ export async function handBackToTeam(orgId: string, ticketId: string, why?: stri
     ticketId,
     why ? `${why} It doesn't count toward the AI allowance.` : "The customer replied to the AI answer, so this ticket is now with the team and doesn't count toward the AI allowance.",
   );
+  await alertHandedBack(orgId, ticketId, why ?? "The customer replied to the AI's answer.");
 }
 
 // Emails admins once at 80% and once at 100% of the included allowance.

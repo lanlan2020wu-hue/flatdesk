@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireSession } from "@/lib/auth";
+import { targetLabel } from "@/lib/sla";
 import { duration, REPORT_RANGES, type ReportRange, teamReport } from "@/lib/reports";
 
 export const metadata = { title: "Reports" };
@@ -19,6 +20,7 @@ export default async function ReportsPage({ searchParams }: PageProps<"/app/repo
   const { days: raw } = await searchParams;
   const days = (REPORT_RANGES.find((d) => String(d) === raw) ?? 30) as ReportRange;
   const r = await teamReport(s.orgId, days);
+  const pct = (v: number | null) => (v === null ? "–" : `${Math.round(v * 100)}%`);
 
   return (
     <div className="grid max-w-4xl gap-8 px-4 py-6 md:px-8">
@@ -49,6 +51,27 @@ export default async function ReportsPage({ searchParams }: PageProps<"/app/repo
         />
       </section>
 
+      <section className="grid gap-3 sm:grid-cols-2" aria-label="Service">
+        <Tile
+          label="First replies on target"
+          value={r.target ? pct(r.target.share) : "–"}
+          note={
+            r.target
+              ? `${r.target.met} within ${targetLabel(r.target.minutes)}, ${r.target.missed} late. Imported tickets aren't counted.`
+              : "No first-reply target set. Add one in Settings."
+          }
+        />
+        <Tile
+          label="Rated Great"
+          value={pct(r.csat.score)}
+          note={
+            r.csat.total
+              ? `${r.csat.total} ${r.csat.total === 1 ? "rating" : "ratings"}, ${r.csat.bad} Not good.${r.csat.team !== null ? ` Team ${pct(r.csat.team)}.` : ""}${r.csat.ai !== null ? ` AI ${pct(r.csat.ai)}.` : ""}`
+              : "No ratings yet. Customers rate replies with one click from the email."
+          }
+        />
+      </section>
+
       <section className="grid gap-3">
         <h2 className="font-medium">By agent</h2>
         {r.agents.length === 0 ? (
@@ -62,6 +85,7 @@ export default async function ReportsPage({ searchParams }: PageProps<"/app/repo
                   <th scope="col" className="px-4 py-2 text-right font-normal">Replies sent</th>
                   <th scope="col" className="px-4 py-2 text-right font-normal">Tickets closed</th>
                   <th scope="col" className="px-4 py-2 text-right font-normal">Open now</th>
+                  <th scope="col" className="px-4 py-2 text-right font-normal">Rated Great</th>
                 </tr>
               </thead>
               <tbody>
@@ -71,13 +95,14 @@ export default async function ReportsPage({ searchParams }: PageProps<"/app/repo
                     <td className="num px-4 py-2 text-right">{a.replies}</td>
                     <td className="num px-4 py-2 text-right">{a.closed}</td>
                     <td className="num px-4 py-2 text-right">{a.openNow}</td>
+                    <td className="num px-4 py-2 text-right" title={`${a.rated} ${a.rated === 1 ? "rating" : "ratings"}`}>{pct(a.csat)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         )}
-        <p className="text-sm text-muted">Tickets closed counts closed tickets assigned to each agent. Internal notes aren&apos;t counted as replies.</p>
+        <p className="text-sm text-muted">Tickets closed counts closed tickets assigned to each agent. Internal notes aren&apos;t counted as replies. Rated Great is the share of each agent&apos;s rated replies.</p>
       </section>
     </div>
   );

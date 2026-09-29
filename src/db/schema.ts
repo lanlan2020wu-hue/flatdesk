@@ -57,6 +57,18 @@ export const orgs = pgTable("orgs", {
   // Length of the no-card trial. Finishing an import from another help desk
   // extends it to SWITCH_TRIAL_DAYS (see lib/billing.ts).
   trialDays: integer("trial_days").notNull().default(14),
+  // Alerts to Slack (or any webhook) when a ticket needs a person. See lib/alerts.ts.
+  alertWebhookUrl: text("alert_webhook_url"),
+  alertOn: text("alert_on").$type<AlertOn>().notNull().default("team"),
+  // Signs generic webhook payloads (X-Flatdesk-Signature) so receivers can check them.
+  alertSecret: text("alert_secret").notNull().default(sql`replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', '')`),
+  alertLastAt: timestamp("alert_last_at", { withTimezone: true }),
+  alertLastError: text("alert_last_error"),
+  // One-click ratings under every reply email. See lib/csat.ts.
+  csatEnabled: boolean("csat_enabled").notNull().default(true),
+  // First-reply target in minutes (null = off), counted in business hours when set. See lib/sla.ts.
+  firstResponseMinutes: integer("first_response_minutes").default(240),
+  businessHours: jsonb("business_hours").$type<BusinessHours>(),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -70,6 +82,14 @@ export type Onboarding = {
   gmailConfirmation?: { code: string | null; link: string | null; receivedAt: string };
   testToken?: string; // subject token of the end-to-end test email
   testSentAt?: string;
+};
+// "team": only tickets that need a person. "all": every new ticket, saying whether the AI answered it.
+export type AlertOn = "team" | "all";
+export type BusinessHours = {
+  tz: string; // IANA time zone, e.g. "America/New_York"
+  days: number[]; // 0 = Sunday ... 6 = Saturday
+  start: number; // minutes after local midnight
+  end: number;
 };
 export type OnboardingStep = "invite" | "inbox" | "import" | "test";
 
@@ -191,6 +211,28 @@ export const attachments = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("attachments_message").on(t.messageId), index("attachments_ticket").on(t.ticketId)],
+);
+
+// A customer's one-click rating of one reply (an agent's or the AI's), from the
+// links under the reply email. One rating per reply; clicking again changes it.
+export const csatRating = pgEnum("csat_rating", ["great", "okay", "bad"]);
+
+export const csatRatings = pgTable(
+  "csat_ratings",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
+    ticketId: uuid("ticket_id").notNull().references(() => tickets.id, { onDelete: "cascade" }),
+    messageId: uuid("message_id").notNull().references(() => messages.id, { onDelete: "cascade" }),
+    rating: csatRating("rating").notNull(),
+    // Who wrote the rated reply: "ai" or "agent", and which agent.
+    ratedAuthorType: authorType("rated_author_type").notNull(),
+    agentId: text("agent_id"),
+    comment: text("comment"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("csat_ratings_message").on(t.messageId), index("csat_ratings_org_created").on(t.orgId, t.createdAt)],
 );
 
 export const macros = pgTable("macros", {
