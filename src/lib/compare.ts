@@ -82,7 +82,7 @@ export const RIVALS: Rival[] = [
       "Richer messenger with proactive and outbound messages",
       "More channels, like WhatsApp, SMS and social",
       "Fin can run on top of another help desk",
-      "A built-in help center",
+      "A richer help center, with collections and in-app search",
     ],
     pickThem: "You sell mostly through in-app chat and want proactive messaging, and a per-outcome AI bill is fine for your volume.",
     canImport: true,
@@ -97,7 +97,7 @@ export const RIVALS: Rival[] = [
     slug: "zendesk",
     name: "Zendesk",
     title: "Zendesk",
-    answer: `Zendesk Suite starts at $55 per agent on annual billing and charges for automated resolutions past a small allowance. It doesn't publish the per-resolution rate; third parties put it near $1.50 to $2.00. Flatdesk is ${usd(PLAN.annualSeatPrice)} per agent on annual billing (${usd(PLAN.seatPrice)} monthly) with ${PLAN.includedPerAgent} AI resolutions per agent included and a cap on by default. Zendesk is far broader: help center, many channels, a large app marketplace.`,
+    answer: `Zendesk Suite starts at $55 per agent on annual billing and charges for automated resolutions past a small allowance. It doesn't publish the per-resolution rate; third parties put it near $1.50 to $2.00. Flatdesk is ${usd(PLAN.annualSeatPrice)} per agent on annual billing (${usd(PLAN.seatPrice)} monthly) with ${PLAN.includedPerAgent} AI resolutions per agent included and a cap on by default. Zendesk is far broader: community forums, many channels, a large app marketplace.`,
     flatdeskWins: [
       "One public price, with AI included and capped",
       "AI receipts with one-click refunds",
@@ -105,12 +105,12 @@ export const RIVALS: Rival[] = [
       "No tiers or add-ons: every seat gets every feature",
     ],
     theyWin: [
-      "Help center, community and many more channels",
+      "A full help center with community forums, and many more channels",
       "A large marketplace of integrations",
       "Full SLA policies (per priority, resolution times, escalations) and advanced workflows",
       "Built for large and enterprise teams",
     ],
-    pickThem: "You need a help center, many channels or deep integrations today, or you run a large team with enterprise requirements.",
+    pickThem: "You need community forums, many channels or deep integrations today, or you run a large team with enterprise requirements.",
     canImport: true,
     plans: ["zendesk-team", "zendesk-professional"],
     faq: [
@@ -135,11 +135,11 @@ export const RIVALS: Rival[] = [
     ],
     theyWin: [
       "A free plan for up to 5 users",
-      "Docs, a built-in help center",
+      "Docs, a fuller help center with collections and custom domains",
       "Also lets admins cap AI spend",
       "Lower entry seat price if you use little AI",
     ],
-    pickThem: "You're a very small team that uses little AI, or you need a public help center now.",
+    pickThem: "You're a very small team that uses little AI, or you need a help center on your own domain now.",
     canImport: true,
     plans: ["helpscout-standard", "helpscout-plus"],
     faq: [
@@ -161,7 +161,7 @@ export const RIVALS: Rival[] = [
     ],
     theyWin: [
       "Cheaper seat when you barely use AI ($19 on Growth)",
-      "Help center, full SLA policies with escalations, and more channels",
+      "A fuller help center, full SLA policies with escalations, and more channels",
       "A large marketplace of apps",
     ],
     pickThem: "Your AI answers fewer than about 40 tickets per agent a month, or you need SLA escalations and a marketplace today.",

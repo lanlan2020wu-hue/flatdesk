@@ -24,6 +24,7 @@ const I = {
   card: "M3 6h18v12H3zM3 10h18M7 15h3",
   bell: "M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0",
   clock: "M12 21a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM12 9v4l2.5 2M9 2h6",
+  book: "M5 4h9a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM5 17a3 3 0 0 1 3-3h9M9 8h5",
   smile: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM8.5 14.5a4.5 4.5 0 0 0 7 0M9 9.5h.01M15 9.5h.01",
   spark: "M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8zM18 15l.9 2.1L21 18l-2.1.9L18 21l-.9-2.1L15 18l2.1-.9z",
 };
@@ -48,6 +49,7 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
     features: [
       { id: "macros", title: "Macros", body: "Saved replies that can also add tags and set the status in one click.", icon: I.macro },
       { id: "suggested-macros", title: "Macros that write themselves", body: "When your team sends the same answer on 5 tickets, Flatdesk offers it as a finished macro. No AI allowance used.", icon: I.spark, isNew: true },
+      { id: "help-center", title: "Help center", body: "A public help center with search. Write an article once; customers find it themselves and the AI links to it in its answers.", icon: I.book, isNew: true },
       { id: "rules", title: "Assignment rules", body: 'When a ticket is tagged, rules like "if tagged billing, assign to Sam" pick who gets it.', icon: I.rule },
       { id: "tags", title: "Tags", body: "Tag tickets by hand, from a macro, or from your old help desk's data.", icon: I.tag },
     ],
