@@ -54,8 +54,7 @@ export const orgs = pgTable("orgs", {
   // What the AI test drive has cost us so far, across every run. Capped at
   // TEST_DRIVE.budgetUsd in lib/test-drive.ts.
   testDriveSpentUsd: numeric("test_drive_spent_usd", { precision: 10, scale: 5 }).notNull().default("0"),
-  // Length of the no-card trial. Finishing an import from another help desk
-  // extends it to SWITCH_TRIAL_DAYS (see lib/billing.ts).
+  // Length of the no-card trial (TRIAL_DAYS in lib/billing.ts).
   trialDays: integer("trial_days").notNull().default(14),
   // Alerts to Slack (or any webhook) when a ticket needs a person. See lib/alerts.ts.
   alertWebhookUrl: text("alert_webhook_url"),

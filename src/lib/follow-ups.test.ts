@@ -1,4 +1,4 @@
-// Multi-turn AI answers, viewer seats, the switch trial and duplicate inbound email.
+// Multi-turn AI answers, viewer seats and duplicate inbound email.
 // The model is a small fake server. Run: DATABASE_URL=... npm test
 import assert from "node:assert/strict";
 import { createServer } from "node:http";
@@ -106,19 +106,14 @@ test("the AI answers follow-ups on its own ticket, counted once, and hands off w
   assert.equal(aiReplies, 1);
 });
 
-test("viewers aren't billed seats, and a finished import extends the trial once", async () => {
+test("viewers aren't billed seats", async () => {
   const { db, schema } = await setup();
-  const { seatCount, extendTrialForSwitch, trialEndsAt, SWITCH_TRIAL_DAYS } = await import("./billing");
+  const { seatCount } = await import("./billing");
   await db.insert(schema.agents).values([
     { orgId: ORG, userId: "u2", name: "Bo", email: "bo@acme.com", role: "agent" },
     { orgId: ORG, userId: "u3", name: "Cy", email: "cy@acme.com", role: "agent", viewer: true },
   ]);
   assert.equal(await seatCount(ORG), 2);
-
-  assert.equal(await extendTrialForSwitch(ORG), true);
-  assert.equal(await extendTrialForSwitch(ORG), false, "only once");
-  const org = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, ORG) });
-  assert.equal(Math.round((trialEndsAt(org!).getTime() - org!.createdAt.getTime()) / 86_400_000), SWITCH_TRIAL_DAYS);
 });
 
 test("the same email delivered twice at once makes one message", async () => {

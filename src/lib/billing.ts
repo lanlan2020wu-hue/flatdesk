@@ -1,5 +1,5 @@
 import { clerkClient } from "@clerk/nextjs/server";
-import { and, count, eq, isNotNull, lt, sql } from "drizzle-orm";
+import { and, count, eq, isNotNull, sql } from "drizzle-orm";
 import Stripe from "stripe";
 import { db, schema } from "@/db";
 import { clerkEnabled } from "@/lib/auth-config";
@@ -21,9 +21,6 @@ const { orgs, agents, aiEvents } = schema;
 // plan during that window keeps the rest of it as a Stripe trial, so the
 // first charge lands when the 14 days are up either way.
 export const TRIAL_DAYS = 14;
-// A team that finishes importing from another help desk gets this long instead,
-// so the switch doesn't eat the trial.
-export const SWITCH_TRIAL_DAYS = 60;
 const DAY = 24 * 60 * 60 * 1000;
 const ACTIVE = new Set(["trialing", "active", "past_due"]);
 
@@ -45,15 +42,6 @@ export const isActive = (status: string | null | undefined) => Boolean(status &&
 
 export const trialEndsAt = (org: { createdAt: Date; trialDays?: number }) => new Date(org.createdAt.getTime() + (org.trialDays ?? TRIAL_DAYS) * DAY);
 
-// The switch credit. Only a team still on its no-card trial gets it, and only once.
-export async function extendTrialForSwitch(orgId: string) {
-  const [org] = await db
-    .update(orgs)
-    .set({ trialDays: SWITCH_TRIAL_DAYS })
-    .where(and(eq(orgs.id, orgId), lt(orgs.trialDays, SWITCH_TRIAL_DAYS), sql`${orgs.stripeSubscriptionId} is null`))
-    .returning({ id: orgs.id });
-  return Boolean(org);
-}
 
 // "open": paid or trialing in Stripe (or billing isn't set up on this server).
 // "trial": inside the no-card window. "locked": the window is over with no plan.
