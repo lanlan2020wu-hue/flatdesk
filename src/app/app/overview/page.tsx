@@ -4,6 +4,7 @@ import { db, schema } from "@/db";
 import { aiUsage } from "@/lib/ai";
 import { requireSession } from "@/lib/auth";
 import { access } from "@/lib/billing";
+import { macroUpdates } from "@/lib/macro-drift";
 import { macroSuggestions } from "@/lib/macro-suggestions";
 import { withAiDrafts } from "@/lib/macro-writer";
 import { PLAN, seatPriceFor, usd, type Interval } from "@/lib/pricing";
@@ -56,11 +57,12 @@ const Stat = ({ label, value, className = "" }: { label: string; value: React.Re
 // covers this month, then the AI macros waiting, then everything else.
 export default async function OverviewPage() {
   const s = await requireSession();
-  const [org, ai, quality, found, [{ aiMacros }], [{ seats }]] = await Promise.all([
+  const [org, ai, quality, found, drifted, [{ aiMacros }], [{ seats }]] = await Promise.all([
     db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) }),
     aiUsage(s.orgId),
     qualitySummary(s.orgId, 30),
     macroSuggestions(s.orgId),
+    macroUpdates(s.orgId),
     db.select({ aiMacros: count() }).from(schema.macros).where(and(eq(schema.macros.orgId, s.orgId), eq(schema.macros.source, "suggested"))),
     db.select({ seats: count() }).from(schema.agents).where(and(eq(schema.agents.orgId, s.orgId), eq(schema.agents.viewer, false))),
   ]);
@@ -99,20 +101,34 @@ export default async function OverviewPage() {
         </div>
       </Chapter>
 
-      <Chapter n="02" title="AI macros" href="/app/macros" cta={suggestions.length ? "Review and save them" : "Open AI macros"}>
+      <Chapter n="02" title="AI macros" href="/app/macros" cta={suggestions.length || drifted.length ? "Review them" : "Open AI macros"}>
         <div className="grid gap-6 md:grid-cols-[minmax(0,4fr)_minmax(0,7fr)]">
           <dl className="grid content-start gap-3">
             <Stat label="Identified, waiting for review" value={suggestions.length} className={suggestions.length ? "text-accent" : ""} />
+            <Stat label="Out of date, update ready" value={drifted.length} className={drifted.length ? "text-accent" : ""} />
             <Stat label="Saved by your team" value={saved} />
           </dl>
-          {suggestions.length ? (
+          {suggestions.length || drifted.length ? (
             <ul className="grid self-start divide-y divide-line rounded-xl border border-line">
-              {suggestions.slice(0, 4).map((m) => (
+              {drifted.slice(0, 2).map((u) => (
+                <li key={u.macro.id}>
+                  <Link href="/app/macros#macro-updates" className="grid gap-0.5 px-4 py-3 text-sm transition-colors hover:bg-surface-2/60">
+                    <span className="flex items-baseline justify-between gap-3">
+                      <span className="font-medium">{u.macro.name}</span>
+                      <span className="pill shrink-0 bg-accent-soft text-xs text-accent">Update ready</span>
+                    </span>
+                    <span className="line-clamp-1 text-muted">
+                      Your team edits it the same way before sending: {[...u.drift.added.map((a) => a.text), ...u.drift.changed.map((c) => c.to), ...u.drift.removed.map((r) => `deletes "${r.text}"`)][0]}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+              {suggestions.slice(0, 4 - Math.min(2, drifted.length)).map((m) => (
                 <li key={m.key}>
                   <Link href="/app/macros" className="grid gap-0.5 px-4 py-3 text-sm transition-colors hover:bg-surface-2/60">
                     <span className="flex items-baseline justify-between gap-3">
                       <span className="font-medium">{m.name}</span>
-                      <span className="num shrink-0 text-xs text-muted">sent on {m.tickets} tickets</span>
+                      <span className="num shrink-0 text-xs text-muted">new, sent on {m.tickets} tickets</span>
                     </span>
                     <span className="line-clamp-1 text-muted">{m.question ?? m.body}</span>
                   </Link>
@@ -121,8 +137,8 @@ export default async function OverviewPage() {
             </ul>
           ) : (
             <p className="text-sm text-muted">
-              When your team sends the same answer on 5 tickets, it shows up here, written up by the AI. Saved macros are offered on new tickets that ask the same
-              thing.
+              When your team sends the same answer on 5 tickets, it shows up here, written up by the AI. When they keep editing a macro the same way, the AI
+              updates it. Saved macros are offered on new tickets that ask the same thing.
             </p>
           )}
         </div>

@@ -347,6 +347,37 @@ export const macroAiDrafts = pgTable(
   (t) => [uniqueIndex("macro_ai_drafts_org_key").on(t.orgId, t.key)],
 );
 
+// Which macro a sent reply started from, with the macro's text at that
+// moment. Lets Flatdesk see how the team edits a macro before sending it
+// (lib/macro-drift.ts).
+export const macroUses = pgTable(
+  "macro_uses",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
+    macroId: uuid("macro_id").notNull().references(() => macros.id, { onDelete: "cascade" }),
+    messageId: uuid("message_id").notNull().references(() => messages.id, { onDelete: "cascade" }),
+    macroBody: text("macro_body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("macro_uses_org_macro").on(t.orgId, t.macroId, t.createdAt)],
+);
+
+// Macro updates an admin chose not to apply, by the edit they describe, so the
+// same edit isn't proposed again. A different edit to the same macro still is.
+export const macroUpdateDismissals = pgTable(
+  "macro_update_dismissals",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
+    macroId: uuid("macro_id").notNull().references(() => macros.id, { onDelete: "cascade" }),
+    signature: text("signature").notNull(),
+    userId: text("user_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("macro_update_dismissals_macro_sig").on(t.macroId, t.signature)],
+);
+
 // The agent copilot: summaries, drafted replies and rewrites an agent asks
 // for on a ticket. Included in the seat under a fair-use limit (lib/copilot.ts),
 // never counted toward the AI allowance. A summary row doubles as its cache,

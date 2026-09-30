@@ -107,6 +107,46 @@ export function MacroShot() {
   );
 }
 
+// Macros that fix themselves: the edit the team keeps making, struck through
+// and rewritten, with the one-click update.
+export function MacroUpdateShot() {
+  return (
+    <div className="shot" aria-hidden="true">
+      <Bar title="AI macros · Refund timing" />
+      <div className="grid gap-3 p-3">
+        <span className="flex items-center gap-1.5 text-[12px] font-medium text-accent">
+          <svg viewBox="0 0 24 24" className="sparkle size-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z" />
+          </svg>
+          Your team keeps editing this macro
+        </span>
+        <div className="grid gap-2 rounded-lg border border-line p-2.5 text-[12px]">
+          <span style={{ "--i": 0 } as React.CSSProperties} className="ln flex gap-2">
+            <span className="num w-20 shrink-0 whitespace-nowrap text-[10px] text-accent">Reworded 4×</span>
+            <span className="grid">
+              <span className="text-muted line-through">Refunds reach your card within 5 business days.</span>
+              <span>Refunds reach your card within 7 business days.</span>
+            </span>
+          </span>
+          <span style={{ "--i": 1 } as React.CSSProperties} className="ln flex gap-2">
+            <span className="num w-20 shrink-0 whitespace-nowrap text-[10px] text-accent">Added 4×</span>
+            <span>Your bank may take 2 more days to show it.</span>
+          </span>
+          <span style={{ "--i": 2 } as React.CSSProperties} className="ln flex gap-2">
+            <span className="num w-20 shrink-0 whitespace-nowrap text-[10px] text-warn">Deleted 5×</span>
+            <span className="text-muted line-through">Refunds over $500 need a manager.</span>
+          </span>
+        </div>
+        <span className="flex items-center gap-2 text-[11px]">
+          <span className="save rounded-md bg-accent px-2 py-1 font-medium text-accent-ink">Update macro</span>
+          <span className="text-muted">Keep it as is</span>
+          <span className="num ml-auto text-muted">5 sends since it last changed</span>
+        </span>
+      </div>
+    </div>
+  );
+}
+
 // Quality review: the team's scorecard lines print one by one, then a
 // flagged reply with the AI's coaching note.
 export function QualityShot() {

@@ -13,6 +13,7 @@ import { access, checkoutUrl, portalUrl, switchToAnnual, syncSeats } from "@/lib
 import { CopilotError, draftReply, rewriteText, summarizeTicket, type TicketSummary } from "@/lib/copilot";
 import type { RewriteStyle } from "@/lib/copilot-config";
 import { deliverReply } from "@/lib/email";
+import { recordMacroUses } from "@/lib/macro-drift";
 import { dismissSuggestion, saveSuggestedMacro } from "@/lib/macro-suggestions";
 import { reviewPending } from "@/lib/quality";
 import { TARGET_CHOICES, validHours } from "@/lib/sla";
@@ -68,6 +69,8 @@ export async function replyAction(form: FormData) {
   });
   if (messageId && files.length) await saveAttachments(s.orgId, ticketId, messageId, files);
   if (messageId) await deliverReply(s.orgId, messageId);
+  // Which macros this reply started from, so Flatdesk can see how the team edits them.
+  if (messageId && form.get("internal") !== "on") await recordMacroUses(s.orgId, messageId, str(form, "macroIds").split(",").filter(Boolean));
   // AI quality review grades the reply (and anything else waiting) after the response.
   if (messageId && form.get("internal") !== "on") after(() => reviewPending(s.orgId));
   revalidatePath(`/app/tickets/${number}`);
@@ -137,6 +140,29 @@ export async function dismissSuggestionAction(form: FormData) {
   revalidatePath("/app/macros");
   const number = str(form, "number");
   if (number) revalidatePath(`/app/tickets/${number}`);
+}
+
+// Macros that fix themselves: apply the edit the team keeps making, or keep
+// the macro as it is (that edit isn't proposed again).
+export async function applyMacroUpdateAction(form: FormData) {
+  const s = await requireOpenSession();
+  const body = str(form, "body").slice(0, 4000);
+  if (!body) throw new Error("The updated macro is empty.");
+  await db.update(schema.macros).set({ body }).where(and(eq(schema.macros.orgId, s.orgId), eq(schema.macros.id, str(form, "id"))));
+  revalidatePath("/app/macros");
+  revalidatePath("/app/overview");
+}
+
+export async function dismissMacroUpdateAction(form: FormData) {
+  const s = await requireOpenSession();
+  const macro = await db.query.macros.findFirst({ where: and(eq(schema.macros.orgId, s.orgId), eq(schema.macros.id, str(form, "id"))) });
+  if (!macro) return;
+  await db
+    .insert(schema.macroUpdateDismissals)
+    .values({ orgId: s.orgId, macroId: macro.id, signature: str(form, "signature").slice(0, 40), userId: s.userId })
+    .onConflictDoNothing();
+  revalidatePath("/app/macros");
+  revalidatePath("/app/overview");
 }
 
 export async function saveRuleAction(form: FormData) {

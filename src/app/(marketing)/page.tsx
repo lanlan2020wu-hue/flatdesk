@@ -3,7 +3,7 @@ import Link from "next/link";
 import JsonLd from "@/components/JsonLd";
 import WaitlistForm from "@/components/WaitlistForm";
 import YearChart from "@/components/YearChart";
-import { AiShot, ImportShot, InboxShot, MacroShot, QualityShot, ReceiptShot, ReportShot } from "@/components/ProductShots";
+import { AiShot, ImportShot, InboxShot, MacroShot, MacroUpdateShot, QualityShot, ReceiptShot, ReportShot } from "@/components/ProductShots";
 import { QUALITY } from "@/lib/quality-config";
 import { organization, software, website } from "@/lib/seo";
 import { PLAN, competitorById, competitorMonthly, flatdeskMonthly, usd } from "@/lib/pricing";
@@ -14,8 +14,8 @@ const EXAMPLE = { agents: 10, resolutions: 1500 };
 // macros, then everything else in the seat. Each chapter has its own anchor.
 const CHAPTERS = [
   { id: "flat-rate", n: "01", title: "Flat rate", body: "One price per seat, AI included and capped." },
-  { id: "ai-macros", n: "02", title: "AI macros", body: "Your repeated replies, written up by the AI." },
-  { id: "everything-else", n: "03", title: "Everything else", body: "Quality review, AI answers, inbox, import." },
+  { id: "ai-macros", n: "02", title: "AI macros", body: "Written from your replies. Updated from your edits." },
+  { id: "everything-else", n: "03", title: "Everything else", body: "AI answers, quality review, inbox, import." },
 ];
 
 const SOURCES = ["Zendesk", "Intercom", "Freshdesk", "Help Scout"];
@@ -29,16 +29,6 @@ const MACRO_STEPS = [
 // Chapter three: the rest of the seat, in the order teams ask about it.
 const TOUR: { id: string; eyebrow: string; title: string; body: string; points: string[]; shot: React.ReactNode; badge?: string; href?: string }[] = [
   {
-    id: "quality",
-    eyebrow: "AI quality review",
-    badge: "New",
-    title: "Every reply graded. The weak ones come with a fix.",
-    body: "After a reply goes out, the AI checks it against your macros, notes and help center: was it accurate, was the tone right, did it answer what the customer asked. Each person gets a scorecard, AI answers included, and replies that fall short are flagged with what went wrong and one line of coaching.",
-    points: ["Catches wrong promises before they become refunds", `${QUALITY.perAgent} reviews per seat a month, pooled`, "Doesn't use AI resolutions"],
-    shot: <QualityShot />,
-    href: "/features/ai-quality-review",
-  },
-  {
     id: "ai",
     eyebrow: "AI answers",
     title: "AI takes the routine questions, and stops at your cap.",
@@ -46,6 +36,15 @@ const TOUR: { id: string; eyebrow: string; title: string; body: string; points: 
     points: ["Pauses at the included amount unless an admin opts in", "Emails admins at 80% and at 100%", "Try it first: the AI test drive drafts answers to 50 of your past tickets"],
     shot: <AiShot />,
     href: "/features/ai-test-drive",
+  },
+  {
+    id: "quality",
+    eyebrow: "AI quality review",
+    title: "Every reply graded. The weak ones come with a fix.",
+    body: "After a reply goes out, the AI checks it against your macros, notes and help center: was it accurate, was the tone right, did it answer what the customer asked. Each person gets a scorecard, AI answers included, and replies that fall short are flagged with what went wrong and one line of coaching.",
+    points: ["Catches wrong promises before they become refunds", `${QUALITY.perAgent} reviews per seat a month, pooled`, "Doesn't use AI resolutions"],
+    shot: <QualityShot />,
+    href: "/features/ai-quality-review",
   },
   {
     id: "inbox",
@@ -135,7 +134,7 @@ export default function Home() {
             </h1>
             <p style={{ "--d": 2 } as React.CSSProperties} className="enter max-w-xl text-lg text-muted">
               {usd(PLAN.annualSeatPrice)} per agent billed yearly, or {usd(PLAN.seatPrice)} month to month, with {PLAN.includedPerAgent} AI resolutions per seat
-              included and capped. No AI meter, no add-ons. And the AI turns the answers your team keeps retyping into macros.
+              included and capped. No AI meter, no add-ons. And AI macros that write themselves from your team&apos;s replies, then update themselves when your team keeps editing them.
             </p>
             <div style={{ "--d": 3 } as React.CSSProperties} className="enter flex flex-wrap gap-3">
               <Link href="/sign-up" className="btn btn-primary">
@@ -246,9 +245,10 @@ export default function Home() {
 
       <section id="ai-macros" className="scroll-mt-24 border-y border-accent/20 bg-accent-soft/40 py-20 sm:py-28">
         <div className="mx-auto grid w-full max-w-6xl gap-12 px-4 sm:px-6">
-          <ChapterHead n="02" eyebrow="AI macros" title="Your team answers it five times. The AI writes the macro.">
+          <ChapterHead n="02" eyebrow="AI macros" title="The AI writes your macros, then keeps them up to date.">
             Flatdesk identifies the answers your team keeps typing, and the AI turns each one into a macro that&apos;s offered on every new ticket asking the same
-            thing. It&apos;s included in the seat and never uses your AI allowance.
+            thing. When your team keeps editing a macro the same way before sending it, the AI updates the macro. It&apos;s included in the seat and never uses
+            your AI allowance.
           </ChapterHead>
           <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] lg:gap-16">
             <div data-play="" className="relative">
@@ -264,11 +264,30 @@ export default function Home() {
                   </span>
                 </li>
               ))}
-              <li>
-                <Link href="/features/ai-macros" className="link text-sm font-medium text-accent">How AI macros work</Link>
-              </li>
             </ol>
           </div>
+          <article className="grid items-center gap-10 rounded-3xl border border-accent/30 bg-surface p-6 shadow-sm sm:p-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-16">
+            <div data-play="" className="grid content-start gap-4">
+              <p className="eyebrow flex items-center gap-2">
+                Macros that fix themselves
+                <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] tracking-[0.12em] text-accent-ink">New</span>
+              </p>
+              <h3 className="ink font-display text-3xl leading-tight">Your team keeps fixing the same macro. Now the macro fixes itself.</h3>
+              <p className="text-muted">
+                Flatdesk sees how agents edit a macro before they send it. When most sends make the same change, like a new time frame, an extra line or a step
+                that no longer applies, the AI rewrites the macro with it. An admin applies it in one click.
+              </p>
+              <ul className="grid gap-2 text-sm">
+                {["Counts only sends of the current version, so one fix starts the count again", "Keeps your placeholders, greeting and sign-off", "Zendesk's macro suggestions cover new macros only"].map((p) => (
+                  <li key={p} className="flex gap-2.5">{check}{p}</li>
+                ))}
+              </ul>
+              <Link href="/features/ai-macros" className="link w-max text-sm font-medium text-accent">How AI macros work</Link>
+            </div>
+            <div data-play="">
+              <MacroUpdateShot />
+            </div>
+          </article>
         </div>
       </section>
 

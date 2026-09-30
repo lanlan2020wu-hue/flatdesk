@@ -70,10 +70,10 @@ export const SELLING_POINTS: SellingPoint[] = [
   {
     slug: "ai-macros",
     name: "AI macros",
-    short: "Flatdesk identifies the answers your team keeps retyping, the AI writes each one up as a clean macro, and new tickets asking the same thing get it offered in one click.",
-    headline: "AI macros: identified from your team's replies, written by AI, offered on the right tickets",
+    short: "Flatdesk identifies the answers your team keeps retyping and the AI writes each one up as a macro. When your team keeps editing a macro the same way before sending, the AI updates it.",
+    headline: "AI macros: written from your team's replies, and updated when your team keeps editing them",
     answer:
-      "Flatdesk watches the replies your agents send. Once essentially the same answer has gone out on 5 different tickets, it identifies it as a macro, and the AI writes it up from the versions your team sent: a short name, the customer question it answers, and one reply with placeholders where each customer's details go. Save it in one click. From then on, when a new ticket asks that question, the macro is offered right in the reply box. None of this uses your AI allowance.",
+      "Flatdesk watches the replies your agents send. Once essentially the same answer has gone out on 5 different tickets, it identifies it as a macro, and the AI writes it up from the versions your team sent: a short name, the customer question it answers, and one reply with placeholders where each customer's details go. Save it in one click. From then on, when a new ticket asks that question, the macro is offered right in the reply box. And when agents keep making the same edit to a macro before sending it (a new time frame, an extra line, a step that no longer applies), the AI rewrites the macro with that edit for an admin to apply in one click. None of this uses your AI allowance.",
     metaTitle: "AI macros: canned responses identified and written automatically",
     metaDescription:
       "Flatdesk identifies the replies your team sends over and over, has the AI write them up as macros, and offers the right macro on new tickets. Works from imported history too.",
@@ -82,11 +82,13 @@ export const SELLING_POINTS: SellingPoint[] = [
       { title: "Flatdesk identifies the repeats", body: "Replies that say essentially the same thing, on 5 different tickets, become one suggested macro." },
       { title: "The AI writes the macro", body: "It reads the versions your team sent and writes one clean reply with placeholders, a name, and the question it answers." },
       { title: "It's offered on the right tickets", body: "When a new ticket asks the same question, the reply box offers the macro. AI answers use it too." },
+      { title: "It stays up to date", body: "When agents keep editing the macro the same way before sending, the AI rewrites it with that edit. Apply it in one click, or keep the macro as it is." },
     ],
     facts: [
       "Identifies a macro once 5 distinct tickets get the same answer",
       "The AI writes each one up from your team's own replies, with placeholders for customer details",
       "Offers the matching macro on new tickets, right in the reply box",
+      "Updates a macro when your team keeps editing it the same way before sending",
       "Works from imported history, so suggestions can start on day one",
       "Never uses your AI allowance",
     ],
@@ -94,6 +96,10 @@ export const SELLING_POINTS: SellingPoint[] = [
       {
         q: "How does Flatdesk identify which macros to suggest?",
         a: "It groups agent replies from the last 90 days by how many words they share. When one answer has gone out on 5 different tickets and no existing macro covers it, it becomes a suggestion, and the AI writes it up.",
+      },
+      {
+        q: "How does a macro update itself?",
+        a: "When an agent inserts a macro, Flatdesk remembers the macro's text. If on most of the last sends (at least 3) agents made the same change before sending, like a different time frame, an added sentence or a deleted step, the AI rewrites the macro with that change. An admin applies it in one click or keeps the macro as it is. Zendesk's macro suggestions only cover new macros.",
       },
       {
         q: "Do AI macros use AI resolutions?",

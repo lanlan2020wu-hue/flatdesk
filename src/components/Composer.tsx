@@ -53,6 +53,8 @@ export default function Composer({
   const [working, setWorking] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [usedSuggestion, setUsedSuggestion] = useState(false);
+  // Macros inserted into this reply, so the server can learn how the team edits them.
+  const [macroIds, setMacroIds] = useState<string[]>([]);
   const suggested = !usedSuggestion && suggestedMacroId ? macros.find((m) => m.id === suggestedMacroId) : undefined;
 
   function draft() {
@@ -88,6 +90,7 @@ export default function Composer({
     setAddTags(m.addTags.join(", "));
     if (m.setStatus) setStatusChoice(m.setStatus);
     if (id === suggestedMacroId) setUsedSuggestion(true);
+    setMacroIds((ids) => [...ids, id]);
   }
 
   return (
@@ -108,12 +111,14 @@ export default function Composer({
         setAddTags("");
         setStatusChoice(null);
         setFiles([]);
+        setMacroIds([]);
       }}
       className={`grid gap-3 rounded-2xl border p-3 shadow-md transition-colors focus-within:ring-2 focus-within:ring-accent/25 ${internal ? "border-warn/50 bg-warn-soft" : "border-line bg-surface"}`}
     >
       <input type="hidden" name="ticketId" value={ticketId} />
       <input type="hidden" name="number" value={number} />
       <input type="hidden" name="addTags" value={addTags} />
+      <input type="hidden" name="macroIds" value={macroIds.join(",")} />
       <div className="flex flex-wrap items-center gap-3 text-sm">
         <div role="radiogroup" aria-label="Message type" className="flex gap-0.5 rounded-lg bg-surface-2 p-0.5">
           <button type="button" role="radio" aria-checked={!internal} onClick={() => setInternal(false)} className={`rounded-md px-3 py-1 transition-colors ${!internal ? "bg-surface font-medium shadow-sm" : "text-muted hover:text-ink"}`}>Reply</button>

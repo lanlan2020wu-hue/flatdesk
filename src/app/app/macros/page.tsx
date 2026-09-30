@@ -2,10 +2,12 @@ import { asc, eq } from "drizzle-orm";
 import { after } from "next/server";
 import { db, schema } from "@/db";
 import { SuggestionsSection } from "@/components/MacroSuggestion";
+import MacroUpdates from "@/components/MacroUpdates";
 import { requireSession } from "@/lib/auth";
 import { aiConfigured } from "@/lib/ai";
+import { macroUpdates } from "@/lib/macro-drift";
 import { macroSuggestions } from "@/lib/macro-suggestions";
-import { withAiDrafts, writeMissingDrafts } from "@/lib/macro-writer";
+import { withAiDrafts, withUpdateDrafts, writeMacroUpdates, writeMissingDrafts } from "@/lib/macro-writer";
 import { listAgents } from "@/lib/tickets";
 import { deleteMacroAction, deleteRuleAction, saveMacroAction, saveRuleAction, toggleRuleAction } from "../actions";
 
@@ -16,16 +18,20 @@ const SOURCE_NAME: Record<string, string> = { zendesk: "Zendesk", intercom: "Int
 
 export default async function MacrosPage() {
   const s = await requireSession();
-  const [macros, rules, agents, imported, found] = await Promise.all([
+  const [macros, rules, agents, imported, found, drifted] = await Promise.all([
     db.select().from(schema.macros).where(eq(schema.macros.orgId, s.orgId)).orderBy(asc(schema.macros.name)),
     db.select().from(schema.rules).where(eq(schema.rules.orgId, s.orgId)).orderBy(asc(schema.rules.createdAt)),
     listAgents(s.orgId),
     db.select().from(schema.importedRules).where(eq(schema.importedRules.orgId, s.orgId)).orderBy(asc(schema.importedRules.name)),
     macroSuggestions(s.orgId),
+    macroUpdates(s.orgId),
   ]);
   // The AI writes up the repeats it hasn't written yet, after this page is sent.
   const { suggestions, missing } = await withAiDrafts(s.orgId, found);
   if (missing.length) after(() => writeMissingDrafts(s.orgId, missing));
+  // Macros the team keeps editing the same way, rewritten by the AI.
+  const { updates, missing: unwritten } = await withUpdateDrafts(s.orgId, drifted);
+  if (unwritten.length) after(() => writeMacroUpdates(s.orgId, unwritten));
   // Imported rules that aren't running as a Flatdesk rule: shown for reference.
   const reference = imported.filter((r) => !r.flatdeskRuleId);
   const agentName = (id: string) => agents.find((a) => a.userId === id)?.name ?? "Removed agent";
@@ -36,9 +42,11 @@ export default async function MacrosPage() {
         <div className="grid gap-1">
           <h1 className="font-display text-3xl">AI macros</h1>
           <p className="text-sm text-muted">
-            Flatdesk identifies the answers your team keeps retyping and the AI writes them up as macros. On a new ticket, the macro that answers it is offered in the reply box. A macro can also add tags and set the status.
+            Flatdesk identifies the answers your team keeps retyping and the AI writes them up as macros. On a new ticket, the macro that answers it is offered in the reply box. When your team keeps editing a macro the same way before sending it, the AI updates the macro for you.
           </p>
         </div>
+
+        <MacroUpdates updates={updates} aiOn={aiConfigured()} />
 
         <SuggestionsSection suggestions={suggestions} aiOn={aiConfigured()} />
 
