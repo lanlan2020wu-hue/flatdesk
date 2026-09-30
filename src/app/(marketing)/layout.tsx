@@ -41,7 +41,6 @@ export default function MarketingLayout({ children }: LayoutProps<"/">) {
             </Link>
             <Link href="/sign-up" className="btn btn-primary btn-sm">
               Start free trial
-              <span aria-hidden="true" className="arrow">→</span>
             </Link>
           </div>
         </nav>

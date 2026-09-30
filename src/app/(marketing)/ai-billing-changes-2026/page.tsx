@@ -90,8 +90,8 @@ export default function ChangesPage() {
   return (
     <article className="mx-auto grid max-w-3xl gap-16 px-4 pt-14 sm:px-6 sm:pt-20">
       <header className="enter grid gap-4">
-        <p className="eyebrow">Last checked {CHECKED_ON}</p>
         <h1 className="font-display text-4xl sm:text-5xl">What changed in AI support billing in 2026</h1>
+        <p className="text-sm text-muted">Last checked {CHECKED_ON}</p>
         <p className="text-lg text-muted">
           Zendesk and Fin both charge for each conversation their AI resolves. Here is what changed in the last year, with a source for every
           line, and what to check on your own account.

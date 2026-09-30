@@ -27,12 +27,11 @@ export default function PricingPage() {
   return (
     <div className="mx-auto grid max-w-5xl gap-16 px-4 pt-14 sm:px-6 sm:pt-20">
       <div className="enter grid max-w-2xl gap-3">
-        <p className="eyebrow">Pricing</p>
         <h1 className="font-display text-4xl sm:text-5xl">One plan. Every price is on this page.</h1>
         <p className="text-lg text-muted">No tiers, no add-ons and no sales call.</p>
       </div>
 
-      <section style={{ "--d": 2 } as React.CSSProperties} className="enter card grid overflow-hidden shadow-lg md:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+      <section style={{ "--d": 2 } as React.CSSProperties} className="enter card grid overflow-hidden md:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         <div className="grid content-start gap-6 p-6 sm:p-8">
           <div className="grid gap-1">
             <p className="font-medium text-accent">Flatdesk</p>
@@ -45,16 +44,16 @@ export default function PricingPage() {
               ({usd((PLAN.seatPrice - PLAN.annualSeatPrice) * 12)} per agent a year).
             </p>
           </div>
-          <dl className="grid gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-3">
-            <div className="grid gap-1 bg-surface p-4">
+          <dl className="grid gap-px border-y border-line bg-line sm:grid-cols-3">
+            <div className="grid gap-1 bg-surface py-4 sm:pr-4">
               <dt className="text-sm text-muted">AI resolutions included</dt>
               <dd className="num">{PLAN.includedPerAgent} per agent</dd>
             </div>
-            <div className="grid gap-1 bg-surface p-4">
+            <div className="grid gap-1 bg-surface py-4 sm:px-4">
               <dt className="text-sm text-muted">When you reach them</dt>
               <dd>AI pauses</dd>
             </div>
-            <div className="grid gap-1 bg-surface p-4">
+            <div className="grid gap-1 bg-surface py-4 sm:pl-4">
               <dt className="text-sm text-muted">Optional overage</dt>
               <dd className="num">{usd(PLAN.overageRate, true)} each</dd>
             </div>

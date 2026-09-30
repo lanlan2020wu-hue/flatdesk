@@ -84,7 +84,7 @@ export default function Calculator({ initialTool, initialAgents, initialResoluti
 
   const field = "field num";
   const barMax = Math.max(today.total, ours.withOverage, 1);
-  const bar = (n: number) => `${Math.max(2, (n / barMax) * 100)}%`;
+  const bar = (n: number) => `scaleX(${Math.max(0.02, n / barMax)})`;
 
   return (
     <div data-play="" style={{ "--d": 2 } as React.CSSProperties} className="enter grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
@@ -161,11 +161,11 @@ export default function Calculator({ initialTool, initialAgents, initialResoluti
         <div className="card grid gap-3 p-5 sm:p-6" aria-hidden="true">
           <div className="grid gap-1.5">
             <div className="flex justify-between text-sm"><span className="text-muted">{tool.vendor}</span><span className="num">{usd(today.total)}</span></div>
-            <div className="h-3 overflow-hidden rounded-full bg-surface-2"><div className="meter h-full rounded-full bg-chart-other transition-[width] duration-300" style={{ width: bar(today.total) }} /></div>
+            <div className="h-3 overflow-hidden rounded-full bg-surface-2"><div className="meter h-full w-full origin-left bg-chart-other transition-transform duration-300" style={{ transform: bar(today.total) }} /></div>
           </div>
           <div className="grid gap-1.5">
             <div className="flex justify-between text-sm"><span className="text-muted">Flatdesk</span><span className="num">{usd(ours.capped)}</span></div>
-            <div className="h-3 overflow-hidden rounded-full bg-surface-2"><div className="meter h-full rounded-full bg-accent transition-[width] duration-300" style={{ width: bar(ours.capped) }} /></div>
+            <div className="h-3 overflow-hidden rounded-full bg-surface-2"><div className="meter h-full w-full origin-left bg-accent transition-transform duration-300" style={{ transform: bar(ours.capped) }} /></div>
           </div>
         </div>
 
@@ -195,7 +195,7 @@ export default function Calculator({ initialTool, initialAgents, initialResoluti
           </button>
         </div>
 
-        <p className="text-xs text-muted">
+        <p className="max-w-[80ch] text-xs text-muted">
           Estimates use list prices and your inputs. Taxes, add-ons such as Zendesk Copilot, and negotiated discounts are not included. Sources:{" "}
           {tool.sources.map((s, i) => (
             <span key={s.url}>{i > 0 && " · "}<a className="link" href={s.url} target="_blank" rel="noreferrer">{s.label}</a></span>

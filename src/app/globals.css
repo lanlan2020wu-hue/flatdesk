@@ -1,14 +1,15 @@
 @import "tailwindcss";
 
-/* Warm "paper and ink" palette: a ledger feel for a product about predictable bills. */
+/* Ledger paper and bank-note green: the pale green of an accountant's ruled
+   book, for a product about predictable bills. */
 :root {
-  --bg: #f6f4ef;
-  --surface: #fffdf9;
-  --surface-2: #f0ede5;
+  --bg: #edf1ea;
+  --surface: #fbfcf9;
+  --surface-2: #e3e9df;
   --ink: #14201b;
-  --muted: #5b6660;
-  --line: #e3ded3;
-  --line-strong: #cfc8b9;
+  --muted: #52615a;
+  --line: #d5ddd1;
+  --line-strong: #b9c6b6;
   --accent: #17624b;
   --accent-hover: #0f4f3c;
   --accent-ink: #ffffff;
@@ -19,7 +20,9 @@
   --chart-other: #a8a193;
   --shadow-sm: 0 1px 2px rgb(20 32 27 / 0.05), 0 1px 1px rgb(20 32 27 / 0.03);
   --shadow-md: 0 1px 2px rgb(20 32 27 / 0.04), 0 6px 16px -4px rgb(20 32 27 / 0.08);
-  --shadow-lg: 0 2px 4px rgb(20 32 27 / 0.04), 0 24px 48px -16px rgb(20 32 27 / 0.18);
+  --shadow-lg: 0 2px 4px rgb(20 32 27 / 0.05), 0 14px 24px -12px rgb(20 32 27 / 0.2);
+  /* The counter the hero bill prints onto. */
+  --counter: #17624b;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -41,7 +44,8 @@
     --chart-other: #6c7a73;
     --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
     --shadow-md: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 20px -6px rgb(0 0 0 / 0.45);
-    --shadow-lg: 0 2px 4px rgb(0 0 0 / 0.3), 0 28px 56px -16px rgb(0 0 0 / 0.6);
+    --shadow-lg: 0 2px 4px rgb(0 0 0 / 0.3), 0 14px 24px -12px rgb(0 0 0 / 0.6);
+    --counter: #123a2e;
     color-scheme: dark;
   }
 }
@@ -105,11 +109,10 @@ p {
     letter-spacing: -0.015em;
   }
 
+  /* A small label for a group of things: set in the body face, sentence case. */
   .eyebrow {
-    font-family: var(--font-mono);
-    font-size: 0.72rem;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
+    font-size: 0.8125rem;
+    font-weight: 500;
     color: var(--muted);
   }
 
@@ -274,13 +277,6 @@ p {
     border-top: 1px dashed var(--line-strong);
   }
 
-  /* Soft dotted backdrop for hero areas. */
-  .dots {
-    background-image: radial-gradient(color-mix(in srgb, var(--ink) 11%, transparent) 1px, transparent 1px);
-    background-size: 22px 22px;
-    mask-image: radial-gradient(ellipse 70% 60% at 60% 30%, #000 20%, transparent 75%);
-  }
-
   .nav-link {
     display: flex;
     align-items: center;
@@ -303,51 +299,12 @@ p {
     font-weight: 500;
   }
 
-  /* Hero ribbon: a diagonal band of brand color behind the hero, in the spirit
-     of a printed banknote's guilloche. Fades out toward the text column. */
-  .ribbon {
-    position: absolute;
-    inset: 0;
-    clip-path: polygon(0 0, 100% 0, 100% 52%, 0 96%);
-    background:
-      radial-gradient(45% 70% at 88% 18%, #0d4f3b 0%, transparent 70%),
-      radial-gradient(40% 65% at 58% 30%, #eaf7a0 0%, transparent 68%),
-      radial-gradient(42% 70% at 78% 82%, #f6ad5f 0%, transparent 70%),
-      radial-gradient(38% 60% at 36% 70%, #86e0c0 0%, transparent 70%),
-      radial-gradient(30% 50% at 100% 70%, #e9785d 0%, transparent 70%),
-      linear-gradient(100deg, #45c29c, #1e8a6b);
-    background-size: 125% 125%;
-    background-position: 0% 50%;
-    mask-image: linear-gradient(100deg, transparent 38%, #000 64%);
-    opacity: 0.95;
-  }
-  .ribbon::after {
-    /* Fine diagonal lines, like engraving, so the color reads as material not a blur. */
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: repeating-linear-gradient(115deg, rgb(255 255 255 / 0.13) 0 1px, transparent 1px 9px);
-    mix-blend-mode: overlay;
-  }
-  @media (prefers-color-scheme: dark) {
-    .ribbon {
-      opacity: 0.55;
-    }
-  }
-  /* On narrow screens the text spans the full width, so the band sits lower, behind the receipt. */
-  @media (max-width: 1023px) {
-    .ribbon {
-      clip-path: polygon(0 58%, 100% 44%, 100% 82%, 0 96%);
-      mask-image: none;
-    }
-  }
-
   /* A UI mock: the app's own chrome, drawn smaller, for the feature tour. */
   .shot {
     border-radius: 0.875rem;
     border: 1px solid var(--line);
     background: var(--surface);
-    box-shadow: var(--shadow-lg);
+    box-shadow: var(--shadow-md);
     overflow: hidden;
     font-size: 13px;
   }
@@ -358,21 +315,6 @@ p {
     border-bottom: 1px solid var(--line);
     background: var(--surface-2);
     padding: 0.55rem 0.75rem;
-  }
-  .shot-bar > i {
-    width: 0.55rem;
-    height: 0.55rem;
-    border-radius: 999px;
-    background: var(--line-strong);
-  }
-
-  /* A soft hairline grid, like the page rules on Stripe's site. */
-  .gridlines {
-    background-image:
-      linear-gradient(to right, var(--line) 1px, transparent 1px);
-    background-size: calc(100% / 4) 100%;
-    mask-image: linear-gradient(to bottom, transparent, #000 15%, #000 85%, transparent);
-    opacity: 0.6;
   }
 
   details > summary {
@@ -523,10 +465,6 @@ p {
     opacity: 0;
     transform: scale(0.4);
   }
-  70% {
-    opacity: 1;
-    transform: scale(1.02);
-  }
   100% {
     opacity: 1;
     transform: scale(1);
@@ -538,25 +476,19 @@ p {
     opacity: 1;
   }
 }
-@keyframes bounce-dot {
+@keyframes breathe {
   0%,
-  60%,
   100% {
-    transform: none;
+    opacity: 0.35;
   }
-  30% {
-    transform: translateY(-3px);
+  50% {
+    opacity: 1;
   }
 }
 @keyframes twinkle {
-  0% {
+  from {
+    opacity: 0;
     transform: scale(0.4) rotate(-90deg);
-  }
-  60% {
-    transform: scale(1.3) rotate(10deg);
-  }
-  100% {
-    transform: none;
   }
 }
 @keyframes pulse-ring {
@@ -659,10 +591,6 @@ p {
     animation: marker 700ms cubic-bezier(0.6, 0, 0.3, 1) 900ms backwards;
   }
 
-  /* The ribbon used to drift by animating background-position on six
-     gradients, which repainted the hero every frame (1.5 s of blocking time on
-     a mid-range phone). It stays still now, like the rest of the page between plays. */
-
   /* The hero bill feeds out of a printer slot in steps, like a till roll, then
      the "Flat" stamp lands on it and the paper takes the knock. On phones the
      bill sits below the fold, so it waits until it's scrolled to. */
@@ -681,27 +609,16 @@ p {
     animation: ink-ring 700ms ease-out 1850ms;
   }
 
-  /* Cards press like a stamp on hover instead of floating up. */
+  /* Linked cards take the accent on their edge and their link line on hover;
+     they don't move. */
   .lift {
-    transition:
-      transform 160ms ease,
-      box-shadow 160ms ease,
-      border-color 160ms ease;
+    transition: border-color 160ms ease;
   }
   .lift:hover {
-    border-color: color-mix(in srgb, var(--accent) 45%, var(--line));
-    box-shadow: 4px 4px 0 var(--accent-soft);
-    transform: translate(-2px, -2px);
+    border-color: color-mix(in srgb, var(--accent) 55%, var(--line));
   }
-  .lift:active {
-    box-shadow: 1px 1px 0 var(--accent-soft);
-    transform: translate(0, 0);
-  }
-  .btn .arrow {
-    transition: transform 180ms ease;
-  }
-  .btn:hover .arrow {
-    transform: translateX(3px);
+  .lift:hover .lift-link {
+    text-decoration-color: currentColor;
   }
 
   /* ----- Blocks that play once on scroll ----- */
@@ -729,7 +646,7 @@ p {
   /* AI macro: the sparkle catches, then the reply writes itself word
      by word, and the save button pulses once it's finished. */
   [data-play] .sparkle {
-    animation: twinkle 600ms cubic-bezier(0.3, 1.4, 0.5, 1) 200ms backwards;
+    animation: twinkle 600ms cubic-bezier(0.16, 1, 0.3, 1) 200ms backwards;
   }
   [data-play] .word {
     animation: appear 160ms ease-out calc(600ms + var(--w, 0) * 70ms) backwards;
@@ -757,7 +674,7 @@ p {
     inset: 0;
     width: 40%;
     background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.55), transparent);
-    animation: shimmer 1600ms ease-in-out 2200ms infinite backwards;
+    animation: shimmer 1600ms ease-in-out 2200ms 2 backwards;
   }
 
   /* Inbox: tickets land one at a time, newest on top, each with a brief flash. */
@@ -776,12 +693,12 @@ p {
     animation: typing 900ms linear 500ms;
   }
   [data-play] .typing i {
-    animation: bounce-dot 450ms ease-in-out calc(500ms + var(--j, 0) * 120ms) 2;
+    animation: breathe 450ms ease-in-out calc(500ms + var(--j, 0) * 120ms) 2;
   }
 
   /* Chat widget: the launcher pops, then the window opens out of it. */
   [data-play] .launcher {
-    animation: pop 380ms cubic-bezier(0.3, 1.5, 0.5, 1) 150ms backwards;
+    animation: pop 380ms cubic-bezier(0.16, 1, 0.3, 1) 150ms backwards;
   }
   [data-play] .widget {
     transform-origin: bottom right;

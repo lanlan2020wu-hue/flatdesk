@@ -60,7 +60,7 @@ export default async function RivalPage({ params }: PageProps<"/compare/[slug]">
         ]}
       />
       <div className="grid max-w-3xl gap-4">
-        <p className="enter eyebrow flex items-center gap-2">
+        <p className="enter flex items-center gap-2 text-sm text-muted">
           <Link href="/compare" className="transition-colors hover:text-ink">Compare</Link>
           <span aria-hidden="true">/</span>
           {r.title}
@@ -80,7 +80,7 @@ export default async function RivalPage({ params }: PageProps<"/compare/[slug]">
         <List title={`Where ${r.name} is stronger`} items={r.theyWin} tone="muted" />
       </section>
 
-      <section data-play="" className="card grid gap-3 bg-surface-2/60 p-6 sm:p-8">
+      <section data-play="" className="card grid gap-3 bg-surface-2/60 p-6 sm:p-8 [&>p]:max-w-[70ch]">
         <h2 className="ink font-display text-2xl">Which should you pick?</h2>
         <p><span className="font-medium">Pick {r.name} if</span> {r.pickThem.charAt(0).toLowerCase() + r.pickThem.slice(1)}</p>
         <p>
@@ -90,7 +90,6 @@ export default async function RivalPage({ params }: PageProps<"/compare/[slug]">
         <div className="mt-2 flex flex-wrap gap-3">
           <Link href="/sign-up" className="btn btn-primary">
             Start your free trial
-            <span aria-hidden="true" className="arrow">→</span>
           </Link>
           {r.canImport && <Link href="/features/lossless-import" className="btn btn-secondary">How the import works</Link>}
         </div>

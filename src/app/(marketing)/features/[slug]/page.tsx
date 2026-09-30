@@ -49,24 +49,22 @@ export default async function SellingPointPage({ params }: PageProps<"/features/
       />
       <section className="grid items-center gap-10 lg:grid-cols-2 lg:gap-16">
         <div className="grid content-start gap-5">
-          <p className="enter eyebrow flex items-center gap-2">
+          <p className="enter flex items-center gap-2 text-sm text-muted">
             <Link href="/features" className="transition-colors hover:text-ink">Product</Link>
             <span aria-hidden="true">/</span>
             {p.name}
-            {p.isNew && <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] tracking-[0.12em] text-accent-ink">New</span>}
+            {p.isNew && <span className="text-xs font-medium text-accent">New</span>}
           </p>
           <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-4xl leading-[1.08] sm:text-5xl">{p.headline}</h1>
           <p style={{ "--d": 2 } as React.CSSProperties} className="enter text-lg text-muted">{p.answer}</p>
           <div style={{ "--d": 3 } as React.CSSProperties} className="enter flex flex-wrap gap-3">
             <Link href="/sign-up" className="btn btn-primary">
               Start your free trial
-              <span aria-hidden="true" className="arrow">→</span>
             </Link>
             <Link href="/pricing" className="btn btn-secondary">See pricing</Link>
           </div>
         </div>
-        <div data-play="" className="relative">
-          <div className="pointer-events-none absolute -inset-6 -z-10 rounded-[2rem] bg-accent-soft/70" aria-hidden="true" />
+        <div data-play="">
           {SHOTS[p.slug]}
         </div>
       </section>
@@ -112,16 +110,14 @@ export default async function SellingPointPage({ params }: PageProps<"/features/
       <Faq items={p.faq} />
 
       <section data-play="" aria-labelledby="more" className="grid gap-6">
-        <h2 id="more" className="ink eyebrow w-max">More reasons teams switch</h2>
+        <h2 id="more" className="ink font-display text-2xl">More reasons teams switch</h2>
         <div className="grid gap-4 md:grid-cols-3">
           {others.map((o, i) => (
             <Link key={o.slug} href={`/features/${o.slug}`} style={{ "--i": i } as React.CSSProperties} className="lift card group flex flex-col gap-3 p-6">
               <FeatureIcon d={o.icon} />
               <span className="text-lg font-medium">{o.name}</span>
               <span className="text-muted">{o.short}</span>
-              <span className="mt-auto text-sm font-medium text-accent">
-                How it works <span aria-hidden="true" className="arrow inline-block transition-transform group-hover:translate-x-0.5">→</span>
-              </span>
+              <span className="lift-link link mt-auto w-max text-sm font-medium text-accent">How it works</span>
             </Link>
           ))}
         </div>

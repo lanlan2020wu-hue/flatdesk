@@ -26,13 +26,11 @@ function PointCard({ p, big = false }: { p: (typeof SELLING_POINTS)[number]; big
     <Link href={`/features/${p.slug}`} className={`lift card group grid content-start gap-3 ${big ? "border-accent/40 bg-accent-soft/40 p-6 sm:p-10" : "p-6 sm:p-8"}`}>
       <span className="flex items-center justify-between">
         <FeatureIcon d={p.icon} className={big ? "size-11 bg-accent-soft p-2.5" : undefined} />
-        {p.isNew && <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-medium tracking-[0.12em] text-accent-ink uppercase">New</span>}
+        {p.isNew && <span className="text-xs font-medium text-accent">New</span>}
       </span>
       <h3 className={`font-display ${big ? "text-3xl sm:text-4xl" : "text-2xl"}`}>{big ? p.headline : p.name}</h3>
-      <p className={`text-muted ${big ? "max-w-3xl text-lg" : ""}`}>{big ? p.answer : p.short}</p>
-      <span className="text-sm font-medium text-accent">
-        How it works <span aria-hidden="true" className="arrow inline-block transition-transform group-hover:translate-x-0.5">→</span>
-      </span>
+      <p className={`text-muted ${big ? "max-w-[65ch] text-lg" : ""}`}>{big ? p.answer : p.short}</p>
+      <span className="lift-link link w-max text-sm font-medium text-accent">How it works</span>
     </Link>
   );
 }
@@ -42,7 +40,6 @@ export default function FeaturesPage() {
     <div className="mx-auto grid max-w-6xl gap-20 px-4 pt-14 sm:px-6 sm:pt-20">
       <JsonLd data={[software(), breadcrumbs([{ name: "Product", path: "/features" }])]} />
       <div className="grid max-w-2xl gap-3">
-        <p className="enter eyebrow">Product</p>
         <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-4xl sm:text-5xl">A flat rate first. AI macros second. Everything else included.</h1>
         <p style={{ "--d": 2 } as React.CSSProperties} className="enter text-lg text-muted">
           Flatdesk is a help desk for email and chat. Every seat gets every feature below, for one price per agent.
@@ -51,10 +48,7 @@ export default function FeaturesPage() {
 
       {CHAPTERS.map((c) => (
         <section key={c.n} data-play="" aria-labelledby={`ch-${c.n}`} className="grid gap-6">
-          <h2 id={`ch-${c.n}`} className="eyebrow flex items-center gap-3">
-            <span className="num font-display text-3xl text-accent">{c.n}</span>
-            {c.title}
-          </h2>
+          <h2 id={`ch-${c.n}`} className="font-display text-2xl">{c.title}</h2>
           {c.lead && <PointCard p={c.lead} big />}
           {c.more.length > 0 && (
             <div className={`grid gap-4 ${c.more.length > 2 ? "sm:grid-cols-2 lg:grid-cols-3" : c.more.length > 1 ? "sm:grid-cols-2" : ""}`}>
@@ -71,7 +65,7 @@ export default function FeaturesPage() {
         <div className="grid gap-x-10 gap-y-10 md:grid-cols-2 lg:grid-cols-3">
           {FEATURE_GROUPS.map((g) => (
             <div key={g.id} className="grid content-start gap-4">
-              <h3 className="eyebrow border-b border-line pb-2">{g.title}</h3>
+              <h3 className="border-b border-line pb-2 font-medium">{g.title}</h3>
               <ul className="grid gap-4">
                 {g.features.map((f, i) => (
                   <li key={f.id} style={{ "--i": i } as React.CSSProperties} className="flex gap-3">
@@ -79,7 +73,7 @@ export default function FeaturesPage() {
                     <span className="grid gap-0.5">
                       <span className="flex items-center gap-2 font-medium">
                         {f.title}
-                        {f.isNew && <span className="rounded-full bg-accent px-1.5 py-px text-[10px] font-medium text-accent-ink">New</span>}
+                        {f.isNew && <span className="text-xs font-medium text-accent">New</span>}
                       </span>
                       <span className="text-sm text-muted">{f.body}</span>
                     </span>
