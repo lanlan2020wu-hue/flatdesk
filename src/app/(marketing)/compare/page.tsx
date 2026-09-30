@@ -17,7 +17,6 @@ export default function ComparePage() {
     <div className="mx-auto grid max-w-6xl gap-16 px-4 pt-14 sm:px-6 sm:pt-20">
       <JsonLd data={[breadcrumbs([{ name: "Compare", path: "/compare" }])]} />
       <div className="grid max-w-2xl gap-3">
-        <p className="enter eyebrow">Compare</p>
         <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-4xl sm:text-5xl">How Flatdesk compares, including where it doesn&apos;t win.</h1>
         <p style={{ "--d": 2 } as React.CSSProperties} className="enter text-lg text-muted">
           Flatdesk isn&apos;t the cheapest seat. It&apos;s the help desk whose AI bill can&apos;t surprise you: AI resolutions come with every seat and
@@ -30,9 +29,7 @@ export default function ComparePage() {
           <Link key={r.slug} href={`/compare/${r.slug}`} style={{ "--i": i } as React.CSSProperties} className="lift card group grid content-start gap-2 p-6">
             <h2 className="font-display text-2xl">Flatdesk vs {r.title}</h2>
             <p className="text-sm text-muted">{r.pickThem.replace(/^You/, "Pick them if you")}</p>
-            <span className="mt-2 text-sm font-medium text-accent">
-              Read the comparison <span aria-hidden="true" className="arrow inline-block transition-transform group-hover:translate-x-0.5">→</span>
-            </span>
+            <span className="lift-link link mt-2 w-max text-sm font-medium text-accent">Read the comparison</span>
           </Link>
         ))}
       </section>

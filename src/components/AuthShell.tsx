@@ -9,9 +9,6 @@ export default function AuthShell({ title, children }: { title: string; children
   return (
     <div className="grid min-h-screen flex-1 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)]">
       <section className="relative isolate order-2 overflow-hidden border-t border-line bg-surface-2/60 px-6 py-12 sm:px-10 lg:order-1 lg:border-t-0 lg:border-r lg:px-14 lg:py-14">
-        <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden opacity-40" aria-hidden="true">
-          <div className="ribbon" />
-        </div>
         <div className="grid max-w-2xl gap-10">
           <div className="hidden lg:block">
             <Logo />
@@ -31,7 +28,7 @@ export default function AuthShell({ title, children }: { title: string; children
                     <li key={f.id} className="flex items-center gap-2.5 text-sm" title={f.body}>
                       <FeatureIcon d={f.icon} className="size-7 bg-surface p-[5px] shadow-sm ring-1 ring-line" />
                       <span>{f.title}</span>
-                      {f.isNew && <span className="rounded-full bg-accent px-1.5 py-px text-[10px] font-medium text-accent-ink">New</span>}
+                      {f.isNew && <span className="text-xs font-medium text-accent">New</span>}
                     </li>
                   ))}
                 </ul>

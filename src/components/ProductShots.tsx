@@ -14,10 +14,7 @@ export function FeatureIcon({ d, className = "size-9 p-2 bg-accent-soft" }: { d:
 function Bar({ title }: { title: string }) {
   return (
     <div className="shot-bar">
-      <i />
-      <i />
-      <i />
-      <span className="ml-2 text-xs text-muted">{title}</span>
+      <span className="text-xs text-muted">{title}</span>
     </div>
   );
 }
@@ -122,18 +119,18 @@ export function MacroUpdateShot() {
         </span>
         <div className="grid gap-2 rounded-lg border border-line p-2.5 text-[12px]">
           <span style={{ "--i": 0 } as React.CSSProperties} className="ln flex gap-2">
-            <span className="num w-20 shrink-0 whitespace-nowrap text-[10px] text-accent">Reworded 4×</span>
+            <span className="num w-20 shrink-0 whitespace-nowrap text-[11px] text-accent">Reworded 4×</span>
             <span className="grid">
               <span className="text-muted line-through">Refunds reach your card within 5 business days.</span>
               <span>Refunds reach your card within 7 business days.</span>
             </span>
           </span>
           <span style={{ "--i": 1 } as React.CSSProperties} className="ln flex gap-2">
-            <span className="num w-20 shrink-0 whitespace-nowrap text-[10px] text-accent">Added 4×</span>
+            <span className="num w-20 shrink-0 whitespace-nowrap text-[11px] text-accent">Added 4×</span>
             <span>Your bank may take 2 more days to show it.</span>
           </span>
           <span style={{ "--i": 2 } as React.CSSProperties} className="ln flex gap-2">
-            <span className="num w-20 shrink-0 whitespace-nowrap text-[10px] text-warn">Deleted 5×</span>
+            <span className="num w-20 shrink-0 whitespace-nowrap text-[11px] text-warn">Deleted 5×</span>
             <span className="text-muted line-through">Refunds over $500 need a manager.</span>
           </span>
         </div>
@@ -226,7 +223,7 @@ export function ReceiptShot() {
               <span className="truncate">
                 <span className="num text-muted">{n}</span> <span className="font-medium">{subject}</span>
               </span>
-              <span className={`${tone} shrink-0 text-[10px]`}>{status}</span>
+              <span className={`${tone} shrink-0 text-[11px]`}>{status}</span>
             </span>
             {n === "#1042" && (
               <span className="flex items-center justify-between text-[11px] text-muted">
@@ -258,7 +255,7 @@ export function ReportShot() {
             ["Answered by AI", "41%"],
           ].map(([l, v]) => (
             <span key={l} className="grid rounded-lg border border-line px-2 py-1.5">
-              <span className="text-[10px] text-muted">{l}</span>
+              <span className="text-[11px] text-muted">{l}</span>
               <span className="num font-display text-lg">{v}</span>
             </span>
           ))}
