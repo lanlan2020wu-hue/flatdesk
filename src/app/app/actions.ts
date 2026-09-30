@@ -8,6 +8,7 @@ import { db, schema } from "@/db";
 import { requireAdmin, requireEditor } from "@/lib/auth";
 import { filesFromForm, saveAttachments } from "@/lib/attachments";
 import { checkWebhookUrl, sendTestAlert } from "@/lib/alerts";
+import { handBackToTeam } from "@/lib/ai";
 import { access, checkoutUrl, portalUrl, switchToAnnual, syncSeats } from "@/lib/billing";
 import { CopilotError, draftReply, rewriteText, summarizeTicket, type TicketSummary } from "@/lib/copilot";
 import type { RewriteStyle } from "@/lib/copilot-config";
@@ -60,7 +61,7 @@ export async function replyAction(form: FormData) {
   const assignee = assignTo
     ? await db.query.agents.findFirst({ where: and(eq(schema.agents.orgId, s.orgId), eq(schema.agents.userId, assignTo), eq(schema.agents.viewer, false)) })
     : null;
-  const { messageId } = await addReply({
+  const { messageId, ticket } = await addReply({
     orgId: s.orgId,
     ticketId,
     userId: s.userId,
@@ -73,6 +74,11 @@ export async function replyAction(form: FormData) {
   });
   if (messageId && files.length) await saveAttachments(s.orgId, ticketId, messageId, files);
   if (messageId) await deliverReply(s.orgId, messageId);
+  // A person on the team answered, so the AI didn't finish this conversation
+  // alone: it stops counting (and isn't billed as overage). No alert, since the team is already on it.
+  if (messageId && form.get("internal") !== "on" && ticket.resolvedByAi) {
+    await handBackToTeam(s.orgId, ticketId, "A person on the team replied.", false);
+  }
   // Which macros this reply started from, so Flatdesk can see how the team edits them.
   if (messageId && form.get("internal") !== "on") await recordMacroUses(s.orgId, messageId, str(form, "macroIds").split(",").filter(Boolean));
   revalidatePath(`/app/tickets/${number}`);

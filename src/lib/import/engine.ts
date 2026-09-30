@@ -111,6 +111,17 @@ export async function cancelImport(orgId: string, id: string) {
     .where(and(eq(imports.orgId, orgId), eq(imports.id, id), eq(imports.status, "running")));
 }
 
+// Imports only run while their page is open. One left idle for a week is
+// cancelled, so its sealed API token doesn't sit in the database. The daily job calls this.
+export async function expireIdleImports(days = 7) {
+  const rows = await db
+    .update(imports)
+    .set({ status: "cancelled", credentials: null, finishedAt: new Date(), updatedAt: new Date() })
+    .where(and(eq(imports.status, "running"), lt(imports.updatedAt, new Date(Date.now() - days * 86_400_000))))
+    .returning({ id: imports.id });
+  return rows.length;
+}
+
 // Runs one step. Returns the job as it stands afterwards.
 export async function runStep(orgId: string, id: string, opts: { budgetMs?: number; fetchImpl?: FetchLike } = {}): Promise<Job | undefined> {
   const budget = opts.budgetMs ?? STEP_BUDGET_MS;

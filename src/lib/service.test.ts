@@ -5,6 +5,8 @@ import type { AddressInfo } from "node:net";
 import { after, before, test } from "node:test";
 import { eq } from "drizzle-orm";
 
+process.env.ALERTS_ALLOW_PRIVATE = "1"; // the fake webhook listens on 127.0.0.1
+
 process.env.INBOUND_DOMAIN = "in.flatdesk.test";
 
 const ORG = "org_test_service";
@@ -76,7 +78,10 @@ test("a ticket's place against the target", async () => {
 });
 
 test("webhook addresses must be public https; each tool gets its own format", async () => {
-  const { checkWebhookUrl, buildRequest, sign } = await import("./alerts");
+  const { checkWebhookUrl, buildRequest, sign, isPrivateAddress } = await import("./alerts");
+  // A public name that resolves to one of these is refused at send time.
+  for (const ip of ["127.0.0.1", "10.1.2.3", "172.20.0.1", "192.168.1.1", "169.254.169.254", "100.64.0.1", "::1", "fd00::1", "fe80::1", "::ffff:127.0.0.1"]) assert.ok(isPrivateAddress(ip), ip);
+  for (const ip of ["8.8.8.8", "172.32.0.1", "2606:4700::1111"]) assert.ok(!isPrivateAddress(ip), ip);
   assert.ok("url" in checkWebhookUrl("https://hooks.slack.com/services/T/B/x"));
   for (const bad of ["http://hooks.slack.com/x", "https://127.0.0.1/x", "https://[::1]/x", "https://localhost/x", "https://metadata.internal/x", "https://intranet/x", "not a url"]) {
     assert.ok("error" in checkWebhookUrl(bad), bad);

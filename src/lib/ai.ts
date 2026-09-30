@@ -82,7 +82,7 @@ async function measure(q: Pick<typeof db, "select">, org: Org, month: string): P
   if (!trial) where.push(eq(aiEvents.month, month));
   const counted = sql`(${aiEvents.kind} = 'resolution' or (${aiEvents.kind} = 'draft' and ${aiEvents.createdAt} > now() - make_interval(mins => ${DRAFT_TTL_MINUTES})))`;
   const [[{ agentCount }], [{ used, overage, attempts, spent }]] = await Promise.all([
-    q.select({ agentCount: count() }).from(agents).where(eq(agents.orgId, org.id)),
+    q.select({ agentCount: count() }).from(agents).where(and(eq(agents.orgId, org.id), eq(agents.viewer, false))),
     q
       .select({
         used: sql<number>`count(*) filter (where ${counted})`,
@@ -461,7 +461,7 @@ export async function answerFollowUp(orgId: string, ticketId: string) {
 }
 
 // The ticket goes to the team and the AI's answer no longer counts as a resolution.
-export async function handBackToTeam(orgId: string, ticketId: string, why?: string) {
+export async function handBackToTeam(orgId: string, ticketId: string, why?: string, alert = true) {
   const [ticket] = await db
     .update(tickets)
     .set({ resolvedByAi: false })
@@ -477,7 +477,7 @@ export async function handBackToTeam(orgId: string, ticketId: string, why?: stri
     ticketId,
     why ? `${why} It doesn't count toward the AI allowance.` : "The customer replied to the AI answer, so this ticket is now with the team and doesn't count toward the AI allowance.",
   );
-  await alertHandedBack(orgId, ticketId, why ?? "The customer replied to the AI's answer.");
+  if (alert) await alertHandedBack(orgId, ticketId, why ?? "The customer replied to the AI's answer.");
 }
 
 // Emails admins once at 80% and once at 100% of the included allowance.

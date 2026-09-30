@@ -126,15 +126,22 @@ export async function deliverReply(orgId: string, messageId: string): Promise<vo
   }
 
   const rateable = row.org.csatEnabled && (row.message.authorType === "agent" || row.message.authorType === "ai");
-  const subject = /^re:/i.test(row.ticket.subject) ? row.ticket.subject : `Re: ${row.ticket.subject}`;
+  // A chat visitor types any email address and the first line becomes the
+  // subject, so chat emails get a fixed subject and say where they came from:
+  // the team's name can't be used to send someone else's words to a stranger.
+  const chat = row.ticket.channel === "chat";
+  const subject = chat
+    ? `Your chat with ${row.org.name}`
+    : /^re:/i.test(row.ticket.subject) ? row.ticket.subject : `Re: ${row.ticket.subject}`;
+  const chatNote = chat ? `\n\n--\nYou're getting this because someone started a chat with ${row.org.name} using this email address. If that wasn't you, you can ignore it.` : "";
   const { error } = await resend().emails.send({
     from: `${row.org.name} <${emailConfig.from}>`,
     to: row.customer.email,
     replyTo: replyToAddress(row.org.inboundKey, row.ticket.number) ?? undefined,
     subject,
     // Agent and AI replies end with one-click rating links unless the team turned them off.
-    text: rateable ? row.message.body + csatText(row.message.id) : row.message.body,
-    html: replyHtml(row.message.body, rateable ? row.message.id : null),
+    text: (rateable ? row.message.body + csatText(row.message.id) : row.message.body) + chatNote,
+    html: replyHtml(row.message.body + chatNote, rateable ? row.message.id : null),
     headers,
     attachments: await emailAttachments(row.message.id),
   });

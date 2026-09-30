@@ -82,6 +82,9 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
           <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
             <span className="num">#{ticket.number}</span>
             <span className="chip capitalize">{ticket.channel}</span>
+            {ticket.channel === "chat" && (
+              <span className="chip" title="Chat visitors type their own email address; nothing checks it belongs to them.">Email not verified</span>
+            )}
             <span className={`capitalize ${STATUS_STYLE[ticket.status]}`}>{ticket.status}</span>
             <SlaBadge state={sla} hours={org?.businessHours ?? null} />
             <span>· {customer.name || customer.email}</span>

@@ -5,6 +5,7 @@ import { SuggestionsSection } from "@/components/MacroSuggestion";
 import MacroUpdates from "@/components/MacroUpdates";
 import { requireSession } from "@/lib/auth";
 import { aiConfigured } from "@/lib/ai";
+import { access } from "@/lib/billing";
 import { macroUpdates } from "@/lib/macro-drift";
 import { macroSuggestions } from "@/lib/macro-suggestions";
 import { withAiDrafts, withUpdateDrafts, writeMacroUpdates, writeMissingDrafts } from "@/lib/macro-writer";
@@ -26,12 +27,15 @@ export default async function MacrosPage() {
     macroSuggestions(s.orgId),
     macroUpdates(s.orgId),
   ]);
+  // Behind the paywall the page still renders, so it must not start paid AI calls.
+  const org = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) });
+  const open = !org || access(org).state !== "locked";
   // The AI writes up the repeats it hasn't written yet, after this page is sent.
   const { suggestions, missing } = await withAiDrafts(s.orgId, found);
-  if (missing.length) after(() => writeMissingDrafts(s.orgId, missing));
+  if (open && missing.length) after(() => writeMissingDrafts(s.orgId, missing));
   // Macros the team keeps editing the same way, rewritten by the AI.
   const { updates, missing: unwritten } = await withUpdateDrafts(s.orgId, drifted);
-  if (unwritten.length) after(() => writeMacroUpdates(s.orgId, unwritten));
+  if (open && unwritten.length) after(() => writeMacroUpdates(s.orgId, unwritten));
   // Imported rules that aren't running as a Flatdesk rule: shown for reference.
   const reference = imported.filter((r) => !r.flatdeskRuleId);
   const agentName = (id: string) => agents.find((a) => a.userId === id)?.name ?? "Removed agent";

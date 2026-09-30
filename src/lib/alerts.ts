@@ -1,5 +1,6 @@
 import { createHmac } from "node:crypto";
 import { isIP } from "node:net";
+import { lookup } from "node:dns/promises";
 import { and, desc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { SITE } from "@/lib/site";
@@ -50,6 +51,25 @@ export function checkWebhookUrl(raw: string): { url: string } | { error: string 
     return { error: "Use the public address your tool gave you, not an IP address or a local name." };
   }
   return { url: u.toString() };
+}
+
+// True for loopback, private, link-local, CGNAT and other non-public addresses.
+export function isPrivateAddress(ip: string): boolean {
+  const v4 = ip.startsWith("::ffff:") ? ip.slice(7) : ip;
+  if (isIP(v4) === 4) {
+    const [a, b] = v4.split(".").map(Number);
+    return a === 0 || a === 10 || a === 127 || (a === 100 && b >= 64 && b <= 127) || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 198 && (b === 18 || b === 19)) || a >= 224;
+  }
+  const h = ip.toLowerCase();
+  return h === "::" || h === "::1" || h.startsWith("fc") || h.startsWith("fd") || /^fe[89ab]/.test(h) || h.startsWith("ff");
+}
+
+// A public name can still point at a private address, so check where it resolves.
+// Tests post to a local server, so they switch this off.
+async function resolvesPublic(url: string): Promise<boolean> {
+  if (process.env.ALERTS_ALLOW_PRIVATE === "1") return true;
+  const addrs = await lookup(new URL(url).hostname, { all: true }).catch(() => []);
+  return addrs.length > 0 && addrs.every((a) => !isPrivateAddress(a.address));
 }
 
 type Kind = "slack" | "discord" | "google-chat" | "generic";
@@ -103,10 +123,12 @@ export async function deliver(org: Pick<Org, "id" | "alertWebhookUrl" | "alertSe
   if (!org.alertWebhookUrl) return null;
   let error: string | null = null;
   try {
+    if (!(await resolvesPublic(org.alertWebhookUrl))) throw new Error("The address doesn't resolve to a public server.");
     const { body, headers } = buildRequest(org.alertWebhookUrl, org.alertSecret, payload);
     // No redirects: a redirect could point the request somewhere the URL check never saw.
     const res = await fetch(org.alertWebhookUrl, { method: "POST", body, headers, redirect: "manual", signal: AbortSignal.timeout(TIMEOUT_MS) });
-    if (!res.ok) error = `${res.status} ${res.statusText}`.trim() + ((await res.text().catch(() => "")).slice(0, 120).replace(/^(?=.)/, ": "));
+    // Only the status: the response body could be anything the server chose to send.
+    if (!res.ok) error = `${res.status} ${res.statusText}`.trim();
   } catch (err) {
     error = err instanceof Error && err.name === "TimeoutError" ? "No answer within 5 seconds." : err instanceof Error ? err.message : "Couldn't reach the address.";
   }
