@@ -1,9 +1,10 @@
-// Macros that write themselves. The matching tests need no database; the
+// AI macros, identification. The matching tests need no database; the
 // last test does. Run: DATABASE_URL=... npm test
 import assert from "node:assert/strict";
 import { after, test } from "node:test";
 import { eq } from "drizzle-orm";
-import { answerPart, macroBody, macroName, repeatsOf, suggestMacros, type Reply } from "./macro-suggestions";
+import { answerPart, identifyMacro, macroBody, macroName, repeatsOf, suggestMacros, type Reply } from "./macro-suggestions";
+import { cleanWritten, withAiDrafts, writerPrompt } from "./macro-writer";
 
 const NOW = new Date("2026-09-28T12:00:00Z");
 const hoursAgo = (h: number) => new Date(NOW.getTime() - h * 3_600_000);
@@ -73,6 +74,34 @@ test("placeholders replace order numbers and emails", () => {
   assert.equal(macroName("Your plan renews on the 1st. You can switch any time."), "Your plan renews on the 1st");
 });
 
+test("identifies the macro that answers a customer's message", () => {
+  const macros = [
+    { id: "refund", name: "Refund timing", question: "When will my refund arrive on my card?" },
+    { id: "reset", name: "Reset password", question: "How do I reset my password?" },
+    { id: "plain", name: "Shipping to Canada", question: null },
+  ];
+  assert.equal(identifyMacro("Hi, I returned the shoes last week. When will the refund arrive on my card?\nThanks, Kim", macros)?.id, "refund");
+  assert.equal(identifyMacro("I can't log in, how do I reset my password?", macros)?.id, "reset");
+  assert.equal(identifyMacro("Do you do shipping to Canada?", macros)?.id, "plain", "falls back to the macro name");
+  assert.equal(identifyMacro("Can I change the color of my order?", macros), null, "nothing close enough");
+  assert.equal(identifyMacro("Thanks!", macros), null);
+});
+
+test("the AI macro writer reads one variant per ticket and tidies what comes back", () => {
+  const [s] = suggestMacros(replies(), { now: NOW });
+  assert.equal(s.samples.length, 6, "one sample per ticket");
+  assert.equal(s.aiWritten, false);
+  const prompt = writerPrompt(s.samples);
+  assert.match(prompt, /<reply n="1"/);
+  assert.ok(!prompt.includes("Lee <lee@x.com> wrote"), "quoted email left out");
+  assert.deepEqual(cleanWritten({ name: "  **Refund** timing ", question: "When does my refund arrive?", body: "Hi [customer name],\n**Refunds** take 5 days.\nThanks," }), {
+    name: "Refund timing",
+    question: "When does my refund arrive?",
+    body: "Hi [customer name],\nRefunds take 5 days.\nThanks,",
+  });
+  assert.equal(cleanWritten({ name: "x", question: "", body: "y" }), null);
+});
+
 after(async () => {
   const { pool } = await import("@/db");
   await pool.end();
@@ -111,7 +140,17 @@ test("database: suggestions come from sent replies, and saving or dismissing one
   await db.delete(schema.macroSuggestionDismissals).where(eq(schema.macroSuggestionDismissals.orgId, ORG));
   assert.equal((await macroSuggestions(ORG)).length, 1);
 
-  await saveSuggestedMacro(ORG, { name: s.name, body: s.body, addTags: s.addTags });
+  // The AI's write-up replaces the plain version once it exists.
+  await db.insert(schema.macroAiDrafts).values({ orgId: ORG, key: s.key, name: "Refund timing", question: "When will my refund arrive?", body: "Hi [customer name],\nRefunds take 5 business days.", model: "test" });
+  const { suggestions: [written], missing } = await withAiDrafts(ORG, await macroSuggestions(ORG));
+  assert.equal(missing.length, 0);
+  assert.equal(written.name, "Refund timing");
+  assert.equal(written.aiWritten, true);
+
+  await saveSuggestedMacro(ORG, { name: written.name, body: written.body, addTags: s.addTags, question: written.question }, { answer: s.answer, userId: "u1" });
+  const [saved] = await db.select().from(schema.macros).where(eq(schema.macros.orgId, ORG));
+  assert.equal(saved.question, "When will my refund arrive?");
+  assert.equal(saved.source, "suggested");
   assert.equal((await macroSuggestions(ORG)).length, 0, "saved as a macro");
   assert.equal(await repeatPrompt(ORG, last.ticketId, last.reply), null);
 

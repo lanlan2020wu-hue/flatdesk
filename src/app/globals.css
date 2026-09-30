@@ -726,7 +726,7 @@ p {
     animation: grow-x 380ms cubic-bezier(0.6, 0, 0.3, 1) 1200ms backwards;
   }
 
-  /* Self-writing macro: the sparkle catches, then the reply writes itself word
+  /* AI macro: the sparkle catches, then the reply writes itself word
      by word, and the save button pulses once it's finished. */
   [data-play] .sparkle {
     animation: twinkle 600ms cubic-bezier(0.3, 1.4, 0.5, 1) 200ms backwards;

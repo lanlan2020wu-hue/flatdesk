@@ -1,11 +1,13 @@
-// Macros that write themselves. Flatdesk looks at the replies agents actually
-// send, finds answers the team keeps typing out (MIN_REPEATS or more times, on
-// different tickets), and offers each one as a ready-made macro.
+// AI macros, step one: identification. Flatdesk looks at the replies agents
+// actually send, finds answers the team keeps typing out (MIN_REPEATS or more
+// times, on different tickets), and offers each one as a macro. The AI then
+// writes each one up (lib/macro-writer.ts), and identifyMacro below matches
+// new tickets to the macro that answers them.
 //
-// Everything here is plain text matching in our own database. No model is
-// called, so suggestions never touch the AI allowance. Imported history counts
-// too, which is why a team that just moved from another help desk gets
-// suggestions on day one.
+// Finding the repeats is plain text matching in our own database, so it's
+// fast on every page load. Imported history counts too, which is why a team
+// that just moved from another help desk gets suggestions on day one. None of
+// it touches the AI allowance.
 
 import { and, desc, eq, gte } from "drizzle-orm";
 import { db, schema } from "@/db";
@@ -16,6 +18,7 @@ const SIMILAR = 0.5; // Jaccard similarity of content words
 const MIN_WORDS = 6; // shorter replies ("Thanks, closing this") aren't worth a macro
 const MAX_REPLIES = 2000;
 const MAX_SUGGESTIONS = 6;
+const SAMPLES = 6; // variants the AI reads when it writes the macro
 
 // Common words carry no meaning for matching; leaving them in makes unrelated replies look alike.
 const STOP = new Set(
@@ -106,6 +109,7 @@ export type Reply = {
   body: string;
   createdAt: Date;
   tags?: string[];
+  subject?: string;
 };
 
 export type Suggestion = {
@@ -118,6 +122,11 @@ export type Suggestion = {
   thisWeek: number;
   examples: number[]; // ticket numbers, newest first
   lastSentAt: Date;
+  // What the AI reads to write the macro: the variants the team sent, with the
+  // subject of the ticket each one answered. One per ticket, newest first.
+  samples: { subject: string; answer: string }[];
+  question: string | null; // the customer question, once the AI has written the macro
+  aiWritten: boolean;
 };
 
 type Item = Reply & { answer: string; words: Set<string> };
@@ -213,6 +222,13 @@ export function suggestMacros(
 
     const examples: number[] = [];
     for (const m of g.members) if (!examples.includes(m.ticketNumber) && examples.length < 5) examples.push(m.ticketNumber);
+    const samples: Suggestion["samples"] = [];
+    const sampled = new Set<string>();
+    for (const m of g.members) {
+      if (sampled.has(m.ticketId) || samples.length >= SAMPLES) continue;
+      sampled.add(m.ticketId);
+      samples.push({ subject: m.subject ?? "", answer: m.answer.slice(0, 1500) });
+    }
 
     out.push({
       key: rep.id,
@@ -224,6 +240,9 @@ export function suggestMacros(
       thisWeek: new Set(g.members.filter((m) => m.createdAt.getTime() >= weekAgo).map((m) => m.ticketId)).size,
       examples,
       lastSentAt: g.members[0].createdAt,
+      samples,
+      question: null,
+      aiWritten: false,
     });
   }
   return out.sort((a, b) => b.tickets - a.tickets || b.lastSentAt.getTime() - a.lastSentAt.getTime()).slice(0, opts.limit ?? MAX_SUGGESTIONS);
@@ -241,6 +260,31 @@ export function repeatsOf(body: string, replies: Reply[], opts: { covered?: stri
   return tickets.size;
 }
 
+// Which saved macro answers this customer's message, if one clearly does. The
+// AI wrote each suggested macro's question from the tickets it came from, so a
+// new ticket asking the same thing shares most of its words. Macros without a
+// question are matched on their name, more strictly.
+export function identifyMacro<M extends { id: string; name: string; question: string | null }>(message: string, macros: M[]): M | null {
+  const asked = words(answerPart(message));
+  if (asked.size < 2) return null;
+  let best: M | null = null;
+  let bestScore = 0;
+  for (const m of macros) {
+    const target = words(m.question || m.name);
+    if (target.size < 2) continue;
+    let shared = 0;
+    for (const w of target) if (asked.has(w)) shared++;
+    // Most of the macro's question should appear in the message.
+    const score = shared / target.size;
+    const needed = m.question ? 0.5 : 0.75;
+    if (shared >= 2 && score >= needed && score > bestScore) {
+      best = m;
+      bestScore = score;
+    }
+  }
+  return best;
+}
+
 // ---- Database ---------------------------------------------------------------
 
 async function loadReplies(orgId: string, now: Date): Promise<Reply[]> {
@@ -254,6 +298,7 @@ async function loadReplies(orgId: string, now: Date): Promise<Reply[]> {
       body: messages.body,
       createdAt: messages.createdAt,
       tags: tickets.tags,
+      subject: tickets.subject,
     })
     .from(messages)
     .innerJoin(tickets, eq(tickets.id, messages.ticketId))
@@ -295,10 +340,17 @@ export async function dismissSuggestion(orgId: string, userId: string, text: str
   await db.insert(schema.macroSuggestionDismissals).values({ orgId, text: answer, dismissedBy: userId });
 }
 
-export async function saveSuggestedMacro(orgId: string, values: { name: string; body: string; addTags: string[] }) {
+// Saves the macro and remembers the answer it came from: the AI's version is
+// reworded, so without it the same repeats would be suggested again.
+export async function saveSuggestedMacro(
+  orgId: string,
+  values: { name: string; body: string; addTags: string[]; question?: string | null },
+  from?: { answer: string; userId: string },
+) {
   const [macro] = await db
     .insert(schema.macros)
-    .values({ orgId, name: values.name, body: values.body, addTags: values.addTags, source: "suggested" })
+    .values({ orgId, name: values.name, body: values.body, addTags: values.addTags, question: values.question || null, source: "suggested" })
     .returning({ id: schema.macros.id });
+  if (from?.answer) await dismissSuggestion(orgId, from.userId, from.answer);
   return macro;
 }

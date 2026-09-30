@@ -1,25 +1,31 @@
 import { asc, eq } from "drizzle-orm";
+import { after } from "next/server";
 import { db, schema } from "@/db";
 import { SuggestionsSection } from "@/components/MacroSuggestion";
 import { requireSession } from "@/lib/auth";
+import { aiConfigured } from "@/lib/ai";
 import { macroSuggestions } from "@/lib/macro-suggestions";
+import { withAiDrafts, writeMissingDrafts } from "@/lib/macro-writer";
 import { listAgents } from "@/lib/tickets";
 import { deleteMacroAction, deleteRuleAction, saveMacroAction, saveRuleAction, toggleRuleAction } from "../actions";
 
-export const metadata = { title: "Macros and rules" };
+export const metadata = { title: "AI macros and rules" };
 
 const field = "field";
 const SOURCE_NAME: Record<string, string> = { zendesk: "Zendesk", intercom: "Intercom", freshdesk: "Freshdesk", helpscout: "Help Scout" };
 
 export default async function MacrosPage() {
   const s = await requireSession();
-  const [macros, rules, agents, imported, suggestions] = await Promise.all([
+  const [macros, rules, agents, imported, found] = await Promise.all([
     db.select().from(schema.macros).where(eq(schema.macros.orgId, s.orgId)).orderBy(asc(schema.macros.name)),
     db.select().from(schema.rules).where(eq(schema.rules.orgId, s.orgId)).orderBy(asc(schema.rules.createdAt)),
     listAgents(s.orgId),
     db.select().from(schema.importedRules).where(eq(schema.importedRules.orgId, s.orgId)).orderBy(asc(schema.importedRules.name)),
     macroSuggestions(s.orgId),
   ]);
+  // The AI writes up the repeats it hasn't written yet, after this page is sent.
+  const { suggestions, missing } = await withAiDrafts(s.orgId, found);
+  if (missing.length) after(() => writeMissingDrafts(s.orgId, missing));
   // Imported rules that aren't running as a Flatdesk rule: shown for reference.
   const reference = imported.filter((r) => !r.flatdeskRuleId);
   const agentName = (id: string) => agents.find((a) => a.userId === id)?.name ?? "Removed agent";
@@ -28,11 +34,13 @@ export default async function MacrosPage() {
     <div className="grid max-w-3xl gap-12 px-4 py-6 md:px-8 md:py-8">
       <section className="grid gap-4">
         <div className="grid gap-1">
-          <h1 className="font-display text-3xl">Macros</h1>
-          <p className="text-sm text-muted">Saved replies your team can insert into any ticket. A macro can also add tags and set the status.</p>
+          <h1 className="font-display text-3xl">AI macros</h1>
+          <p className="text-sm text-muted">
+            Flatdesk identifies the answers your team keeps retyping and the AI writes them up as macros. On a new ticket, the macro that answers it is offered in the reply box. A macro can also add tags and set the status.
+          </p>
         </div>
 
-        <SuggestionsSection suggestions={suggestions} />
+        <SuggestionsSection suggestions={suggestions} aiOn={aiConfigured()} />
 
         {macros.map((m) => (
           <details key={m.id} className="card overflow-hidden">
@@ -40,7 +48,7 @@ export default async function MacrosPage() {
               <span className="flex min-w-0 items-center gap-2">
                 <span className="truncate">{m.name}</span>
                 {m.source === "suggested" ? (
-                  <span className="chip shrink-0">Written by Flatdesk</span>
+                  <span className="chip shrink-0">Written by Flatdesk AI</span>
                 ) : (
                   m.source && <span className="chip shrink-0">From {SOURCE_NAME[m.source] ?? m.source}</span>
                 )}
@@ -58,6 +66,7 @@ export default async function MacrosPage() {
                 </ul>
               </div>
             )}
+            {m.question && <p className="mx-5 mt-1 text-sm text-muted">Offered on tickets that ask: <span className="text-ink">{m.question}</span></p>}
             <MacroForm macro={m} />
             <form action={deleteMacroAction} className="px-5 pb-5">
               <input type="hidden" name="id" value={m.id} />

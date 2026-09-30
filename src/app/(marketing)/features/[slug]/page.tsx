@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import CostTable from "@/components/CostTable";
 import Faq from "@/components/Faq";
 import JsonLd from "@/components/JsonLd";
-import { FeatureIcon, ImportShot, MacroShot, ReceiptShot, TestDriveShot } from "@/components/ProductShots";
+import { CopilotShot, FeatureIcon, ImportShot, MacroShot, ReceiptShot, TestDriveShot } from "@/components/ProductShots";
 import YearChart from "@/components/YearChart";
 import { COMPARED_ON, RIVALS, costRows } from "@/lib/compare";
 import { SELLING_POINTS, sellingPoint } from "@/lib/selling-points";
@@ -14,7 +14,8 @@ const SHOTS: Record<string, React.ReactNode> = {
   "flat-pricing": <YearChart />,
   "ai-receipts": <ReceiptShot />,
   "ai-test-drive": <TestDriveShot />,
-  "self-writing-macros": <MacroShot />,
+  "ai-macros": <MacroShot />,
+  "ai-copilot": <CopilotShot />,
   "lossless-import": <ImportShot />,
 };
 

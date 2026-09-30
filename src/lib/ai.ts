@@ -19,7 +19,7 @@ import { PLAN } from "@/lib/pricing";
 // card gets PLAN.trialPerAgent for the whole trial and no overage, which caps
 // what an unpaid team can spend; adding a card lifts it to the full allowance.
 
-const MODEL = "claude-opus-5-5";
+export const MODEL = "claude-opus-5-5";
 // USD per million tokens, for internal cost logging. The system prompt is cached
 // for an hour (small teams often go more than 5 minutes between tickets), which
 // bills cache writes at 2x the input rate; cache reads are $0.20.

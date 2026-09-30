@@ -48,7 +48,7 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
     title: "Automation",
     features: [
       { id: "macros", title: "Macros", body: "Saved replies that can also add tags and set the status in one click.", icon: I.macro },
-      { id: "suggested-macros", title: "Macros that write themselves", body: "When your team sends the same answer on 5 tickets, Flatdesk offers it as a finished macro. No AI allowance used.", icon: I.spark, isNew: true },
+      { id: "suggested-macros", title: "AI macros", body: "Flatdesk identifies the answers your team sends on 5 or more tickets, the AI writes each one up as a macro, and new tickets asking the same thing get it offered in the reply box.", icon: I.spark, isNew: true },
       { id: "help-center", title: "Help center", body: "A public help center with search. Write an article once; customers find it themselves and the AI links to it in its answers.", icon: I.book, isNew: true },
       { id: "rules", title: "Assignment rules", body: 'When a ticket is tagged, rules like "if tagged billing, assign to Sam" pick who gets it.', icon: I.rule },
       { id: "tags", title: "Tags", body: "Tag tickets by hand, from a macro, or from your old help desk's data.", icon: I.tag },
@@ -58,6 +58,7 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
     id: "ai",
     title: "AI",
     features: [
+      { id: "copilot", title: "AI copilot in every seat", body: "Summarize a ticket, draft a reply from your macros and help center, or rewrite what you typed. Included in the seat, not an add-on.", icon: I.ai, isNew: true },
       { id: "ai", title: "AI answers", body: "Answers routine questions from your macros and notes, and hands everything else to your team.", icon: I.ai },
       { id: "cap", title: "A cap that's on by default", body: "The AI pauses at your included resolutions. Admins get an email at 80% and at 100%.", icon: I.cap },
       { id: "test-drive", title: "AI test drive", body: "After you import, the AI drafts answers to 50 of your recent tickets beside what your team sent. Nothing is sent and it doesn't use your allowance.", icon: I.check, isNew: true },

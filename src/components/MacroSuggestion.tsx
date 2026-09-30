@@ -11,12 +11,16 @@ const Spark = ({ className = "size-4" }: { className?: string }) => (
 );
 
 // One repeated answer, ready to save. Everything is editable before saving.
-export function SuggestionCard({ s }: { s: Suggestion }) {
+export function SuggestionCard({ s, aiOn }: { s: Suggestion; aiOn: boolean }) {
   return (
     <details className="card overflow-hidden border-accent/30">
       <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-3 px-5 py-4 transition-colors hover:bg-surface-2/60">
         <span className="grid min-w-0 gap-1">
-          <span className="truncate font-medium">{s.name}</span>
+          <span className="flex min-w-0 items-center gap-2">
+            <span className="truncate font-medium">{s.name}</span>
+            {s.aiWritten ? <span className="chip shrink-0">Written by AI</span> : aiOn && <span className="chip shrink-0 text-muted">AI is writing it up</span>}
+          </span>
+          {s.question && <span className="text-sm">Customers ask: {s.question}</span>}
           <span className="text-sm text-muted">
             Sent on <strong className="num text-ink">{s.tickets}</strong> tickets
             {s.thisWeek > 0 && s.thisWeek < s.tickets && <>, {s.thisWeek} this week</>}
@@ -27,6 +31,7 @@ export function SuggestionCard({ s }: { s: Suggestion }) {
       </summary>
       <form action={saveSuggestedMacroAction} className="grid gap-4 border-t border-line p-5 text-sm">
         <input type="hidden" name="answer" value={s.answer} />
+        <input type="hidden" name="question" value={s.question ?? ""} />
         <label className="grid gap-1.5 font-medium" htmlFor={`sname-${s.key}`}>Name<input id={`sname-${s.key}`} name="name" required defaultValue={s.name} className={`${field} font-normal`} /></label>
         <label className="grid gap-1.5 font-medium" htmlFor={`sbody-${s.key}`}>Reply<textarea id={`sbody-${s.key}`} name="body" required rows={5} defaultValue={s.body} className={`${field} font-normal`} /></label>
         <label className="grid gap-1.5 font-medium" htmlFor={`stags-${s.key}`}>Add tags<input id={`stags-${s.key}`} name="addTags" defaultValue={s.addTags.join(", ")} placeholder="refund" className={`${field} font-normal`} /></label>
@@ -49,12 +54,12 @@ export function SuggestionCard({ s }: { s: Suggestion }) {
   );
 }
 
-export function SuggestionsSection({ suggestions }: { suggestions: Suggestion[] }) {
+export function SuggestionsSection({ suggestions, aiOn }: { suggestions: Suggestion[]; aiOn: boolean }) {
   if (!suggestions.length) {
     return (
       <p className="flex items-start gap-2 rounded-xl border border-dashed border-line-strong px-4 py-3 text-sm text-muted">
         <Spark className="mt-0.5 size-4 shrink-0 text-accent" />
-        When your team sends the same answer on 5 tickets, Flatdesk offers it here as a ready-made macro.
+        When your team sends the same answer on 5 tickets, Flatdesk identifies it and the AI writes it up here as a ready-made macro.
       </p>
     );
   }
@@ -63,12 +68,12 @@ export function SuggestionsSection({ suggestions }: { suggestions: Suggestion[] 
       <div className="grid gap-1">
         <p className="flex items-center gap-2 font-medium text-accent">
           <Spark />
-          {suggestions.length === 1 ? "1 macro Flatdesk wrote for you" : `${suggestions.length} macros Flatdesk wrote for you`}
+          {suggestions.length === 1 ? "1 AI macro identified from your replies" : `${suggestions.length} AI macros identified from your replies`}
         </p>
-        <p className="text-sm text-muted">Your team keeps typing these answers. Save one and it&apos;s a click away in every ticket, and the AI can use it too. Suggestions never use your AI allowance.</p>
+        <p className="text-sm text-muted">Your team keeps typing these answers.{aiOn && " The AI writes each one up from the versions you sent."} Save one and it&apos;s offered on every ticket that asks the same thing, and AI answers use it too. None of this uses your AI allowance.</p>
       </div>
       {suggestions.map((s) => (
-        <SuggestionCard key={s.key} s={s} />
+        <SuggestionCard key={s.key} s={s} aiOn={aiOn} />
       ))}
     </div>
   );

@@ -1,7 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useTransition } from "react";
 import { useFormStatus } from "react-dom";
+import { copilotDraftAction, copilotRewriteAction } from "@/app/app/actions";
+import { CopilotMark } from "@/components/CopilotSummary";
+import { REWRITE_LABEL, type RewriteStyle } from "@/lib/copilot-config";
 
 // Mirrors REPLY_UPLOAD_LIMIT and MAX_FILES in lib/attachments.ts (Vercel caps request bodies at 4.5 MB).
 const UPLOAD_LIMIT = 4 * 1024 * 1024;
@@ -24,12 +27,17 @@ export default function Composer({
   number,
   status,
   macros,
+  suggestedMacroId = null,
+  copilot = true,
 }: {
   action: (f: FormData) => Promise<void>;
   ticketId: string;
   number: number;
   status: string;
   macros: Macro[];
+  // The macro Flatdesk identified as the answer to the customer's latest message.
+  suggestedMacroId?: string | null;
+  copilot?: boolean;
 }) {
   const [internal, setInternal] = useState(false);
   const [body, setBody] = useState("");
@@ -41,6 +49,37 @@ export default function Composer({
   const fileRef = useRef<HTMLInputElement>(null);
   const nextStatus = statusChoice ?? (internal ? status : "pending");
   const formRef = useRef<HTMLFormElement>(null);
+  const [thinking, startCopilot] = useTransition();
+  const [working, setWorking] = useState<string | null>(null);
+  const [note, setNote] = useState<string | null>(null);
+  const [usedSuggestion, setUsedSuggestion] = useState(false);
+  const suggested = !usedSuggestion && suggestedMacroId ? macros.find((m) => m.id === suggestedMacroId) : undefined;
+
+  function draft() {
+    setWorking("Drafting a reply…");
+    startCopilot(async () => {
+      setError(null);
+      setNote(null);
+      const r = await copilotDraftAction(ticketId);
+      setWorking(null);
+      if (!r.ok) return setError(r.error);
+      setInternal(false);
+      setBody(r.value.reply);
+      if (r.value.gaps) setNote(r.value.gaps);
+    });
+  }
+
+  function rewrite(style: RewriteStyle) {
+    if (!body.trim()) return setError("Write something first, then the copilot can rewrite it.");
+    setWorking(`${REWRITE_LABEL[style]}…`);
+    startCopilot(async () => {
+      setError(null);
+      const r = await copilotRewriteAction(ticketId, body, style);
+      setWorking(null);
+      if (!r.ok) return setError(r.error);
+      setBody(r.value);
+    });
+  }
 
   function applyMacro(id: string) {
     const m = macros.find((x) => x.id === id);
@@ -48,6 +87,7 @@ export default function Composer({
     setBody((b) => (b ? `${b}\n\n${m.body}` : m.body));
     setAddTags(m.addTags.join(", "));
     if (m.setStatus) setStatusChoice(m.setStatus);
+    if (id === suggestedMacroId) setUsedSuggestion(true);
   }
 
   return (
@@ -64,6 +104,7 @@ export default function Composer({
           return setError("That didn't save. Check your connection and try again; your text is still here.");
         }
         setBody("");
+        setNote(null);
         setAddTags("");
         setStatusChoice(null);
         setFiles([]);
@@ -85,13 +126,42 @@ export default function Composer({
             {macros.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
           </select>
         )}
+        {copilot && (
+          <span className="flex flex-wrap items-center gap-2 sm:ml-auto">
+            <button type="button" onClick={draft} disabled={thinking} className="btn btn-secondary btn-sm text-accent">
+              <CopilotMark />
+              Draft reply
+            </button>
+            <select
+              aria-label="Rewrite with the copilot"
+              className="field field-sm w-auto"
+              value=""
+              disabled={thinking || !body.trim()}
+              onChange={(e) => e.target.value && rewrite(e.target.value as RewriteStyle)}
+            >
+              <option value="">Rewrite…</option>
+              {(Object.keys(REWRITE_LABEL) as RewriteStyle[]).map((k) => <option key={k} value={k}>{REWRITE_LABEL[k]}</option>)}
+            </select>
+          </span>
+        )}
       </div>
+      {suggested && (
+        <p className="flex flex-wrap items-center gap-2 rounded-lg bg-accent-soft px-3 py-2 text-sm">
+          <CopilotMark className="size-4 shrink-0 text-accent" />
+          <span className="min-w-0 flex-1">
+            This looks like <strong className="font-medium">{suggested.name}</strong>, one of your macros.
+          </span>
+          <button type="button" onClick={() => applyMacro(suggested.id)} className="btn btn-primary btn-sm">Use macro</button>
+          <button type="button" onClick={() => setUsedSuggestion(true)} className="link px-1 text-muted">Dismiss</button>
+        </p>
+      )}
       <label htmlFor="composer" className="sr-only">{internal ? "Internal note" : "Reply"}</label>
       <textarea
         id="composer"
         name="body"
         rows={6}
         value={body}
+        readOnly={thinking}
         onChange={(e) => setBody(e.target.value)}
         onKeyDown={(e) => {
           if ((e.metaKey || e.ctrlKey) && e.key === "Enter") formRef.current?.requestSubmit();
@@ -109,6 +179,8 @@ export default function Composer({
           ))}
         </ul>
       )}
+      {working && <p className="flex items-center gap-2 px-2 text-sm text-accent" role="status"><CopilotMark className="size-4 animate-pulse" />{working}</p>}
+      {note && <p className="px-2 text-sm text-muted">Check before sending: {note}</p>}
       {error && <p className="px-2 text-sm text-warn" role="alert">{error}</p>}
       <div className="flex flex-wrap items-center justify-between gap-3 border-t border-line pt-3 text-sm">
         <span className="flex flex-wrap items-center gap-3 text-muted">

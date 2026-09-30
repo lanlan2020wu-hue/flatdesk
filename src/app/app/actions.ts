@@ -9,6 +9,8 @@ import { requireAdmin, requireEditor } from "@/lib/auth";
 import { filesFromForm, saveAttachments } from "@/lib/attachments";
 import { checkWebhookUrl, sendTestAlert } from "@/lib/alerts";
 import { access, checkoutUrl, portalUrl, switchToAnnual, syncSeats } from "@/lib/billing";
+import { CopilotError, draftReply, rewriteText, summarizeTicket, type TicketSummary } from "@/lib/copilot";
+import type { RewriteStyle } from "@/lib/copilot-config";
 import { deliverReply } from "@/lib/email";
 import { dismissSuggestion, saveSuggestedMacro } from "@/lib/macro-suggestions";
 import { TARGET_CHOICES, validHours } from "@/lib/sla";
@@ -117,9 +119,9 @@ export async function deleteMacroAction(form: FormData) {
 // the prompt under an agent's reply).
 export async function saveSuggestedMacroAction(form: FormData) {
   const s = await requireOpenSession();
-  const values = { name: str(form, "name"), body: str(form, "body"), addTags: tagList(str(form, "addTags")) };
+  const values = { name: str(form, "name"), body: str(form, "body"), addTags: tagList(str(form, "addTags")), question: str(form, "question").slice(0, 300) || null };
   if (!values.name || !values.body) throw new Error("A macro needs a name and a reply.");
-  await saveSuggestedMacro(s.orgId, values);
+  await saveSuggestedMacro(s.orgId, values, { answer: str(form, "answer"), userId: s.userId });
   revalidatePath("/app/macros");
   const number = str(form, "number");
   if (number) revalidatePath(`/app/tickets/${number}`);
@@ -267,4 +269,32 @@ export async function switchToAnnualAction() {
 export async function openBillingPortalAction() {
   const s = await requireAdmin();
   redirect(await portalUrl(s.orgId, await origin()));
+}
+
+// ---- Copilot ----------------------------------------------------------------
+// Called from the ticket page's client components; they show the error text.
+
+type CopilotResult<T> = { ok: true; value: T } | { ok: false; error: string };
+
+async function copilot<T>(run: (s: { orgId: string; userId: string }) => Promise<T>): Promise<CopilotResult<T>> {
+  try {
+    const s = await requireOpenSession();
+    return { ok: true, value: await run(s) };
+  } catch (err) {
+    if (err instanceof CopilotError) return { ok: false, error: err.message };
+    console.error("copilot failed", err);
+    return { ok: false, error: "The copilot couldn't do that just now. Try again in a moment." };
+  }
+}
+
+export async function copilotSummaryAction(ticketId: string): Promise<CopilotResult<TicketSummary>> {
+  return copilot((s) => summarizeTicket(s.orgId, s.userId, ticketId));
+}
+
+export async function copilotDraftAction(ticketId: string): Promise<CopilotResult<{ reply: string; gaps: string }>> {
+  return copilot((s) => draftReply(s.orgId, s.userId, ticketId));
+}
+
+export async function copilotRewriteAction(ticketId: string, text: string, style: RewriteStyle): Promise<CopilotResult<string>> {
+  return copilot((s) => rewriteText(s.orgId, s.userId, ticketId, text, style));
 }

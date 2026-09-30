@@ -3,41 +3,50 @@ import Link from "next/link";
 import JsonLd from "@/components/JsonLd";
 import WaitlistForm from "@/components/WaitlistForm";
 import YearChart from "@/components/YearChart";
-import { AiShot, ChatShot, FeatureIcon, ImportShot, InboxShot, MacroShot, ReceiptShot, ReportShot } from "@/components/ProductShots";
+import { AiShot, ChatShot, CopilotShot, FeatureIcon, ImportShot, InboxShot, MacroShot, ReceiptShot, ReportShot } from "@/components/ProductShots";
+import { COPILOT } from "@/lib/copilot-config";
 import { FEATURE_GROUPS } from "@/lib/features";
 import { organization, software, website } from "@/lib/seo";
 import { PLAN, competitorById, competitorMonthly, flatdeskMonthly, usd } from "@/lib/pricing";
 
 const EXAMPLE = { agents: 10, resolutions: 1500 };
 
-// The four reasons to switch, right under the hero. Each links to its part of the tour.
-const SELLING_POINTS: { title: string; body: string; href: string; icon: string; isNew?: boolean }[] = [
+// The three things every seat is built around, right under the hero. Each
+// links to its own feature page.
+const PILLARS: { n: string; title: string; body: string; points: string[]; href: string; icon: string; isNew?: boolean }[] = [
   {
-    title: "One flat price",
-    body: `Seats × ${usd(PLAN.annualSeatPrice)} billed yearly (${usd(PLAN.seatPrice)} monthly), with ${PLAN.includedPerAgent} AI resolutions per seat. The AI pauses at the cap unless an admin opts in. No meters, no add-on tiers.`,
-    href: "#why-flat",
+    n: "01",
+    title: "One flat rate",
+    body: `${usd(PLAN.annualSeatPrice)} per agent billed yearly, or ${usd(PLAN.seatPrice)} monthly. Every feature, ${PLAN.includedPerAgent} AI resolutions per seat, and a cap that's on unless you turn it off.`,
+    points: ["No AI meter running up the bill", "No tiers, no add-ons", "Refund a wrong AI answer from its receipt"],
+    href: "/features/flat-pricing",
     icon: "M7 4h10v16l-2.5-1.5L12 20l-2.5-1.5L7 20zM10 9h4M10 13h4",
   },
   {
-    title: "AI receipts",
-    body: "Every AI answer you're charged for, itemized with the saved answers it used. Refund a wrong one in a click and it stops counting.",
-    href: "#receipts",
-    icon: "M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6zM9 12l2 2 4-4",
+    n: "02",
+    title: "AI macros",
+    body: "Flatdesk identifies the answers your team keeps retyping, and the AI writes each one up as a clean macro. New tickets that ask the same thing get it offered in one click.",
+    points: ["Identified from your own replies, imported history too", "Written by AI, with placeholders for customer details", "Never uses your AI allowance"],
+    href: "/features/ai-macros",
+    icon: "M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8zM18 15l.9 2.1L21 18l-2.1.9L18 21l-.9-2.1L15 18l2.1-.9z",
     isNew: true,
   },
   {
-    title: "AI test drive",
-    body: "Import your help desk and the AI drafts answers to your 50 most recent tickets, each beside the reply your team sent. Judge it before you switch.",
-    href: "/features/ai-test-drive",
-    icon: "M4 6h10M4 12h7M4 18h10M15 13l2.5 2.5L22 11",
+    n: "03",
+    title: "AI copilot, included",
+    body: "Every agent can summarize a ticket, draft a reply from your macros and help center, or rewrite what they typed. Zendesk sells its copilot as a paid add-on. Here it's in the seat.",
+    points: ["Summary, customer mood and next step", "Drafts that cite your own answers", `${COPILOT.perAgent} actions per seat a month, pooled`],
+    href: "/features/ai-copilot",
+    icon: "M4 6h16v10H8l-4 4zM8 10h8M8 13h5",
     isNew: true,
   },
-  {
-    title: "Lossless import",
-    body: "Bring tickets, customers, macros and rules from your old help desk. Every original record is archived, and anything that didn't map is listed.",
-    href: "#import",
-    icon: "M12 4v11m0 0l-4-4m4 4l4-4M5 19h14",
-  },
+];
+
+// Also in every seat: the reasons teams switched before, one line each.
+const ALSO = [
+  { title: "AI receipts", body: "Every AI answer itemized. Refund a wrong one.", href: "/features/ai-receipts" },
+  { title: "AI test drive", body: "AI drafts for your last 50 tickets, beside your team's replies.", href: "/features/ai-test-drive" },
+  { title: "Lossless import", body: "Zendesk, Intercom, Freshdesk, Help Scout. Nothing dropped.", href: "/features/lossless-import" },
 ];
 
 const SOURCES = ["Zendesk", "Intercom", "Freshdesk", "Help Scout"];
@@ -46,6 +55,28 @@ const SOURCES = ["Zendesk", "Intercom", "Freshdesk", "Help Scout"];
 // The selling points come first.
 const TOUR: { id: string; eyebrow: string; title: string; body: string; points: string[]; shot: React.ReactNode; badge?: string }[] = [
   {
+    id: "macros",
+    eyebrow: "AI macros",
+    badge: "New",
+    title: "Your team answers it five times. The AI writes the macro.",
+    body: "Flatdesk identifies the answers your team keeps typing. Once the same reply has gone out on 5 tickets, the AI writes it up from the versions your team sent: a name, the question it answers, and one clean reply with placeholders. Save it, and every new ticket that asks the same thing gets it offered in the reply box.",
+    points: [
+      "Works from your imported history, so AI macros start on day one",
+      "Offered on new tickets that ask the same question",
+      "AI answers use your macros too, and none of this uses your AI allowance",
+    ],
+    shot: <MacroShot />,
+  },
+  {
+    id: "copilot",
+    eyebrow: "AI copilot",
+    badge: "Included",
+    title: "A copilot for every agent, in the seat you already pay for.",
+    body: "Open a ticket and the copilot tells you what the customer wants, how they feel and what to do next. One click drafts the reply from your macros, notes and help center; another makes it shorter, friendlier or more formal. Nothing is sent until you send it.",
+    points: ["Summaries that update when the customer writes again", "Placeholders, never made-up order numbers or policies", "Doesn't use AI resolutions"],
+    shot: <CopilotShot />,
+  },
+  {
     id: "receipts",
     eyebrow: "AI receipts",
     badge: "New",
@@ -53,19 +84,6 @@ const TOUR: { id: string; eyebrow: string; title: string; body: string; points: 
     body: "Each month gets an itemized statement: which tickets the AI answered, the saved answers it used, and whether each one counted. If the AI got one wrong, an admin refunds it in one click. It stops counting and the ticket goes back to your team.",
     points: ["Line by line, with the saved answers cited", "Refunds free up allowance and come off any overage", "Download the month as CSV"],
     shot: <ReceiptShot />,
-  },
-  {
-    id: "macros",
-    eyebrow: "Macros that write themselves",
-    badge: "New",
-    title: "Your team answers it five times. Flatdesk writes the macro.",
-    body: "Flatdesk notices the answers your team keeps typing. Once the same reply has gone out on 5 tickets, it offers a finished macro with the customer's name taken out and the usual tags filled in. One click saves it, and the AI can use it right away.",
-    points: [
-      "Works from your imported history, so suggestions start on day one",
-      "Offers to save a reply right after you send it for the fifth time",
-      "Suggestions never use your AI allowance",
-    ],
-    shot: <MacroShot />,
   },
   {
     id: "import",
@@ -139,15 +157,15 @@ export default function Home() {
               Help desk for teams of 3–15 agents
             </p>
             <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-[2.6rem] leading-[1.05] sm:text-6xl">
-              From {usd(PLAN.annualSeatPrice)} per agent. AI included. <span className="hl hl-draw font-display-italic italic">The same bill every month.</span>
+              One flat rate. AI macros and a copilot included. <span className="hl hl-draw font-display-italic italic">The same bill every month.</span>
             </h1>
             <p style={{ "--d": 2 } as React.CSSProperties} className="enter max-w-xl text-lg text-muted">
-              {usd(PLAN.annualSeatPrice)} a month billed yearly, or {usd(PLAN.seatPrice)} month to month. Every seat includes{" "}
-              {PLAN.includedPerAgent} AI resolutions a month, shared across your team. When they run out, the AI pauses and your team takes
-              over. You only pay more if you turn overage on yourself.
+              {usd(PLAN.annualSeatPrice)} per agent billed yearly, or {usd(PLAN.seatPrice)} month to month. Flatdesk spots the answers your team keeps
+              retyping and the AI turns them into macros. Every agent gets an AI copilot to summarize, draft and rewrite. And{" "}
+              {PLAN.includedPerAgent} AI resolutions per seat are included and capped, so the bill never runs away.
             </p>
             <p style={{ "--d": 2 } as React.CSSProperties} className="enter flex flex-wrap gap-2 text-sm">
-              {["AI test drive on your own tickets", "AI receipts", "Lossless import"].map((t) => (
+              {["Flat rate, no AI meter", "AI macros", "AI copilot in every seat"].map((t) => (
                 <span key={t} className="flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1 shadow-sm">
                   <svg viewBox="0 0 20 20" className="size-3.5 text-accent" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 10.5l3 3 7-7" /></svg>
                   {t}
@@ -211,26 +229,47 @@ export default function Home() {
         </div>
       </section>
 
-      <section data-play="" aria-labelledby="why-switch" className="mx-auto grid w-full max-w-6xl gap-6 px-4 sm:px-6">
-        <h2 id="why-switch" className="ink eyebrow w-max">Four reasons teams switch</h2>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {SELLING_POINTS.map((p, i) => (
-            <a key={p.title} href={p.href} style={{ "--i": i } as React.CSSProperties} className="lift card group flex flex-col gap-3 p-6">
+      <section data-play="" aria-labelledby="why-switch" className="mx-auto grid w-full max-w-6xl gap-8 px-4 sm:px-6">
+        <div className="grid max-w-2xl gap-3">
+          <p className="eyebrow">In every seat</p>
+          <h2 id="why-switch" className="ink font-display text-3xl sm:text-4xl">One price. Two kinds of AI that save your team typing.</h2>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-3">
+          {PILLARS.map((p, i) => (
+            <Link key={p.title} href={p.href} style={{ "--i": i } as React.CSSProperties} className={`lift card group flex flex-col gap-4 p-6 sm:p-7 ${i === 0 ? "border-accent/40 bg-accent-soft/40" : ""}`}>
               <span className="flex items-center justify-between">
-                <FeatureIcon d={p.icon} />
+                <FeatureIcon d={p.icon} className="size-11 bg-accent-soft p-2.5" />
                 <span className="flex items-center gap-2">
                   {p.isNew && <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-medium tracking-[0.12em] text-accent-ink uppercase">New</span>}
-                  <span className="num text-xs text-muted">0{i + 1}</span>
+                  <span className="num font-display text-2xl text-accent/60">{p.n}</span>
                 </span>
               </span>
-              <span className="text-lg font-medium">{p.title}</span>
+              <span className="font-display text-2xl">{p.title}</span>
               <span className="text-muted">{p.body}</span>
+              <ul className="grid gap-2 border-t border-line pt-4 text-sm">
+                {p.points.map((t) => (
+                  <li key={t} className="flex gap-2.5">
+                    <svg viewBox="0 0 20 20" className="mt-0.5 size-4 shrink-0 text-accent" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 10.5l3 3 7-7" /></svg>
+                    {t}
+                  </li>
+                ))}
+              </ul>
               <span className="mt-auto text-sm font-medium text-accent">
-                See how <span aria-hidden="true" className="arrow inline-block transition-transform group-hover:translate-x-0.5">→</span>
+                How it works <span aria-hidden="true" className="arrow inline-block transition-transform group-hover:translate-x-0.5">→</span>
               </span>
-            </a>
+            </Link>
           ))}
         </div>
+        <ul className="grid gap-3 sm:grid-cols-3">
+          {ALSO.map((a) => (
+            <li key={a.title}>
+              <Link href={a.href} className="flex h-full flex-col gap-0.5 rounded-xl border border-line px-4 py-3 text-sm transition-colors hover:border-line-strong">
+                <span className="font-medium">{a.title}</span>
+                <span className="text-muted">{a.body}</span>
+              </Link>
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section id="why-flat" data-play="" className="mx-auto grid w-full max-w-6xl scroll-mt-24 gap-8 px-4 sm:px-6 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] lg:items-center">

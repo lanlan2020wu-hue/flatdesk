@@ -61,25 +61,26 @@ export function InboxShot() {
   );
 }
 
-const MACRO_WORDS = "Hi there, refunds go back to the original card within 5 business days…".split(" ");
+const MACRO_WORDS = "Hi [customer name], refunds go back to the original card within 5 business days…".split(" ");
 
 export function MacroShot() {
   return (
     <div className="shot" aria-hidden="true">
-      <Bar title="Macros and rules" />
+      <Bar title="AI macros" />
       <div className="grid gap-3 p-3">
         <div className="grid gap-2 rounded-lg border border-accent/30 bg-accent-soft/70 p-2.5">
           <span className="flex items-center gap-1.5 text-[12px] font-medium text-accent">
             <svg viewBox="0 0 24 24" className="sparkle size-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z" />
             </svg>
-            Flatdesk wrote this for you
+            AI macro, identified from your replies
           </span>
           <span className="grid gap-1 rounded-md bg-surface p-2 shadow-sm">
             <span className="flex items-center justify-between gap-2">
-              <span className="font-medium">Where&apos;s my refund</span>
+              <span className="font-medium">Refund timing</span>
               <span className="num text-[11px] text-muted">sent on 12 tickets this week</span>
             </span>
+            <span className="text-[11px]">Customers ask: when will my refund reach my card?</span>
             <span className="text-[12px] text-muted">
               {MACRO_WORDS.map((w, i) => (
                 <span key={i} style={{ "--w": i } as React.CSSProperties} className="word">{w} </span>
@@ -100,6 +101,56 @@ export function MacroShot() {
             </span>
           </span>
           <span className="text-[12px] text-muted">Hi there, reset links last 30 minutes. Request a new one from the sign-in page…</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const DRAFT_WORDS = "Hi Kim, sorry for the wait. Your order [order number] left our warehouse today, and tracking is on its way…".split(" ");
+
+// The copilot on a ticket: the summary prints line by line, then a drafted
+// reply writes itself into the reply box.
+export function CopilotShot() {
+  const points = ["Kim's order hasn't arrived after 9 days", "Sam asked the warehouse yesterday (internal note)", "Wants a date, or a refund"];
+  return (
+    <div className="shot" aria-hidden="true">
+      <Bar title="#2291 · Still waiting on my order" />
+      <div className="grid gap-3 p-3">
+        <div className="grid gap-1.5 rounded-lg border border-accent/30 bg-accent-soft/70 p-2.5">
+          <span className="flex items-center justify-between gap-2 text-[12px] font-medium text-accent">
+            <span className="flex items-center gap-1.5">
+              <svg viewBox="0 0 24 24" className="sparkle size-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z" />
+              </svg>
+              Copilot summary
+            </span>
+            <span className="rounded-full bg-warn/15 px-1.5 py-px text-[10px] text-warn">Frustrated</span>
+          </span>
+          {points.map((p, i) => (
+            <span key={p} style={{ "--i": i } as React.CSSProperties} className="ln flex gap-1.5 text-[12px]">
+              <span className="mt-1.5 size-1 shrink-0 rounded-full bg-accent" />
+              {p}
+            </span>
+          ))}
+          <span style={{ "--i": 3 } as React.CSSProperties} className="ln text-[11px] text-muted">Next: give a delivery date and offer a refund if it slips.</span>
+        </div>
+        <div className="grid gap-2 rounded-lg border border-line p-2.5">
+          <span className="flex items-center gap-2 text-[11px]">
+            <span className="rounded-md bg-surface-2 px-1.5 py-0.5 font-medium">Reply</span>
+            <span className="text-muted">Insert macro…</span>
+            <span className="save ml-auto rounded-md border border-accent/40 px-1.5 py-0.5 font-medium text-accent">Draft reply</span>
+            <span className="rounded-md border border-line px-1.5 py-0.5 text-muted">Rewrite…</span>
+          </span>
+          <span className="min-h-10 text-[12px]">
+            {DRAFT_WORDS.map((w, i) => (
+              <span key={i} style={{ "--w": i + 8 } as React.CSSProperties} className="word">{w} </span>
+            ))}
+          </span>
+          <span className="flex items-center justify-between text-[11px] text-muted">
+            <span>Included in every seat</span>
+            <span className="rounded-md bg-accent px-2 py-1 font-medium text-accent-ink">Send reply</span>
+          </span>
         </div>
       </div>
     </div>

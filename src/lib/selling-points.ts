@@ -3,6 +3,7 @@
 // is a claim about the shipped product, so keep it in step with the code.
 
 import { SWITCH_TRIAL_DAYS, TRIAL_DAYS } from "@/lib/billing";
+import { COPILOT } from "@/lib/copilot-config";
 import { BILLING_FAQ } from "@/lib/faq";
 import { PLAN, PRICE_PHRASE, usd } from "@/lib/pricing";
 import { TEST_DRIVE } from "@/lib/test-drive";
@@ -65,6 +66,88 @@ export const SELLING_POINTS: SellingPoint[] = [
       ...BILLING_FAQ.filter((f) => f.q.startsWith("What happens when") || f.q.startsWith("What counts")),
     ],
     icon: "M7 4h10v16l-2.5-1.5L12 20l-2.5-1.5L7 20zM10 9h4M10 13h4",
+  },
+  {
+    slug: "ai-macros",
+    name: "AI macros",
+    short: "Flatdesk identifies the answers your team keeps retyping, the AI writes each one up as a clean macro, and new tickets asking the same thing get it offered in one click.",
+    headline: "AI macros: identified from your team's replies, written by AI, offered on the right tickets",
+    answer:
+      "Flatdesk watches the replies your agents send. Once essentially the same answer has gone out on 5 different tickets, it identifies it as a macro, and the AI writes it up from the versions your team sent: a short name, the customer question it answers, and one reply with placeholders where each customer's details go. Save it in one click. From then on, when a new ticket asks that question, the macro is offered right in the reply box. None of this uses your AI allowance.",
+    metaTitle: "AI macros: canned responses identified and written automatically",
+    metaDescription:
+      "Flatdesk identifies the replies your team sends over and over, has the AI write them up as macros, and offers the right macro on new tickets. Works from imported history too.",
+    steps: [
+      { title: "Your team answers as usual", body: "Replies from the last 90 days count, including history you imported from your old help desk." },
+      { title: "Flatdesk identifies the repeats", body: "Replies that say essentially the same thing, on 5 different tickets, become one suggested macro." },
+      { title: "The AI writes the macro", body: "It reads the versions your team sent and writes one clean reply with placeholders, a name, and the question it answers." },
+      { title: "It's offered on the right tickets", body: "When a new ticket asks the same question, the reply box offers the macro. AI answers use it too." },
+    ],
+    facts: [
+      "Identifies a macro once 5 distinct tickets get the same answer",
+      "The AI writes each one up from your team's own replies, with placeholders for customer details",
+      "Offers the matching macro on new tickets, right in the reply box",
+      "Works from imported history, so suggestions can start on day one",
+      "Never uses your AI allowance",
+    ],
+    faq: [
+      {
+        q: "How does Flatdesk identify which macros to suggest?",
+        a: "It groups agent replies from the last 90 days by how many words they share. When one answer has gone out on 5 different tickets and no existing macro covers it, it becomes a suggestion, and the AI writes it up.",
+      },
+      {
+        q: "Do AI macros use AI resolutions?",
+        a: "No. Writing macros and matching them to tickets never counts toward the AI allowance. Resolutions only count when the AI answers a customer.",
+      },
+      {
+        q: "How does Flatdesk know which macro fits a new ticket?",
+        a: "The AI writes down the customer question each macro answers. When a new ticket asks the same thing, the reply box offers that macro, and the agent decides whether to use it.",
+      },
+      {
+        q: "Does it work with history imported from another help desk?",
+        a: "Yes. Imported replies count, so a team that brings its history can get AI macros on the first day.",
+      },
+    ],
+    icon: "M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8zM18 15l.9 2.1L21 18l-2.1.9L18 21l-.9-2.1L15 18l2.1-.9z",
+    isNew: true,
+  },
+  {
+    slug: "ai-copilot",
+    name: "AI copilot, included",
+    short: `Summarize any ticket, draft a reply from your macros and help center, or rewrite what you typed. It's in every seat at ${usd(PLAN.annualSeatPrice)}, where other help desks sell a copilot as a per-agent add-on.`,
+    headline: "An AI copilot for every agent, included in the seat",
+    answer: `Flatdesk's copilot helps the person answering a ticket. It summarizes the conversation with the customer's mood and the next step, drafts a reply from your team's macros, notes and help center, and rewrites what you typed to be shorter, friendlier, more formal or correctly spelled. Nothing is sent without the agent. It's included in every seat with up to ${COPILOT.perAgent} copilot actions per seat a month, pooled, and it never uses your AI resolutions.`,
+    metaTitle: "AI copilot for support agents, included in every seat",
+    metaDescription: `Ticket summaries, drafted replies and rewrites for every agent, included in Flatdesk's ${usd(PLAN.annualSeatPrice)} seat instead of sold as a per-agent add-on.`,
+    steps: [
+      { title: "Open a ticket", body: "The copilot summarizes it: what the customer wants, where it stands, their mood and what to do next." },
+      { title: "Draft a reply", body: "One click drafts the next reply from your macros, notes and help center. Where it needs a detail it doesn't have, it leaves a placeholder and tells you." },
+      { title: "Rewrite it", body: "Make your reply shorter, friendlier or more formal, or just fix the spelling." },
+      { title: "You send it", body: "Nothing goes to the customer until you press send." },
+    ],
+    facts: [
+      "Ticket summaries with the customer's mood and a next step",
+      "Drafted replies from your macros, notes and help center",
+      "Rewrites: shorter, friendlier, more formal, or fix grammar",
+      `Up to ${COPILOT.perAgent} copilot actions per seat a month, pooled across the team`,
+      "Never uses AI resolutions and never sends anything by itself",
+    ],
+    faq: [
+      {
+        q: "Does the copilot cost extra?",
+        a: `No. It's part of every seat. Each seat adds ${COPILOT.perAgent} copilot actions a month to a team pool, and a summary you've already made is shown again for free until the conversation changes.`,
+      },
+      {
+        q: "Do copilot drafts count as AI resolutions?",
+        a: "No. Resolutions count only when the AI answers a customer by itself. The copilot only helps an agent, who sends the reply.",
+      },
+      {
+        q: "What does the copilot draft from?",
+        a: "Your team's macros, AI instructions and published help center articles, plus the whole conversation, including internal notes the customer never saw.",
+      },
+    ],
+    icon: "M4 6h16v10H8l-4 4zM8 10h8M8 13h5",
+    isNew: true,
   },
   {
     slug: "ai-receipts",
@@ -142,46 +225,6 @@ export const SELLING_POINTS: SellingPoint[] = [
       },
     ],
     icon: "M4 6h10M4 12h7M4 18h10M15 13l2.5 2.5L22 11",
-    isNew: true,
-  },
-  {
-    slug: "self-writing-macros",
-    name: "Macros that write themselves",
-    short: "When your team sends the same answer on 5 tickets, Flatdesk offers it as a finished macro. Suggestions can start on day one from your imported history.",
-    headline: "Macros that write themselves from the answers your team repeats",
-    answer:
-      "Flatdesk watches the replies your agents send. Once essentially the same answer has gone out on 5 different tickets, it offers it as a finished macro with the greeting, sign-off and customer's name taken out. One click saves it, and the AI can use it straight away. Suggestions don't use any AI allowance.",
-    metaTitle: "Macros that write themselves: automatic canned responses",
-    metaDescription:
-      "Flatdesk turns replies your team sends on 5 tickets into ready macros, from your imported history too. No AI allowance used.",
-    steps: [
-      { title: "Your team answers as usual", body: "Replies from the last 90 days count, including history you imported from your old help desk." },
-      { title: "Flatdesk spots the repeats", body: "Replies that are essentially the same, on 5 different tickets, become one suggestion." },
-      { title: "Save it in one click", body: "The suggestion shows at the top of Macros, and right under a reply you've just sent for the fifth time." },
-      { title: "The AI uses it", body: "Saved macros are what the AI answers from, so every save makes it more useful." },
-    ],
-    facts: [
-      "Suggests a macro after 5 distinct tickets get the same answer",
-      "Works from imported history, so suggestions can start on day one",
-      "Strips quotes, greetings and sign-offs",
-      "Never uses your AI allowance",
-      'Saved suggestions carry a "Written by Flatdesk" label',
-    ],
-    faq: [
-      {
-        q: "How does Flatdesk know which macros to suggest?",
-        a: "It groups agent replies from the last 90 days by how many words they share. When one answer has gone out on 5 different tickets and no existing macro covers it, it becomes a suggestion.",
-      },
-      {
-        q: "Do macro suggestions use AI resolutions?",
-        a: "No. Suggestions are found by comparing your team's replies, without a model call, so they never count toward the AI allowance.",
-      },
-      {
-        q: "Does it work with history imported from another help desk?",
-        a: "Yes. Imported replies count, so a team that brings its history can get suggestions on the first day.",
-      },
-    ],
-    icon: "M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8zM18 15l.9 2.1L21 18l-2.1.9L18 21l-.9-2.1L15 18l2.1-.9z",
     isNew: true,
   },
   {
