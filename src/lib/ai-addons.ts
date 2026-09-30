@@ -26,10 +26,14 @@ const each = (id: string) => {
   return `${c.estimated ? "~" : ""}${usd(c.aiRate, true)} each`;
 };
 
+// Flatdesk's equivalent per-answer rate: the whole seat price spread over its included answers.
+export const perAnswer = (billing: "month" | "year") =>
+  (billing === "year" ? PLAN.annualSeatPrice : PLAN.seatPrice) / PLAN.includedPerAgent;
+
 export const FLATDESK_ROW: GridRow = {
   vendor: "Flatdesk",
-  cells: ["Included", "Included", "Included", `${PLAN.includedPerAgent} per agent included`],
-  note: `All in the seat: ${usd(PLAN.seatPrice)} a month, or ${usd(PLAN.annualSeatPrice)} billed yearly. Macros never use the AI allowance.`,
+  cells: ["Included", "Included", "Included", `${usd(perAnswer("year"), true)} each or less`],
+  note: `All in the seat: ${usd(PLAN.seatPrice)} a month, or ${usd(PLAN.annualSeatPrice)} billed yearly. Each seat includes ${PLAN.includedPerAgent} AI answers a month, so even counting the whole seat an answer costs at most ${usd(perAnswer("year"), true)} (${usd(perAnswer("month"), true)} on monthly billing); optional overage is ${usd(PLAN.overageRate, true)}. Macros never use the AI allowance.`,
 };
 
 export const GRID: GridRow[] = [
