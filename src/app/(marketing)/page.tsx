@@ -281,7 +281,7 @@ export default function Home() {
                 sends make the same edit, and the AI rewrites the macro with it. An admin applies it in one click, so the macros grow with the business.
               </p>
               <ul className="grid gap-2 text-sm">
-                {["Counts only sends of the current version, so one fix starts the count again", "Keeps your placeholders, greeting and sign-off", "Zendesk's macro suggestions cover new macros only"].map((p) => (
+                {["Counts only sends of the current version, so one fix starts the count again", "Keeps your placeholders, greeting and sign-off", "Included in the seat, where Zendesk sells macro suggestions in its $50 Copilot add-on"].map((p) => (
                   <li key={p} className="flex gap-2.5">{mark}{p}</li>
                 ))}
               </ul>

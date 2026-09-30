@@ -100,7 +100,7 @@ export const RIVALS: Rival[] = [
     answer: `Zendesk Suite starts at $55 per agent on annual billing and charges for automated resolutions past a small allowance. It doesn't publish the per-resolution rate; third parties put it near $1.50 to $2.00. Flatdesk is ${usd(PLAN.annualSeatPrice)} per agent on annual billing (${usd(PLAN.seatPrice)} monthly) with ${PLAN.includedPerAgent} AI resolutions per agent included and a cap on by default. Zendesk is far broader: community forums, many channels, a large app marketplace.`,
     flatdeskWins: [
       "One public price, with AI included and capped",
-      "Evolving macros that update from your team's edits, where Zendesk's macro suggestions cover new macros only",
+      "Evolving macros that update from your team's edits, included in the seat (Zendesk's macro suggestions need its Copilot add-on, $50 per agent)",
       "AI receipts with one-click refunds",
       "No tiers or add-ons: every seat gets every feature",
     ],
