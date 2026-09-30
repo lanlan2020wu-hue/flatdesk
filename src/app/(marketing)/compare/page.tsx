@@ -17,7 +17,7 @@ export default function ComparePage() {
     <div className="mx-auto grid max-w-6xl gap-16 px-4 pt-14 sm:px-6 sm:pt-20">
       <JsonLd data={[breadcrumbs([{ name: "Compare", path: "/compare" }])]} />
       <div className="grid max-w-2xl gap-3">
-        <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-4xl sm:text-5xl">How Flatdesk compares, including where it doesn&apos;t win.</h1>
+        <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-[2.6rem] sm:text-6xl">How Flatdesk compares, including where it doesn&apos;t win.</h1>
         <p style={{ "--d": 2 } as React.CSSProperties} className="enter text-lg text-muted">
           Flatdesk isn&apos;t the cheapest seat. It&apos;s the help desk whose AI bill can&apos;t surprise you: AI resolutions come with every seat and
           the AI pauses at the cap. Here is what the same teams pay elsewhere.

@@ -18,15 +18,15 @@ export const metadata = { title: { default: "Inbox", template: "%s · Flatdesk" 
 
 function SideMeter({ label, used, of }: { label: string; used: number; of: number }) {
   return (
-    <span className="grid gap-1">
+    <span className="grid gap-1.5">
       <span className="flex justify-between gap-2">
         <span>{label}</span>
-        <span className="num text-muted">
+        <span className="num text-field-muted">
           {used}/{of}
         </span>
       </span>
-      <span className="h-1 overflow-hidden rounded-full bg-line" aria-hidden="true">
-        <span className={`block h-full rounded-full ${used >= of ? "bg-warn" : "bg-accent"}`} style={{ width: `${Math.min(100, (used / Math.max(1, of)) * 100)}%` }} />
+      <span className="h-1 overflow-hidden rounded-full bg-field-line" aria-hidden="true">
+        <span className={`block h-full rounded-full ${used >= of ? "bg-warn" : "bg-lime"}`} style={{ width: `${Math.min(100, (used / Math.max(1, of)) * 100)}%` }} />
       </span>
     </span>
   );
@@ -47,47 +47,41 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
   }
   const plan = current ? access(current) : ({ state: "open" } as const);
 
+  const interval = org?.billingInterval === "year" ? "year" : "month";
+  const seats = org?.billedSeats ?? null;
+
   return (
     <AuthProvider>
-    <div className="grid min-h-screen flex-1 md:grid-cols-[248px_minmax(0,1fr)]">
-      <div className="border-b border-line bg-surface md:border-r md:border-b-0">
-        <MobileNav bar={<Logo href="/app/overview" />}>
-        <aside className="flex w-full flex-col gap-6 px-3 pb-4 md:sticky md:top-0 md:h-screen md:overflow-y-auto md:py-5">
+    <div className="grid min-h-screen flex-1 grid-rows-[auto_1fr] md:grid-cols-[236px_minmax(0,1fr)] md:grid-rows-none">
+      <div className="bg-field text-field-ink">
+        <MobileNav bar={<Logo href="/app/overview" onField />}>
+        <aside className="flex w-full flex-col gap-5 px-3 pb-4 text-sm md:sticky md:top-0 md:h-screen md:overflow-y-auto md:py-5">
           <div className="hidden px-2 md:block">
-            <Logo href="/app/overview" />
+            <Logo href="/app/overview" onField />
           </div>
-          {/* The flat rate comes first in the app too: the price and what it has covered this month. */}
-          <Link href="/app/overview" className="grid gap-2.5 rounded-xl border border-accent/25 bg-accent-soft/60 px-3 py-3 text-xs transition-colors hover:border-accent/50">
-            <span className="flex items-baseline justify-between gap-2">
-              <span className="font-medium text-accent">Flat rate</span>
-              <span className="num text-muted">{usd(seatPriceFor(org?.billingInterval === "year" ? "year" : "month"))} per seat</span>
-            </span>
-            <SideMeter label="AI resolutions" used={ai.used} of={ai.included} />
-            <span className="text-muted">No AI meter. AI macros are included.</span>
-          </Link>
-          <Link href="/app/tickets/new" className="btn btn-primary w-full">
+          <Link href="/app/tickets/new" className="btn btn-on-field btn-sm w-full">
             <svg viewBox="0 0 20 20" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M10 4v12M4 10h12" /></svg>
             New ticket
           </Link>
           {onboarding?.visible && (
-            <Link href="/app/welcome" className="grid gap-1.5 rounded-lg border border-line bg-bg px-3 py-2.5 text-sm transition-colors hover:border-line-strong">
+            <Link href="/app/welcome" className="grid gap-1.5 rounded-[6px] bg-field-2 px-3 py-2.5 transition-colors hover:bg-field-line">
               <span className="flex justify-between gap-2">
                 <span className="font-medium">Finish setup</span>
-                <span className="num text-xs text-muted">
+                <span className="num text-xs text-field-muted">
                   {onboarding.doneCount}/{onboarding.steps.length}
                 </span>
               </span>
-              <span className="h-1 overflow-hidden rounded-full bg-line" aria-hidden="true">
-                <span className="block h-full rounded-full bg-accent" style={{ width: `${(onboarding.doneCount / onboarding.steps.length) * 100}%` }} />
+              <span className="h-1 overflow-hidden rounded-full bg-field-line" aria-hidden="true">
+                <span className="block h-full rounded-full bg-lime" style={{ width: `${(onboarding.doneCount / onboarding.steps.length) * 100}%` }} />
               </span>
             </Link>
           )}
-          <nav className="grid gap-0.5 text-sm" aria-label="Your seat">
+          <nav className="grid gap-px" aria-label="Your seat">
             <NavLink href="/app/overview">Overview</NavLink>
             <NavLink href="/app/macros">AI macros</NavLink>
           </nav>
-          <nav className="grid gap-0.5 text-sm" aria-label="Views">
-            <p className="eyebrow px-2.5 pb-1.5">Inbox</p>
+          <nav className="grid gap-px" aria-label="Views">
+            <p className="nav-group">Inbox</p>
             {VIEWS.map((v) => (
               <NavLink key={v.id} href={`/app/inbox?view=${v.id}`}>
                 <span>{v.label}</span>
@@ -95,20 +89,34 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
               </NavLink>
             ))}
           </nav>
-          <nav className="grid gap-0.5 text-sm" aria-label="Also included">
-            <p className="eyebrow px-2.5 pb-1.5">Also included</p>
+          <nav className="grid gap-px" aria-label="Also included">
+            <p className="nav-group">Also included</p>
             <NavLink href="/app/receipts">AI receipts</NavLink>
             <NavLink href="/app/test-drive">AI test drive</NavLink>
             <NavLink href="/app/help">Help center</NavLink>
             <NavLink href="/app/reports">Reports</NavLink>
           </nav>
-          <nav className="grid gap-0.5 text-sm" aria-label="Workspace">
-            <p className="eyebrow px-2.5 pb-1.5">Workspace</p>
+          <nav className="grid gap-px" aria-label="Workspace">
+            <p className="nav-group">Workspace</p>
             {s.role === "admin" && <NavLink href="/app/import">Import</NavLink>}
             <NavLink href="/app/settings">Settings</NavLink>
           </nav>
-          <div className="mt-auto border-t border-line px-2 pt-4">
-            <AccountMenu fallbackName={s.name} />
+          {/* The flat rate stays in view: what a seat costs and what the AI has used this month. */}
+          <div className="mt-auto grid gap-3">
+            <Link href="/app/overview" className="grid gap-2.5 rounded-[6px] border border-field-line px-3 py-3 text-xs transition-colors hover:border-field-muted">
+              <span className="flex items-baseline justify-between gap-2">
+                <span className="font-semibold">Flat rate</span>
+                <span className="num text-field-muted">
+                  {seats ? `${seats} × ` : ""}
+                  {usd(seatPriceFor(interval))}
+                </span>
+              </span>
+              <SideMeter label="AI answers" used={ai.used} of={ai.included} />
+              <span className="text-field-muted">AI macros never use the allowance.</span>
+            </Link>
+            <div className="rounded-[6px] bg-surface px-2.5 py-2 text-ink">
+              <AccountMenu fallbackName={s.name} />
+            </div>
           </div>
         </aside>
         </MobileNav>

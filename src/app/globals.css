@@ -6,8 +6,8 @@
   --bg: #edf1ea;
   --surface: #fbfcf9;
   --surface-2: #e3e9df;
-  --ink: #14201b;
-  --muted: #52615a;
+  --ink: #0f1a15;
+  --muted: #4c5b54;
   --line: #d5ddd1;
   --line-strong: #b9c6b6;
   --accent: #17624b;
@@ -17,12 +17,20 @@
   --warn: #9a5b0c;
   --warn-soft: #fbf0de;
   --highlight: #dff28f;
+  --lime: #dff28f;
   --chart-other: #a8a193;
   --shadow-sm: 0 1px 2px rgb(20 32 27 / 0.05), 0 1px 1px rgb(20 32 27 / 0.03);
   --shadow-md: 0 1px 2px rgb(20 32 27 / 0.04), 0 6px 16px -4px rgb(20 32 27 / 0.08);
   --shadow-lg: 0 2px 4px rgb(20 32 27 / 0.05), 0 14px 24px -12px rgb(20 32 27 / 0.2);
   /* The counter the hero bill prints onto. */
   --counter: #17624b;
+  /* Bank-note green: the field that owns whole regions (the hero, the close,
+     the app's sidebar), with its own ink. */
+  --field: #11392c;
+  --field-2: #174636;
+  --field-ink: #eef4ec;
+  --field-muted: #a7bfb2;
+  --field-line: rgb(238 244 236 / 0.16);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -41,11 +49,17 @@
     --warn: #e7b062;
     --warn-soft: #3a2d16;
     --highlight: rgb(206 240 90 / 0.28);
+    --lime: #cfe877;
     --chart-other: #6c7a73;
     --shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
     --shadow-md: 0 1px 2px rgb(0 0 0 / 0.3), 0 8px 20px -6px rgb(0 0 0 / 0.45);
     --shadow-lg: 0 2px 4px rgb(0 0 0 / 0.3), 0 14px 24px -12px rgb(0 0 0 / 0.6);
     --counter: #123a2e;
+    --field: #0b231b;
+    --field-2: #10301f;
+    --field-ink: #e8efe9;
+    --field-muted: #93aa9e;
+    --field-line: rgb(232 239 233 / 0.12);
     color-scheme: dark;
   }
 }
@@ -65,13 +79,19 @@
   --color-warn: var(--warn);
   --color-warn-soft: var(--warn-soft);
   --color-chart-other: var(--chart-other);
+  --color-field: var(--field);
+  --color-field-2: var(--field-2);
+  --color-field-ink: var(--field-ink);
+  --color-field-muted: var(--field-muted);
+  --color-field-line: var(--field-line);
+  --color-highlight: var(--highlight);
+  --color-lime: var(--lime);
   --shadow-sm: var(--shadow-sm);
   --shadow-md: var(--shadow-md);
   --shadow-lg: var(--shadow-lg);
-  --font-sans: var(--font-plex-sans), system-ui, sans-serif;
-  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
-  --font-display: var(--font-fraunces), Georgia, serif;
-  --font-display-italic: var(--font-fraunces-italic), var(--font-fraunces), Georgia, serif;
+  --font-sans: var(--font-sans-face), system-ui, sans-serif;
+  --font-mono: var(--font-mono-face), ui-monospace, monospace;
+  --font-display: var(--font-sans-face), system-ui, sans-serif;
 }
 
 body {
@@ -105,8 +125,11 @@ p {
 }
 
 @layer components {
+  /* Headlines are the same grotesk, heavy and set tight. */
   .font-display {
-    letter-spacing: -0.015em;
+    font-weight: 700;
+    letter-spacing: -0.035em;
+    line-height: 1.05;
   }
 
   /* A small label for a group of things: set in the body face, sentence case. */
@@ -129,11 +152,11 @@ p {
     align-items: center;
     justify-content: center;
     gap: 0.5rem;
-    border-radius: 0.625rem;
+    border-radius: 0.375rem;
     border: 1px solid transparent;
-    padding: 0.625rem 1.05rem;
+    padding: 0.65rem 1.1rem;
     font-size: 0.9rem;
-    font-weight: 500;
+    font-weight: 600;
     line-height: 1.25;
     white-space: nowrap;
     transition:
@@ -152,7 +175,7 @@ p {
   .btn-sm {
     padding: 0.4rem 0.75rem;
     font-size: 0.82rem;
-    border-radius: 0.5rem;
+    border-radius: 0.3125rem;
   }
   .btn-primary {
     background: var(--accent);
@@ -174,9 +197,25 @@ p {
     border-color: var(--muted);
   }
 
+  /* Buttons that sit on the bank-note green field. */
+  .btn-on-field {
+    background: var(--lime);
+    color: #0f1a15;
+  }
+  .btn-on-field:hover:not(:disabled) {
+    background: color-mix(in srgb, var(--lime) 82%, white);
+  }
+  .btn-ghost-field {
+    border-color: var(--field-line);
+    color: var(--field-ink);
+  }
+  .btn-ghost-field:hover:not(:disabled) {
+    border-color: var(--field-muted);
+  }
+
   .field {
     width: 100%;
-    border-radius: 0.5rem;
+    border-radius: 0.375rem;
     border: 1px solid var(--line-strong);
     background: var(--surface);
     padding: 0.55rem 0.75rem;
@@ -203,7 +242,7 @@ p {
   }
 
   .card {
-    border-radius: 1rem;
+    border-radius: 0.5rem;
     border: 1px solid var(--line);
     background: var(--surface);
     box-shadow: var(--shadow-sm);
@@ -277,31 +316,39 @@ p {
     border-top: 1px dashed var(--line-strong);
   }
 
+  /* The app's sidebar sits on the bank-note green field. */
   .nav-link {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
-    border-radius: 0.5rem;
-    padding: 0.4rem 0.6rem;
-    color: var(--muted);
+    border-radius: 0.3125rem;
+    padding: 0.36rem 0.6rem;
+    color: var(--field-muted);
     transition:
       background-color 120ms ease,
       color 120ms ease;
   }
   .nav-link:hover {
-    background: var(--surface-2);
-    color: var(--ink);
+    background: var(--field-2);
+    color: var(--field-ink);
   }
   .nav-link[aria-current="page"] {
-    background: var(--accent-soft);
-    color: var(--ink);
-    font-weight: 500;
+    background: var(--field-ink);
+    color: var(--field);
+    font-weight: 600;
+  }
+  .nav-group {
+    padding: 0 0.6rem 0.35rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--field-muted);
+    opacity: 0.8;
   }
 
   /* A UI mock: the app's own chrome, drawn smaller, for the feature tour. */
   .shot {
-    border-radius: 0.875rem;
+    border-radius: 0.5rem;
     border: 1px solid var(--line);
     background: var(--surface);
     box-shadow: var(--shadow-md);

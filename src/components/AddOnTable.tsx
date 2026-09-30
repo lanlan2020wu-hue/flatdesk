@@ -16,7 +16,7 @@ export default function AddOnTable() {
   const rows = [FLATDESK_ROW, ...GRID];
   return (
     <div className="grid gap-3">
-      <div className="card overflow-x-auto" tabIndex={0} role="region" aria-label="AI macro features and prices by help desk">
+      <div className="card relative overflow-x-auto" tabIndex={0} role="region" aria-label="AI macro features and prices by help desk">
         <table className="w-full min-w-[46rem] text-sm">
           <thead>
             <tr className="border-b border-line text-left align-bottom">

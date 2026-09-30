@@ -40,7 +40,7 @@ export default function FeaturesPage() {
     <div className="mx-auto grid max-w-6xl gap-20 px-4 pt-14 sm:px-6 sm:pt-20">
       <JsonLd data={[software(), breadcrumbs([{ name: "Product", path: "/features" }])]} />
       <div className="grid max-w-2xl gap-3">
-        <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-4xl sm:text-5xl">A flat rate first. AI macros second. Everything else included.</h1>
+        <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-[2.6rem] sm:text-6xl">A flat rate first. AI macros second. Everything else included.</h1>
         <p style={{ "--d": 2 } as React.CSSProperties} className="enter text-lg text-muted">
           Flatdesk is a help desk for email and chat. Every seat gets every feature below, for one price per agent.
         </p>

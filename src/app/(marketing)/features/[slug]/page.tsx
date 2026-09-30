@@ -55,7 +55,7 @@ export default async function SellingPointPage({ params }: PageProps<"/features/
             {p.name}
             {p.isNew && <span className="text-xs font-medium text-accent">New</span>}
           </p>
-          <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-4xl leading-[1.08] sm:text-5xl">{p.headline}</h1>
+          <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-[2.6rem] sm:text-6xl">{p.headline}</h1>
           <p style={{ "--d": 2 } as React.CSSProperties} className="enter text-lg text-muted">{p.answer}</p>
           <div style={{ "--d": 3 } as React.CSSProperties} className="enter flex flex-wrap gap-3">
             <Link href="/sign-up" className="btn btn-primary">
