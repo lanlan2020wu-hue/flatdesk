@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import AddOnTable from "@/components/AddOnTable";
 import JsonLd from "@/components/JsonLd";
 import WaitlistForm from "@/components/WaitlistForm";
 import YearChart from "@/components/YearChart";
@@ -291,6 +292,10 @@ export default function Home() {
               <MacroUpdateShot />
             </div>
           </article>
+          <div data-play="" className="grid gap-6 border-t border-accent/30 pt-12">
+            <h3 className="ink font-display text-3xl leading-tight">Elsewhere, AI help with macros is an add-on. Here it&apos;s in the seat.</h3>
+            <AddOnTable />
+          </div>
         </div>
       </section>
 
