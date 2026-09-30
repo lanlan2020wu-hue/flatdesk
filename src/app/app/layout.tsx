@@ -10,7 +10,6 @@ import { db, schema } from "@/db";
 import { aiUsage } from "@/lib/ai";
 import { requireSession } from "@/lib/auth";
 import { access, billingConfigured, isActive, refreshSubscription } from "@/lib/billing";
-import { qualityRoom } from "@/lib/quality";
 import { getOnboarding } from "@/lib/onboarding";
 import { seatPriceFor, usd } from "@/lib/pricing";
 import { VIEWS, viewCounts } from "@/lib/tickets";
@@ -35,12 +34,11 @@ function SideMeter({ label, used, of }: { label: string; used: number; of: numbe
 
 export default async function AppLayout({ children }: LayoutProps<"/app">) {
   const s = await requireSession();
-  const [counts, org, onboarding, ai, quality] = await Promise.all([
+  const [counts, org, onboarding, ai] = await Promise.all([
     viewCounts(s.orgId, s.userId),
     db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) }),
     s.role === "admin" ? getOnboarding(s.orgId) : null,
     aiUsage(s.orgId),
-    qualityRoom(s.orgId),
   ]);
   let current = org;
   // Right after Checkout the row is stale; ask Stripe before showing the banner.
@@ -53,11 +51,20 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
     <AuthProvider>
     <div className="grid min-h-screen flex-1 md:grid-cols-[248px_minmax(0,1fr)]">
       <div className="border-b border-line bg-surface md:border-r md:border-b-0">
-        <MobileNav bar={<Logo href="/app/inbox" />}>
+        <MobileNav bar={<Logo href="/app/overview" />}>
         <aside className="flex w-full flex-col gap-6 px-3 pb-4 md:sticky md:top-0 md:h-screen md:overflow-y-auto md:py-5">
           <div className="hidden px-2 md:block">
-            <Logo href="/app/inbox" />
+            <Logo href="/app/overview" />
           </div>
+          {/* The flat rate comes first in the app too: the price and what it has covered this month. */}
+          <Link href="/app/overview" className="grid gap-2.5 rounded-xl border border-accent/25 bg-accent-soft/60 px-3 py-3 text-xs transition-colors hover:border-accent/50">
+            <span className="flex items-baseline justify-between gap-2">
+              <span className="font-medium text-accent">Flat rate</span>
+              <span className="num text-muted">{usd(seatPriceFor(org?.billingInterval === "year" ? "year" : "month"))} per seat</span>
+            </span>
+            <SideMeter label="AI resolutions" used={ai.used} of={ai.included} />
+            <span className="text-muted">No AI meter. AI macros and quality review are included.</span>
+          </Link>
           <Link href="/app/tickets/new" className="btn btn-primary w-full">
             <svg viewBox="0 0 20 20" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M10 4v12M4 10h12" /></svg>
             New ticket
@@ -75,8 +82,9 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
               </span>
             </Link>
           )}
-          <nav className="grid gap-0.5 text-sm" aria-label="Overview">
+          <nav className="grid gap-0.5 text-sm" aria-label="Your seat">
             <NavLink href="/app/overview">Overview</NavLink>
+            <NavLink href="/app/macros">AI macros</NavLink>
           </nav>
           <nav className="grid gap-0.5 text-sm" aria-label="Views">
             <p className="eyebrow px-2.5 pb-1.5">Inbox</p>
@@ -87,30 +95,20 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
               </NavLink>
             ))}
           </nav>
-          <nav className="grid gap-0.5 text-sm" aria-label="AI">
-            <p className="eyebrow px-2.5 pb-1.5">AI, included</p>
-            <NavLink href="/app/macros">AI macros</NavLink>
+          <nav className="grid gap-0.5 text-sm" aria-label="Also included">
+            <p className="eyebrow px-2.5 pb-1.5">Also included</p>
             <NavLink href="/app/quality">Quality review</NavLink>
             <NavLink href="/app/receipts">AI receipts</NavLink>
             <NavLink href="/app/test-drive">AI test drive</NavLink>
-          </nav>
-          <nav className="grid gap-0.5 text-sm" aria-label="Settings">
-            <p className="eyebrow px-2.5 pb-1.5">Workspace</p>
-            <NavLink href="/app/reports">Reports</NavLink>
             <NavLink href="/app/help">Help center</NavLink>
+            <NavLink href="/app/reports">Reports</NavLink>
+          </nav>
+          <nav className="grid gap-0.5 text-sm" aria-label="Workspace">
+            <p className="eyebrow px-2.5 pb-1.5">Workspace</p>
             {s.role === "admin" && <NavLink href="/app/import">Import</NavLink>}
             <NavLink href="/app/settings">Settings</NavLink>
           </nav>
-          <Link href="/app/overview" className="mt-auto grid gap-2.5 rounded-xl border border-accent/25 bg-accent-soft/60 px-3 py-3 text-xs transition-colors hover:border-accent/50">
-            <span className="flex items-baseline justify-between gap-2">
-              <span className="font-medium text-accent">Flat rate</span>
-              <span className="num text-muted">{usd(seatPriceFor(org?.billingInterval === "year" ? "year" : "month"))} per seat</span>
-            </span>
-            <SideMeter label="AI resolutions" used={ai.used} of={ai.included} />
-            <SideMeter label="Quality reviews" used={quality.used} of={quality.limit} />
-            <span className="text-muted">AI macros and quality review never use resolutions.</span>
-          </Link>
-          <div className="border-t border-line px-2 pt-4">
+          <div className="mt-auto border-t border-line px-2 pt-4">
             <AccountMenu fallbackName={s.name} />
           </div>
         </aside>

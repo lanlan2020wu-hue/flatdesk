@@ -29,7 +29,36 @@ const I = {
   spark: "M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8zM18 15l.9 2.1L21 18l-2.1.9L18 21l-.9-2.1L15 18l2.1-.9z",
 };
 
+// In the order Flatdesk is sold: the flat rate, then AI macros, then the rest.
 export const FEATURE_GROUPS: FeatureGroup[] = [
+  {
+    id: "pricing",
+    title: "Flat rate",
+    features: [
+      { id: "billing", title: "One flat price", body: "Seats times one price, with AI resolutions included. No tiers, no add-ons, and the seat count follows your team.", icon: I.card },
+      { id: "cap", title: "A cap that's on by default", body: "The AI pauses at your included resolutions. Admins get an email at 80% and at 100%.", icon: I.cap },
+      { id: "receipts", title: "AI receipts", body: "Every AI answer itemized, with the saved answers it used. Refund a wrong one and it stops counting.", icon: I.receipt, isNew: true },
+    ],
+  },
+  {
+    id: "automation",
+    title: "AI macros and automation",
+    features: [
+      { id: "suggested-macros", title: "AI macros", body: "Flatdesk identifies the answers your team sends on 5 or more tickets, the AI writes each one up as a macro, and new tickets asking the same thing get it offered in the reply box.", icon: I.spark, isNew: true },
+      { id: "macros", title: "Macros", body: "Saved replies that can also add tags and set the status in one click.", icon: I.macro },
+      { id: "rules", title: "Assignment rules", body: 'When a ticket is tagged, rules like "if tagged billing, assign to Sam" pick who gets it.', icon: I.rule },
+      { id: "tags", title: "Tags", body: "Tag tickets by hand, from a macro, or from your old help desk's data.", icon: I.tag },
+    ],
+  },
+  {
+    id: "ai",
+    title: "AI",
+    features: [
+      { id: "quality", title: "AI quality review", body: "The AI grades every reply sent to a customer for accuracy, tone and resolution, flags the weak ones with a coaching note, and keeps a scorecard per agent.", icon: I.check, isNew: true },
+      { id: "ai", title: "AI answers", body: "Answers routine questions from your macros and notes, and hands everything else to your team. On those, agents can ask it for a draft or a ticket summary.", icon: I.ai },
+      { id: "test-drive", title: "AI test drive", body: "After you import, the AI drafts answers to 50 of your recent tickets beside what your team sent. Nothing is sent and it doesn't use your allowance.", icon: I.check, isNew: true },
+    ],
+  },
   {
     id: "inbox",
     title: "Ticketing",
@@ -44,31 +73,10 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
     ],
   },
   {
-    id: "automation",
-    title: "Automation",
-    features: [
-      { id: "macros", title: "Macros", body: "Saved replies that can also add tags and set the status in one click.", icon: I.macro },
-      { id: "suggested-macros", title: "AI macros", body: "Flatdesk identifies the answers your team sends on 5 or more tickets, the AI writes each one up as a macro, and new tickets asking the same thing get it offered in the reply box.", icon: I.spark, isNew: true },
-      { id: "help-center", title: "Help center", body: "A public help center with search. Write an article once; customers find it themselves and the AI links to it in its answers.", icon: I.book, isNew: true },
-      { id: "rules", title: "Assignment rules", body: 'When a ticket is tagged, rules like "if tagged billing, assign to Sam" pick who gets it.', icon: I.rule },
-      { id: "tags", title: "Tags", body: "Tag tickets by hand, from a macro, or from your old help desk's data.", icon: I.tag },
-    ],
-  },
-  {
-    id: "ai",
-    title: "AI",
-    features: [
-      { id: "quality", title: "AI quality review", body: "The AI grades every reply sent to a customer for accuracy, tone and resolution, flags the weak ones with a coaching note, and keeps a scorecard per agent.", icon: I.check, isNew: true },
-      { id: "ai", title: "AI answers", body: "Answers routine questions from your macros and notes, and hands everything else to your team. On those, agents can ask it for a draft or a ticket summary.", icon: I.ai },
-      { id: "cap", title: "A cap that's on by default", body: "The AI pauses at your included resolutions. Admins get an email at 80% and at 100%.", icon: I.cap },
-      { id: "test-drive", title: "AI test drive", body: "After you import, the AI drafts answers to 50 of your recent tickets beside what your team sent. Nothing is sent and it doesn't use your allowance.", icon: I.check, isNew: true },
-      { id: "receipts", title: "AI receipts", body: "Every AI answer itemized, with the saved answers it used. Refund a wrong one and it stops counting.", icon: I.receipt, isNew: true },
-    ],
-  },
-  {
     id: "data",
-    title: "Your data",
+    title: "Help center and data",
     features: [
+      { id: "help-center", title: "Help center", body: "A public help center with search. Write an article once; customers find it themselves and the AI links to it in its answers.", icon: I.book, isNew: true },
       { id: "import", title: "Lossless import", body: "Tickets, customers, macros and rules from Zendesk, Intercom, Freshdesk or Help Scout. Every original record is archived.", icon: I.import },
       { id: "export", title: "Export any time", body: "Tickets, messages, customers and macros as CSV or JSON, without asking us.", icon: I.export },
       { id: "reports", title: "Reports", body: "Volume, first response, time to close, first replies on target, ratings, AI share and per-agent load.", icon: I.report },
@@ -76,11 +84,10 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
   },
   {
     id: "team",
-    title: "Team and billing",
+    title: "Team",
     features: [
       { id: "onboarding", title: "Guided setup", body: "A checklist walks you from inbox to first test ticket.", icon: I.check },
       { id: "team", title: "Admins and agents", body: "Invite your team. Admins handle AI settings, imports and billing.", icon: I.users },
-      { id: "billing", title: "One flat price", body: "Seats times one price. Your seat count follows your team as people join or leave.", icon: I.card },
     ],
   },
 ];

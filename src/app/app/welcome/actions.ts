@@ -126,5 +126,5 @@ export async function createSampleTicketAction() {
 export async function dismissOnboardingAction() {
   const s = await requireAdmin();
   await updateOnboarding(s.orgId, (ob) => ({ ...ob, dismissed: true }));
-  redirect("/app/inbox");
+  redirect("/app/overview");
 }

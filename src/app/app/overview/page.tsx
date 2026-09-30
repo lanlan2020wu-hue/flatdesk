@@ -5,8 +5,9 @@ import { aiUsage } from "@/lib/ai";
 import { requireSession } from "@/lib/auth";
 import { access } from "@/lib/billing";
 import { macroSuggestions } from "@/lib/macro-suggestions";
+import { withAiDrafts } from "@/lib/macro-writer";
 import { PLAN, seatPriceFor, usd, type Interval } from "@/lib/pricing";
-import { qualityRoom, qualitySummary } from "@/lib/quality";
+import { qualitySummary } from "@/lib/quality";
 
 export const metadata = { title: "Overview" };
 
@@ -29,124 +30,129 @@ function Meter({ label, used, of }: { label: string; used: number; of: number })
   );
 }
 
-function Pillar({ n, title, lede, children, href, cta }: { n: string; title: string; lede: string; children: React.ReactNode; href: string; cta: string }) {
+function Chapter({ n, title, href, cta, children, tone = "" }: { n: string; title: string; href: string; cta: string; children: React.ReactNode; tone?: string }) {
   return (
-    <section className="card flex flex-col gap-5 p-6">
-      <div className="grid gap-1.5">
-        <p className="flex items-center justify-between">
-          <span className="eyebrow">{title}</span>
-          <span className="num font-display text-xl text-accent/60">{n}</span>
-        </p>
-        <p className="font-display text-2xl leading-snug">{lede}</p>
+    <section className={`card grid gap-6 p-6 sm:p-8 ${tone}`}>
+      <div className="flex flex-wrap items-baseline justify-between gap-3">
+        <h2 className="eyebrow flex items-center gap-3">
+          <span className="num font-display text-2xl text-accent">{n}</span>
+          {title}
+        </h2>
+        <Link href={href} className="link text-sm font-medium text-accent">{cta}</Link>
       </div>
-      <div className="grid gap-4">{children}</div>
-      <Link href={href} className="link mt-auto w-max text-sm font-medium text-accent">{cta}</Link>
+      {children}
     </section>
   );
 }
 
-// What the team gets for its flat price this month: the bill, the AI macros
-// Flatdesk found, and how the team's replies scored. The three things Flatdesk sells.
+const Stat = ({ label, value, className = "" }: { label: string; value: React.ReactNode; className?: string }) => (
+  <div className="grid gap-0.5 rounded-lg bg-surface-2/60 px-4 py-3">
+    <dt className="text-sm text-muted">{label}</dt>
+    <dd className={`num font-display text-3xl ${className}`}>{value}</dd>
+  </div>
+);
+
+// The app's landing page, in the order Flatdesk is sold: what the flat rate
+// covers this month, then the AI macros waiting, then everything else.
 export default async function OverviewPage() {
   const s = await requireSession();
-  const [org, ai, quality, room, suggestions, [{ aiMacros }], [{ seats }]] = await Promise.all([
+  const [org, ai, quality, found, [{ aiMacros }], [{ seats }]] = await Promise.all([
     db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) }),
     aiUsage(s.orgId),
     qualitySummary(s.orgId, 30),
-    qualityRoom(s.orgId),
     macroSuggestions(s.orgId),
     db.select({ aiMacros: count() }).from(schema.macros).where(and(eq(schema.macros.orgId, s.orgId), eq(schema.macros.source, "suggested"))),
     db.select({ seats: count() }).from(schema.agents).where(and(eq(schema.agents.orgId, s.orgId), eq(schema.agents.viewer, false))),
   ]);
+  const { suggestions } = await withAiDrafts(s.orgId, found);
   const plan = org ? access(org) : ({ state: "open" } as const);
   const interval: Interval = org?.billingInterval === "year" ? "year" : "month";
   const billed = org?.billedSeats ?? Number(seats);
   const perSeat = seatPriceFor(interval);
+  const saved = Number(aiMacros);
 
   return (
-    <div className="grid max-w-6xl gap-8 px-4 py-6 md:px-8 md:py-8">
-      <header className="grid gap-1.5">
+    <div className="grid max-w-5xl gap-6 px-4 py-6 md:px-8 md:py-8">
+      <header className="grid gap-1.5 pb-2">
         <p className="eyebrow">{monthName(ai.month)} at a glance</p>
-        <h1 className="font-display text-3xl sm:text-4xl">Everything in your seat, working.</h1>
-        <p className="max-w-2xl text-muted">One flat price covers the help desk, AI macros identified automatically from your team&apos;s replies, and AI quality review of every reply you send.</p>
+        <h1 className="font-display text-3xl sm:text-4xl">One flat rate, and what it covered this month.</h1>
       </header>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <Pillar
-          n="01"
-          title="Flat rate"
-          lede={plan.state === "trial" ? `Free trial, ${plan.daysLeft} day${plan.daysLeft === 1 ? "" : "s"} left` : `${usd(billed * perSeat)} a month, every month`}
-          href="/app/receipts"
-          cta="See this month's AI receipt"
-        >
-          <p className="text-sm text-muted">
-            {billed} seat{billed === 1 ? "" : "s"} × {usd(perSeat)}
-            {interval === "year" ? " billed yearly" : " a month"}. Every feature on this page is included, with no AI meter.
-          </p>
-          <Meter label={ai.trial ? "AI resolutions in the trial" : "AI resolutions included"} used={ai.used} of={ai.included} />
-          <p className="text-sm text-muted">
-            {org?.aiOverageEnabled ? `Overage is on at ${usd(PLAN.overageRate, true)} per resolution.` : "At the cap the AI pauses. Nothing extra is charged."}
-          </p>
-        </Pillar>
+      <Chapter n="01" title="Flat rate" href="/app/receipts" cta="See this month's AI receipt" tone="border-accent/40 bg-accent-soft/40">
+        <div className="grid gap-8 md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] md:items-end">
+          <div className="grid gap-1">
+            <p className="font-display text-4xl sm:text-5xl">
+              {plan.state === "trial" ? `Free trial, ${plan.daysLeft} day${plan.daysLeft === 1 ? "" : "s"} left` : `${usd(billed * perSeat)} a month`}
+            </p>
+            <p className="text-muted">
+              {billed} seat{billed === 1 ? "" : "s"} × {usd(perSeat)}
+              {interval === "year" ? " billed yearly" : " a month"}. The same next month, however busy it gets.
+            </p>
+          </div>
+          <div className="grid gap-3">
+            <Meter label={ai.trial ? "AI resolutions in the trial" : "AI resolutions included"} used={ai.used} of={ai.included} />
+            <p className="text-sm text-muted">
+              {org?.aiOverageEnabled ? `Overage is on at ${usd(PLAN.overageRate, true)} per resolution.` : "At the cap the AI pauses. Nothing extra is charged."} AI macros
+              and quality review never use resolutions.
+            </p>
+          </div>
+        </div>
+      </Chapter>
 
-        <Pillar
-          n="02"
-          title="AI macros"
-          lede={suggestions.length ? `${suggestions.length} new macro${suggestions.length === 1 ? "" : "s"} identified` : `${Number(aiMacros)} AI macro${Number(aiMacros) === 1 ? "" : "s"} in use`}
-          href="/app/macros"
-          cta={suggestions.length ? "Review and save them" : "Open AI macros"}
-        >
-          <dl className="grid grid-cols-2 gap-3 text-sm">
-            <div className="grid gap-0.5 rounded-lg bg-surface-2/60 px-3 py-2.5">
-              <dt className="text-muted">Waiting for review</dt>
-              <dd className="num font-display text-2xl">{suggestions.length}</dd>
-            </div>
-            <div className="grid gap-0.5 rounded-lg bg-surface-2/60 px-3 py-2.5">
-              <dt className="text-muted">Saved by your team</dt>
-              <dd className="num font-display text-2xl">{Number(aiMacros)}</dd>
-            </div>
+      <Chapter n="02" title="AI macros" href="/app/macros" cta={suggestions.length ? "Review and save them" : "Open AI macros"}>
+        <div className="grid gap-6 md:grid-cols-[minmax(0,4fr)_minmax(0,7fr)]">
+          <dl className="grid content-start gap-3">
+            <Stat label="Identified, waiting for review" value={suggestions.length} className={suggestions.length ? "text-accent" : ""} />
+            <Stat label="Saved by your team" value={saved} />
           </dl>
-          <p className="text-sm text-muted">
-            {suggestions[0]
-              ? `Top of the list: "${suggestions[0].name}", sent on ${suggestions[0].tickets} tickets.`
-              : "When your team sends the same answer on 5 tickets, it shows up here, written up by the AI."}{" "}
-            Saved macros are offered on new tickets that ask the same thing. None of this uses AI resolutions.
-          </p>
-        </Pillar>
+          {suggestions.length ? (
+            <ul className="grid self-start divide-y divide-line rounded-xl border border-line">
+              {suggestions.slice(0, 4).map((m) => (
+                <li key={m.key}>
+                  <Link href="/app/macros" className="grid gap-0.5 px-4 py-3 text-sm transition-colors hover:bg-surface-2/60">
+                    <span className="flex items-baseline justify-between gap-3">
+                      <span className="font-medium">{m.name}</span>
+                      <span className="num shrink-0 text-xs text-muted">sent on {m.tickets} tickets</span>
+                    </span>
+                    <span className="line-clamp-1 text-muted">{m.question ?? m.body}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted">
+              When your team sends the same answer on 5 tickets, it shows up here, written up by the AI. Saved macros are offered on new tickets that ask the same
+              thing.
+            </p>
+          )}
+        </div>
+      </Chapter>
 
-        <Pillar
-          n="03"
-          title="AI quality review"
-          lede={quality.average != null ? `Team score ${quality.average.toFixed(1)} of 5` : "Every reply, graded"}
-          href="/app/quality"
-          cta={quality.flagged ? `See ${quality.flagged} flagged repl${quality.flagged === 1 ? "y" : "ies"}` : "Open quality review"}
-        >
-          <dl className="grid grid-cols-2 gap-3 text-sm">
-            <div className="grid gap-0.5 rounded-lg bg-surface-2/60 px-3 py-2.5">
-              <dt className="text-muted">Reviewed, 30 days</dt>
-              <dd className="num font-display text-2xl">{quality.reviewed}</dd>
-            </div>
-            <div className="grid gap-0.5 rounded-lg bg-surface-2/60 px-3 py-2.5">
-              <dt className="text-muted">Flagged</dt>
-              <dd className={`num font-display text-2xl ${quality.flagged ? "text-warn" : ""}`}>{quality.flagged}</dd>
-            </div>
-          </dl>
-          <Meter label="Reviews included this month" used={room.used} of={room.limit} />
-          <p className="text-sm text-muted">The AI grades every reply, from your team and from AI answers, for accuracy, tone and resolution, and coaches on the weak ones. Zendesk sells QA as a separate product; yours is in the seat.</p>
-        </Pillar>
-      </div>
-
-      <section className="grid gap-3">
-        <h2 className="eyebrow">Also in your seat</h2>
-        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <section className="grid gap-3 pt-2">
+        <h2 className="eyebrow flex items-center gap-3">
+          <span className="num font-display text-2xl text-accent">03</span>
+          Everything else in your seat
+        </h2>
+        <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <li>
+            <Link href="/app/quality" className="flex h-full flex-col gap-1 rounded-xl border border-line bg-surface px-4 py-3 text-sm transition-colors hover:border-line-strong">
+              <span className="font-medium">Quality review</span>
+              <span className="text-muted">
+                {quality.reviewed
+                  ? `Team score ${quality.average!.toFixed(1)} of 5 over ${quality.reviewed} replies. ${quality.flagged} flagged.`
+                  : "Every reply sent to a customer, graded by the AI."}
+              </span>
+            </Link>
+          </li>
           {[
             { href: "/app/receipts", title: "AI receipts", body: "Every AI answer itemized, refundable." },
             { href: "/app/test-drive", title: "AI test drive", body: "AI drafts for your past tickets." },
             { href: "/app/help", title: "Help center", body: "Articles your customers and the AI use." },
             { href: "/app/reports", title: "Reports", body: "Volume, response times and AI share." },
+            { href: "/app/inbox", title: "Inbox", body: "Email and chat in one queue." },
           ].map((l) => (
             <li key={l.href}>
-              <Link href={l.href} className="flex h-full flex-col gap-0.5 rounded-xl border border-line bg-surface px-4 py-3 text-sm transition-colors hover:border-line-strong">
+              <Link href={l.href} className="flex h-full flex-col gap-1 rounded-xl border border-line bg-surface px-4 py-3 text-sm transition-colors hover:border-line-strong">
                 <span className="font-medium">{l.title}</span>
                 <span className="text-muted">{l.body}</span>
               </Link>
