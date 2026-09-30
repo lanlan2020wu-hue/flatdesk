@@ -14,4 +14,4 @@ export const SITE = {
   governingLaw: process.env.GOVERNING_LAW || "the State of Delaware, USA",
 };
 
-export const LEGAL_UPDATED = "September 28, 2026";
+export const LEGAL_UPDATED = "September 30, 2026";
