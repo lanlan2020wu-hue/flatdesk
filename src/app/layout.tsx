@@ -1,36 +1,21 @@
 import type { Metadata } from "next";
-import { Fraunces, IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
+import { Red_Hat_Mono, Schibsted_Grotesk } from "next/font/google";
 import { PLAN, usd } from "@/lib/pricing";
 import { SITE } from "@/lib/site";
 import "./globals.css";
 
-const plexSans = IBM_Plex_Sans({
-  variable: "--font-plex-sans",
+// One grotesk for everything, from body text up to the headlines: Schibsted
+// Grotesk was drawn for a newspaper, and reads like plain facts about a bill.
+const sans = Schibsted_Grotesk({
+  variable: "--font-sans-face",
+  subsets: ["latin"],
+});
+
+// Every figure (prices, counts, totals) is set in mono, like a statement.
+const mono = Red_Hat_Mono({
+  variable: "--font-mono-face",
   subsets: ["latin"],
   weight: ["400", "500", "600"],
-});
-
-// Mono is only used for small labels, so it isn't preloaded ahead of the text font.
-const plexMono = IBM_Plex_Mono({
-  variable: "--font-plex-mono",
-  subsets: ["latin"],
-  weight: ["400", "500"],
-  preload: false,
-});
-
-const fraunces = Fraunces({
-  variable: "--font-fraunces",
-  subsets: ["latin"],
-  weight: ["500", "600"],
-});
-
-// The italic face sets one phrase on the home page, so it loads on demand.
-const frauncesItalic = Fraunces({
-  variable: "--font-fraunces-italic",
-  subsets: ["latin"],
-  weight: ["500", "600"],
-  style: "italic",
-  preload: false,
 });
 
 export const metadata: Metadata = {
@@ -50,7 +35,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${plexSans.variable} ${plexMono.variable} ${fraunces.variable} ${frauncesItalic.variable} h-full antialiased`}
+      className={`${sans.variable} ${mono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col font-sans text-[15px] leading-relaxed">
         {children}

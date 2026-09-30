@@ -25,7 +25,7 @@ export default function MobileNav({ bar, children }: { bar: React.ReactNode; chi
           aria-expanded={open}
           aria-controls="app-nav"
           onClick={() => setOpen((o) => !o)}
-          className="btn btn-secondary btn-sm"
+          className="btn btn-ghost-field btn-sm"
         >
           <svg viewBox="0 0 20 20" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
             {open ? <path d="M5 5l10 10M15 5L5 15" /> : <path d="M3 6h14M3 10h14M3 14h14" />}

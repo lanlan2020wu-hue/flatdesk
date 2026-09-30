@@ -71,16 +71,21 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
       : null;
 
   return (
-    <div className="grid gap-6 px-4 py-6 md:px-8 md:py-8 xl:grid-cols-[minmax(0,1fr)_280px]">
+    <div className="grid gap-8 px-4 py-6 md:px-8 md:py-8 xl:grid-cols-[minmax(0,1fr)_272px]">
       <div className="grid min-w-0 content-start gap-5">
-        <header className="grid gap-2">
-          <p className="flex items-center gap-2 text-sm text-muted">
+        <header className="grid gap-3 border-b border-line pb-5">
+          <Link href="/app/inbox" className="flex w-max items-center gap-1 text-sm text-muted transition-colors hover:text-ink">
+            <svg viewBox="0 0 16 16" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 3.5 5.5 8l4.5 4.5" /></svg>
+            Inbox
+          </Link>
+          <h1 className="font-display text-3xl sm:text-4xl">{ticket.subject}</h1>
+          <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
             <span className="num">#{ticket.number}</span>
             <span className="chip capitalize">{ticket.channel}</span>
             <span className={`capitalize ${STATUS_STYLE[ticket.status]}`}>{ticket.status}</span>
             <SlaBadge state={sla} hours={org?.businessHours ?? null} />
+            <span>· {customer.name || customer.email}</span>
           </p>
-          <h1 className="font-display text-3xl">{ticket.subject}</h1>
         </header>
 
         {copilotOn && thread.length > 0 && <CopilotSummary ticketId={ticket.id} initial={summary?.summary ?? null} stale={summary?.stale ?? false} disabled={s.viewer} />}
@@ -104,7 +109,7 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
             return (
               <li key={m.id} style={{ "--d": Math.min(i, 6) } as React.CSSProperties} className="enter flex gap-3">
                 <Avatar name={who} className="mt-1 size-8 text-[11px]" />
-                <div className={`grid min-w-0 flex-1 gap-1.5 rounded-2xl rounded-tl-md border px-4 py-3 shadow-sm ${tone}`}>
+                <div className={`grid min-w-0 flex-1 gap-1.5 rounded-[6px] border px-4 py-3 ${tone}`}>
                   <p className="flex flex-wrap items-center justify-between gap-2 text-sm">
                     <span className="flex items-center gap-2 font-medium">
                       {who}
@@ -167,7 +172,7 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
         )}
       </div>
 
-      <aside className="card grid content-start gap-5 self-start p-5 text-sm xl:sticky xl:top-6">
+      <aside className="grid content-start gap-5 self-start border-t border-line pt-5 text-sm xl:sticky xl:top-8 xl:border-t-0 xl:border-l xl:pt-0 xl:pl-6">
         <section className="grid gap-2">
           <h2 className={heading}>Customer</h2>
           <div className="flex items-center gap-3">

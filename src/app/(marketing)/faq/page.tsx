@@ -18,7 +18,7 @@ export default function FaqPage() {
     <div className="mx-auto grid max-w-5xl gap-16 px-4 pt-14 sm:px-6 sm:pt-20">
       <JsonLd data={[breadcrumbs([{ name: "FAQ", path: "/faq" }]), faqPage(unique)]} />
       <div className="grid max-w-2xl gap-3">
-        <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-4xl sm:text-5xl">Questions, answered plainly.</h1>
+        <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-[2.6rem] sm:text-6xl">Questions, answered plainly.</h1>
         <p style={{ "--d": 2 } as React.CSSProperties} className="enter text-lg text-muted">
           Can&apos;t find yours? Compare Flatdesk with the tool you use today on the <Link href="/compare" className="link text-accent">comparison pages</Link>.
         </p>

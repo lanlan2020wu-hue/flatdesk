@@ -46,31 +46,31 @@ export default function MarketingLayout({ children }: LayoutProps<"/">) {
         </nav>
       </header>
       {/* Decorations (the receipt stamp) may poke past the edge; never let them cause sideways scrolling. */}
-      <main id="main" className="flex-1 overflow-x-clip">{children}</main>
+      <main id="main" className="relative flex-1 overflow-x-clip">{children}</main>
       <script dangerouslySetInnerHTML={{ __html: PLAY_EARLY }} />
       <MotionObserver />
-      <footer className="mt-24 border-t border-line bg-surface-2/60">
-        <div className="mx-auto grid max-w-6xl gap-8 px-4 py-10 sm:grid-cols-[1.4fr_1fr] sm:px-6">
+      <footer className="mt-24 bg-field text-field-ink">
+        <div className="mx-auto grid max-w-6xl gap-8 border-t border-field-line px-4 py-12 sm:grid-cols-[1.4fr_1fr] sm:px-6">
           <div className="grid content-start gap-3">
-            <Logo />
-            <p className="max-w-xs text-sm text-muted">One flat price for support teams.</p>
+            <Logo onField />
+            <p className="max-w-xs text-sm text-field-muted">Busy month, same bill. One flat price for support teams.</p>
           </div>
           <div className="grid content-start gap-2 text-sm">
             {FOOTER.map((n) => (
-              <Link key={n.href} href={n.href} className="w-max text-muted transition-colors hover:text-ink">
+              <Link key={n.href} href={n.href} className="w-max text-field-muted transition-colors hover:text-field-ink">
                 {n.label}
               </Link>
             ))}
           </div>
         </div>
-        <div className="border-t border-line">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-4 text-xs text-muted sm:px-6">
+        <div className="border-t border-field-line">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-4 text-xs text-field-muted sm:px-6">
             <p className="num">Competitor prices last checked {CHECKED_ON}.</p>
             <p className="flex gap-4">
-              <Link href="/sign-in" className="transition-colors hover:text-ink">Sign in</Link>
-              <Link href="/terms" className="transition-colors hover:text-ink">Terms</Link>
-              <Link href="/privacy" className="transition-colors hover:text-ink">Privacy</Link>
-              <a href={`mailto:${SITE.contactEmail}`} className="transition-colors hover:text-ink">{SITE.contactEmail}</a>
+              <Link href="/sign-in" className="transition-colors hover:text-field-ink">Sign in</Link>
+              <Link href="/terms" className="transition-colors hover:text-field-ink">Terms</Link>
+              <Link href="/privacy" className="transition-colors hover:text-field-ink">Privacy</Link>
+              <a href={`mailto:${SITE.contactEmail}`} className="transition-colors hover:text-field-ink">{SITE.contactEmail}</a>
             </p>
           </div>
         </div>

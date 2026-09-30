@@ -65,7 +65,7 @@ export default async function RivalPage({ params }: PageProps<"/compare/[slug]">
           <span aria-hidden="true">/</span>
           {r.title}
         </p>
-        <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-4xl sm:text-5xl">Flatdesk vs {r.title}</h1>
+        <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-[2.6rem] sm:text-6xl">Flatdesk vs {r.title}</h1>
         <p style={{ "--d": 2 } as React.CSSProperties} className="enter text-lg text-muted">{r.answer}</p>
         <p style={{ "--d": 2 } as React.CSSProperties} className="enter text-sm text-muted">Checked {COMPARED_ON} against list prices. Sources are at the bottom.</p>
       </div>

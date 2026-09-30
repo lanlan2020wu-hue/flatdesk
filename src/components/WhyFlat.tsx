@@ -4,7 +4,9 @@ import { CHECK_IT, LEFT_OUT, WHY_CHEAPER } from "@/lib/why-flat";
 // Answers "how is it this cheap, and is it any good?" on the homepage and the
 // pricing page: where the savings come from, what's left out, and how to
 // check the quality on your own tickets before paying.
-export default function WhyFlat({ headingLevel = "h3" }: { headingLevel?: "h2" | "h3" }) {
+// The homepage shows what Flatdesk leaves out in its own "is it a fit" section,
+// so it can turn that list off here.
+export default function WhyFlat({ headingLevel = "h3", leftOut = true }: { headingLevel?: "h2" | "h3"; leftOut?: boolean }) {
   const H = headingLevel;
   return (
     <div className="grid gap-10">
@@ -29,7 +31,8 @@ export default function WhyFlat({ headingLevel = "h3" }: { headingLevel?: "h2" |
         ))}
       </ul>
 
-      <div className="grid gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
+      <div className={`grid gap-10 ${leftOut ? "lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16" : ""}`}>
+        {leftOut && (
         <div data-play="" className="grid content-start gap-3">
           <p className="font-medium">What Flatdesk doesn&apos;t do</p>
           <ul className="grid gap-2 text-sm text-muted">
@@ -42,9 +45,10 @@ export default function WhyFlat({ headingLevel = "h3" }: { headingLevel?: "h2" |
           </ul>
           <Link href="/compare" className="link w-max text-sm font-medium text-accent">Where other help desks are ahead</Link>
         </div>
+        )}
         <div data-play="" className="grid content-start gap-3">
           <p className="font-medium">Check it before the first charge</p>
-          <ul className="grid border-t border-line sm:grid-cols-2">
+          <ul className={`grid border-t border-line sm:grid-cols-2 ${leftOut ? "" : "lg:grid-cols-4"}`}>
             {CHECK_IT.map((c) => (
               <li key={c.title} className="border-b border-line">
                 <Link href={c.href} className="group flex h-full flex-col gap-0.5 py-4 text-sm sm:pr-6">

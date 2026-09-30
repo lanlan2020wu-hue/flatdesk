@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { COMPETITORS } from "@/lib/pricing";
 
-export default function WaitlistForm() {
+// `stacked` lays the fields out two by two, for a narrow column.
+export default function WaitlistForm({ stacked = false }: { stacked?: boolean }) {
   const [state, setState] = useState<"idle" | "sending" | "done" | "error">("idle");
   const [message, setMessage] = useState("");
 
@@ -45,8 +46,8 @@ export default function WaitlistForm() {
 
   const field = "field";
   return (
-    <form onSubmit={onSubmit} className="grid gap-4 sm:grid-cols-[2fr_1.5fr_0.8fr_auto] sm:items-end">
-      <label className="grid gap-1.5 text-sm font-medium" htmlFor="wl-email">
+    <form onSubmit={onSubmit} className={`grid gap-4 sm:items-end ${stacked ? "sm:grid-cols-[1.6fr_1fr]" : "sm:grid-cols-[2fr_1.5fr_0.8fr_auto]"}`}>
+      <label className={`grid gap-1.5 text-sm font-medium ${stacked ? "sm:col-span-2" : ""}`} htmlFor="wl-email">
         Work email
         <input id="wl-email" name="email" type="email" required autoComplete="email" className={`${field} font-normal`} />
       </label>
@@ -70,7 +71,7 @@ export default function WaitlistForm() {
           <input name="website" tabIndex={-1} autoComplete="off" />
         </label>
       </div>
-      <button type="submit" disabled={state === "sending"} className="btn btn-primary">
+      <button type="submit" disabled={state === "sending"} className={`btn btn-primary ${stacked ? "sm:col-span-2" : ""}`}>
         {state === "sending" ? "Joining…" : "Join the waitlist"}
       </button>
       {state === "error" && <p className="text-sm text-warn sm:col-span-4">{message}</p>}
