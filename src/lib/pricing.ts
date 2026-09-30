@@ -9,6 +9,7 @@ export const PLAN = {
   annualSeatPrice: 39, // USD per agent per month when billed yearly (20% off); same allowance, same features
   includedPerAgent: 100, // AI resolutions per agent per month, pooled across the team
   trialPerAgent: 25, // AI resolutions per agent for the whole no-card trial, pooled; no overage
+  trialAgentCap: 10, // the trial allowance counts at most this many agents
   overageRate: 0.4, // USD per extra AI resolution, only when an admin turns overage on
 } as const;
 

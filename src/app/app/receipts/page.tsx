@@ -85,7 +85,7 @@ export default async function ReceiptsPage({ searchParams }: PageProps<"/app/rec
             <div className="my-1.5 h-1.5 overflow-hidden rounded-full bg-line" aria-hidden="true">
               <span className={`meter block h-full rounded-full ${pct >= 100 ? "bg-warn" : "bg-accent"}`} style={{ width: `${pct}%` }} />
             </div>
-            <Line label="Not counted (customer wrote back or handed off)" value={r.notCounted.toLocaleString("en-US")} className="text-muted" />
+            <Line label="Not counted (handed to the team)" value={r.notCounted.toLocaleString("en-US")} className="text-muted" />
             <Line label="Refunded by your team" value={r.refunded.toLocaleString("en-US")} className="text-muted" />
             <div className="rule-dashed my-3" />
             <Line label={`Overage, ${r.overage} × ${usd(PLAN.overageRate, true)}`} value={usd(r.overageUsd, true)} />

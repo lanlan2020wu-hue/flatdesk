@@ -144,6 +144,7 @@ test("yearly checkout charges 12 months up front; switching, seat changes and ov
   assert.equal(sw.get("items[0][price_data][unit_amount]"), String(PLAN.annualSeatPrice * 12 * 100));
   assert.equal(sw.get("items[0][price_data][product]"), "prod_1");
   assert.equal(sw.get("proration_behavior"), "always_invoice");
+  assert.equal(sw.get("discounts"), "", "a monthly design-partner discount doesn't carry into yearly");
   assert.equal(org.billingInterval, "year");
 
   // On yearly billing a new seat is invoiced straight away.
@@ -151,16 +152,23 @@ test("yearly checkout charges 12 months up front; switching, seat changes and ov
   await syncSeats(ORG);
   assert.equal(posts("/v1/subscription_items/si_1").at(-1)!.body.get("proration_behavior"), "always_invoice");
 
-  // A removed yearly seat isn't refunded mid-year.
+  // A removed yearly seat isn't refunded mid-year: it stays paid, with its AI
+  // allowance, and the next person to join takes it without a second charge.
   await db.delete(schema.agents).where(eq(schema.agents.userId, "user_y4"));
   sub.quantity = 4;
+  const itemPosts = posts("/v1/subscription_items/si_1").length;
   await syncSeats(ORG);
-  assert.equal(posts("/v1/subscription_items/si_1").at(-1)!.body.get("proration_behavior"), "none");
+  assert.equal(posts("/v1/subscription_items/si_1").length, itemPosts, "no quantity change mid-year");
+  assert.equal((await db.select().from(schema.orgs).where(eq(schema.orgs.id, ORG)))[0].billedSeats, 4);
+  await db.insert(schema.agents).values({ orgId: ORG, userId: "user_y5", name: "E", email: "e@yearly.dev", role: "agent" });
+  await syncSeats(ORG);
+  assert.equal(posts("/v1/subscription_items/si_1").length, itemPosts, "the replacement fills the paid seat");
+  await db.delete(schema.agents).where(eq(schema.agents.userId, "user_y5"));
 
   // Overage gets its own invoice instead of waiting for the renewal. Only what
-  // the month ended over the allowance is billed: 3 seats include 300, and 7
+  // the month ended over the allowance is billed: 4 paid seats include 400, and 7
   // answers ran as overage, but 2 earlier ones stopped counting when customers replied.
-  const included = 3 * PLAN.includedPerAgent;
+  const included = 4 * PLAN.includedPerAgent;
   await db.insert(schema.aiEvents).values([
     ...Array.from({ length: included - 2 }, () => ({ orgId: ORG, kind: "resolution" as const, month: "2026-08", model: "test" })),
     ...Array.from({ length: 7 }, () => ({ orgId: ORG, kind: "resolution" as const, month: "2026-08", overage: true, model: "test" })),

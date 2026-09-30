@@ -112,6 +112,9 @@ export default function SwitchBill({ initialTool = "zendesk-team", initialAgents
               {short(tool.vendor)} {tool.plan}
             </p>
             <Line label={<span className="text-muted">{agents} × {usd(tool.seatPrice)} seats</span>} value={usd(today.seats)} />
+            {billed > 0 && today.included > 0 && (
+              <Line label={<span className="text-muted">{today.included.toLocaleString("en-US")} AI included</span>} value="$0" />
+            )}
             <Line
               label={<span className="text-muted">{billed ? `${billed.toLocaleString("en-US")} AI × ${usd(tool.aiRate, true)}` : "AI answers"}</span>}
               value={usd(today.ai)}

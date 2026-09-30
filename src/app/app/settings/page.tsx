@@ -144,7 +144,11 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
                   {org.currentPeriodEnd.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}
                 </p>
               )}
-              <p className="text-sm text-muted">Seats follow your team members: adding or removing someone updates the next bill.</p>
+              <p className="text-sm text-muted">
+                {yearly
+                  ? "Seats follow your team members. A new seat is invoiced now for the rest of the year; a freed seat stays paid until renewal, and the next person to join takes it at no charge."
+                  : "Seats follow your team members: adding or removing someone updates the next bill. Prices shown are before any design-partner discount, which your invoices show."}
+              </p>
             </div>
             {isAdmin && subscribed ? (
               <div className="flex flex-wrap gap-3">
@@ -156,6 +160,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
                     <button className="btn btn-secondary">
                       Switch to yearly, {usd(PLAN.annualSeatPrice)}/mo per seat (save {annualSavingsPct}%)
                     </button>
+                    <span className="mt-1 block text-xs text-muted">A design-partner discount is monthly only and ends if you switch.</span>
                   </form>
                 )}
               </div>

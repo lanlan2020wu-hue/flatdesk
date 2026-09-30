@@ -134,7 +134,7 @@ export const SELLING_POINTS: SellingPoint[] = [
       "See every AI answer your help desk charged for, with the saved answers it cited. Refund a wrong answer in one click so it stops counting. Download as CSV.",
     steps: [
       { title: "The AI answers a ticket", body: "It answers from your macros and notes, and records which ones it used." },
-      { title: "It lands on the month's receipt", body: "Each line shows the ticket, the answers cited and a status: included, overage, refunded, customer wrote back, or handed off." },
+      { title: "It lands on the month's receipt", body: "Each line shows the ticket, the answers cited and a status: included, overage, refunded, or handed to the team." },
       { title: "Refund anything wrong", body: "An admin refunds the line with a note. The ticket reopens for your team with that note attached." },
       { title: "Take it to finance", body: "Download any month as CSV to reconcile it with your invoice." },
     ],
@@ -205,7 +205,7 @@ export const SELLING_POINTS: SellingPoint[] = [
     name: "Lossless import",
     short: `Bring tickets, customers, macros and rules from ${IMPORT_SOURCES.join(", ").replace(/, ([^,]*)$/, " or $1")}. Every original record is archived, and anything that didn't map is listed.`,
     headline: `Move from ${IMPORT_SOURCES.slice(0, 3).join(", ")} or Help Scout without losing a ticket`,
-    answer: `Flatdesk imports tickets, messages, attachments, customers, tags, macros and rules from ${IMPORT_SOURCES.join(", ").replace(/, ([^,]*)$/, " and $1")}. Every original record is kept in an archive you can download, and anything that couldn't be mapped is listed in a report instead of being dropped. Intercom's API doesn't share workflows or assignment rules, so those are recreated by hand. You can export everything again as CSV or JSON at any time.`,
+    answer: `Flatdesk imports tickets, messages, attachments, customers, tags, macros and rules from ${IMPORT_SOURCES.join(", ").replace(/, ([^,]*)$/, " and $1")}. Every original record is kept in an archive you can download, and anything that couldn't be mapped is listed in a report instead of being dropped. Rules are kept for reference; Flatdesk runs one kind today (if tagged X, assign to Y), and the report lists the rest to rebuild. Intercom's API doesn't share workflows or assignment rules at all. You can export everything again as CSV or JSON at any time.`,
     metaTitle: "Lossless help desk import from Zendesk, Intercom, Freshdesk and Help Scout",
     metaDescription:
       "Import tickets, attachments, customers, macros and rules from Zendesk, Intercom, Freshdesk or Help Scout. Every raw record is archived and nothing is silently dropped.",
@@ -216,7 +216,7 @@ export const SELLING_POINTS: SellingPoint[] = [
       { title: "Keep the originals", body: "Download the raw archive of every record as JSONL. Re-running an import updates instead of duplicating." },
     ],
     facts: [
-      `Imports from ${IMPORT_SOURCES.join(", ")}`,
+      `Imports from ${IMPORT_SOURCES.join(", ").replace(/, ([^,]*)$/, " and $1")}`,
       "Tickets, messages, attachments, customers, tags, macros and rules (rules from every source except Intercom, whose API doesn't share them)",
       "Every raw record archived and downloadable",
       "Unmapped items listed in a report, never silently dropped",
@@ -237,7 +237,7 @@ export const SELLING_POINTS: SellingPoint[] = [
       },
       {
         q: "Can we get our data out of Flatdesk?",
-        a: "Yes. Settings has a one-click export of tickets, messages, customers and macros as CSV or JSON.",
+        a: "Yes. Settings has a one-click export of tickets (with their tags), messages, customers and macros as CSV or JSON. File attachments aren't in the export; download them from each ticket.",
       },
     ],
     icon: "M12 4v11m0 0l-4-4m4 4l4-4M5 19h14",

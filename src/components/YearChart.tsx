@@ -1,4 +1,4 @@
-import { competitorById, competitorMonthly, flatdeskMonthly, usd } from "@/lib/pricing";
+import { PLAN, competitorById, competitorMonthly, flatdeskMonthly, usd } from "@/lib/pricing";
 
 // An example year for a 10-agent team whose AI volume follows a seasonal
 // pattern. Every bar is computed from the same list prices as the calculator.
@@ -12,14 +12,16 @@ export default function YearChart() {
     month: m,
     resolutions: RESOLUTIONS[i],
     fin: competitorMonthly(fin, AGENTS, RESOLUTIONS[i]).total,
-    ours: flatdeskMonthly(AGENTS, RESOLUTIONS[i], "year").capped,
+    // With overage on, so both bars pay for every AI answer.
+    ours: flatdeskMonthly(AGENTS, RESOLUTIONS[i], "year").withOverage,
   }));
   const max = Math.max(...rows.map((r) => r.fin));
   const top = Math.ceil(max / 500) * 500;
   const pct = (n: number) => `${(n / top) * 100}%`;
   const ticks = [0, top / 2, top];
-  // With the cap on, Flatdesk's bill is the seat price every month.
-  const flat = rows[0].ours;
+  // The seat price is the floor; overage adds $0.40 per answer past the allowance.
+  const plan = flatdeskMonthly(AGENTS, 0, "year");
+  const flat = plan.capped;
 
   return (
     <figure className="card grid gap-5 p-5 sm:p-6">
@@ -61,7 +63,7 @@ export default function YearChart() {
           </div>
           <div className="flatline pointer-events-none absolute inset-x-0 border-t-2 border-accent" style={{ bottom: pct(flat) }} />
           <span className="flatline-label num pointer-events-none absolute left-1 rounded border border-accent/30 shadow-sm bg-surface px-1.5 text-[11px] font-medium text-accent" style={{ bottom: `calc(${pct(flat)} + 4px)` }}>
-            {usd(flat)} every month
+            {usd(flat)} seats, plus overage
           </span>
         </div>
         <div />
@@ -82,8 +84,8 @@ export default function YearChart() {
       </div>
 
       <p className="text-xs text-muted">
-        {fin.vendor} at list price with annual billing. Flatdesk with annual billing and the default cap: once the included resolutions are used, the AI pauses
-        and your team answers the rest.
+        {fin.vendor} at list price with annual billing. Flatdesk with annual billing and overage turned on, so both pay for every AI answer: {plan.included.toLocaleString()}{" "}
+        are included, and each one past that is {usd(PLAN.overageRate, true)}. With the default cap instead, the bill stays {usd(flat)} and your team answers the rest.
       </p>
     </figure>
   );

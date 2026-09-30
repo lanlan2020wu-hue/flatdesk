@@ -93,8 +93,8 @@ export default function TermsPage() {
       <Section title="6. AI answers">
         <p>
           AI answers are written by a large language model from the material you provide. They can be wrong. You decide whether the AI is
-          switched on, what it knows, and whether it keeps answering after the allowance, and every AI reply tells the customer they can reach
-          a person by replying. You are responsible for the answers sent in your name, just as you are for your team&apos;s replies.
+          switched on, what it knows, and whether it keeps answering after the allowance, and every AI reply tells the customer they can ask
+          for a person at any time. You are responsible for the answers sent in your name, just as you are for your team&apos;s replies.
         </p>
       </Section>
 

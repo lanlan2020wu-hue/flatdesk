@@ -35,7 +35,7 @@ export const GENERAL_FAQ: QA[] = [
 export const BILLING_FAQ: QA[] = [
   {
     q: "Is there a free trial?",
-    a: `Yes, ${TRIAL_DAYS} days with every feature and no card, including ${PLAN.trialPerAgent} AI resolutions per agent for the trial. Add a card at any point to get the full ${PLAN.includedPerAgent} per agent a month; the first charge still waits until the trial ends.`,
+    a: `Yes, ${TRIAL_DAYS} days with every feature and no card, including ${PLAN.trialPerAgent} AI resolutions per agent for the trial (up to ${PLAN.trialPerAgent * PLAN.trialAgentCap} for the team). Add a card at any point to get the full ${PLAN.includedPerAgent} per agent a month; the first charge still waits until the trial ends.`,
   },
   {
     q: "Can viewers see tickets without paying for a seat?",
@@ -59,7 +59,7 @@ export const BILLING_FAQ: QA[] = [
   },
   {
     q: "Is there a contract or a minimum?",
-    a: "No. Monthly billing has no contract: add or remove seats at any time and cancel from settings. Yearly billing is paid a year ahead for the lower price and runs to the end of the year you've paid for.",
+    a: "No. Monthly billing has no contract: add or remove seats at any time and cancel from settings. Yearly billing is paid a year ahead for the lower price and runs to the end of the year you've paid for. A seat freed mid-year stays paid until renewal, and the next person you add takes it at no extra charge.",
   },
   {
     q: "Is there a discount for paying yearly?",
@@ -67,6 +67,6 @@ export const BILLING_FAQ: QA[] = [
   },
   {
     q: "Can we take our data with us?",
-    a: "Yes. Settings has a one-click export of all tickets, customers, tags and macros as CSV or JSON. You never need to ask us for it.",
+    a: "Yes. Settings has a one-click export of tickets (with their tags), messages, customers and macros as CSV or JSON. File attachments aren't in the export; download them from each ticket. You never need to ask us for it.",
   },
 ];

@@ -152,7 +152,7 @@ export const RIVALS: Rival[] = [
     slug: "freshdesk",
     name: "Freshdesk",
     title: "Freshdesk",
-    answer: `Freshdesk Growth is $19 per agent on annual billing ($23 monthly), but its 500 Freddy AI Agent sessions are a one-time pack for new customers. After that every session costs 49¢, counted whenever the AI replies, whether or not it solves anything. Flatdesk (${usd(PLAN.annualSeatPrice)} per agent on annual billing) includes ${PLAN.includedPerAgent} AI resolutions per agent every month, counts only answers the customer doesn't write back to, and itemizes each one. Once your AI answers about 41 tickets per agent a month, Flatdesk costs less.`,
+    answer: `Freshdesk Growth is $19 per agent on annual billing ($23 monthly), but its 500 Freddy AI Agent sessions are a one-time pack for new customers. After that every session costs 49¢, counted whenever the AI replies, whether or not it solves anything. Flatdesk (${usd(PLAN.annualSeatPrice)} per agent on annual billing) includes ${PLAN.includedPerAgent} AI resolutions per agent every month, counts a conversation once, only when the AI finishes it without handing it to your team, and itemizes each one. Once your AI answers about 41 tickets per agent a month, Flatdesk costs less.`,
     flatdeskWins: [
       `${PLAN.includedPerAgent} AI resolutions per agent every month, not a one-time 500`,
       "Counts resolutions, not sessions, and hand-offs don't count",
@@ -164,7 +164,7 @@ export const RIVALS: Rival[] = [
       "A fuller help center, full SLA policies with escalations, and more channels",
       "A large marketplace of apps",
     ],
-    pickThem: "Your AI answers fewer than about 40 tickets per agent a month, or you need SLA escalations and a marketplace today.",
+    pickThem: "Your AI answers fewer than about 41 tickets per agent a month, or you need SLA escalations and a marketplace today.",
     canImport: true,
     plans: ["freshdesk-growth", "freshdesk-pro"],
     faq: [
@@ -201,7 +201,8 @@ export const RIVALS: Rival[] = [
     canImport: false,
     plans: [],
     fixed: [
-      { label: "Front Starter / Professional", costs: [83, 690], approx: false, aiBilling: "From $0.05 per conversation. 10 agents uses Professional ($65), since Starter is single-channel." },
+      { label: "Front Starter", costs: [83, 290], approx: false, aiBilling: "From $0.05 per conversation. Up to 10 seats, one channel." },
+      { label: "Front Professional", costs: [203, 690], approx: false, aiBilling: "From $0.05 per conversation." },
     ],
     faq: [
       { q: "Can Flatdesk import from Front?", a: "Not yet. Flatdesk imports from Zendesk, Intercom, Freshdesk and Help Scout today." },

@@ -16,7 +16,7 @@ export const STATUS_LABEL: Record<ReceiptStatus, string> = {
   included: "Counted, included",
   overage: `Counted, overage ${"$" + PLAN.overageRate.toFixed(2)}`,
   refunded: "Refunded",
-  "customer-replied": "Not counted, customer wrote back",
+  "customer-replied": "Not counted, handed to the team after the AI replied",
   "handed-off": "Not counted, handed to the team",
 };
 
@@ -94,8 +94,19 @@ export async function monthReceipt(orgId: string, month: string) {
     refundNote: r.refund_note,
     refundedByName: r.refunded_by_name,
   }));
-  const tally = (s: ReceiptStatus) => lines.filter((l) => l.status === s).length;
   const usage = await aiUsage(orgId, month);
+  // Only what the month ended over the allowance is charged (see billOverage),
+  // so the latest flagged answers are overage and earlier ones count as included.
+  let overageLeft = Math.min(
+    lines.filter((l) => l.status === "overage").length,
+    Math.max(0, lines.filter((l) => l.status === "overage" || l.status === "included").length - usage.included),
+  );
+  for (const l of lines) {
+    if (l.status !== "overage") continue;
+    if (overageLeft > 0) overageLeft--;
+    else l.status = "included";
+  }
+  const tally = (s: ReceiptStatus) => lines.filter((l) => l.status === s).length;
   const overage = tally("overage");
   return {
     month,

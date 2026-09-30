@@ -146,7 +146,9 @@ export async function checkoutUrl(orgId: string, email: string, origin: string, 
 
 // Moves a monthly subscription to yearly billing. Stripe starts the new year
 // today and credits the unused part of the current month on the first invoice.
-// During a Stripe trial nothing is charged until the trial ends.
+// During a Stripe trial nothing is charged until the trial ends. A
+// design-partner discount is monthly only, so it ends here: the yearly price
+// replaces it rather than stacking with it.
 export async function switchToAnnual(orgId: string) {
   const org = await getOrg(orgId);
   if (!org.stripeSubscriptionId || !isActive(org.subscriptionStatus)) throw new Error("This team has no plan to switch.");
@@ -157,6 +159,7 @@ export async function switchToAnnual(orgId: string) {
   const product = typeof item.price.product === "string" ? item.price.product : item.price.product.id;
   await stripe().subscriptions.update(sub.id, {
     items: [{ id: item.id, quantity: item.quantity, price_data: { ...seatPriceData("year"), product } }],
+    discounts: "",
     proration_behavior: "always_invoice",
   });
   return refreshSubscription(orgId);
@@ -209,9 +212,16 @@ export async function syncSeats(orgId: string) {
   if (!item || item.quantity === seats) return;
   // Monthly plans settle the difference on the next invoice. A yearly plan's
   // next invoice can be months away, so an added seat is invoiced now. A
-  // removed yearly seat isn't refunded: the year runs to its end, as the FAQ says.
+  // freed yearly seat isn't refunded, so it stays paid (with its AI
+  // allowance) until the renewal: the next person to join takes it without a
+  // second charge, and the quantity only drops just before the year renews.
   const yearly = item.price.recurring?.interval === "year";
-  const proration_behavior = !yearly ? "create_prorations" : seats > (item.quantity ?? 0) ? "always_invoice" : "none";
+  const paid = item.quantity ?? 0;
+  if (yearly && seats < paid && item.current_period_end * 1000 - Date.now() > 2 * DAY) {
+    if (org.billedSeats !== paid) await db.update(orgs).set({ billedSeats: paid }).where(eq(orgs.id, orgId));
+    return;
+  }
+  const proration_behavior = !yearly ? "create_prorations" : seats > paid ? "always_invoice" : "none";
   await stripe().subscriptionItems.update(item.id, { quantity: seats, proration_behavior });
   await db.update(orgs).set({ billedSeats: seats }).where(eq(orgs.id, orgId));
 }
@@ -253,7 +263,11 @@ export async function billOverage(orgId: string, month = previousMonth()) {
         { idempotencyKey: `overage-${orgId}-${month}-${n}` },
       );
     }
-    if (org.billingInterval === "year" && !already) {
+    // A yearly plan's next invoice can be months away, and a cancelled plan has
+    // none, so those get an invoice now. During a Stripe trial the item waits
+    // for the first invoice, as the trial promises.
+    const invoiceNow = (org.billingInterval === "year" && org.subscriptionStatus !== "trialing") || !isActive(org.subscriptionStatus);
+    if (invoiceNow && !already) {
       await stripe().invoices.create(
         { customer: org.stripeCustomerId, pending_invoice_items_behavior: "include", auto_advance: true, description: `AI overage, ${month}` },
         { idempotencyKey: `overage-invoice-${orgId}-${month}` },
@@ -285,8 +299,10 @@ export async function dailyBilling({ concurrency = 5, budgetMs = 240_000 } = {})
       }
       try {
         await refreshSubscription(id);
-        await syncSeats(id);
+        // Overage first, so last month is measured against the seats it had,
+        // not seats added today.
         const billed = await billOverage(id);
+        await syncSeats(id);
         results[id] = billed ? `billed ${billed} overage` : "ok";
       } catch (err) {
         console.error("daily billing failed", id, err);
