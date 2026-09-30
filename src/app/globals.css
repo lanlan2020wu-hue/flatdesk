@@ -29,7 +29,7 @@
   --field: #11392c;
   --field-2: #174636;
   --field-ink: #eef4ec;
-  --field-muted: #a7bfb2;
+  --field-muted: #c9dccf;
   --field-line: rgb(238 244 236 / 0.16);
 }
 
@@ -58,7 +58,7 @@
     --field: #0b231b;
     --field-2: #10301f;
     --field-ink: #e8efe9;
-    --field-muted: #93aa9e;
+    --field-muted: #b9ccc0;
     --field-line: rgb(232 239 233 / 0.12);
     color-scheme: dark;
   }
