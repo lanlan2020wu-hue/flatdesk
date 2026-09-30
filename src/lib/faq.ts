@@ -1,7 +1,7 @@
 // Questions buyers (and AI answer engines) ask, with answers that stand on
 // their own. Selling-point questions live with each point in selling-points.ts.
 
-import { SWITCH_TRIAL_DAYS, TRIAL_DAYS } from "@/lib/billing";
+import { TRIAL_DAYS } from "@/lib/billing";
 import { PLAN, PRICE_PHRASE, annualSavingsPct, usd } from "@/lib/pricing";
 import type { QA } from "@/lib/selling-points";
 
@@ -24,7 +24,7 @@ export const GENERAL_FAQ: QA[] = [
   },
   {
     q: "Why is Flatdesk cheaper? Is it a lower-quality help desk?",
-    a: `The price is lower because of what Flatdesk doesn't carry, not because the parts you use are worse. AI answers are written by Claude Opus from Anthropic, and one answer costs cents to run, so ${PLAN.includedPerAgent} per seat fit inside the seat price; the cap keeps it that way. There's no sales team, one plan instead of tiers, and a narrower product: email and chat only, no phone, SMS or social channels, no app marketplace and no SLA escalations. Before paying, the AI test drive shows AI drafts for your last 50 tickets beside your team's real replies, and switching teams get a ${SWITCH_TRIAL_DAYS}-day trial.`,
+    a: `The price is lower because of what Flatdesk doesn't carry, not because the parts you use are worse. AI answers are written by Claude Opus from Anthropic, and one answer costs cents to run, so ${PLAN.includedPerAgent} per seat fit inside the seat price; the cap keeps it that way. There's no sales team, one plan instead of tiers, and a narrower product: email and chat only, no phone, SMS or social channels, no app marketplace and no SLA escalations. Before paying, the AI test drive shows AI drafts for your last 50 tickets beside your team's real replies, and every feature is in the ${TRIAL_DAYS}-day free trial.`,
   },
   {
     q: "Who is Flatdesk a good fit for?",
@@ -35,11 +35,7 @@ export const GENERAL_FAQ: QA[] = [
 export const BILLING_FAQ: QA[] = [
   {
     q: "Is there a free trial?",
-    a: `Yes, ${TRIAL_DAYS} days with every feature and no card, including ${PLAN.trialPerAgent} AI resolutions per agent for the trial. Add a card at any point to get the full ${PLAN.includedPerAgent} per agent a month; the first charge still waits until the trial ends. Import your old help desk during the trial and it runs ${SWITCH_TRIAL_DAYS} days instead.`,
-  },
-  {
-    q: "Do we get longer to try Flatdesk if we're switching?",
-    a: `Yes. When an import of your tickets from Zendesk, Intercom, Freshdesk or Help Scout finishes during the free trial, the trial runs ${SWITCH_TRIAL_DAYS} days from sign-up instead of ${TRIAL_DAYS}, so moving over doesn't use it up. Your old help desk can keep running alongside until you're ready.`,
+    a: `Yes, ${TRIAL_DAYS} days with every feature and no card, including ${PLAN.trialPerAgent} AI resolutions per agent for the trial. Add a card at any point to get the full ${PLAN.includedPerAgent} per agent a month; the first charge still waits until the trial ends.`,
   },
   {
     q: "Can viewers see tickets without paying for a seat?",

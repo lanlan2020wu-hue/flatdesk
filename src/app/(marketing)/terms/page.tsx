@@ -3,7 +3,7 @@ import Link from "next/link";
 import LegalPage, { Section } from "@/components/LegalPage";
 import { PLAN, usd } from "@/lib/pricing";
 import { LEGAL_UPDATED, SITE } from "@/lib/site";
-import { SWITCH_TRIAL_DAYS, TRIAL_DAYS } from "@/lib/billing";
+import { TRIAL_DAYS } from "@/lib/billing";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/terms" },
@@ -44,8 +44,7 @@ export default function TermsPage() {
           <li>
             New teams get {TRIAL_DAYS} days free with no card, with {PLAN.trialPerAgent} AI resolutions per agent for the whole trial and no
             overage. To keep using Flatdesk after that, or to get the full monthly AI allowance sooner, an admin adds a card; the first charge
-            is on the day the trial ends. A team that finishes importing tickets from another help desk during the trial gets{" "}
-            {SWITCH_TRIAL_DAYS} days from sign-up instead.
+            is on the day the trial ends.
           </li>
           <li>
             The plan is {usd(PLAN.seatPrice)} per agent per month billed monthly, or {usd(PLAN.annualSeatPrice)} per agent per month billed
