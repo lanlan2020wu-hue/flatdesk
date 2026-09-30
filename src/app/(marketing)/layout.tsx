@@ -4,14 +4,15 @@ import MotionObserver from "@/components/MotionObserver";
 import { CHECKED_ON } from "@/lib/pricing";
 import { SITE } from "@/lib/site";
 
+// Same order as the site: the flat rate first, then AI macros, then the rest.
 const NAV = [
-  { href: "/features", label: "Product" },
+  { href: "/pricing", label: "Flat rate" },
+  { href: "/features/ai-macros", label: "AI macros" },
+  { href: "/features", label: "All features" },
   { href: "/compare", label: "Compare" },
-  { href: "/pricing", label: "Pricing" },
   { href: "/calculator", label: "Bill calculator" },
-  { href: "/ai-billing-changes-2026", label: "2026 AI billing changes" },
 ];
-const FOOTER = [...NAV, { href: "/faq", label: "FAQ" }];
+const FOOTER = [...NAV, { href: "/ai-billing-changes-2026", label: "2026 AI billing changes" }, { href: "/faq", label: "FAQ" }];
 
 // The same observer MotionObserver sets up, but inline, so [data-play] blocks
 // (the calculator, the hero receipt) show before React hydrates, or if a

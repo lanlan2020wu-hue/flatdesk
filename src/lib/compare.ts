@@ -76,7 +76,7 @@ export const RIVALS: Rival[] = [
       `${PLAN.includedPerAgent} AI resolutions per agent included, instead of paying for each one`,
       "The AI pauses at the cap unless you opt in, so the bill can't grow on its own",
       "AI receipts itemize every answer, and you can refund a wrong one",
-      "Macros that write themselves from your team's repeated replies",
+      "AI macros, identified from your team's repeated replies and updated when your team keeps editing them",
     ],
     theyWin: [
       "Richer messenger with proactive and outbound messages",
@@ -100,8 +100,8 @@ export const RIVALS: Rival[] = [
     answer: `Zendesk Suite starts at $55 per agent on annual billing and charges for automated resolutions past a small allowance. It doesn't publish the per-resolution rate; third parties put it near $1.50 to $2.00. Flatdesk is ${usd(PLAN.annualSeatPrice)} per agent on annual billing (${usd(PLAN.seatPrice)} monthly) with ${PLAN.includedPerAgent} AI resolutions per agent included and a cap on by default. Zendesk is far broader: community forums, many channels, a large app marketplace.`,
     flatdeskWins: [
       "One public price, with AI included and capped",
+      "Evolving macros that update from your team's edits, where Zendesk's macro suggestions cover new macros only",
       "AI receipts with one-click refunds",
-      "Macros that write themselves",
       "No tiers or add-ons: every seat gets every feature",
     ],
     theyWin: [
@@ -130,7 +130,7 @@ export const RIVALS: Rival[] = [
     flatdeskWins: [
       `${PLAN.includedPerAgent} AI resolutions per agent included instead of paying per resolution`,
       "AI receipts with one-click refunds",
-      "Macros that write themselves",
+      "Evolving AI macros, written from your replies and updated from your team's edits, that also assign, tag and close tickets",
       "Lossless import with a raw archive of every record",
     ],
     theyWin: [
@@ -185,11 +185,11 @@ export const RIVALS: Rival[] = [
     slug: "front",
     name: "Front",
     title: "Front",
-    answer: `Front is a collaborative shared inbox with seats from $25 (Starter, up to 10 seats) and an AI agent from $0.05 per conversation, so its AI is cheaper than Flatdesk's overage. Flatdesk (${usd(PLAN.annualSeatPrice)} per agent on annual billing) is built as a help desk: AI resolutions included and capped, AI receipts, macros that write themselves and lossless import.`,
+    answer: `Front is a collaborative shared inbox with seats from $25 (Starter, up to 10 seats) and an AI agent from $0.05 per conversation, so its AI is cheaper than Flatdesk's overage. Flatdesk (${usd(PLAN.annualSeatPrice)} per agent on annual billing) is built as a help desk: AI resolutions included and capped, AI receipts, AI macros that update themselves and lossless import.`,
     flatdeskWins: [
       "AI included in the seat, with a cap on by default",
       "AI receipts with one-click refunds",
-      "Macros that write themselves",
+      "Evolving AI macros, written from your replies and updated from your team's edits, that also assign, tag and close tickets",
       "Lossless import from Zendesk, Intercom, Freshdesk and Help Scout",
     ],
     theyWin: [
@@ -217,7 +217,7 @@ export const RIVALS: Rival[] = [
       "AI included in the seat instead of charged per interaction",
       "An AI answer is never charged on top of a ticket fee",
       "AI receipts with one-click refunds",
-      "Macros that write themselves",
+      "Evolving AI macros, written from your replies and updated from your team's edits, that also assign, tag and close tickets",
     ],
     theyWin: [
       "Native Shopify integration with order data in the ticket",

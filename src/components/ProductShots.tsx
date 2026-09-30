@@ -61,25 +61,26 @@ export function InboxShot() {
   );
 }
 
-const MACRO_WORDS = "Hi there, refunds go back to the original card within 5 business days…".split(" ");
+const MACRO_WORDS = "Hi [customer name], refunds go back to the original card within 5 business days…".split(" ");
 
 export function MacroShot() {
   return (
     <div className="shot" aria-hidden="true">
-      <Bar title="Macros and rules" />
+      <Bar title="AI macros" />
       <div className="grid gap-3 p-3">
         <div className="grid gap-2 rounded-lg border border-accent/30 bg-accent-soft/70 p-2.5">
           <span className="flex items-center gap-1.5 text-[12px] font-medium text-accent">
             <svg viewBox="0 0 24 24" className="sparkle size-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
               <path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z" />
             </svg>
-            Flatdesk wrote this for you
+            AI macro, identified from your replies
           </span>
           <span className="grid gap-1 rounded-md bg-surface p-2 shadow-sm">
             <span className="flex items-center justify-between gap-2">
-              <span className="font-medium">Where&apos;s my refund</span>
+              <span className="font-medium">Refund timing</span>
               <span className="num text-[11px] text-muted">sent on 12 tickets this week</span>
             </span>
+            <span className="text-[11px]">Customers ask: when will my refund reach my card?</span>
             <span className="text-[12px] text-muted">
               {MACRO_WORDS.map((w, i) => (
                 <span key={i} style={{ "--w": i } as React.CSSProperties} className="word">{w} </span>
@@ -101,6 +102,46 @@ export function MacroShot() {
           </span>
           <span className="text-[12px] text-muted">Hi there, reset links last 30 minutes. Request a new one from the sign-in page…</span>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Evolving macros: the edit the team keeps making, struck through
+// and rewritten, with the one-click update.
+export function MacroUpdateShot() {
+  return (
+    <div className="shot" aria-hidden="true">
+      <Bar title="AI macros · Refund timing" />
+      <div className="grid gap-3 p-3">
+        <span className="flex items-center gap-1.5 text-[12px] font-medium text-accent">
+          <svg viewBox="0 0 24 24" className="sparkle size-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z" />
+          </svg>
+          Your team keeps editing this macro
+        </span>
+        <div className="grid gap-2 rounded-lg border border-line p-2.5 text-[12px]">
+          <span style={{ "--i": 0 } as React.CSSProperties} className="ln flex gap-2">
+            <span className="num w-20 shrink-0 whitespace-nowrap text-[10px] text-accent">Reworded 4×</span>
+            <span className="grid">
+              <span className="text-muted line-through">Refunds reach your card within 5 business days.</span>
+              <span>Refunds reach your card within 7 business days.</span>
+            </span>
+          </span>
+          <span style={{ "--i": 1 } as React.CSSProperties} className="ln flex gap-2">
+            <span className="num w-20 shrink-0 whitespace-nowrap text-[10px] text-accent">Added 4×</span>
+            <span>Your bank may take 2 more days to show it.</span>
+          </span>
+          <span style={{ "--i": 2 } as React.CSSProperties} className="ln flex gap-2">
+            <span className="num w-20 shrink-0 whitespace-nowrap text-[10px] text-warn">Deleted 5×</span>
+            <span className="text-muted line-through">Refunds over $500 need a manager.</span>
+          </span>
+        </div>
+        <span className="flex items-center gap-2 text-[11px]">
+          <span className="save rounded-md bg-accent px-2 py-1 font-medium text-accent-ink">Update macro</span>
+          <span className="text-muted">Keep it as is</span>
+          <span className="num ml-auto text-muted">5 sends since it last changed</span>
+        </span>
       </div>
     </div>
   );
@@ -200,27 +241,6 @@ export function ReceiptShot() {
         <span>AI charges this month</span>
         <span className="font-medium">{usd(0, true)}</span>
       </div>
-    </div>
-  );
-}
-
-export function ChatShot() {
-  return (
-    <div className="relative h-full min-h-56" aria-hidden="true">
-      <div className="widget shot absolute right-12 bottom-12 w-[270px] max-w-[calc(100%-3rem)]">
-        <div className="flex items-center gap-2 bg-accent px-3 py-2 text-accent-ink">
-          <Dot className="bg-accent-ink" />
-          <span className="text-[12px] font-medium">Chat with Acme support</span>
-        </div>
-        <div className="grid gap-2 p-2.5 text-[12px]">
-          <p style={at(950)} className="say max-w-[85%] justify-self-start rounded-xl rounded-bl-sm bg-surface-2 px-2.5 py-1.5">Do you ship to Canada?</p>
-          <p style={at(1600)} className="say max-w-[85%] justify-self-end rounded-xl rounded-br-sm bg-accent-soft px-2.5 py-1.5">Yes, 3–5 business days. Rates show at checkout.</p>
-          <p className="rounded-md border border-line px-2 py-1.5 text-muted">Write a message…</p>
-        </div>
-      </div>
-      <span className="launcher absolute right-0 bottom-0 grid size-10 place-items-center rounded-full bg-accent text-accent-ink shadow-lg">
-        <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z" /></svg>
-      </span>
     </div>
   );
 }

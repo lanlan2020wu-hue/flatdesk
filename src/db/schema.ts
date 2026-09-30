@@ -244,7 +244,12 @@ export const macros = pgTable("macros", {
   body: text("body").notNull(),
   addTags: text("add_tags").array().notNull().default(sql`'{}'::text[]`),
   setStatus: ticketStatus("set_status"), // null = leave status unchanged
+  assignTo: text("assign_to"), // agent user id; null = leave the assignee unchanged
+  sendNow: boolean("send_now").notNull().default(false), // using the macro sends the reply at once
   source: text("source"), // import source ("zendesk", ...) or "suggested" when saved from a repeated-reply suggestion
+  // What customers ask when this macro is the answer, in a sentence. The AI
+  // writes it for suggested macros; the ticket page matches new tickets to it.
+  question: text("question"),
   externalId: text("external_id"),
   // Actions from the original macro that Flatdesk can't perform, in words
   // ("Set priority to High"). Shown on the macro so nothing is silently lost.
@@ -323,6 +328,81 @@ export const aiEvents = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("ai_events_org_month").on(t.orgId, t.month, t.kind)],
+);
+
+// AI macros: the macro the AI wrote for one group of repeated replies, keyed
+// by the group's representative reply so each group is written once. Written
+// on our dime, never counted toward the AI allowance. See lib/macro-writer.ts.
+export const macroAiDrafts = pgTable(
+  "macro_ai_drafts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
+    key: text("key").notNull(),
+    name: text("name").notNull(),
+    question: text("question").notNull(),
+    body: text("body").notNull(),
+    model: text("model").notNull(),
+    costUsd: numeric("cost_usd", { precision: 10, scale: 5 }).notNull().default("0"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("macro_ai_drafts_org_key").on(t.orgId, t.key)],
+);
+
+// Which macro a sent reply started from, with the macro's text at that
+// moment. Lets Flatdesk see how the team edits a macro before sending it
+// (lib/macro-drift.ts).
+export const macroUses = pgTable(
+  "macro_uses",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
+    macroId: uuid("macro_id").notNull().references(() => macros.id, { onDelete: "cascade" }),
+    messageId: uuid("message_id").notNull().references(() => messages.id, { onDelete: "cascade" }),
+    macroBody: text("macro_body").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("macro_uses_org_macro").on(t.orgId, t.macroId, t.createdAt)],
+);
+
+// Macro updates an admin chose not to apply, by the edit they describe, so the
+// same edit isn't proposed again. A different edit to the same macro still is.
+export const macroUpdateDismissals = pgTable(
+  "macro_update_dismissals",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
+    macroId: uuid("macro_id").notNull().references(() => macros.id, { onDelete: "cascade" }),
+    signature: text("signature").notNull(),
+    userId: text("user_id"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("macro_update_dismissals_macro_sig").on(t.macroId, t.signature)],
+);
+
+// The agent copilot: summaries, drafted replies and rewrites an agent asks
+// for on a ticket. Included in the seat under a fair-use limit (lib/copilot.ts),
+// never counted toward the AI allowance. A summary row doubles as its cache,
+// keyed by the last message it read.
+export const copilotKind = pgEnum("copilot_kind", ["summary", "draft", "rewrite"]);
+export const copilotEvents = pgTable(
+  "copilot_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
+    ticketId: uuid("ticket_id").references(() => tickets.id, { onDelete: "set null" }),
+    userId: text("user_id").notNull(),
+    kind: copilotKind("kind").notNull(),
+    month: text("month").notNull(), // "2026-09", in UTC
+    lastMessageId: uuid("last_message_id"),
+    output: text("output"),
+    model: text("model").notNull(),
+    inputTokens: integer("input_tokens").notNull().default(0),
+    outputTokens: integer("output_tokens").notNull().default(0),
+    costUsd: numeric("cost_usd", { precision: 10, scale: 5 }).notNull().default("0"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("copilot_events_org_month").on(t.orgId, t.month), index("copilot_events_ticket").on(t.ticketId, t.kind)],
 );
 
 export const testDriveStatus = pgEnum("test_drive_status", ["queued", "running", "done", "failed", "skipped"]);

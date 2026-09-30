@@ -9,7 +9,10 @@ import { requireAdmin, requireEditor } from "@/lib/auth";
 import { filesFromForm, saveAttachments } from "@/lib/attachments";
 import { checkWebhookUrl, sendTestAlert } from "@/lib/alerts";
 import { access, checkoutUrl, portalUrl, switchToAnnual, syncSeats } from "@/lib/billing";
+import { CopilotError, draftReply, rewriteText, summarizeTicket, type TicketSummary } from "@/lib/copilot";
+import type { RewriteStyle } from "@/lib/copilot-config";
 import { deliverReply } from "@/lib/email";
+import { recordMacroUses } from "@/lib/macro-drift";
 import { dismissSuggestion, saveSuggestedMacro } from "@/lib/macro-suggestions";
 import { TARGET_CHOICES, validHours } from "@/lib/sla";
 import { addReply, createTicket, normalizeTags, updateTicket, type TicketStatus } from "@/lib/tickets";
@@ -52,6 +55,11 @@ export async function replyAction(form: FormData) {
   const ticketId = str(form, "ticketId");
   const number = str(form, "number");
   const files = await filesFromForm(form);
+  // A macro can hand the ticket to someone on the team.
+  const assignTo = str(form, "assignTo");
+  const assignee = assignTo
+    ? await db.query.agents.findFirst({ where: and(eq(schema.agents.orgId, s.orgId), eq(schema.agents.userId, assignTo), eq(schema.agents.viewer, false)) })
+    : null;
   const { messageId } = await addReply({
     orgId: s.orgId,
     ticketId,
@@ -60,10 +68,13 @@ export async function replyAction(form: FormData) {
     internal: form.get("internal") === "on",
     status: status(str(form, "status")),
     addTags: tagList(str(form, "addTags")),
+    assignTo: assignee?.userId ?? null,
     hasFiles: files.length > 0,
   });
   if (messageId && files.length) await saveAttachments(s.orgId, ticketId, messageId, files);
   if (messageId) await deliverReply(s.orgId, messageId);
+  // Which macros this reply started from, so Flatdesk can see how the team edits them.
+  if (messageId && form.get("internal") !== "on") await recordMacroUses(s.orgId, messageId, str(form, "macroIds").split(",").filter(Boolean));
   revalidatePath(`/app/tickets/${number}`);
   revalidatePath("/app/inbox");
 }
@@ -96,8 +107,15 @@ export async function saveMacroAction(form: FormData) {
     body: str(form, "body"),
     addTags: tagList(str(form, "addTags")),
     setStatus: status(str(form, "setStatus")),
+    assignTo: null as string | null,
+    sendNow: form.get("sendNow") === "on",
   };
   if (!values.name || !values.body) throw new Error("A macro needs a name and a reply.");
+  const assignTo = str(form, "assignTo");
+  if (assignTo) {
+    const member = await db.query.agents.findFirst({ where: and(eq(schema.agents.orgId, s.orgId), eq(schema.agents.userId, assignTo), eq(schema.agents.viewer, false)) });
+    values.assignTo = member?.userId ?? null;
+  }
   const id = str(form, "id");
   if (id) {
     await db.update(schema.macros).set(values).where(and(eq(schema.macros.orgId, s.orgId), eq(schema.macros.id, id)));
@@ -117,9 +135,9 @@ export async function deleteMacroAction(form: FormData) {
 // the prompt under an agent's reply).
 export async function saveSuggestedMacroAction(form: FormData) {
   const s = await requireOpenSession();
-  const values = { name: str(form, "name"), body: str(form, "body"), addTags: tagList(str(form, "addTags")) };
+  const values = { name: str(form, "name"), body: str(form, "body"), addTags: tagList(str(form, "addTags")), question: str(form, "question").slice(0, 300) || null };
   if (!values.name || !values.body) throw new Error("A macro needs a name and a reply.");
-  await saveSuggestedMacro(s.orgId, values);
+  await saveSuggestedMacro(s.orgId, values, { answer: str(form, "answer"), userId: s.userId });
   revalidatePath("/app/macros");
   const number = str(form, "number");
   if (number) revalidatePath(`/app/tickets/${number}`);
@@ -131,6 +149,29 @@ export async function dismissSuggestionAction(form: FormData) {
   revalidatePath("/app/macros");
   const number = str(form, "number");
   if (number) revalidatePath(`/app/tickets/${number}`);
+}
+
+// Evolving macros: apply the edit the team keeps making, or keep
+// the macro as it is (that edit isn't proposed again).
+export async function applyMacroUpdateAction(form: FormData) {
+  const s = await requireOpenSession();
+  const body = str(form, "body").slice(0, 4000);
+  if (!body) throw new Error("The updated macro is empty.");
+  await db.update(schema.macros).set({ body }).where(and(eq(schema.macros.orgId, s.orgId), eq(schema.macros.id, str(form, "id"))));
+  revalidatePath("/app/macros");
+  revalidatePath("/app/overview");
+}
+
+export async function dismissMacroUpdateAction(form: FormData) {
+  const s = await requireOpenSession();
+  const macro = await db.query.macros.findFirst({ where: and(eq(schema.macros.orgId, s.orgId), eq(schema.macros.id, str(form, "id"))) });
+  if (!macro) return;
+  await db
+    .insert(schema.macroUpdateDismissals)
+    .values({ orgId: s.orgId, macroId: macro.id, signature: str(form, "signature").slice(0, 40), userId: s.userId })
+    .onConflictDoNothing();
+  revalidatePath("/app/macros");
+  revalidatePath("/app/overview");
 }
 
 export async function saveRuleAction(form: FormData) {
@@ -267,4 +308,32 @@ export async function switchToAnnualAction() {
 export async function openBillingPortalAction() {
   const s = await requireAdmin();
   redirect(await portalUrl(s.orgId, await origin()));
+}
+
+// ---- Copilot ----------------------------------------------------------------
+// Called from the ticket page's client components; they show the error text.
+
+type CopilotResult<T> = { ok: true; value: T } | { ok: false; error: string };
+
+async function copilot<T>(run: (s: { orgId: string; userId: string }) => Promise<T>): Promise<CopilotResult<T>> {
+  try {
+    const s = await requireOpenSession();
+    return { ok: true, value: await run(s) };
+  } catch (err) {
+    if (err instanceof CopilotError) return { ok: false, error: err.message };
+    console.error("copilot failed", err);
+    return { ok: false, error: "The copilot couldn't do that just now. Try again in a moment." };
+  }
+}
+
+export async function copilotSummaryAction(ticketId: string): Promise<CopilotResult<TicketSummary>> {
+  return copilot((s) => summarizeTicket(s.orgId, s.userId, ticketId));
+}
+
+export async function copilotDraftAction(ticketId: string): Promise<CopilotResult<{ reply: string; gaps: string }>> {
+  return copilot((s) => draftReply(s.orgId, s.userId, ticketId));
+}
+
+export async function copilotRewriteAction(ticketId: string, text: string, style: RewriteStyle): Promise<CopilotResult<string>> {
+  return copilot((s) => rewriteText(s.orgId, s.userId, ticketId, text, style));
 }

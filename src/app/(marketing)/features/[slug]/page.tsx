@@ -14,7 +14,7 @@ const SHOTS: Record<string, React.ReactNode> = {
   "flat-pricing": <YearChart />,
   "ai-receipts": <ReceiptShot />,
   "ai-test-drive": <TestDriveShot />,
-  "self-writing-macros": <MacroShot />,
+  "ai-macros": <MacroShot />,
   "lossless-import": <ImportShot />,
 };
 

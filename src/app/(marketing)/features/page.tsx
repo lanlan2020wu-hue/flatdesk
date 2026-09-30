@@ -8,9 +8,34 @@ import { breadcrumbs, pageMeta, software } from "@/lib/seo";
 export const metadata = pageMeta({
   title: "Help desk features",
   description:
-    "Everything in Flatdesk: shared inbox, email and chat, AI answers with a cap, an AI test drive on your own tickets, AI receipts, macros that write themselves, lossless import, reports and export. Every seat gets every feature.",
+    "Everything in Flatdesk: shared inbox, email and chat, AI answers with a cap, an AI test drive on your own tickets, AI receipts, evolving AI macros that also assign, tag and close tickets, lossless import, reports and export. Every seat gets every feature.",
   path: "/features",
 });
+
+const bySlug = (slug: string) => SELLING_POINTS.find((p) => p.slug === slug)!;
+
+// Same order as the homepage: the flat rate, then AI macros, then the rest.
+const CHAPTERS = [
+  { n: "01", title: "Flat rate", lead: bySlug("flat-pricing"), more: [bySlug("ai-receipts")] },
+  { n: "02", title: "AI macros", lead: bySlug("ai-macros"), more: [] },
+  { n: "03", title: "Everything else", lead: null, more: SELLING_POINTS.filter((p) => !["flat-pricing", "ai-receipts", "ai-macros"].includes(p.slug)) },
+];
+
+function PointCard({ p, big = false }: { p: (typeof SELLING_POINTS)[number]; big?: boolean }) {
+  return (
+    <Link href={`/features/${p.slug}`} className={`lift card group grid content-start gap-3 ${big ? "border-accent/40 bg-accent-soft/40 p-6 sm:p-10" : "p-6 sm:p-8"}`}>
+      <span className="flex items-center justify-between">
+        <FeatureIcon d={p.icon} className={big ? "size-11 bg-accent-soft p-2.5" : undefined} />
+        {p.isNew && <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-medium tracking-[0.12em] text-accent-ink uppercase">New</span>}
+      </span>
+      <h3 className={`font-display ${big ? "text-3xl sm:text-4xl" : "text-2xl"}`}>{big ? p.headline : p.name}</h3>
+      <p className={`text-muted ${big ? "max-w-3xl text-lg" : ""}`}>{big ? p.answer : p.short}</p>
+      <span className="text-sm font-medium text-accent">
+        How it works <span aria-hidden="true" className="arrow inline-block transition-transform group-hover:translate-x-0.5">→</span>
+      </span>
+    </Link>
+  );
+}
 
 export default function FeaturesPage() {
   return (
@@ -18,30 +43,31 @@ export default function FeaturesPage() {
       <JsonLd data={[software(), breadcrumbs([{ name: "Product", path: "/features" }])]} />
       <div className="grid max-w-2xl gap-3">
         <p className="enter eyebrow">Product</p>
-        <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-4xl sm:text-5xl">Why teams switch, and everything else they need.</h1>
+        <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-4xl sm:text-5xl">A flat rate first. AI macros second. Everything else included.</h1>
         <p style={{ "--d": 2 } as React.CSSProperties} className="enter text-lg text-muted">
           Flatdesk is a help desk for email and chat. Every seat gets every feature below, for one price per agent.
         </p>
       </div>
 
-      <section data-play="" aria-label="Why teams switch" className="grid gap-4 sm:grid-cols-2">
-        {SELLING_POINTS.map((p, i) => (
-          <Link key={p.slug} href={`/features/${p.slug}`} style={{ "--i": i } as React.CSSProperties} className="lift card group grid content-start gap-3 p-6 sm:p-8">
-            <span className="flex items-center justify-between">
-              <FeatureIcon d={p.icon} />
-              {p.isNew && <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] font-medium tracking-[0.12em] text-accent-ink uppercase">New</span>}
-            </span>
-            <h2 className="font-display text-2xl">{p.name}</h2>
-            <p className="text-muted">{p.short}</p>
-            <span className="text-sm font-medium text-accent">
-              How it works <span aria-hidden="true" className="arrow inline-block transition-transform group-hover:translate-x-0.5">→</span>
-            </span>
-          </Link>
-        ))}
-      </section>
+      {CHAPTERS.map((c) => (
+        <section key={c.n} data-play="" aria-labelledby={`ch-${c.n}`} className="grid gap-6">
+          <h2 id={`ch-${c.n}`} className="eyebrow flex items-center gap-3">
+            <span className="num font-display text-3xl text-accent">{c.n}</span>
+            {c.title}
+          </h2>
+          {c.lead && <PointCard p={c.lead} big />}
+          {c.more.length > 0 && (
+            <div className={`grid gap-4 ${c.more.length > 2 ? "sm:grid-cols-2 lg:grid-cols-3" : c.more.length > 1 ? "sm:grid-cols-2" : ""}`}>
+              {c.more.map((p) => (
+                <PointCard key={p.slug} p={p} />
+              ))}
+            </div>
+          )}
+        </section>
+      ))}
 
-      <section data-play="" aria-labelledby="all" className="grid gap-10">
-        <h2 id="all" className="ink font-display text-3xl sm:text-4xl">Included in every seat</h2>
+      <section data-play="" id="all" aria-labelledby="all-heading" className="grid scroll-mt-24 gap-10">
+        <h2 id="all-heading" className="ink font-display text-3xl sm:text-4xl">Included in every seat</h2>
         <div className="grid gap-x-10 gap-y-10 md:grid-cols-2 lg:grid-cols-3">
           {FEATURE_GROUPS.map((g) => (
             <div key={g.id} className="grid content-start gap-4">

@@ -67,6 +67,62 @@ export const SELLING_POINTS: SellingPoint[] = [
     icon: "M7 4h10v16l-2.5-1.5L12 20l-2.5-1.5L7 20zM10 9h4M10 13h4",
   },
   {
+    slug: "ai-macros",
+    name: "AI macros",
+    short: "Evolving macros: the AI writes them from the answers your team keeps retyping and updates them as your business changes. Each one can also assign, tag, set the status and send.",
+    headline: "Evolving AI macros that scale with your business, and do the work around the reply too",
+    answer:
+      "Flatdesk watches the replies your agents send. Once essentially the same answer has gone out on 5 different tickets, it identifies it as a macro, and the AI writes it up from the versions your team sent: a short name, the customer question it answers, and one reply with placeholders where each customer's details go. Save it in one click. From then on, when a new ticket asks that question, the macro is offered right in the reply box. And when agents keep making the same edit to a macro before sending it (a new time frame, an extra line, a step that no longer applies), the AI rewrites the macro with that edit for an admin to apply in one click. So the macros evolve as your prices, policies and products do. Each macro also does the work around the reply: it fills in the customer's first name, assigns the ticket to a teammate, sets the status, adds tags, and can send the reply the moment it's used. None of this uses your AI allowance.",
+    metaTitle: "AI macros: canned responses identified and written automatically",
+    metaDescription:
+      "Flatdesk identifies the replies your team sends over and over, has the AI write them up as macros, and offers the right macro on new tickets. Works from imported history too.",
+    steps: [
+      { title: "Your team answers as usual", body: "Replies from the last 90 days count, including history you imported from your old help desk." },
+      { title: "Flatdesk identifies the repeats", body: "Replies that say essentially the same thing, on 5 different tickets, become one suggested macro." },
+      { title: "The AI writes the macro", body: "It reads the versions your team sent and writes one clean reply with placeholders, a name, and the question it answers." },
+      { title: "It's offered on the right tickets", body: "When a new ticket asks the same question, the reply box offers the macro. AI answers use it too." },
+      { title: "It does the work around the reply", body: "Using a macro can fill in the customer's first name, assign the ticket to a teammate, set the status, add tags, or send the reply right away." },
+      { title: "It evolves with your business", body: "When agents keep editing the macro the same way before sending, the AI rewrites it with that edit. Apply it in one click, or keep the macro as it is." },
+    ],
+    facts: [
+      "Identifies a macro once 5 distinct tickets get the same answer",
+      "The AI writes each one up from your team's own replies, with placeholders for customer details",
+      "Offers the matching macro on new tickets, right in the reply box",
+      "Updates a macro when your team keeps editing it the same way before sending",
+      "Each macro can assign the ticket, set the status, add tags and send right away",
+      "Works from imported history, so suggestions can start on day one",
+      "Never uses your AI allowance",
+    ],
+    faq: [
+      {
+        q: "How does Flatdesk identify which macros to suggest?",
+        a: "It groups agent replies from the last 90 days by how many words they share. When one answer has gone out on 5 different tickets and no existing macro covers it, it becomes a suggestion, and the AI writes it up.",
+      },
+      {
+        q: "How does a macro update itself?",
+        a: "When an agent inserts a macro, Flatdesk remembers the macro's text. If on most of the last sends (at least 3) agents made the same change before sending, like a different time frame, an added sentence or a deleted step, the AI rewrites the macro with that change. An admin applies it in one click or keeps the macro as it is. Zendesk's macro suggestions only cover new macros.",
+      },
+      {
+        q: "What can a macro do besides reply?",
+        a: "A macro can assign the ticket to a teammate, set it to open, pending or closed, add tags, and send the reply as soon as it's used. [customer name] is filled in with the customer's first name. A macro set to send right away waits if it still has blanks like [order number], so nothing goes out half filled in.",
+      },
+      {
+        q: "Do AI macros use AI resolutions?",
+        a: "No. Writing macros and matching them to tickets never counts toward the AI allowance. Resolutions only count when the AI answers a customer.",
+      },
+      {
+        q: "How does Flatdesk know which macro fits a new ticket?",
+        a: "The AI writes down the customer question each macro answers. When a new ticket asks the same thing, the reply box offers that macro, and the agent decides whether to use it.",
+      },
+      {
+        q: "Does it work with history imported from another help desk?",
+        a: "Yes. Imported replies count, so a team that brings its history can get AI macros on the first day.",
+      },
+    ],
+    icon: "M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8zM18 15l.9 2.1L21 18l-2.1.9L18 21l-.9-2.1L15 18l2.1-.9z",
+    isNew: true,
+  },
+  {
     slug: "ai-receipts",
     name: "AI receipts",
     short: "Every AI answer you're charged for, itemized with the saved answers it used. Refund a wrong one in a click and it stops counting.",
@@ -142,46 +198,6 @@ export const SELLING_POINTS: SellingPoint[] = [
       },
     ],
     icon: "M4 6h10M4 12h7M4 18h10M15 13l2.5 2.5L22 11",
-    isNew: true,
-  },
-  {
-    slug: "self-writing-macros",
-    name: "Macros that write themselves",
-    short: "When your team sends the same answer on 5 tickets, Flatdesk offers it as a finished macro. Suggestions can start on day one from your imported history.",
-    headline: "Macros that write themselves from the answers your team repeats",
-    answer:
-      "Flatdesk watches the replies your agents send. Once essentially the same answer has gone out on 5 different tickets, it offers it as a finished macro with the greeting, sign-off and customer's name taken out. One click saves it, and the AI can use it straight away. Suggestions don't use any AI allowance.",
-    metaTitle: "Macros that write themselves: automatic canned responses",
-    metaDescription:
-      "Flatdesk turns replies your team sends on 5 tickets into ready macros, from your imported history too. No AI allowance used.",
-    steps: [
-      { title: "Your team answers as usual", body: "Replies from the last 90 days count, including history you imported from your old help desk." },
-      { title: "Flatdesk spots the repeats", body: "Replies that are essentially the same, on 5 different tickets, become one suggestion." },
-      { title: "Save it in one click", body: "The suggestion shows at the top of Macros, and right under a reply you've just sent for the fifth time." },
-      { title: "The AI uses it", body: "Saved macros are what the AI answers from, so every save makes it more useful." },
-    ],
-    facts: [
-      "Suggests a macro after 5 distinct tickets get the same answer",
-      "Works from imported history, so suggestions can start on day one",
-      "Strips quotes, greetings and sign-offs",
-      "Never uses your AI allowance",
-      'Saved suggestions carry a "Written by Flatdesk" label',
-    ],
-    faq: [
-      {
-        q: "How does Flatdesk know which macros to suggest?",
-        a: "It groups agent replies from the last 90 days by how many words they share. When one answer has gone out on 5 different tickets and no existing macro covers it, it becomes a suggestion.",
-      },
-      {
-        q: "Do macro suggestions use AI resolutions?",
-        a: "No. Suggestions are found by comparing your team's replies, without a model call, so they never count toward the AI allowance.",
-      },
-      {
-        q: "Does it work with history imported from another help desk?",
-        a: "Yes. Imported replies count, so a team that brings its history can get suggestions on the first day.",
-      },
-    ],
-    icon: "M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8zM18 15l.9 2.1L21 18l-2.1.9L18 21l-.9-2.1L15 18l2.1-.9z",
     isNew: true,
   },
   {

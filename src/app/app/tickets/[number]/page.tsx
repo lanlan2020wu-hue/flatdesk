@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import AutoSubmitSelect from "@/components/AutoSubmitSelect";
 import Avatar from "@/components/Avatar";
 import Composer from "@/components/Composer";
+import CopilotSummary from "@/components/CopilotSummary";
 import SlaBadge from "@/components/SlaBadge";
 import { RepeatPrompt } from "@/components/MacroSuggestion";
 import { db, schema } from "@/db";
@@ -11,7 +12,9 @@ import { attachmentsByMessage, formatBytes } from "@/lib/attachments";
 import { requireSession } from "@/lib/auth";
 import { RATING_LABEL, ratingsForTicket } from "@/lib/csat";
 import { STATUS_STYLE, timeAgo } from "@/lib/format";
-import { repeatPrompt } from "@/lib/macro-suggestions";
+import { aiConfigured } from "@/lib/ai";
+import { cachedSummary } from "@/lib/copilot";
+import { identifyMacro, repeatPrompt } from "@/lib/macro-suggestions";
 import { STATUS_LABEL } from "@/lib/receipts";
 import { formatDue, shortDuration, slaState, targetLabel } from "@/lib/sla";
 import { getTicket, listAgents } from "@/lib/tickets";
@@ -37,7 +40,7 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
   // Right after this agent replies with an answer they keep sending, offer to save it as a macro.
   const last = thread.at(-1);
   const justReplied = last && last.authorType === "agent" && !last.internal && last.authorId === s.userId;
-  const [agents, macros, [aiEvent], repeat, files, ratings, org] = await Promise.all([
+  const [agents, macros, [aiEvent], repeat, files, ratings, org, summary] = await Promise.all([
     listAgents(s.orgId),
     db.select().from(schema.macros).where(and(eq(schema.macros.orgId, s.orgId))).orderBy(asc(schema.macros.name)),
     db
@@ -50,7 +53,12 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
     attachmentsByMessage(s.orgId, thread.map((m) => m.id)),
     ratingsForTicket(s.orgId, ticket.id),
     db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) }),
+    cachedSummary(s.orgId, ticket.id, last?.id),
   ]);
+  const copilotOn = aiConfigured();
+  // AI macros: when the customer is waiting on us, the macro that answers what they asked.
+  const lastVisible = thread.filter((m) => !m.internal && m.authorType !== "system").at(-1);
+  const suggestedMacro = ticket.status !== "closed" && lastVisible?.authorType === "customer" ? identifyMacro(lastVisible.body, macros) : null;
   const sla = org ? slaState(ticket, org) : null;
   // The receipt line for this ticket's AI answer, shown under that answer.
   const receipt =
@@ -74,6 +82,8 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
           </p>
           <h1 className="font-display text-3xl">{ticket.subject}</h1>
         </header>
+
+        {copilotOn && thread.length > 0 && <CopilotSummary ticketId={ticket.id} initial={summary?.summary ?? null} stale={summary?.stale ?? false} disabled={s.viewer} />}
 
         <ol className="grid gap-4">
           {thread.map((m, i) => {
@@ -148,7 +158,11 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
           ticketId={ticket.id}
           number={ticket.number}
           status={ticket.status}
-          macros={macros.map((m) => ({ id: m.id, name: m.name, body: m.body, addTags: m.addTags, setStatus: m.setStatus }))}
+          macros={macros.map((m) => ({ id: m.id, name: m.name, body: m.body, addTags: m.addTags, setStatus: m.setStatus, assignTo: m.assignTo, sendNow: m.sendNow }))}
+          customerName={customer.name}
+          agents={agents.filter((a) => !a.viewer).map((a) => ({ userId: a.userId, name: a.name }))}
+          suggestedMacroId={suggestedMacro?.id ?? null}
+          copilot={copilotOn}
         />
         )}
       </div>

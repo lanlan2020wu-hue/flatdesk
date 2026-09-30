@@ -6,7 +6,7 @@ import type { QA } from "@/lib/selling-points";
 import { PLAN, PRICE_PHRASE } from "@/lib/pricing";
 import { SITE } from "@/lib/site";
 
-export const DESCRIPTION = `Flatdesk is a help desk for teams of 3–15 agents: ${PRICE_PHRASE}, with ${PLAN.includedPerAgent} AI resolutions per agent included and capped, itemized AI receipts, macros that write themselves, and lossless import.`;
+export const DESCRIPTION = `Flatdesk is a help desk for teams of 3–15 agents: ${PRICE_PHRASE}, with ${PLAN.includedPerAgent} AI resolutions per agent included and capped, itemized AI receipts, evolving AI macros that are written from your replies, update from your team's edits and assign, tag or close tickets, and lossless import.`;
 
 // A page's openGraph replaces the layout's, image included, so every page
 // names its card: the site-wide one, or its own from /og/<kind>/<slug>.
