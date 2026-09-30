@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import AddOnTable from "@/components/AddOnTable";
 import { BILLING_FAQ } from "@/lib/faq";
 import { PLAN, PRICE_PHRASE, annualSavingsPct, usd } from "@/lib/pricing";
 
@@ -75,6 +76,11 @@ export default function PricingPage() {
           </ul>
           <p className="mt-auto text-sm text-muted">Prices in US dollars, before any sales tax.</p>
         </div>
+      </section>
+
+      <section data-play="" className="grid gap-6">
+        <h2 className="ink font-display text-3xl">AI macros: an add-on elsewhere, included here</h2>
+        <AddOnTable />
       </section>
 
       <section data-play="" className="grid gap-6 md:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">
