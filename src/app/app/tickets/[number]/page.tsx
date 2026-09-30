@@ -15,7 +15,6 @@ import { STATUS_STYLE, timeAgo } from "@/lib/format";
 import { aiConfigured } from "@/lib/ai";
 import { cachedSummary } from "@/lib/copilot";
 import { identifyMacro, repeatPrompt } from "@/lib/macro-suggestions";
-import { reviewsForMessages } from "@/lib/quality";
 import { STATUS_LABEL } from "@/lib/receipts";
 import { formatDue, shortDuration, slaState, targetLabel } from "@/lib/sla";
 import { getTicket, listAgents } from "@/lib/tickets";
@@ -41,7 +40,7 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
   // Right after this agent replies with an answer they keep sending, offer to save it as a macro.
   const last = thread.at(-1);
   const justReplied = last && last.authorType === "agent" && !last.internal && last.authorId === s.userId;
-  const [agents, macros, [aiEvent], repeat, files, ratings, org, summary, graded] = await Promise.all([
+  const [agents, macros, [aiEvent], repeat, files, ratings, org, summary] = await Promise.all([
     listAgents(s.orgId),
     db.select().from(schema.macros).where(and(eq(schema.macros.orgId, s.orgId))).orderBy(asc(schema.macros.name)),
     db
@@ -55,7 +54,6 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
     ratingsForTicket(s.orgId, ticket.id),
     db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) }),
     cachedSummary(s.orgId, ticket.id, last?.id),
-    reviewsForMessages(s.orgId, thread.filter((m) => !m.internal && (m.authorType === "agent" || m.authorType === "ai")).map((m) => m.id)),
   ]);
   const copilotOn = aiConfigured();
   // AI macros: when the customer is waiting on us, the macro that answers what they asked.
@@ -135,14 +133,6 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
                     </p>
                   )}
                   {m.deliveryError && <p className="text-sm text-warn">This reply wasn&apos;t emailed: {m.deliveryError}</p>}
-                  {graded.get(m.id) && (
-                    <p className="flex flex-wrap items-baseline gap-x-2 gap-y-1 border-t border-accent/20 pt-2 text-xs text-muted">
-                      <span className="num">Quality</span>
-                      <span className={`num font-medium ${graded.get(m.id)!.flagged ? "text-warn" : graded.get(m.id)!.overall >= 4 ? "text-accent" : "text-ink"}`}>{graded.get(m.id)!.overall}/5</span>
-                      <span className={`min-w-0 flex-1 ${graded.get(m.id)!.flagged ? "text-ink" : ""}`}>{graded.get(m.id)!.flagged ? [graded.get(m.id)!.issue, graded.get(m.id)!.note].filter(Boolean).join(" ") : graded.get(m.id)!.note}</span>
-                      <Link href="/app/quality" className="link">Review</Link>
-                    </p>
-                  )}
                   {m.authorType === "ai" && receipt && aiEvent && (
                     <p className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-accent/20 pt-2 text-xs text-muted">
                       <span className="num">Receipt</span>

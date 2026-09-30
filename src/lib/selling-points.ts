@@ -3,7 +3,6 @@
 // is a claim about the shipped product, so keep it in step with the code.
 
 import { SWITCH_TRIAL_DAYS, TRIAL_DAYS } from "@/lib/billing";
-import { QUALITY } from "@/lib/quality-config";
 import { BILLING_FAQ } from "@/lib/faq";
 import { PLAN, PRICE_PHRASE, usd } from "@/lib/pricing";
 import { TEST_DRIVE } from "@/lib/test-drive";
@@ -115,48 +114,6 @@ export const SELLING_POINTS: SellingPoint[] = [
       },
     ],
     icon: "M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8zM18 15l.9 2.1L21 18l-2.1.9L18 21l-.9-2.1L15 18l2.1-.9z",
-    isNew: true,
-  },
-  {
-    slug: "ai-quality-review",
-    name: "AI quality review",
-    short: `The AI grades every reply your team and AI answers send, for accuracy, tone and resolution, and flags the weak ones with a coaching note. It's in every seat at ${usd(PLAN.annualSeatPrice)}, where other help desks sell QA as a separate product.`,
-    headline: "AI quality review of every support reply, included in the seat",
-    answer: `Flatdesk's AI reviews every reply sent to a customer, whether an agent or AI answers wrote it. It checks the reply against your team's macros, notes and help center for accuracy, and grades the tone and whether it solved what the customer asked. Replies scoring ${QUALITY.flagAt} out of 5 or lower are flagged with what went wrong and one line of coaching, and every agent gets a scorecard. It's included in every seat with up to ${QUALITY.perAgent} reviews per seat a month, pooled, and it never uses your AI resolutions.`,
-    metaTitle: "AI QA for support replies, included in every seat",
-    metaDescription: `Every support reply graded by AI for accuracy, tone and resolution, with per-agent scorecards and coaching, included in Flatdesk's ${usd(PLAN.annualSeatPrice)} seat.`,
-    steps: [
-      { title: "A reply goes out", body: "From an agent or from AI answers, by email or chat. Internal notes aren't reviewed." },
-      { title: "The AI grades it", body: "Accuracy against your macros, notes and help center, tone, and whether it answered what the customer asked, each from 1 to 5." },
-      { title: "Weak replies are flagged", body: "You see what went wrong and one line of coaching, on the ticket and on the Quality page." },
-      { title: "Scorecards add up", body: "Each agent, and AI answers, gets an average and a flagged count over 7, 30 or 90 days." },
-    ],
-    facts: [
-      "Every customer-facing reply is reviewed, not a sample",
-      "Checks accuracy against your own macros, notes and help center",
-      "Scorecards per agent and for AI answers",
-      `Up to ${QUALITY.perAgent} reviews per seat a month, pooled across the team`,
-      "Never uses AI resolutions and never changes or sends anything",
-    ],
-    faq: [
-      {
-        q: "Does quality review cost extra?",
-        a: `No. It's part of every seat. Each seat adds ${QUALITY.perAgent} reviews a month to a team pool. When the pool runs out, reviews pause until next month.`,
-      },
-      {
-        q: "What does the AI check a reply against?",
-        a: "Your team's macros, AI instructions and published help center articles, plus the conversation before the reply, including internal notes.",
-      },
-      {
-        q: "Does it review AI answers too?",
-        a: "Yes. AI answers get their own scorecard, so you can see whether the AI is getting things right before you let it answer more.",
-      },
-      {
-        q: "Do reviews count as AI resolutions?",
-        a: "No. Resolutions count only when the AI answers a customer by itself. Reviews never contact the customer.",
-      },
-    ],
-    icon: "M9 12l2 2 4-4M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6z",
     isNew: true,
   },
   {

@@ -8,7 +8,6 @@ import { macroUpdates } from "@/lib/macro-drift";
 import { macroSuggestions } from "@/lib/macro-suggestions";
 import { withAiDrafts } from "@/lib/macro-writer";
 import { PLAN, seatPriceFor, usd, type Interval } from "@/lib/pricing";
-import { qualitySummary } from "@/lib/quality";
 
 export const metadata = { title: "Overview" };
 
@@ -57,10 +56,9 @@ const Stat = ({ label, value, className = "" }: { label: string; value: React.Re
 // covers this month, then the AI macros waiting, then everything else.
 export default async function OverviewPage() {
   const s = await requireSession();
-  const [org, ai, quality, found, drifted, [{ aiMacros }], [{ seats }]] = await Promise.all([
+  const [org, ai, found, drifted, [{ aiMacros }], [{ seats }]] = await Promise.all([
     db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) }),
     aiUsage(s.orgId),
-    qualitySummary(s.orgId, 30),
     macroSuggestions(s.orgId),
     macroUpdates(s.orgId),
     db.select({ aiMacros: count() }).from(schema.macros).where(and(eq(schema.macros.orgId, s.orgId), eq(schema.macros.source, "suggested"))),
@@ -95,7 +93,7 @@ export default async function OverviewPage() {
             <Meter label={ai.trial ? "AI resolutions in the trial" : "AI resolutions included"} used={ai.used} of={ai.included} />
             <p className="text-sm text-muted">
               {org?.aiOverageEnabled ? `Overage is on at ${usd(PLAN.overageRate, true)} per resolution.` : "At the cap the AI pauses. Nothing extra is charged."} AI macros
-              and quality review never use resolutions.
+              never use resolutions.
             </p>
           </div>
         </div>
@@ -150,16 +148,6 @@ export default async function OverviewPage() {
           Everything else in your seat
         </h2>
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          <li>
-            <Link href="/app/quality" className="flex h-full flex-col gap-1 rounded-xl border border-line bg-surface px-4 py-3 text-sm transition-colors hover:border-line-strong">
-              <span className="font-medium">Quality review</span>
-              <span className="text-muted">
-                {quality.reviewed
-                  ? `Team score ${quality.average!.toFixed(1)} of 5 over ${quality.reviewed} replies. ${quality.flagged} flagged.`
-                  : "Every reply sent to a customer, graded by the AI."}
-              </span>
-            </Link>
-          </li>
           {[
             { href: "/app/receipts", title: "AI receipts", body: "Every AI answer itemized, refundable." },
             { href: "/app/test-drive", title: "AI test drive", body: "AI drafts for your past tickets." },

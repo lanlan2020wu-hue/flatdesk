@@ -63,7 +63,7 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
               <span className="num text-muted">{usd(seatPriceFor(org?.billingInterval === "year" ? "year" : "month"))} per seat</span>
             </span>
             <SideMeter label="AI resolutions" used={ai.used} of={ai.included} />
-            <span className="text-muted">No AI meter. AI macros and quality review are included.</span>
+            <span className="text-muted">No AI meter. AI macros are included.</span>
           </Link>
           <Link href="/app/tickets/new" className="btn btn-primary w-full">
             <svg viewBox="0 0 20 20" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M10 4v12M4 10h12" /></svg>
@@ -97,7 +97,6 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
           </nav>
           <nav className="grid gap-0.5 text-sm" aria-label="Also included">
             <p className="eyebrow px-2.5 pb-1.5">Also included</p>
-            <NavLink href="/app/quality">Quality review</NavLink>
             <NavLink href="/app/receipts">AI receipts</NavLink>
             <NavLink href="/app/test-drive">AI test drive</NavLink>
             <NavLink href="/app/help">Help center</NavLink>

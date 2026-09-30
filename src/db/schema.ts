@@ -403,34 +403,6 @@ export const copilotEvents = pgTable(
   (t) => [index("copilot_events_org_month").on(t.orgId, t.month), index("copilot_events_ticket").on(t.ticketId, t.kind)],
 );
 
-// AI quality review: the AI grades each reply sent to a customer, by an agent
-// or by AI answers, against the team's own macros, notes and help center.
-// One row per reviewed message. Never counted toward the AI allowance.
-// See lib/quality.ts.
-export const replyReviews = pgTable(
-  "reply_reviews",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
-    ticketId: uuid("ticket_id").notNull().references(() => tickets.id, { onDelete: "cascade" }),
-    messageId: uuid("message_id").notNull().references(() => messages.id, { onDelete: "cascade" }),
-    authorType: text("author_type").notNull(), // "agent" or "ai"
-    authorId: text("author_id"), // the agent's user id; null for AI answers
-    month: text("month").notNull(), // "2026-09", in UTC, when the reply was sent
-    overall: integer("overall").notNull(), // 1 to 5
-    accuracy: integer("accuracy").notNull(),
-    tone: integer("tone").notNull(),
-    resolution: integer("resolution").notNull(),
-    flagged: boolean("flagged").notNull().default(false),
-    issue: text("issue"), // what went wrong, when flagged
-    note: text("note").notNull(), // one line of coaching
-    model: text("model").notNull(),
-    costUsd: numeric("cost_usd", { precision: 10, scale: 5 }).notNull().default("0"),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  },
-  (t) => [uniqueIndex("reply_reviews_message").on(t.messageId), index("reply_reviews_org_month").on(t.orgId, t.month)],
-);
-
 export const testDriveStatus = pgEnum("test_drive_status", ["queued", "running", "done", "failed", "skipped"]);
 export const testDriveVerdict = pgEnum("test_drive_verdict", ["send", "edit", "wrong"]);
 

@@ -8,7 +8,7 @@ import { breadcrumbs, pageMeta, software } from "@/lib/seo";
 export const metadata = pageMeta({
   title: "Help desk features",
   description:
-    "Everything in Flatdesk: shared inbox, email and chat, AI answers with a cap, an AI test drive on your own tickets, AI receipts, AI macros identified automatically, AI quality review of every reply, lossless import, reports and export. Every seat gets every feature.",
+    "Everything in Flatdesk: shared inbox, email and chat, AI answers with a cap, an AI test drive on your own tickets, AI receipts, AI macros that write and update themselves, lossless import, reports and export. Every seat gets every feature.",
   path: "/features",
 });
 

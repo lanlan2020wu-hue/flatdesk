@@ -3,7 +3,6 @@
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-import { after } from "next/server";
 import { redirect } from "next/navigation";
 import { db, schema } from "@/db";
 import { requireAdmin, requireEditor } from "@/lib/auth";
@@ -15,7 +14,6 @@ import type { RewriteStyle } from "@/lib/copilot-config";
 import { deliverReply } from "@/lib/email";
 import { recordMacroUses } from "@/lib/macro-drift";
 import { dismissSuggestion, saveSuggestedMacro } from "@/lib/macro-suggestions";
-import { reviewPending } from "@/lib/quality";
 import { TARGET_CHOICES, validHours } from "@/lib/sla";
 import { addReply, createTicket, normalizeTags, updateTicket, type TicketStatus } from "@/lib/tickets";
 
@@ -71,8 +69,6 @@ export async function replyAction(form: FormData) {
   if (messageId) await deliverReply(s.orgId, messageId);
   // Which macros this reply started from, so Flatdesk can see how the team edits them.
   if (messageId && form.get("internal") !== "on") await recordMacroUses(s.orgId, messageId, str(form, "macroIds").split(",").filter(Boolean));
-  // AI quality review grades the reply (and anything else waiting) after the response.
-  if (messageId && form.get("internal") !== "on") after(() => reviewPending(s.orgId));
   revalidatePath(`/app/tickets/${number}`);
   revalidatePath("/app/inbox");
 }

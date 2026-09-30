@@ -147,49 +147,6 @@ export function MacroUpdateShot() {
   );
 }
 
-// Quality review: the team's scorecard lines print one by one, then a
-// flagged reply with the AI's coaching note.
-export function QualityShot() {
-  const rows: [string, string, string][] = [
-    ["Sam Ortiz", "4.6", "0"],
-    ["AI answers", "4.4", "1"],
-    ["Ana Ruiz", "3.9", "2"],
-  ];
-  return (
-    <div className="shot" aria-hidden="true">
-      <Bar title="Quality review · Last 30 days" />
-      <div className="grid gap-3 p-3">
-        <div className="grid gap-1 rounded-lg border border-line p-2.5">
-          <span className="flex justify-between text-[11px] text-muted">
-            <span>Scorecards</span>
-            <span className="num">Team 4.3 / 5</span>
-          </span>
-          {rows.map(([who, avg, flagged], i) => (
-            <span key={who} style={{ "--i": i } as React.CSSProperties} className="ln grid grid-cols-[1fr_auto_auto] gap-3 text-[12px]">
-              <span className="font-medium">{who}</span>
-              <span className="num text-accent">{avg}</span>
-              <span className={`num whitespace-nowrap text-right ${flagged === "0" ? "text-muted" : "text-warn"}`}>{flagged} flagged</span>
-            </span>
-          ))}
-        </div>
-        <div className="grid gap-1.5 rounded-lg border border-warn/40 bg-warn-soft p-2.5">
-          <span className="flex items-center justify-between gap-2 text-[12px]">
-            <span className="font-medium">#2291 Still waiting on my order</span>
-            <span className="save num rounded-full bg-warn/15 px-1.5 py-px text-[10px] text-warn">2/5 flagged</span>
-          </span>
-          <span style={{ "--i": 3 } as React.CSSProperties} className="ln text-[12px]">Promised a refund in 3 days. Your refund policy says 5 to 7.</span>
-          <span style={{ "--i": 4 } as React.CSSProperties} className="ln flex gap-1.5 text-[11px] text-muted">
-            <svg viewBox="0 0 24 24" className="sparkle size-3.5 shrink-0 text-accent" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z" />
-            </svg>
-            Coaching: quote the refund macro&apos;s 5 to 7 business days.
-          </span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export function TestDriveShot() {
   return (
     <div className="shot" aria-hidden="true">

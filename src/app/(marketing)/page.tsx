@@ -3,8 +3,7 @@ import Link from "next/link";
 import JsonLd from "@/components/JsonLd";
 import WaitlistForm from "@/components/WaitlistForm";
 import YearChart from "@/components/YearChart";
-import { AiShot, ImportShot, InboxShot, MacroShot, MacroUpdateShot, QualityShot, ReceiptShot, ReportShot } from "@/components/ProductShots";
-import { QUALITY } from "@/lib/quality-config";
+import { AiShot, ImportShot, InboxShot, MacroShot, MacroUpdateShot, ReceiptShot, ReportShot } from "@/components/ProductShots";
 import { organization, software, website } from "@/lib/seo";
 import { PLAN, competitorById, competitorMonthly, flatdeskMonthly, usd } from "@/lib/pricing";
 
@@ -15,7 +14,7 @@ const EXAMPLE = { agents: 10, resolutions: 1500 };
 const CHAPTERS = [
   { id: "flat-rate", n: "01", title: "Flat rate", body: "One price per seat, AI included and capped." },
   { id: "ai-macros", n: "02", title: "AI macros", body: "Written from your replies. Updated from your edits." },
-  { id: "everything-else", n: "03", title: "Everything else", body: "AI answers, quality review, inbox, import." },
+  { id: "everything-else", n: "03", title: "Everything else", body: "AI answers, inbox and chat, import, reports." },
 ];
 
 const SOURCES = ["Zendesk", "Intercom", "Freshdesk", "Help Scout"];
@@ -36,15 +35,6 @@ const TOUR: { id: string; eyebrow: string; title: string; body: string; points: 
     points: ["Pauses at the included amount unless an admin opts in", "Emails admins at 80% and at 100%", "Try it first: the AI test drive drafts answers to 50 of your past tickets"],
     shot: <AiShot />,
     href: "/features/ai-test-drive",
-  },
-  {
-    id: "quality",
-    eyebrow: "AI quality review",
-    title: "Every reply graded. The weak ones come with a fix.",
-    body: "After a reply goes out, the AI checks it against your macros, notes and help center: was it accurate, was the tone right, did it answer what the customer asked. Each person gets a scorecard, AI answers included, and replies that fall short are flagged with what went wrong and one line of coaching.",
-    points: ["Catches wrong promises before they become refunds", `${QUALITY.perAgent} reviews per seat a month, pooled`, "Doesn't use AI resolutions"],
-    shot: <QualityShot />,
-    href: "/features/ai-quality-review",
   },
   {
     id: "inbox",

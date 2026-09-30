@@ -54,7 +54,6 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
     id: "ai",
     title: "AI",
     features: [
-      { id: "quality", title: "AI quality review", body: "The AI grades every reply sent to a customer for accuracy, tone and resolution, flags the weak ones with a coaching note, and keeps a scorecard per agent.", icon: I.check, isNew: true },
       { id: "ai", title: "AI answers", body: "Answers routine questions from your macros and notes, and hands everything else to your team. On those, agents can ask it for a draft or a ticket summary.", icon: I.ai },
       { id: "test-drive", title: "AI test drive", body: "After you import, the AI drafts answers to 50 of your recent tickets beside what your team sent. Nothing is sent and it doesn't use your allowance.", icon: I.check, isNew: true },
     ],
