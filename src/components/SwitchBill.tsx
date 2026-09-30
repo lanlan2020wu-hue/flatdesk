@@ -30,7 +30,8 @@ export default function SwitchBill({ initialTool = "zendesk-team", initialAgents
   const plans = COMPETITORS.filter((c) => c.vendor === tool.vendor);
   const today = competitorMonthly(tool, agents, ai);
   const ours = flatdeskMonthly(agents, ai, "year");
-  const diff = today.total - ours.capped;
+  // Compared with overage on, so both columns pay for every AI answer.
+  const diff = today.total - ours.withOverage;
   const billed = today.ai > 0 ? Math.max(0, ai - today.included) : 0;
   const qs = new URLSearchParams({ tool: toolId, agents: String(agents), resolutions: String(ai), billing: "yearly" });
 
@@ -124,7 +125,13 @@ export default function SwitchBill({ initialTool = "zendesk-team", initialAgents
               label={<span className="text-muted">{ours.extra ? `${ours.included.toLocaleString("en-US")} AI included` : `AI, ${ai.toLocaleString("en-US")} of ${ours.included.toLocaleString("en-US")}`}</span>}
               value="$0"
             />
-            <Line label="A month" value={usd(ours.capped)} className="mt-auto border-t border-line pt-2 text-base font-medium" />
+            {ours.extra > 0 && (
+              <Line
+                label={<span className="text-muted">{ours.extra.toLocaleString("en-US")} more × {usd(PLAN.overageRate, true)}</span>}
+                value={usd(ours.withOverage - ours.seats)}
+              />
+            )}
+            <Line label="A month" value={usd(ours.withOverage)} className="mt-auto border-t border-line pt-2 text-base font-medium" />
             <span
               aria-hidden="true"
               className="stamp absolute -top-4 right-0 rotate-6 rounded-[4px] border-2 border-accent bg-surface px-1.5 py-0.5 font-mono text-[10px] font-semibold tracking-[0.2em] text-accent uppercase"
@@ -147,8 +154,8 @@ export default function SwitchBill({ initialTool = "zendesk-team", initialAgents
           )}
           {ours.extra > 0 && (
             <p className="text-xs text-muted">
-              Past {ours.included.toLocaleString("en-US")} the AI pauses and your team answers, so the bill stays put. Overage, if an admin turns it on, is{" "}
-              {usd(PLAN.overageRate, true)} each ({usd(ours.withOverage)} in all).
+              This counts overage at {usd(PLAN.overageRate, true)} an answer past the {ours.included.toLocaleString("en-US")} included. Overage is off unless an admin
+              turns it on: with the cap left on, the AI pauses there, your team answers the rest, and the bill stays {usd(ours.capped)}.
             </p>
           )}
         </div>
