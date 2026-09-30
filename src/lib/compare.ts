@@ -5,9 +5,9 @@
 // these pages are only useful, to people and to AI answer engines, if they're fair.
 
 import type { QA } from "@/lib/selling-points";
-import { COMPETITORS, PLAN, competitorById, competitorMonthly, flatdeskMonthly, usd } from "@/lib/pricing";
+import { CHECKED_ON, COMPETITORS, PLAN, competitorById, competitorMonthly, flatdeskMonthly, usd } from "@/lib/pricing";
 
-export const COMPARED_ON = "2026-09-28";
+export const COMPARED_ON = CHECKED_ON;
 
 // Two example teams, used on every comparison.
 export const TEAMS = [
@@ -71,7 +71,7 @@ export const RIVALS: Rival[] = [
     slug: "intercom",
     name: "Intercom",
     title: "Intercom (Fin)",
-    answer: `Intercom, now sold as Fin, charges $0.99 for every AI outcome on top of seats from $29, with no AI included. Flatdesk is ${usd(PLAN.annualSeatPrice)} per agent on annual billing (${usd(PLAN.seatPrice)} monthly) with ${PLAN.includedPerAgent} AI resolutions per agent included and a cap that's on by default, so it costs less once the AI answers a real share of tickets. Intercom is ahead on live chat, proactive messaging and channels.`,
+    answer: `Intercom, now sold as Fin and owned by Salesforce since September 10, 2026, charges $0.99 for every AI outcome on top of seats from $29, with no AI included on those seat plans. Flatdesk is ${usd(PLAN.annualSeatPrice)} per agent on annual billing (${usd(PLAN.seatPrice)} monthly) with ${PLAN.includedPerAgent} AI resolutions per agent included and a cap that's on by default, so it costs less once the AI answers a real share of tickets. Intercom is ahead on live chat, proactive messaging and channels.`,
     flatdeskWins: [
       `${PLAN.includedPerAgent} AI resolutions per agent included, instead of paying for each one`,
       "The AI pauses at the cap unless you opt in, so the bill can't grow on its own",
@@ -88,7 +88,7 @@ export const RIVALS: Rival[] = [
     canImport: true,
     plans: ["fin-essential", "fin-advanced"],
     faq: [
-      { q: "How much does Intercom's Fin AI cost?", a: "$0.99 per Fin outcome, with no volume discount and none included, on top of seats from $29 to $132 per agent per month on annual billing." },
+      { q: "How much does Intercom's Fin AI cost?", a: "$0.99 per Fin outcome at list price, with none included on the Essential, Advanced and Expert seat plans, on top of seats from $29 to $132 per agent per month on annual billing. Larger contracts are negotiated." },
       { q: "Can I move from Intercom to Flatdesk?", a: importAnswer("Intercom") },
     ],
     sources: sourcesFor("fin-essential"),
@@ -201,8 +201,8 @@ export const RIVALS: Rival[] = [
     canImport: false,
     plans: [],
     fixed: [
-      { label: "Front Starter", costs: [83, 290], approx: false, aiBilling: "From $0.05 per conversation. Up to 10 seats, one channel." },
-      { label: "Front Professional", costs: [203, 690], approx: false, aiBilling: "From $0.05 per conversation." },
+      { label: "Front Starter", costs: [83, 290], approx: true, aiBilling: "From $0.05 per conversation. Up to 10 seats, one channel." },
+      { label: "Front Professional", costs: [203, 690], approx: true, aiBilling: "From $0.05 per conversation." },
     ],
     faq: [
       { q: "Can Flatdesk import from Front?", a: "Not yet. Flatdesk imports from Zendesk, Intercom, Freshdesk and Help Scout today." },
@@ -229,7 +229,7 @@ export const RIVALS: Rival[] = [
     canImport: false,
     plans: [],
     fixed: [
-      { label: "Gorgias Basic / Pro", costs: [210, 1160], approx: true, aiBilling: "About $1 per AI interaction plus the ticket fee (third-party figures). Assumes 300 and 2,000 tickets." },
+      { label: "Gorgias Basic / Pro", costs: [210, 1160], approx: true, aiBilling: "Monthly-billing plan prices ($60 and $360); yearly is a little less. About $1 per AI interaction plus the ticket fee (third-party figures). Assumes 300 and 2,000 tickets." },
     ],
     faq: [
       { q: "Can Flatdesk import from Gorgias?", a: "Not yet. Flatdesk imports from Zendesk, Intercom, Freshdesk and Help Scout today." },

@@ -23,8 +23,8 @@ export const GENERAL_FAQ: QA[] = [
     a: "Run the AI test drive during your free trial. After you import your help desk, the AI drafts answers to your 50 most recent tickets using your macros, and shows each draft beside the reply your team actually sent. Nothing is sent to customers and it doesn't use your AI allowance.",
   },
   {
-    q: "Why is Flatdesk cheaper? Is it a lower-quality help desk?",
-    a: `The price is lower because of what Flatdesk doesn't carry, not because the parts you use are worse. AI answers are written by Claude Opus from Anthropic, and one answer costs cents to run, so ${PLAN.includedPerAgent} per seat fit inside the seat price; the cap keeps it that way. There's no sales team, one plan instead of tiers, and a narrower product: email and chat only, no phone, SMS or social channels, no app marketplace and no SLA escalations. Before paying, the AI test drive shows AI drafts for your last 50 tickets beside your team's real replies, and every feature is in the ${TRIAL_DAYS}-day free trial.`,
+    q: "How is this much included in one flat price? Is it a lower-quality help desk?",
+    a: `The price covers this much because of what Flatdesk doesn't carry, not because the parts you use are worse. AI answers are written by Claude Opus from Anthropic, and one answer costs cents to run, so ${PLAN.includedPerAgent} per seat fit inside the seat price; the cap keeps it that way. There's no sales team, one plan instead of tiers, and a narrower product: email and chat only, no phone, SMS or social channels, no app marketplace and no SLA escalations. Before paying, the AI test drive shows AI drafts for your last 50 tickets beside your team's real replies, and every feature is in the ${TRIAL_DAYS}-day free trial.`,
   },
   {
     q: "Who is Flatdesk a good fit for?",

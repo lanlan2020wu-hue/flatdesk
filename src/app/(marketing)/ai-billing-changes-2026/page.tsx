@@ -76,7 +76,7 @@ const CHECKS: [string, string, string][] = [
   ],
   [
     "Fin (formerly Intercom)",
-    "Check how many Fin outcomes you were billed for last month. Each one costs $0.99, with no volume discount.",
+    "Check how many Fin outcomes you were billed for last month. Each one costs $0.99 at list price.",
     "https://www.getmacha.com/blog/intercom-fin-pricing",
   ],
   [

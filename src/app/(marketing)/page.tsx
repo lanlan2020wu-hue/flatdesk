@@ -165,7 +165,7 @@ export default function Home() {
       </div>
 
       <section id="flat-rate" className="mx-auto grid w-full max-w-6xl scroll-mt-20 gap-14 px-4 pt-24 sm:px-6 sm:pt-32">
-        <ChapterHead id="flat-rate" tab="Flat rate" title="Other help desks bill you for being busy. Flatdesk bills per seat.">
+        <ChapterHead id="flat-rate" tab="Flat rate" title="Per-answer AI pricing bills you for being busy. Flatdesk bills per seat.">
           When AI is priced per answer, a launch or a holiday rush lands on the invoice. Here the bill is your seat count, and the cap is on unless an admin
           changes it.
         </ChapterHead>
@@ -266,7 +266,7 @@ export default function Home() {
             </ul>
           </div>
           <div data-play="" className="grid gap-6 border-t border-line pt-14">
-            <h3 className="ink font-display text-3xl">Elsewhere, AI help with macros is an add-on. Here it&apos;s in the seat.</h3>
+            <h3 className="ink font-display text-3xl">Elsewhere, AI help with macros takes a higher plan or an add-on, if it&apos;s offered. Here it&apos;s in the seat.</h3>
             <AddOnTable />
           </div>
         </div>
