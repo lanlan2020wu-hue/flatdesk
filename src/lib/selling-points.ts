@@ -142,7 +142,7 @@ export const SELLING_POINTS: SellingPoint[] = [
       "Every AI event itemized per month",
       "Cites the saved answers the AI used",
       "One-click refunds free up allowance and come off any overage",
-      "Refunds are open until that month's overage has been billed",
+      "Refunds for a month stay open until it closes on the 1st of the next month",
       "CSV export of any month",
     ],
     faq: [
@@ -156,7 +156,7 @@ export const SELLING_POINTS: SellingPoint[] = [
       },
       {
         q: "How long can we refund an AI answer?",
-        a: "Until that month's overage has been billed. Months with no overage stay open.",
+        a: "Until the month closes: billing runs on the 1st of the next month, and after that the month's receipt is final.",
       },
     ],
     icon: "M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6zM9 12l2 2 4-4",
@@ -205,7 +205,7 @@ export const SELLING_POINTS: SellingPoint[] = [
     name: "Lossless import",
     short: `Bring tickets, customers, macros and rules from ${IMPORT_SOURCES.join(", ").replace(/, ([^,]*)$/, " or $1")}. Every original record is archived, and anything that didn't map is listed.`,
     headline: `Move from ${IMPORT_SOURCES.slice(0, 3).join(", ")} or Help Scout without losing a ticket`,
-    answer: `Flatdesk imports tickets, messages, attachments, customers, tags, macros and rules from ${IMPORT_SOURCES.join(", ").replace(/, ([^,]*)$/, " and $1")}. Every original record is kept in an archive you can download, and anything that couldn't be mapped is listed in a report instead of being dropped. Rules are kept for reference; Flatdesk runs one kind today (if tagged X, assign to Y), and the report lists the rest to rebuild. Intercom's API doesn't share workflows or assignment rules at all. You can export everything again as CSV or JSON at any time.`,
+    answer: `Flatdesk imports tickets, messages, attachments, customers, tags, macros and rules from ${IMPORT_SOURCES.join(", ").replace(/, ([^,]*)$/, " and $1")}. Every original record is kept in an archive you can download, and anything that couldn't be mapped is listed in a report instead of being dropped. Rules are kept for reference; Flatdesk runs one kind today (if tagged X, assign to Y), and the report lists the rest to rebuild. Intercom's API doesn't share workflows or assignment rules at all. You can export tickets, messages, customers and macros as CSV or JSON at any time.`,
     metaTitle: "Lossless help desk import from Zendesk, Intercom, Freshdesk and Help Scout",
     metaDescription:
       "Import tickets, attachments, customers, macros and rules from Zendesk, Intercom, Freshdesk or Help Scout. Every raw record is archived and nothing is silently dropped.",
@@ -220,7 +220,7 @@ export const SELLING_POINTS: SellingPoint[] = [
       "Tickets, messages, attachments, customers, tags, macros and rules (rules from every source except Intercom, whose API doesn't share them)",
       "Every raw record archived and downloadable",
       "Unmapped items listed in a report, never silently dropped",
-      "Export everything as CSV or JSON at any time, without asking us",
+      "Export tickets, messages, customers and macros as CSV or JSON at any time, without asking us",
     ],
     faq: [
       {

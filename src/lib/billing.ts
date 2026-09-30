@@ -118,9 +118,11 @@ export async function checkoutUrl(orgId: string, email: string, origin: string, 
   if (current.stripeSubscriptionId && isActive(current.subscriptionStatus)) return portalUrl(orgId, origin);
   const customer = await ensureCustomer(orgId, email);
   const org = await getOrg(orgId);
-  // Stripe needs a trial end at least 48 hours out; closer than that, billing starts now.
-  const trialEnd = trialEndsAt(org);
-  const trial = trialEnd.getTime() - Date.now() > 2 * DAY + 60_000 ? { trial_end: Math.floor(trialEnd.getTime() / 1000) } : {};
+  // A card added during the trial isn't charged until the trial ends. Stripe
+  // needs a trial end at least 48 hours out, so in the trial's last two days
+  // the first charge moves to 48 hours from now rather than happening today.
+  const trialEnd = trialEndsAt(org).getTime();
+  const trial = trialEnd > Date.now() ? { trial_end: Math.floor(Math.max(trialEnd, Date.now() + 2 * DAY + 5 * 60_000) / 1000) } : {};
   const session = await stripe().checkout.sessions.create({
     mode: "subscription",
     customer,
