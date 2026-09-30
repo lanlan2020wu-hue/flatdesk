@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import AddOnTable from "@/components/AddOnTable";
+import WhyFlat from "@/components/WhyFlat";
 import { BILLING_FAQ } from "@/lib/faq";
 import { PLAN, PRICE_PHRASE, annualSavingsPct, usd } from "@/lib/pricing";
 
@@ -76,6 +77,10 @@ export default function PricingPage() {
           </ul>
           <p className="mt-auto text-sm text-muted">Prices in US dollars, before any sales tax.</p>
         </div>
+      </section>
+
+      <section id="why-less" className="scroll-mt-24">
+        <WhyFlat headingLevel="h2" />
       </section>
 
       <section data-play="" className="grid gap-6">

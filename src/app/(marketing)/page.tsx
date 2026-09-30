@@ -3,6 +3,7 @@ import Link from "next/link";
 import AddOnTable from "@/components/AddOnTable";
 import JsonLd from "@/components/JsonLd";
 import WaitlistForm from "@/components/WaitlistForm";
+import WhyFlat from "@/components/WhyFlat";
 import YearChart from "@/components/YearChart";
 import { AiShot, ImportShot, InboxShot, MacroShot, MacroUpdateShot, ReceiptShot, ReportShot } from "@/components/ProductShots";
 import { organization, software, website } from "@/lib/seo";
@@ -128,9 +129,9 @@ export default function Home() {
               One flat rate for your whole help desk. <span className="hl hl-draw">The same bill every month.</span>
             </h1>
             <p style={{ "--d": 2 } as React.CSSProperties} className="enter max-w-[56ch] text-lg text-muted">
-              A help desk for support teams of 3 to 15. {usd(PLAN.annualSeatPrice)} per agent billed yearly, or {usd(PLAN.seatPrice)} month to month. Each
-              seat includes {PLAN.includedPerAgent} AI resolutions, and the AI stops at that cap unless you turn overage on. Macros are written from your
-              team&apos;s own replies and can reply, assign and close a ticket in one click.
+              An email and chat help desk for support teams of 3 to 15. {usd(PLAN.annualSeatPrice)} per agent billed yearly, or {usd(PLAN.seatPrice)} month
+              to month, with {PLAN.includedPerAgent} AI resolutions per seat included and capped.{" "}
+              <a href="#why-less" className="link text-ink">Why it costs less</a>.
             </p>
             <div style={{ "--d": 3 } as React.CSSProperties} className="enter flex flex-wrap gap-3">
               <Link href="/sign-up" className="btn btn-primary">
@@ -235,6 +236,9 @@ export default function Home() {
             <ReceiptShot />
           </div>
         </article>
+        <div id="why-less" className="scroll-mt-24 border-t border-line pt-12">
+          <WhyFlat />
+        </div>
       </section>
 
       <section id="ai-macros" className="scroll-mt-24 border-y border-accent/20 bg-accent-soft/40 py-20 sm:py-28">
