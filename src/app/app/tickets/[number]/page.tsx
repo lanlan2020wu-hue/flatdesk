@@ -158,7 +158,9 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
           ticketId={ticket.id}
           number={ticket.number}
           status={ticket.status}
-          macros={macros.map((m) => ({ id: m.id, name: m.name, body: m.body, addTags: m.addTags, setStatus: m.setStatus }))}
+          macros={macros.map((m) => ({ id: m.id, name: m.name, body: m.body, addTags: m.addTags, setStatus: m.setStatus, assignTo: m.assignTo, sendNow: m.sendNow }))}
+          customerName={customer.name}
+          agents={agents.filter((a) => !a.viewer).map((a) => ({ userId: a.userId, name: a.name }))}
           suggestedMacroId={suggestedMacro?.id ?? null}
           copilot={copilotOn}
         />

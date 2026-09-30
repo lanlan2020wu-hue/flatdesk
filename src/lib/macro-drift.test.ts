@@ -1,4 +1,4 @@
-// Macros that fix themselves: spotting the edit a team keeps making to a
+// Evolving macros: spotting the edit a team keeps making to a
 // macro before sending it. Run: DATABASE_URL=... npm test
 import assert from "node:assert/strict";
 import { after, test } from "node:test";
@@ -88,5 +88,23 @@ test("database: uses of the current text count, and a dismissed edit isn't propo
   await db.insert(schema.macroUpdateDismissals).values({ orgId: ORG, macroId: macro.id, signature: update.drift.signature });
   assert.deepEqual(await macroUpdates(ORG), []);
 
+  await db.delete(schema.orgs).where(eq(schema.orgs.id, ORG));
+});
+
+test("database: a macro's assignee wins over the ticket's current one", { skip: !process.env.DATABASE_URL }, async () => {
+  const { db, schema } = await import("@/db");
+  const { createTicket, addReply } = await import("./tickets");
+  const ORG = "org_test_macro_assign";
+  await db.delete(schema.orgs).where(eq(schema.orgs.id, ORG));
+  await db.insert(schema.orgs).values({ id: ORG, name: "Assign team" });
+  await db.insert(schema.agents).values([
+    { orgId: ORG, userId: "u1", name: "Sam", email: "sam@x.com", role: "admin" },
+    { orgId: ORG, userId: "u2", name: "Ana", email: "ana@x.com", role: "agent" },
+  ]);
+  const t = await createTicket({ orgId: ORG, channel: "email", customerEmail: "kim@x.com", subject: "Invoice", body: "Wrong invoice", authorType: "customer" });
+  await db.update(schema.tickets).set({ assigneeId: "u1" }).where(eq(schema.tickets.id, t.id));
+  await addReply({ orgId: ORG, ticketId: t.id, userId: "u1", body: "Ana will sort this out.", internal: false, assignTo: "u2" });
+  const [row] = await db.select().from(schema.tickets).where(eq(schema.tickets.id, t.id));
+  assert.equal(row.assigneeId, "u2");
   await db.delete(schema.orgs).where(eq(schema.orgs.id, ORG));
 });

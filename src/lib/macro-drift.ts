@@ -1,4 +1,4 @@
-// AI macros, step three: macros that fix themselves. When an agent inserts a
+// AI macros, step three: evolving macros. When an agent inserts a
 // macro, the reply records which macro it started from and the macro's text
 // at that moment. If the team keeps making the same edit before sending (a
 // sentence added, one deleted, a time frame changed), the macro is out of

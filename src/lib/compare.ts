@@ -100,7 +100,7 @@ export const RIVALS: Rival[] = [
     answer: `Zendesk Suite starts at $55 per agent on annual billing and charges for automated resolutions past a small allowance. It doesn't publish the per-resolution rate; third parties put it near $1.50 to $2.00. Flatdesk is ${usd(PLAN.annualSeatPrice)} per agent on annual billing (${usd(PLAN.seatPrice)} monthly) with ${PLAN.includedPerAgent} AI resolutions per agent included and a cap on by default. Zendesk is far broader: community forums, many channels, a large app marketplace.`,
     flatdeskWins: [
       "One public price, with AI included and capped",
-      "Macros that update themselves from your team's edits, where Zendesk's macro suggestions cover new macros only",
+      "Evolving macros that update from your team's edits, where Zendesk's macro suggestions cover new macros only",
       "AI receipts with one-click refunds",
       "No tiers or add-ons: every seat gets every feature",
     ],
@@ -130,7 +130,7 @@ export const RIVALS: Rival[] = [
     flatdeskWins: [
       `${PLAN.includedPerAgent} AI resolutions per agent included instead of paying per resolution`,
       "AI receipts with one-click refunds",
-      "AI macros that are written from your replies and update themselves from your team's edits",
+      "Evolving AI macros, written from your replies and updated from your team's edits, that also assign, tag and close tickets",
       "Lossless import with a raw archive of every record",
     ],
     theyWin: [
@@ -189,7 +189,7 @@ export const RIVALS: Rival[] = [
     flatdeskWins: [
       "AI included in the seat, with a cap on by default",
       "AI receipts with one-click refunds",
-      "AI macros that are written from your replies and update themselves from your team's edits",
+      "Evolving AI macros, written from your replies and updated from your team's edits, that also assign, tag and close tickets",
       "Lossless import from Zendesk, Intercom, Freshdesk and Help Scout",
     ],
     theyWin: [
@@ -217,7 +217,7 @@ export const RIVALS: Rival[] = [
       "AI included in the seat instead of charged per interaction",
       "An AI answer is never charged on top of a ticket fee",
       "AI receipts with one-click refunds",
-      "AI macros that are written from your replies and update themselves from your team's edits",
+      "Evolving AI macros, written from your replies and updated from your team's edits, that also assign, tag and close tickets",
     ],
     theyWin: [
       "Native Shopify integration with order data in the ticket",

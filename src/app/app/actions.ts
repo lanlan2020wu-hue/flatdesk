@@ -55,6 +55,11 @@ export async function replyAction(form: FormData) {
   const ticketId = str(form, "ticketId");
   const number = str(form, "number");
   const files = await filesFromForm(form);
+  // A macro can hand the ticket to someone on the team.
+  const assignTo = str(form, "assignTo");
+  const assignee = assignTo
+    ? await db.query.agents.findFirst({ where: and(eq(schema.agents.orgId, s.orgId), eq(schema.agents.userId, assignTo), eq(schema.agents.viewer, false)) })
+    : null;
   const { messageId } = await addReply({
     orgId: s.orgId,
     ticketId,
@@ -63,6 +68,7 @@ export async function replyAction(form: FormData) {
     internal: form.get("internal") === "on",
     status: status(str(form, "status")),
     addTags: tagList(str(form, "addTags")),
+    assignTo: assignee?.userId ?? null,
     hasFiles: files.length > 0,
   });
   if (messageId && files.length) await saveAttachments(s.orgId, ticketId, messageId, files);
@@ -101,8 +107,15 @@ export async function saveMacroAction(form: FormData) {
     body: str(form, "body"),
     addTags: tagList(str(form, "addTags")),
     setStatus: status(str(form, "setStatus")),
+    assignTo: null as string | null,
+    sendNow: form.get("sendNow") === "on",
   };
   if (!values.name || !values.body) throw new Error("A macro needs a name and a reply.");
+  const assignTo = str(form, "assignTo");
+  if (assignTo) {
+    const member = await db.query.agents.findFirst({ where: and(eq(schema.agents.orgId, s.orgId), eq(schema.agents.userId, assignTo), eq(schema.agents.viewer, false)) });
+    values.assignTo = member?.userId ?? null;
+  }
   const id = str(form, "id");
   if (id) {
     await db.update(schema.macros).set(values).where(and(eq(schema.macros.orgId, s.orgId), eq(schema.macros.id, id)));
@@ -138,7 +151,7 @@ export async function dismissSuggestionAction(form: FormData) {
   if (number) revalidatePath(`/app/tickets/${number}`);
 }
 
-// Macros that fix themselves: apply the edit the team keeps making, or keep
+// Evolving macros: apply the edit the team keeps making, or keep
 // the macro as it is (that edit isn't proposed again).
 export async function applyMacroUpdateAction(form: FormData) {
   const s = await requireOpenSession();

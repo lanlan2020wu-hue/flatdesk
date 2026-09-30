@@ -186,6 +186,7 @@ export async function addReply(opts: {
   internal: boolean;
   status?: TicketStatus | null;
   addTags?: string[];
+  assignTo?: string | null; // from a macro; wins over assignment rules
   hasFiles?: boolean; // a reply can be only attachments
 }) {
   return db.transaction(async (tx) => {
@@ -214,7 +215,7 @@ export async function addReply(opts: {
     const tags = normalizeTags([...ticket.tags, ...(opts.addTags ?? [])]);
     const newTags = tags.filter((t) => !ticket.tags.includes(t));
     const status = opts.status ?? ticket.status;
-    const assigneeId = ticket.assigneeId ?? (await ruleAssignee(tx, opts.orgId, newTags));
+    const assigneeId = opts.assignTo || ticket.assigneeId || (await ruleAssignee(tx, opts.orgId, newTags));
 
     await tx
       .update(tickets)

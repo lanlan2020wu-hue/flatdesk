@@ -15,7 +15,7 @@ const INCLUDED = [
   "Shared inbox",
   "Email and chat, with attachments",
   "Macros and rules",
-  "AI macros, written from your replies and kept up to date",
+  "Evolving AI macros that also assign, tag, close and send",
   "AI answers, capped by default",
   "AI receipts and refunds",
   "Reporting",

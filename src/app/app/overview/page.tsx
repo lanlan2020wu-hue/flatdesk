@@ -99,11 +99,11 @@ export default async function OverviewPage() {
         </div>
       </Chapter>
 
-      <Chapter n="02" title="AI macros" href="/app/macros" cta={suggestions.length || drifted.length ? "Review them" : "Open AI macros"}>
+      <Chapter n="02" title="Evolving AI macros" href="/app/macros" cta={suggestions.length || drifted.length ? "Review them" : "Open AI macros"}>
         <div className="grid gap-6 md:grid-cols-[minmax(0,4fr)_minmax(0,7fr)]">
           <dl className="grid content-start gap-3">
             <Stat label="Identified, waiting for review" value={suggestions.length} className={suggestions.length ? "text-accent" : ""} />
-            <Stat label="Out of date, update ready" value={drifted.length} className={drifted.length ? "text-accent" : ""} />
+            <Stat label="Your team changed, update ready" value={drifted.length} className={drifted.length ? "text-accent" : ""} />
             <Stat label="Saved by your team" value={saved} />
           </dl>
           {suggestions.length || drifted.length ? (
@@ -136,7 +136,7 @@ export default async function OverviewPage() {
           ) : (
             <p className="text-sm text-muted">
               When your team sends the same answer on 5 tickets, it shows up here, written up by the AI. When they keep editing a macro the same way, the AI
-              updates it. Saved macros are offered on new tickets that ask the same thing.
+              updates it, so your macros evolve with the business. Saved macros are offered on new tickets and can assign, tag, close and send.
             </p>
           )}
         </div>

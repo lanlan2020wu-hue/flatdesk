@@ -99,7 +99,7 @@ export async function writeMissingDrafts(orgId: string, missing: Suggestion[]) {
   }
 }
 
-// ---- Macros that fix themselves ----------------------------------------------
+// ---- Evolving macros ----------------------------------------------
 // lib/macro-drift.ts finds the edit a team keeps making to a macro. The AI
 // rewrites the macro with that edit, keeping its placeholders, and the result
 // is cached per macro and edit. It shares the daily limit above.

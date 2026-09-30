@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState, useTransition } from "react";
-import { useFormStatus } from "react-dom";
+import { flushSync, useFormStatus } from "react-dom";
 import { copilotDraftAction, copilotRewriteAction } from "@/app/app/actions";
 import { CopilotMark } from "@/components/CopilotSummary";
 import { REWRITE_LABEL, type RewriteStyle } from "@/lib/copilot-config";
@@ -10,7 +10,10 @@ import { REWRITE_LABEL, type RewriteStyle } from "@/lib/copilot-config";
 const UPLOAD_LIMIT = 4 * 1024 * 1024;
 const MAX_FILES = 10;
 
-type Macro = { id: string; name: string; body: string; addTags: string[]; setStatus: string | null };
+type Macro = { id: string; name: string; body: string; addTags: string[]; setStatus: string | null; assignTo: string | null; sendNow: boolean };
+
+const NAME_PLACEHOLDER = /\[(customer(?:'s)? (?:first )?name|first name|name)\]/gi;
+const STATUS_WORD: Record<string, string> = { open: "open", pending: "pending", closed: "closed" };
 
 function SendButton({ internal }: { internal: boolean }) {
   const { pending } = useFormStatus();
@@ -29,6 +32,8 @@ export default function Composer({
   macros,
   suggestedMacroId = null,
   copilot = true,
+  customerName = null,
+  agents = [],
 }: {
   action: (f: FormData) => Promise<void>;
   ticketId: string;
@@ -38,6 +43,8 @@ export default function Composer({
   // The macro Flatdesk identified as the answer to the customer's latest message.
   suggestedMacroId?: string | null;
   copilot?: boolean;
+  customerName?: string | null;
+  agents?: { userId: string; name: string }[];
 }) {
   const [internal, setInternal] = useState(false);
   const [body, setBody] = useState("");
@@ -55,6 +62,9 @@ export default function Composer({
   const [usedSuggestion, setUsedSuggestion] = useState(false);
   // Macros inserted into this reply, so the server can learn how the team edits them.
   const [macroIds, setMacroIds] = useState<string[]>([]);
+  // What the inserted macro will do when the reply is sent.
+  const [assignTo, setAssignTo] = useState("");
+  const [actions, setActions] = useState<string[]>([]);
   const suggested = !usedSuggestion && suggestedMacroId ? macros.find((m) => m.id === suggestedMacroId) : undefined;
 
   function draft() {
@@ -86,11 +96,30 @@ export default function Composer({
   function applyMacro(id: string) {
     const m = macros.find((x) => x.id === id);
     if (!m) return;
-    setBody((b) => (b ? `${b}\n\n${m.body}` : m.body));
-    setAddTags(m.addTags.join(", "));
-    if (m.setStatus) setStatusChoice(m.setStatus);
+    const first = customerName?.trim().split(/\s+/)[0];
+    const text = first ? m.body.replace(NAME_PLACEHOLDER, first) : m.body;
+    const next = body ? `${body}\n\n${text}` : text;
+    // Committed synchronously so a send-right-away macro submits the filled-in form.
+    flushSync(() => {
+      setBody(next);
+      setAddTags(m.addTags.join(", "));
+      if (m.setStatus) setStatusChoice(m.setStatus);
+      if (m.assignTo) setAssignTo(m.assignTo);
+      setMacroIds((ids) => [...ids, id]);
+    });
+    const who = m.assignTo ? agents.find((a) => a.userId === m.assignTo)?.name : null;
+    setActions([
+      ...(who ? [`assign to ${who}`] : []),
+      ...(m.setStatus ? [`set ${STATUS_WORD[m.setStatus] ?? m.setStatus}`] : []),
+      ...(m.addTags.length ? [`tag ${m.addTags.join(", ")}`] : []),
+    ]);
+    // A macro set to send right away goes out now, unless it still has blanks to fill.
+    const blanks = next.match(/\[[^\]\n]{1,40}\]/g);
+    if (m.sendNow && !internal) {
+      if (blanks) setNote(`Fill in ${[...new Set(blanks)].join(", ")}, then send. This macro sends right away once it has no blanks.`);
+      else formRef.current?.requestSubmit();
+    }
     if (id === suggestedMacroId) setUsedSuggestion(true);
-    setMacroIds((ids) => [...ids, id]);
   }
 
   return (
@@ -112,6 +141,8 @@ export default function Composer({
         setStatusChoice(null);
         setFiles([]);
         setMacroIds([]);
+        setAssignTo("");
+        setActions([]);
       }}
       className={`grid gap-3 rounded-2xl border p-3 shadow-md transition-colors focus-within:ring-2 focus-within:ring-accent/25 ${internal ? "border-warn/50 bg-warn-soft" : "border-line bg-surface"}`}
     >
@@ -119,6 +150,7 @@ export default function Composer({
       <input type="hidden" name="number" value={number} />
       <input type="hidden" name="addTags" value={addTags} />
       <input type="hidden" name="macroIds" value={macroIds.join(",")} />
+      <input type="hidden" name="assignTo" value={assignTo} />
       <div className="flex flex-wrap items-center gap-3 text-sm">
         <div role="radiogroup" aria-label="Message type" className="flex gap-0.5 rounded-lg bg-surface-2 p-0.5">
           <button type="button" role="radio" aria-checked={!internal} onClick={() => setInternal(false)} className={`rounded-md px-3 py-1 transition-colors ${!internal ? "bg-surface font-medium shadow-sm" : "text-muted hover:text-ink"}`}>Reply</button>
@@ -208,7 +240,7 @@ export default function Composer({
               }}
             />
           </label>
-          {addTags && <span>Adds tags: {addTags}</span>}
+          {actions.length > 0 ? <span className="text-accent">On send: {actions.join(", ")}</span> : addTags && <span>Adds tags: {addTags}</span>}
         </span>
         <div className="flex items-center gap-2">
           <label htmlFor="nextStatus" className="text-muted">then set to</label>

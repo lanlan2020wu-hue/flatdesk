@@ -244,6 +244,8 @@ export const macros = pgTable("macros", {
   body: text("body").notNull(),
   addTags: text("add_tags").array().notNull().default(sql`'{}'::text[]`),
   setStatus: ticketStatus("set_status"), // null = leave status unchanged
+  assignTo: text("assign_to"), // agent user id; null = leave the assignee unchanged
+  sendNow: boolean("send_now").notNull().default(false), // using the macro sends the reply at once
   source: text("source"), // import source ("zendesk", ...) or "suggested" when saved from a repeated-reply suggestion
   // What customers ask when this macro is the answer, in a sentence. The AI
   // writes it for suggested macros; the ticket page matches new tickets to it.

@@ -107,7 +107,7 @@ export function MacroShot() {
   );
 }
 
-// Macros that fix themselves: the edit the team keeps making, struck through
+// Evolving macros: the edit the team keeps making, struck through
 // and rewritten, with the one-click update.
 export function MacroUpdateShot() {
   return (

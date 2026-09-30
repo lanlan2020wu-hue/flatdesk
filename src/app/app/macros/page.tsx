@@ -35,6 +35,15 @@ export default async function MacrosPage() {
   // Imported rules that aren't running as a Flatdesk rule: shown for reference.
   const reference = imported.filter((r) => !r.flatdeskRuleId);
   const agentName = (id: string) => agents.find((a) => a.userId === id)?.name ?? "Removed agent";
+  const team = agents.filter((a) => !a.viewer).map((a) => ({ userId: a.userId, name: a.name }));
+  // What a macro does besides insert its reply, in words, for its row.
+  const doesAlso = (m: (typeof macros)[number]) =>
+    [
+      m.assignTo && `assigns to ${agentName(m.assignTo)}`,
+      m.setStatus && `sets ${m.setStatus}`,
+      m.addTags.length > 0 && `tags ${m.addTags.join(", ")}`,
+      m.sendNow && "sends right away",
+    ].filter(Boolean) as string[];
 
   return (
     <div className="grid max-w-3xl gap-12 px-4 py-6 md:px-8 md:py-8">
@@ -42,7 +51,7 @@ export default async function MacrosPage() {
         <div className="grid gap-1">
           <h1 className="font-display text-3xl">AI macros</h1>
           <p className="text-sm text-muted">
-            Flatdesk identifies the answers your team keeps retyping and the AI writes them up as macros. On a new ticket, the macro that answers it is offered in the reply box. When your team keeps editing a macro the same way before sending it, the AI updates the macro for you.
+            Flatdesk identifies the answers your team keeps retyping and the AI writes them up as macros. On a new ticket, the macro that answers it is offered in the reply box. A macro can also assign the ticket, set its status, add tags and send itself. When your team keeps editing a macro the same way before sending it, the AI updates the macro for you.
           </p>
         </div>
 
@@ -61,6 +70,7 @@ export default async function MacrosPage() {
                   m.source && <span className="chip shrink-0">From {SOURCE_NAME[m.source] ?? m.source}</span>
                 )}
                 {m.notApplied.length > 0 && <span className="pill shrink-0 bg-warn/15 text-xs font-normal text-warn">{m.notApplied.length} not applied</span>}
+                {doesAlso(m).length > 0 && <span className="hidden truncate text-xs font-normal text-muted sm:inline">{doesAlso(m).join(" · ")}</span>}
               </span>
               <svg viewBox="0 0 20 20" className="chevron size-4 shrink-0 text-muted transition-transform" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M5 8l5 5 5-5" /></svg>
             </summary>
@@ -75,7 +85,7 @@ export default async function MacrosPage() {
               </div>
             )}
             {m.question && <p className="mx-5 mt-1 text-sm text-muted">Offered on tickets that ask: <span className="text-ink">{m.question}</span></p>}
-            <MacroForm macro={m} />
+            <MacroForm macro={m} agents={team} />
             <form action={deleteMacroAction} className="px-5 pb-5">
               <input type="hidden" name="id" value={m.id} />
               <button className="link text-sm text-warn">Delete macro</button>
@@ -85,7 +95,7 @@ export default async function MacrosPage() {
 
         <div className="rounded-2xl border border-dashed border-line-strong">
           <p className="px-5 pt-4 font-medium">New macro</p>
-          <MacroForm />
+          <MacroForm agents={team} />
         </div>
       </section>
 
@@ -168,7 +178,7 @@ export default async function MacrosPage() {
   );
 }
 
-function MacroForm({ macro }: { macro?: typeof schema.macros.$inferSelect }) {
+function MacroForm({ macro, agents }: { macro?: typeof schema.macros.$inferSelect; agents: { userId: string; name: string }[] }) {
   const key = macro?.id ?? "new";
   return (
     <form action={saveMacroAction} className="grid gap-4 p-5 text-sm">
@@ -185,7 +195,18 @@ function MacroForm({ macro }: { macro?: typeof schema.macros.$inferSelect }) {
             <option value="closed">Closed</option>
           </select>
         </label>
+        <label className="grid gap-1.5 font-medium" htmlFor={`assign-${key}`}>Assign to
+          <select id={`assign-${key}`} name="assignTo" defaultValue={macro?.assignTo ?? ""} className={`${field} font-normal`}>
+            <option value="">Leave as is</option>
+            {agents.map((a) => <option key={a.userId} value={a.userId}>{a.name}</option>)}
+          </select>
+        </label>
+        <label className="flex items-center gap-2 self-end pb-2 font-medium" htmlFor={`send-${key}`}>
+          <input id={`send-${key}`} type="checkbox" name="sendNow" defaultChecked={macro?.sendNow} className="size-4 accent-[var(--accent)]" />
+          Send the reply as soon as it&apos;s used
+        </label>
       </div>
+      <p className="text-xs text-muted">[customer name] is filled in for you. A macro set to send right away waits if it still has other blanks, like [order number].</p>
       <button className="btn btn-primary w-max">{macro ? "Save macro" : "Add macro"}</button>
     </form>
   );

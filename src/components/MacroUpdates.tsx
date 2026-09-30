@@ -3,7 +3,7 @@ import type { Drift } from "@/lib/macro-drift";
 
 type Update = { macro: { id: string; name: string; body: string }; drift: Drift; proposed: string; aiWritten: boolean };
 
-// Macros that fix themselves: the edits the team keeps making to a macro,
+// Evolving macros: the edits the team keeps making to a macro,
 // and the macro rewritten with them, ready to apply.
 export default function MacroUpdates({ updates, aiOn }: { updates: Update[]; aiOn: boolean }) {
   if (!updates.length) return null;

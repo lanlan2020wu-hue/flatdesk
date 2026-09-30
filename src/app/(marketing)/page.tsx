@@ -13,7 +13,7 @@ const EXAMPLE = { agents: 10, resolutions: 1500 };
 // macros, then everything else in the seat. Each chapter has its own anchor.
 const CHAPTERS = [
   { id: "flat-rate", n: "01", title: "Flat rate", body: "One price per seat, AI included and capped." },
-  { id: "ai-macros", n: "02", title: "AI macros", body: "Written from your replies. Updated from your edits." },
+  { id: "ai-macros", n: "02", title: "AI macros", body: "Evolving macros that grow with your business and act on the ticket." },
   { id: "everything-else", n: "03", title: "Everything else", body: "AI answers, inbox and chat, import, reports." },
 ];
 
@@ -23,6 +23,16 @@ const MACRO_STEPS = [
   { title: "Flatdesk spots the repeats", body: "When the same answer has gone out on 5 tickets and no macro covers it, Flatdesk flags it. Imported history counts, so it works on day one." },
   { title: "The AI writes the macro", body: "From the versions your team sent, the AI writes a name, the customer question it answers, and one clean reply with placeholders for names and order numbers." },
   { title: "New tickets get it offered", body: "Save it, and when a new ticket asks the same thing, the reply box offers that macro. AI answers use your macros too." },
+];
+
+// What one macro does when an agent uses it. Zendesk macros also run actions,
+// so this is shown as what's included, not as something only Flatdesk has.
+const MACRO_ACTIONS = [
+  { title: "Writes the reply", body: "With the customer's first name already filled in." },
+  { title: "Assigns the ticket", body: "Refunds to Ana, bugs to your developer, whoever owns it." },
+  { title: "Sets the status", body: "Closed, pending or open, once the reply goes out." },
+  { title: "Adds tags", body: "So reports and assignment rules pick it up." },
+  { title: "Sends right away", body: "For answers that need no checking, one click and it's sent." },
 ];
 
 // Chapter three: the rest of the seat, in the order teams ask about it.
@@ -124,7 +134,7 @@ export default function Home() {
             </h1>
             <p style={{ "--d": 2 } as React.CSSProperties} className="enter max-w-xl text-lg text-muted">
               {usd(PLAN.annualSeatPrice)} per agent billed yearly, or {usd(PLAN.seatPrice)} month to month, with {PLAN.includedPerAgent} AI resolutions per seat
-              included and capped. No AI meter, no add-ons. And AI macros that write themselves from your team&apos;s replies, then update themselves when your team keeps editing them.
+              included and capped. No AI meter, no add-ons. And evolving AI macros: written from your team&apos;s replies, updated as your business changes, and able to reply, assign and close a ticket in one click.
             </p>
             <div style={{ "--d": 3 } as React.CSSProperties} className="enter flex flex-wrap gap-3">
               <Link href="/sign-up" className="btn btn-primary">
@@ -193,21 +203,25 @@ export default function Home() {
           When AI is billed per conversation, a launch or a holiday rush shows up on the invoice. With Flatdesk the bill is your seat count, and the cap is on
           unless you change it.
         </ChapterHead>
-        <div data-play="" className="card grid gap-8 p-6 sm:p-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-center">
-          <dl className="grid gap-6">
-            <div className="grid gap-1">
+        <div data-play="" className="grid gap-4">
+          <dl className="card grid gap-6 border-accent/30 bg-accent-soft/40 p-6 sm:grid-cols-3 sm:p-8">
+            <div className="grid content-start gap-1">
               <dt className="text-sm text-muted">Per agent, billed yearly</dt>
               <dd className="num font-display text-5xl">{usd(PLAN.annualSeatPrice)}<span className="text-lg text-muted"> / month</span></dd>
               <dd className="text-sm text-muted">or {usd(PLAN.seatPrice)} month to month</dd>
             </div>
-            <div className="grid gap-1">
+            <div className="grid content-start gap-1">
               <dt className="text-sm text-muted">AI resolutions included</dt>
-              <dd className="num font-display text-3xl">{PLAN.includedPerAgent} <span className="text-lg text-muted">per seat, pooled</span></dd>
-              <dd className="text-sm text-muted">At the cap the AI pauses. Overage ({usd(PLAN.overageRate, true)} each) only if an admin turns it on.</dd>
+              <dd className="num font-display text-5xl">{PLAN.includedPerAgent}<span className="text-lg text-muted"> per seat</span></dd>
+              <dd className="text-sm text-muted">Pooled across the team. At the cap the AI pauses; overage ({usd(PLAN.overageRate, true)} each) only if an admin turns it on.</dd>
             </div>
-            <div className="flex flex-wrap gap-3 text-sm">
-              <Link href="/pricing" className="link font-medium text-accent">See pricing</Link>
-              <Link href="/calculator" className="link font-medium text-accent">Try it with your numbers</Link>
+            <div className="grid content-start gap-1">
+              <dt className="text-sm text-muted">Add-ons and tiers</dt>
+              <dd className="num font-display text-5xl">0</dd>
+              <dd className="flex flex-wrap gap-x-3 gap-y-1 text-sm">
+                <Link href="/pricing" className="link font-medium text-accent">See pricing</Link>
+                <Link href="/calculator" className="link font-medium text-accent">Try it with your numbers</Link>
+              </dd>
             </div>
           </dl>
           <YearChart />
@@ -235,10 +249,10 @@ export default function Home() {
 
       <section id="ai-macros" className="scroll-mt-24 border-y border-accent/20 bg-accent-soft/40 py-20 sm:py-28">
         <div className="mx-auto grid w-full max-w-6xl gap-12 px-4 sm:px-6">
-          <ChapterHead n="02" eyebrow="AI macros" title="The AI writes your macros, then keeps them up to date.">
-            Flatdesk identifies the answers your team keeps typing, and the AI turns each one into a macro that&apos;s offered on every new ticket asking the same
-            thing. When your team keeps editing a macro the same way before sending it, the AI updates the macro. It&apos;s included in the seat and never uses
-            your AI allowance.
+          <ChapterHead n="02" eyebrow="AI macros" title="Evolving macros that scale with your business.">
+            Flatdesk identifies the answers your team keeps typing and the AI turns each one into a macro. As your products, prices and policies change, the
+            macros change with them, learned from how your team edits them. And each macro does the work around the reply too. It&apos;s included in the seat
+            and never uses your AI allowance.
           </ChapterHead>
           <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] lg:gap-16">
             <div data-play="" className="relative">
@@ -256,16 +270,28 @@ export default function Home() {
               ))}
             </ol>
           </div>
+          <div data-play="" className="grid gap-6">
+            <h3 className="ink font-display text-3xl leading-tight">One macro does the whole job, not just the words.</h3>
+            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+              {MACRO_ACTIONS.map((a, i) => (
+                <li key={a.title} style={{ "--i": i } as React.CSSProperties} className="ln card grid content-start gap-1.5 p-5">
+                  <span className="num font-display text-2xl text-accent">{String(i + 1).padStart(2, "0")}</span>
+                  <span className="font-medium">{a.title}</span>
+                  <span className="text-sm text-muted">{a.body}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
           <article className="grid items-center gap-10 rounded-3xl border border-accent/30 bg-surface p-6 shadow-sm sm:p-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-16">
             <div data-play="" className="grid content-start gap-4">
               <p className="eyebrow flex items-center gap-2">
-                Macros that fix themselves
+                Evolving macros
                 <span className="rounded-full bg-accent px-2 py-0.5 text-[10px] tracking-[0.12em] text-accent-ink">New</span>
               </p>
-              <h3 className="ink font-display text-3xl leading-tight">Your team keeps fixing the same macro. Now the macro fixes itself.</h3>
+              <h3 className="ink font-display text-3xl leading-tight">Your business changes. Your macros keep up on their own.</h3>
               <p className="text-muted">
-                Flatdesk sees how agents edit a macro before they send it. When most sends make the same change, like a new time frame, an extra line or a step
-                that no longer applies, the AI rewrites the macro with it. An admin applies it in one click.
+                A new shipping time, a changed refund policy, a step that no longer applies: your team fixes it by hand in the reply first. Flatdesk sees when most
+                sends make the same edit, and the AI rewrites the macro with it. An admin applies it in one click, so the macros grow with the business.
               </p>
               <ul className="grid gap-2 text-sm">
                 {["Counts only sends of the current version, so one fix starts the count again", "Keeps your placeholders, greeting and sign-off", "Zendesk's macro suggestions cover new macros only"].map((p) => (

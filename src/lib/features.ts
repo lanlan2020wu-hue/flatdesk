@@ -44,8 +44,8 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
     id: "automation",
     title: "AI macros and automation",
     features: [
-      { id: "suggested-macros", title: "AI macros", body: "Flatdesk identifies the answers your team sends on 5 or more tickets, the AI writes each one up as a macro, new tickets asking the same thing get it offered, and macros your team keeps editing the same way get updated.", icon: I.spark, isNew: true },
-      { id: "macros", title: "Macros", body: "Saved replies that can also add tags and set the status in one click.", icon: I.macro },
+      { id: "suggested-macros", title: "AI macros", body: "Evolving macros: Flatdesk identifies the answers your team sends on 5 or more tickets, the AI writes each one up, new tickets asking the same thing get it offered, and macros your team keeps editing the same way get updated.", icon: I.spark, isNew: true },
+      { id: "macros", title: "Macros that take action", body: "One click replies with the customer's name filled in, assigns the ticket, sets the status, adds tags, and can send right away.", icon: I.macro },
       { id: "rules", title: "Assignment rules", body: 'When a ticket is tagged, rules like "if tagged billing, assign to Sam" pick who gets it.', icon: I.rule },
       { id: "tags", title: "Tags", body: "Tag tickets by hand, from a macro, or from your old help desk's data.", icon: I.tag },
     ],

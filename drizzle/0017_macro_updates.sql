@@ -22,4 +22,6 @@ ALTER TABLE "macro_uses" ADD CONSTRAINT "macro_uses_message_id_messages_id_fk" F
 ALTER TABLE "macro_update_dismissals" ADD CONSTRAINT "macro_update_dismissals_org_id_orgs_id_fk" FOREIGN KEY ("org_id") REFERENCES "public"."orgs"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "macro_update_dismissals" ADD CONSTRAINT "macro_update_dismissals_macro_id_macros_id_fk" FOREIGN KEY ("macro_id") REFERENCES "public"."macros"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 CREATE INDEX "macro_uses_org_macro" ON "macro_uses" USING btree ("org_id","macro_id","created_at");--> statement-breakpoint
-CREATE UNIQUE INDEX "macro_update_dismissals_macro_sig" ON "macro_update_dismissals" USING btree ("macro_id","signature");
+CREATE UNIQUE INDEX "macro_update_dismissals_macro_sig" ON "macro_update_dismissals" USING btree ("macro_id","signature");--> statement-breakpoint
+ALTER TABLE "macros" ADD COLUMN "assign_to" text;--> statement-breakpoint
+ALTER TABLE "macros" ADD COLUMN "send_now" boolean DEFAULT false NOT NULL;
