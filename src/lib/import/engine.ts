@@ -1,6 +1,5 @@
 import { and, asc, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { extendTrialForSwitch } from "@/lib/billing";
 import { INBOUND_FILE_LIMIT, MAX_FILES, saveAttachments, type NewFile } from "@/lib/attachments";
 import { normalizeTags } from "@/lib/tickets";
 import { seal, unseal } from "./crypto";
@@ -224,8 +223,6 @@ export async function runStep(orgId: string, id: string, opts: { budgetMs?: numb
     .set({ ...patch, phase: adapter.phases[phaseIdx]?.kind ?? job.phase, cursor, counts, notes: [...notes], lockedUntil: null, updatedAt: new Date() })
     .where(eq(imports.id, job.id))
     .returning();
-  // Switching shouldn't eat the trial: a finished import with tickets extends it.
-  if (after?.status === "done" && (counts.ticket?.imported ?? 0) > 0) await extendTrialForSwitch(orgId);
   return after;
 }
 

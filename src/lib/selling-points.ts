@@ -2,7 +2,7 @@
 // /features pages, the FAQ, structured data and llms.txt. Every sentence here
 // is a claim about the shipped product, so keep it in step with the code.
 
-import { SWITCH_TRIAL_DAYS, TRIAL_DAYS } from "@/lib/billing";
+import { TRIAL_DAYS } from "@/lib/billing";
 import { BILLING_FAQ } from "@/lib/faq";
 import { PLAN, PRICE_PHRASE, usd } from "@/lib/pricing";
 import { TEST_DRIVE } from "@/lib/test-drive";
@@ -221,7 +221,6 @@ export const SELLING_POINTS: SellingPoint[] = [
       "Every raw record archived and downloadable",
       "Unmapped items listed in a report, never silently dropped",
       "Export everything as CSV or JSON at any time, without asking us",
-      `Finishing an import during the free trial extends it to ${SWITCH_TRIAL_DAYS} days`,
     ],
     faq: [
       {
