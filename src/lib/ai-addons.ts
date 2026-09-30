@@ -32,8 +32,8 @@ export const perAnswer = (billing: "month" | "year") =>
 
 export const FLATDESK_ROW: GridRow = {
   vendor: "Flatdesk",
-  cells: ["Included", "Included", "Included", `${usd(perAnswer("year"), true)} each or less`],
-  note: `All in the seat: ${usd(PLAN.seatPrice)} a month, or ${usd(PLAN.annualSeatPrice)} billed yearly. Each seat includes ${PLAN.includedPerAgent} AI answers a month, so even counting the whole seat an answer costs at most ${usd(perAnswer("year"), true)} (${usd(perAnswer("month"), true)} on monthly billing); optional overage is ${usd(PLAN.overageRate, true)}. Macros never use the AI allowance.`,
+  cells: ["Included", "Included", "Included", `${PLAN.includedPerAgent} a seat included, then ${usd(PLAN.overageRate, true)} each`],
+  note: `All in the seat: ${usd(PLAN.seatPrice)} a month, or ${usd(PLAN.annualSeatPrice)} billed yearly. Each seat includes ${PLAN.includedPerAgent} AI answers a month, pooled across the team. Past that the AI pauses, or an admin turns on overage at ${usd(PLAN.overageRate, true)} an answer. Macros never use the AI allowance.`,
 };
 
 export const GRID: GridRow[] = [
@@ -48,7 +48,7 @@ export const GRID: GridRow[] = [
     note: "Freddy AI Copilot is sold with Pro ($55) and Enterprise only, and suggests existing canned responses.",
   },
   {
-    vendor: "Intercom",
+    vendor: "Fin (formerly Intercom)",
     cells: [null, null, "$29/agent Copilot", each("fin-essential")],
     note: "Copilot includes 10 free conversations per agent a month.",
   },

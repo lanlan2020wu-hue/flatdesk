@@ -62,11 +62,16 @@ const DRAFT_TTL_MINUTES = 15;
 // the allowance, but each one is still a paid model call. This bounds every call, counted or
 // not, at a multiple of the allowance.
 export const ATTEMPTS_PER_INCLUDED = 3;
+// And bounds what all those calls cost, so a seat never costs more in AI than
+// it pays: $0.20 per included answer is $20 of a $39 or $49 seat, and each
+// overage answer ($0.40) may spend $0.25.
+export const COST_PER_INCLUDED_USD = 0.2;
+export const COST_PER_OVERAGE_USD = 0.25;
 // A trial allowance is sized from everyone who signed in, capped so that
 // inviting lots of people during the trial can't inflate it.
-const TRIAL_AGENT_CAP = 10;
+const TRIAL_AGENT_CAP = PLAN.trialAgentCap;
 
-export type Usage = { included: number; used: number; overage: number; attempts: number; month: string; trial: boolean };
+export type Usage = { included: number; used: number; overage: number; attempts: number; spentUsd: number; month: string; trial: boolean };
 type Org = typeof orgs.$inferSelect;
 
 // The allowance and what's used of it. During a no-card trial, usage counts
@@ -76,13 +81,14 @@ async function measure(q: Pick<typeof db, "select">, org: Org, month: string): P
   const where = [eq(aiEvents.orgId, org.id)];
   if (!trial) where.push(eq(aiEvents.month, month));
   const counted = sql`(${aiEvents.kind} = 'resolution' or (${aiEvents.kind} = 'draft' and ${aiEvents.createdAt} > now() - make_interval(mins => ${DRAFT_TTL_MINUTES})))`;
-  const [[{ agentCount }], [{ used, overage, attempts }]] = await Promise.all([
+  const [[{ agentCount }], [{ used, overage, attempts, spent }]] = await Promise.all([
     q.select({ agentCount: count() }).from(agents).where(eq(agents.orgId, org.id)),
     q
       .select({
         used: sql<number>`count(*) filter (where ${counted})`,
         overage: sql<number>`count(*) filter (where ${counted} and ${aiEvents.overage})`,
         attempts: count(),
+        spent: sql<string>`coalesce(sum(${aiEvents.costUsd}), 0)`,
       })
       .from(aiEvents)
       .where(and(...where)),
@@ -91,12 +97,17 @@ async function measure(q: Pick<typeof db, "select">, org: Org, month: string): P
   // never deleted, so counting them would keep paying for people who left.
   const seats = trial ? Math.min(Number(agentCount), TRIAL_AGENT_CAP) : (org.billedSeats ?? Number(agentCount));
   const included = Math.max(1, seats) * (trial ? PLAN.trialPerAgent : PLAN.includedPerAgent);
-  return { included, used: Number(used), overage: Number(overage), attempts: Number(attempts), month, trial };
+  // An answer is flagged as overage when it starts, but an earlier one that
+  // stops counting (handed back to the team) brings the month back under the
+  // allowance, so overage is never more than what the month is over by. This
+  // is the number billOverage charges.
+  const over = Math.min(Number(overage), Math.max(0, Number(used) - included));
+  return { included, used: Number(used), overage: over, attempts: Number(attempts), spentUsd: Number(spent), month, trial };
 }
 
 export async function aiUsage(orgId: string, month = monthKey()): Promise<Usage> {
   const org = await db.query.orgs.findFirst({ where: eq(orgs.id, orgId) });
-  if (!org) return { included: PLAN.includedPerAgent, used: 0, overage: 0, attempts: 0, month, trial: false };
+  if (!org) return { included: PLAN.includedPerAgent, used: 0, overage: 0, attempts: 0, spentUsd: 0, month, trial: false };
   return measure(db, org, month);
 }
 
@@ -110,10 +121,11 @@ export async function reserveSlot(orgId: string, ticketId: string, followUp = fa
     const org = await tx.query.orgs.findFirst({ where: eq(orgs.id, orgId) });
     if (!org) return { paused: "missing org" };
     const month = monthKey();
-    const { included, used, overage, attempts, trial } = await measure(tx, org, month);
-    // Overage extends the allowance, so it extends the attempt limit with it.
+    const { included, used, overage, attempts, spentUsd, trial } = await measure(tx, org, month);
+    // Overage extends the allowance, so it extends the attempt and cost limits with it.
     const overageRoom = org.aiOverageEnabled && !trial ? (org.aiOverageMonthlyLimit ?? included) : 0;
-    if (attempts >= (included + overageRoom) * ATTEMPTS_PER_INCLUDED) {
+    const budgetUsd = included * COST_PER_INCLUDED_USD + overageRoom * COST_PER_OVERAGE_USD;
+    if (attempts >= (included + overageRoom) * ATTEMPTS_PER_INCLUDED || spentUsd >= budgetUsd) {
       return { paused: "The AI has handed an unusually large number of tickets to the team this month, so it's paused until next month. Adding saved answers for common questions helps it answer more of them." };
     }
     if (followUp) {

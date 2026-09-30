@@ -210,7 +210,7 @@ export function AiShot() {
 export function ReceiptShot() {
   const lines: [string, string, string, string][] = [
     ["#1042", "Can't reset my password", "Counted, included", "pill bg-accent-soft text-accent"],
-    ["#1038", "Where is my order?", "Not counted, customer wrote back", "pill bg-surface-2 text-muted"],
+    ["#1038", "Where is my order?", "Not counted, handed to the team after the AI replied", "pill bg-surface-2 text-muted"],
     ["#1035", "Change billing email", "Refunded", "pill strike bg-surface-2 text-muted"],
   ];
   return (

@@ -112,7 +112,7 @@ test("a no-card trial gets a smaller AI allowance for the whole trial, with no o
   ]);
 
   const usage = await aiUsage(T);
-  assert.deepEqual(usage, { included: 2 * PLAN.trialPerAgent, used: 49, overage: 0, attempts: 49, month: monthKey(), trial: true });
+  assert.deepEqual(usage, { included: 2 * PLAN.trialPerAgent, used: 49, overage: 0, attempts: 49, spentUsd: 0, month: monthKey(), trial: true });
   const last = await reserveSlot(T, null as unknown as string);
   assert.ok("eventId" in last, "the 50th answer still fits");
   const paused = await reserveSlot(T, null as unknown as string);
@@ -151,4 +151,20 @@ test("the allowance follows paid seats, abandoned slots expire, and handoffs are
   assert.ok("eventId" in (await reserveSlot(T, null as unknown as string)), "the last attempt fits");
   const paused = await reserveSlot(T, null as unknown as string);
   assert.ok("paused" in paused && /handed/.test(paused.paused), "then the AI pauses");
+});
+
+test("the AI also pauses when a month's model calls cost what the allowance allows, so a seat never costs more than it pays", async () => {
+  process.env.STRIPE_SECRET_KEY ??= "sk_test_dummy";
+  const { db, schema } = await import("@/db");
+  const { COST_PER_INCLUDED_USD, monthKey, reserveSlot } = await import("./ai");
+  const { PLAN } = await import("./pricing");
+  const T = "org_test_ai_cost";
+  await db.delete(schema.orgs).where(eq(schema.orgs.id, T));
+  await db.insert(schema.orgs).values({ id: T, name: "Cost team", subscriptionStatus: "active", billedSeats: 1 });
+  await db.insert(schema.agents).values({ orgId: T, userId: "user_c1", name: "A", email: "c1@cost.dev", role: "admin" });
+  const budget = PLAN.includedPerAgent * COST_PER_INCLUDED_USD;
+  await db.insert(schema.aiEvents).values({ orgId: T, kind: "handoff", month: monthKey(), model: "test", costUsd: (budget - 0.01).toFixed(5) });
+  assert.ok("eventId" in (await reserveSlot(T, null as unknown as string)), "under budget");
+  await db.insert(schema.aiEvents).values({ orgId: T, kind: "handoff", month: monthKey(), model: "test", costUsd: "0.02" });
+  assert.ok("paused" in (await reserveSlot(T, null as unknown as string)), "over budget pauses");
 });

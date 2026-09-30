@@ -26,8 +26,8 @@ export const requireSession = cache(async (): Promise<Session> => {
     await ensureRows(DEV_SESSION, "Demo Support Team", "dev@example.com");
     return DEV_SESSION;
   }
-  // Before Clerk is connected, the app isn't open yet: send people to the waitlist.
-  if (!clerkEnabled) redirect("/#waitlist");
+  // Before Clerk is connected, the app isn't open yet: send people to the design-partner form.
+  if (!clerkEnabled) redirect("/#partner");
 
   const { userId, orgId, orgRole } = await auth();
   if (!userId) redirect("/sign-in");

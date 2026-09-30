@@ -21,7 +21,8 @@ export default function WaitlistForm({ stacked = false }: { stacked?: boolean })
           email: form.get("email"),
           tool: form.get("tool"),
           agents: Number(form.get("agents")) || null,
-          source: params.get("utm_source") ?? params.get("ref") ?? "direct",
+          // Every application through this form is for the design-partner program.
+          source: `design-partner:${params.get("utm_source") ?? params.get("ref") ?? "direct"}`,
           referrer: document.referrer,
           website: form.get("website"),
         }),
@@ -39,7 +40,7 @@ export default function WaitlistForm({ stacked = false }: { stacked?: boolean })
     return (
       <p className="flex items-center gap-3 rounded-xl border border-accent/30 bg-accent-soft px-4 py-3" role="status">
         <svg viewBox="0 0 20 20" className="size-5 shrink-0 text-accent" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 10.5l3 3 7-7" /></svg>
-        You&apos;re on the list. We&apos;ll email you when your spot opens.
+        Thanks for applying. We&apos;ll email you within two business days about the design-partner program.
       </p>
     );
   }
@@ -72,7 +73,7 @@ export default function WaitlistForm({ stacked = false }: { stacked?: boolean })
         </label>
       </div>
       <button type="submit" disabled={state === "sending"} className={`btn btn-primary ${stacked ? "sm:col-span-2" : ""}`}>
-        {state === "sending" ? "Joining…" : "Join the waitlist"}
+        {state === "sending" ? "Sending…" : "Apply as a design partner"}
       </button>
       {state === "error" && <p className="text-sm text-warn sm:col-span-4">{message}</p>}
     </form>

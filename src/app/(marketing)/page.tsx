@@ -21,7 +21,7 @@ const SOURCES = ["Zendesk", "Intercom", "Freshdesk", "Help Scout"];
 
 // Under the hero: what switching costs you, before anyone asks.
 const TERMS = [
-  { title: `${TRIAL_DAYS} days free`, body: "No card to start. Every feature, on your real tickets." },
+  { title: `${TRIAL_DAYS} days free`, body: `No card to start. Every feature on your real tickets, with ${PLAN.trialPerAgent} AI answers per agent for the trial.` },
   { title: "Month to month", body: "No contract on monthly billing. Stop whenever you like." },
   { title: "Bring your history", body: `Tickets, customers and macros from ${SOURCES.slice(0, 3).join(", ")} or Help Scout.` },
   { title: "Take it with you", body: "Export every ticket and macro as CSV or JSON, any time." },
@@ -80,7 +80,7 @@ const MORE = [
 
 // The route from an old help desk to Flatdesk, in the order an admin does it.
 const SWITCH_STEPS = [
-  { title: "Import your history", body: `Paste an API key from ${SOURCES.join(", ")}. Tickets with their full threads, customers, macros, tags and rules come over.` },
+  { title: "Import your history", body: `Paste an API key from ${SOURCES.join(", ").replace(/, ([^,]*)$/, " or $1")}. Tickets with their full threads, customers, macros and tags come over. Rules come over for reference, and the ones Flatdesk can run (if tagged X, assign to Y) keep running.` },
   { title: "Point your email and chat", body: "Forward your support address and paste one script tag for the chat bubble. Forwarding can be pointed back any time." },
   { title: "Test drive the AI", body: "The AI drafts answers to your last 50 tickets, shown beside what your team sent. Nothing goes to customers." },
   { title: "Turn it on", body: "Switch AI answers on with the cap in place, invite the team, and cancel the old plan when you're ready." },
@@ -322,7 +322,7 @@ export default function Home() {
                 "Answer customers by email and website chat, with 3 to 15 people",
                 "Want AI answers without a per-answer meter running",
                 "Keep typing the same replies and want them written up for you",
-                `Are on ${SOURCES.join(", ")} and want your history to come with you`,
+                `Are on ${SOURCES.join(", ").replace(/, ([^,]*)$/, " or $1")} and want your history to come with you`,
               ].map((p) => (
                 <li key={p} className="flex gap-2.5">{mark}{p}</li>
               ))}
@@ -393,7 +393,7 @@ export default function Home() {
             <div className="grid gap-2">
               <h3 className="font-display text-2xl">Or become a design partner</h3>
               <p className="text-muted">
-                A small group of teams gets <span className="hl hl-draw text-ink">50% off monthly billing for their first 12 months</span> ({usd(PLAN.seatPrice / 2)} per
+                A small group of teams gets <span className="hl hl-draw text-ink">50% off monthly billing for their first 12 months</span> ({usd(PLAN.seatPrice / 2, true)} per
                 agent), and we run the import from their old help desk for them. The discount replaces the yearly price rather than adding to it.
               </p>
             </div>

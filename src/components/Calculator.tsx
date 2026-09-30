@@ -137,7 +137,7 @@ export default function Calculator({ initialTool, initialAgents, initialResoluti
 
       <section className="grid content-start gap-5">
         <p className="sr-only" aria-live="polite">
-          {tool.vendor} {tool.plan} would cost about {usd(today.total)} a month; Flatdesk would cost {usd(ours.capped)} a month.
+          {tool.vendor} {tool.plan} would cost about {usd(today.total)} a month; Flatdesk would cost {usd(ours.withOverage)} a month for the same AI answers.
         </p>
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="card p-5 sm:p-6">
@@ -150,10 +150,11 @@ export default function Calculator({ initialTool, initialAgents, initialResoluti
           </div>
           <div className="card border-accent/40 bg-accent-soft p-5 shadow-md sm:p-6">
             <p className="text-sm font-medium text-accent">Flatdesk</p>
-            <p className="num mt-1 text-4xl tracking-tight">{usd(ours.capped)}<span className="text-base text-muted">/mo</span></p>
+            <p className="num mt-1 text-4xl tracking-tight">{usd(ours.withOverage)}<span className="text-base text-muted">/mo</span></p>
             <dl className="mt-4 grid gap-1.5 border-t border-accent/20 pt-3 text-sm">
               <div className="flex justify-between gap-3"><dt className="text-muted">Seats, {a} × {usd(seatPriceFor(interval))} ({interval === "year" ? "annual" : "monthly"})</dt><dd className="num">{usd(ours.seats)}</dd></div>
               <div className="flex justify-between gap-3"><dt className="text-muted">AI resolutions included</dt><dd className="num">{ours.included.toLocaleString()}</dd></div>
+              {ours.extra > 0 && <div className="flex justify-between gap-3"><dt className="text-muted">Overage, {ours.extra.toLocaleString()} × {usd(PLAN.overageRate, true)}</dt><dd className="num">{usd(ours.withOverage - ours.capped)}</dd></div>}
             </dl>
           </div>
         </div>
@@ -164,8 +165,8 @@ export default function Calculator({ initialTool, initialAgents, initialResoluti
             <div className="h-3 overflow-hidden rounded-full bg-surface-2"><div className="meter h-full w-full origin-left bg-chart-other transition-transform duration-300" style={{ transform: bar(today.total) }} /></div>
           </div>
           <div className="grid gap-1.5">
-            <div className="flex justify-between text-sm"><span className="text-muted">Flatdesk</span><span className="num">{usd(ours.capped)}</span></div>
-            <div className="h-3 overflow-hidden rounded-full bg-surface-2"><div className="meter h-full w-full origin-left bg-accent transition-transform duration-300" style={{ transform: bar(ours.capped) }} /></div>
+            <div className="flex justify-between text-sm"><span className="text-muted">Flatdesk</span><span className="num">{usd(ours.withOverage)}</span></div>
+            <div className="h-3 overflow-hidden rounded-full bg-surface-2"><div className="meter h-full w-full origin-left bg-accent transition-transform duration-300" style={{ transform: bar(ours.withOverage) }} /></div>
           </div>
         </div>
 
