@@ -16,7 +16,7 @@ const INCLUDED = [
   "Email and chat, with attachments",
   "Macros and rules",
   "AI macros, identified automatically",
-  "AI copilot: summaries, drafted replies, rewrites",
+  "AI quality review of every reply, with scorecards",
   "AI answers, capped by default",
   "AI receipts and refunds",
   "Reporting",

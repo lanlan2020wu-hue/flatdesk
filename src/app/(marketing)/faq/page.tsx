@@ -7,7 +7,7 @@ import { breadcrumbs, faqPage, pageMeta } from "@/lib/seo";
 
 export const metadata = pageMeta({
   title: "Help desk questions, answered",
-  description: "Straight answers about Flatdesk: what it costs, how AI resolutions are counted and capped, AI macros, the AI copilot, AI receipts, and importing from another help desk.",
+  description: "Straight answers about Flatdesk: what it costs, how AI resolutions are counted and capped, AI macros, AI quality review, AI receipts, and importing from another help desk.",
   path: "/faq",
 });
 

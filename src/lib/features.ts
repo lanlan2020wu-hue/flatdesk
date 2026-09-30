@@ -58,8 +58,8 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
     id: "ai",
     title: "AI",
     features: [
-      { id: "copilot", title: "AI copilot in every seat", body: "Summarize a ticket, draft a reply from your macros and help center, or rewrite what you typed. Included in the seat, not an add-on.", icon: I.ai, isNew: true },
-      { id: "ai", title: "AI answers", body: "Answers routine questions from your macros and notes, and hands everything else to your team.", icon: I.ai },
+      { id: "quality", title: "AI quality review", body: "The AI grades every reply sent to a customer for accuracy, tone and resolution, flags the weak ones with a coaching note, and keeps a scorecard per agent.", icon: I.check, isNew: true },
+      { id: "ai", title: "AI answers", body: "Answers routine questions from your macros and notes, and hands everything else to your team. On those, agents can ask it for a draft or a ticket summary.", icon: I.ai },
       { id: "cap", title: "A cap that's on by default", body: "The AI pauses at your included resolutions. Admins get an email at 80% and at 100%.", icon: I.cap },
       { id: "test-drive", title: "AI test drive", body: "After you import, the AI drafts answers to 50 of your recent tickets beside what your team sent. Nothing is sent and it doesn't use your allowance.", icon: I.check, isNew: true },
       { id: "receipts", title: "AI receipts", body: "Every AI answer itemized, with the saved answers it used. Refund a wrong one and it stops counting.", icon: I.receipt, isNew: true },

@@ -77,7 +77,7 @@ export const RIVALS: Rival[] = [
       "The AI pauses at the cap unless you opt in, so the bill can't grow on its own",
       "AI receipts itemize every answer, and you can refund a wrong one",
       "AI macros, identified automatically from your team's repeated replies",
-      "An AI copilot in every seat: ticket summaries, drafted replies and rewrites",
+      "AI quality review of every reply, with per-agent scorecards, in the seat",
     ],
     theyWin: [
       "Richer messenger with proactive and outbound messages",
@@ -101,7 +101,7 @@ export const RIVALS: Rival[] = [
     answer: `Zendesk Suite starts at $55 per agent on annual billing and charges for automated resolutions past a small allowance. It doesn't publish the per-resolution rate; third parties put it near $1.50 to $2.00. Flatdesk is ${usd(PLAN.annualSeatPrice)} per agent on annual billing (${usd(PLAN.seatPrice)} monthly) with ${PLAN.includedPerAgent} AI resolutions per agent included and a cap on by default. Zendesk is far broader: community forums, many channels, a large app marketplace.`,
     flatdeskWins: [
       "One public price, with AI included and capped",
-      "An AI copilot in every seat, where Zendesk sells Copilot as a paid add-on",
+      "AI quality review of every reply in the seat, where Zendesk sells QA as a separate product",
       "AI receipts with one-click refunds",
       "AI macros, identified automatically",
       "No tiers or add-ons: every seat gets every feature",
@@ -187,7 +187,7 @@ export const RIVALS: Rival[] = [
     slug: "front",
     name: "Front",
     title: "Front",
-    answer: `Front is a collaborative shared inbox with seats from $25 (Starter, up to 10 seats) and an AI agent from $0.05 per conversation, so its AI is cheaper than Flatdesk's overage. Flatdesk (${usd(PLAN.annualSeatPrice)} per agent on annual billing) is built as a help desk: AI resolutions included and capped, AI receipts, AI macros, an AI copilot in every seat and lossless import.`,
+    answer: `Front is a collaborative shared inbox with seats from $25 (Starter, up to 10 seats) and an AI agent from $0.05 per conversation, so its AI is cheaper than Flatdesk's overage. Flatdesk (${usd(PLAN.annualSeatPrice)} per agent on annual billing) is built as a help desk: AI resolutions included and capped, AI receipts, AI macros, AI quality review of every reply and lossless import.`,
     flatdeskWins: [
       "AI included in the seat, with a cap on by default",
       "AI receipts with one-click refunds",

@@ -6,8 +6,8 @@ import { MODEL, callCost } from "@/lib/ai";
 export type Metered = { model: string; inputTokens: number; outputTokens: number; costUsd: string };
 
 // One short structured call, for the AI features that help the team rather
-// than answer customers: AI macros and the copilot. Same model as AI answers,
-// at low effort, because these are small writing jobs someone is waiting on.
+// than answer customers: AI macros, quality review and the copilot. Same
+// model as AI answers, at low effort, because these are small jobs.
 // Returns null output on a refusal. Throws on API errors.
 export async function structuredCall<T extends z.ZodType>(
   schema: T,

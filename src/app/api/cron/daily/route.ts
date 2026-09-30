@@ -1,4 +1,5 @@
 import { dailyBilling } from "@/lib/billing";
+import { reviewAllPending } from "@/lib/quality";
 
 // Called once a day by Vercel Cron (vercel.json). Vercel sends CRON_SECRET as
 // a bearer token; anything else is refused.
@@ -9,5 +10,5 @@ export async function GET(request: Request) {
   if (!secret || request.headers.get("authorization") !== `Bearer ${secret}`) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
-  return Response.json({ billing: await dailyBilling() });
+  return Response.json({ billing: await dailyBilling(), quality: await reviewAllPending() });
 }

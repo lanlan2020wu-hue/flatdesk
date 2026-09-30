@@ -4,9 +4,9 @@ import { db, schema } from "@/db";
 import { aiUsage } from "@/lib/ai";
 import { requireSession } from "@/lib/auth";
 import { access } from "@/lib/billing";
-import { copilotBreakdown, copilotUsage } from "@/lib/copilot";
 import { macroSuggestions } from "@/lib/macro-suggestions";
 import { PLAN, seatPriceFor, usd, type Interval } from "@/lib/pricing";
+import { qualityRoom, qualitySummary } from "@/lib/quality";
 
 export const metadata = { title: "Overview" };
 
@@ -46,14 +46,14 @@ function Pillar({ n, title, lede, children, href, cta }: { n: string; title: str
 }
 
 // What the team gets for its flat price this month: the bill, the AI macros
-// Flatdesk found, and what the copilot did. The three things Flatdesk sells.
+// Flatdesk found, and how the team's replies scored. The three things Flatdesk sells.
 export default async function OverviewPage() {
   const s = await requireSession();
-  const [org, ai, copilot, used, suggestions, [{ aiMacros }], [{ seats }]] = await Promise.all([
+  const [org, ai, quality, room, suggestions, [{ aiMacros }], [{ seats }]] = await Promise.all([
     db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) }),
     aiUsage(s.orgId),
-    copilotUsage(s.orgId),
-    copilotBreakdown(s.orgId),
+    qualitySummary(s.orgId, 30),
+    qualityRoom(s.orgId),
     macroSuggestions(s.orgId),
     db.select({ aiMacros: count() }).from(schema.macros).where(and(eq(schema.macros.orgId, s.orgId), eq(schema.macros.source, "suggested"))),
     db.select({ seats: count() }).from(schema.agents).where(and(eq(schema.agents.orgId, s.orgId), eq(schema.agents.viewer, false))),
@@ -68,7 +68,7 @@ export default async function OverviewPage() {
       <header className="grid gap-1.5">
         <p className="eyebrow">{monthName(ai.month)} at a glance</p>
         <h1 className="font-display text-3xl sm:text-4xl">Everything in your seat, working.</h1>
-        <p className="max-w-2xl text-muted">One flat price covers the help desk, AI macros identified automatically from your team&apos;s replies, and an AI copilot for every agent.</p>
+        <p className="max-w-2xl text-muted">One flat price covers the help desk, AI macros identified automatically from your team&apos;s replies, and AI quality review of every reply you send.</p>
       </header>
 
       <div className="grid gap-4 lg:grid-cols-3">
@@ -116,27 +116,23 @@ export default async function OverviewPage() {
 
         <Pillar
           n="03"
-          title="AI copilot"
-          lede={`${copilot.used} copilot action${copilot.used === 1 ? "" : "s"} this month`}
-          href="/app/inbox"
-          cta="Open a ticket to use it"
+          title="AI quality review"
+          lede={quality.average != null ? `Team score ${quality.average.toFixed(1)} of 5` : "Every reply, graded"}
+          href="/app/quality"
+          cta={quality.flagged ? `See ${quality.flagged} flagged repl${quality.flagged === 1 ? "y" : "ies"}` : "Open quality review"}
         >
-          <Meter label="Included this month" used={copilot.used} of={copilot.limit} />
-          <dl className="grid grid-cols-3 gap-2 text-sm">
-            {(
-              [
-                ["Summaries", used.summary],
-                ["Drafts", used.draft],
-                ["Rewrites", used.rewrite],
-              ] as const
-            ).map(([label, n]) => (
-              <div key={label} className="grid gap-0.5 rounded-lg bg-surface-2/60 px-3 py-2">
-                <dt className="text-muted">{label}</dt>
-                <dd className="num font-display text-xl">{n}</dd>
-              </div>
-            ))}
+          <dl className="grid grid-cols-2 gap-3 text-sm">
+            <div className="grid gap-0.5 rounded-lg bg-surface-2/60 px-3 py-2.5">
+              <dt className="text-muted">Reviewed, 30 days</dt>
+              <dd className="num font-display text-2xl">{quality.reviewed}</dd>
+            </div>
+            <div className="grid gap-0.5 rounded-lg bg-surface-2/60 px-3 py-2.5">
+              <dt className="text-muted">Flagged</dt>
+              <dd className={`num font-display text-2xl ${quality.flagged ? "text-warn" : ""}`}>{quality.flagged}</dd>
+            </div>
           </dl>
-          <p className="text-sm text-muted">Summaries, drafted replies and rewrites on every ticket. Zendesk sells its copilot as a paid add-on; yours is in the seat.</p>
+          <Meter label="Reviews included this month" used={room.used} of={room.limit} />
+          <p className="text-sm text-muted">The AI grades every reply, from your team and from AI answers, for accuracy, tone and resolution, and coaches on the weak ones. Zendesk sells QA as a separate product; yours is in the seat.</p>
         </Pillar>
       </div>
 

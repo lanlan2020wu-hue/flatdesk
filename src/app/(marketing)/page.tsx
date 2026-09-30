@@ -3,8 +3,8 @@ import Link from "next/link";
 import JsonLd from "@/components/JsonLd";
 import WaitlistForm from "@/components/WaitlistForm";
 import YearChart from "@/components/YearChart";
-import { AiShot, ChatShot, CopilotShot, FeatureIcon, ImportShot, InboxShot, MacroShot, ReceiptShot, ReportShot } from "@/components/ProductShots";
-import { COPILOT } from "@/lib/copilot-config";
+import { AiShot, ChatShot, QualityShot, FeatureIcon, ImportShot, InboxShot, MacroShot, ReceiptShot, ReportShot } from "@/components/ProductShots";
+import { QUALITY } from "@/lib/quality-config";
 import { FEATURE_GROUPS } from "@/lib/features";
 import { organization, software, website } from "@/lib/seo";
 import { PLAN, competitorById, competitorMonthly, flatdeskMonthly, usd } from "@/lib/pricing";
@@ -33,11 +33,11 @@ const PILLARS: { n: string; title: string; body: string; points: string[]; href:
   },
   {
     n: "03",
-    title: "AI copilot, included",
-    body: "Every agent can summarize a ticket, draft a reply from your macros and help center, or rewrite what they typed. Zendesk sells its copilot as a paid add-on. Here it's in the seat.",
-    points: ["Summary, customer mood and next step", "Drafts that cite your own answers", `${COPILOT.perAgent} actions per seat a month, pooled`],
-    href: "/features/ai-copilot",
-    icon: "M4 6h16v10H8l-4 4zM8 10h8M8 13h5",
+    title: "AI quality review",
+    body: "The AI grades every reply your team and AI answers send, for accuracy against your own macros and help center, tone, and whether it solved the problem. Weak ones are flagged with a coaching note. Zendesk sells QA as a separate product. Here it's in the seat.",
+    points: ["Every reply reviewed, not a sample", "A scorecard for each agent and for AI answers", `${QUALITY.perAgent} reviews per seat a month, pooled`],
+    href: "/features/ai-quality-review",
+    icon: "M9 12l2 2 4-4M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6z",
     isNew: true,
   },
 ];
@@ -68,13 +68,13 @@ const TOUR: { id: string; eyebrow: string; title: string; body: string; points: 
     shot: <MacroShot />,
   },
   {
-    id: "copilot",
-    eyebrow: "AI copilot",
-    badge: "Included",
-    title: "A copilot for every agent, in the seat you already pay for.",
-    body: "Open a ticket and the copilot tells you what the customer wants, how they feel and what to do next. One click drafts the reply from your macros, notes and help center; another makes it shorter, friendlier or more formal. Nothing is sent until you send it.",
-    points: ["Summaries that update when the customer writes again", "Placeholders, never made-up order numbers or policies", "Doesn't use AI resolutions"],
-    shot: <CopilotShot />,
+    id: "quality",
+    eyebrow: "AI quality review",
+    badge: "New",
+    title: "Every reply graded. The weak ones come with a fix.",
+    body: "After a reply goes out, the AI checks it against your macros, notes and help center: was it accurate, was the tone right, did it answer what the customer asked. Each person gets a scorecard, AI answers included, and replies that fall short are flagged with what went wrong and one line of coaching.",
+    points: ["Catches wrong promises before they become refunds", "Scorecards per agent, over 7, 30 or 90 days", "Doesn't use AI resolutions"],
+    shot: <QualityShot />,
   },
   {
     id: "receipts",
@@ -157,15 +157,15 @@ export default function Home() {
               Help desk for teams of 3–15 agents
             </p>
             <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-[2.6rem] leading-[1.05] sm:text-6xl">
-              One flat rate. AI macros and a copilot included. <span className="hl hl-draw font-display-italic italic">The same bill every month.</span>
+              One flat rate. AI macros and quality review included. <span className="hl hl-draw font-display-italic italic">The same bill every month.</span>
             </h1>
             <p style={{ "--d": 2 } as React.CSSProperties} className="enter max-w-xl text-lg text-muted">
               {usd(PLAN.annualSeatPrice)} per agent billed yearly, or {usd(PLAN.seatPrice)} month to month. Flatdesk spots the answers your team keeps
-              retyping and the AI turns them into macros. Every agent gets an AI copilot to summarize, draft and rewrite. And{" "}
+              retyping and the AI turns them into macros. The AI reviews every reply your team sends and flags the weak ones. And{" "}
               {PLAN.includedPerAgent} AI resolutions per seat are included and capped, so the bill never runs away.
             </p>
             <p style={{ "--d": 2 } as React.CSSProperties} className="enter flex flex-wrap gap-2 text-sm">
-              {["Flat rate, no AI meter", "AI macros", "AI copilot in every seat"].map((t) => (
+              {["Flat rate, no AI meter", "AI macros", "AI quality review"].map((t) => (
                 <span key={t} className="flex items-center gap-1.5 rounded-full border border-line bg-surface px-3 py-1 shadow-sm">
                   <svg viewBox="0 0 20 20" className="size-3.5 text-accent" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 10.5l3 3 7-7" /></svg>
                   {t}
@@ -232,7 +232,7 @@ export default function Home() {
       <section data-play="" aria-labelledby="why-switch" className="mx-auto grid w-full max-w-6xl gap-8 px-4 sm:px-6">
         <div className="grid max-w-2xl gap-3">
           <p className="eyebrow">In every seat</p>
-          <h2 id="why-switch" className="ink font-display text-3xl sm:text-4xl">One price. Two kinds of AI that save your team typing.</h2>
+          <h2 id="why-switch" className="ink font-display text-3xl sm:text-4xl">One price. AI that writes your macros and checks every reply.</h2>
         </div>
         <div className="grid gap-4 lg:grid-cols-3">
           {PILLARS.map((p, i) => (

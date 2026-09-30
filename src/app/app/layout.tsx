@@ -10,7 +10,7 @@ import { db, schema } from "@/db";
 import { aiUsage } from "@/lib/ai";
 import { requireSession } from "@/lib/auth";
 import { access, billingConfigured, isActive, refreshSubscription } from "@/lib/billing";
-import { copilotUsage } from "@/lib/copilot";
+import { qualityRoom } from "@/lib/quality";
 import { getOnboarding } from "@/lib/onboarding";
 import { seatPriceFor, usd } from "@/lib/pricing";
 import { VIEWS, viewCounts } from "@/lib/tickets";
@@ -35,12 +35,12 @@ function SideMeter({ label, used, of }: { label: string; used: number; of: numbe
 
 export default async function AppLayout({ children }: LayoutProps<"/app">) {
   const s = await requireSession();
-  const [counts, org, onboarding, ai, copilot] = await Promise.all([
+  const [counts, org, onboarding, ai, quality] = await Promise.all([
     viewCounts(s.orgId, s.userId),
     db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) }),
     s.role === "admin" ? getOnboarding(s.orgId) : null,
     aiUsage(s.orgId),
-    copilotUsage(s.orgId),
+    qualityRoom(s.orgId),
   ]);
   let current = org;
   // Right after Checkout the row is stale; ask Stripe before showing the banner.
@@ -90,6 +90,7 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
           <nav className="grid gap-0.5 text-sm" aria-label="AI">
             <p className="eyebrow px-2.5 pb-1.5">AI, included</p>
             <NavLink href="/app/macros">AI macros</NavLink>
+            <NavLink href="/app/quality">Quality review</NavLink>
             <NavLink href="/app/receipts">AI receipts</NavLink>
             <NavLink href="/app/test-drive">AI test drive</NavLink>
           </nav>
@@ -106,8 +107,8 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
               <span className="num text-muted">{usd(seatPriceFor(org?.billingInterval === "year" ? "year" : "month"))} per seat</span>
             </span>
             <SideMeter label="AI resolutions" used={ai.used} of={ai.included} />
-            <SideMeter label="Copilot" used={copilot.used} of={copilot.limit} />
-            <span className="text-muted">AI macros and the copilot never use resolutions.</span>
+            <SideMeter label="Quality reviews" used={quality.used} of={quality.limit} />
+            <span className="text-muted">AI macros and quality review never use resolutions.</span>
           </Link>
           <div className="border-t border-line px-2 pt-4">
             <AccountMenu fallbackName={s.name} />

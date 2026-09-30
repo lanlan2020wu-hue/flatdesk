@@ -107,49 +107,42 @@ export function MacroShot() {
   );
 }
 
-const DRAFT_WORDS = "Hi Kim, sorry for the wait. Your order [order number] left our warehouse today, and tracking is on its way…".split(" ");
-
-// The copilot on a ticket: the summary prints line by line, then a drafted
-// reply writes itself into the reply box.
-export function CopilotShot() {
-  const points = ["Kim's order hasn't arrived after 9 days", "Sam asked the warehouse yesterday (internal note)", "Wants a date, or a refund"];
+// Quality review: the team's scorecard lines print one by one, then a
+// flagged reply with the AI's coaching note.
+export function QualityShot() {
+  const rows: [string, string, string][] = [
+    ["Sam Ortiz", "4.6", "0"],
+    ["AI answers", "4.4", "1"],
+    ["Ana Ruiz", "3.9", "2"],
+  ];
   return (
     <div className="shot" aria-hidden="true">
-      <Bar title="#2291 · Still waiting on my order" />
+      <Bar title="Quality review · Last 30 days" />
       <div className="grid gap-3 p-3">
-        <div className="grid gap-1.5 rounded-lg border border-accent/30 bg-accent-soft/70 p-2.5">
-          <span className="flex items-center justify-between gap-2 text-[12px] font-medium text-accent">
-            <span className="flex items-center gap-1.5">
-              <svg viewBox="0 0 24 24" className="sparkle size-3.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z" />
-              </svg>
-              Copilot summary
-            </span>
-            <span className="rounded-full bg-warn/15 px-1.5 py-px text-[10px] text-warn">Frustrated</span>
+        <div className="grid gap-1 rounded-lg border border-line p-2.5">
+          <span className="flex justify-between text-[11px] text-muted">
+            <span>Scorecards</span>
+            <span className="num">Team 4.3 / 5</span>
           </span>
-          {points.map((p, i) => (
-            <span key={p} style={{ "--i": i } as React.CSSProperties} className="ln flex gap-1.5 text-[12px]">
-              <span className="mt-1.5 size-1 shrink-0 rounded-full bg-accent" />
-              {p}
+          {rows.map(([who, avg, flagged], i) => (
+            <span key={who} style={{ "--i": i } as React.CSSProperties} className="ln grid grid-cols-[1fr_auto_auto] gap-3 text-[12px]">
+              <span className="font-medium">{who}</span>
+              <span className="num text-accent">{avg}</span>
+              <span className={`num whitespace-nowrap text-right ${flagged === "0" ? "text-muted" : "text-warn"}`}>{flagged} flagged</span>
             </span>
           ))}
-          <span style={{ "--i": 3 } as React.CSSProperties} className="ln text-[11px] text-muted">Next: give a delivery date and offer a refund if it slips.</span>
         </div>
-        <div className="grid gap-2 rounded-lg border border-line p-2.5">
-          <span className="flex items-center gap-2 text-[11px]">
-            <span className="rounded-md bg-surface-2 px-1.5 py-0.5 font-medium">Reply</span>
-            <span className="text-muted">Insert macro…</span>
-            <span className="save ml-auto rounded-md border border-accent/40 px-1.5 py-0.5 font-medium text-accent">Draft reply</span>
-            <span className="rounded-md border border-line px-1.5 py-0.5 text-muted">Rewrite…</span>
+        <div className="grid gap-1.5 rounded-lg border border-warn/40 bg-warn-soft p-2.5">
+          <span className="flex items-center justify-between gap-2 text-[12px]">
+            <span className="font-medium">#2291 Still waiting on my order</span>
+            <span className="save num rounded-full bg-warn/15 px-1.5 py-px text-[10px] text-warn">2/5 flagged</span>
           </span>
-          <span className="min-h-10 text-[12px]">
-            {DRAFT_WORDS.map((w, i) => (
-              <span key={i} style={{ "--w": i + 8 } as React.CSSProperties} className="word">{w} </span>
-            ))}
-          </span>
-          <span className="flex items-center justify-between text-[11px] text-muted">
-            <span>Included in every seat</span>
-            <span className="rounded-md bg-accent px-2 py-1 font-medium text-accent-ink">Send reply</span>
+          <span style={{ "--i": 3 } as React.CSSProperties} className="ln text-[12px]">Promised a refund in 3 days. Your refund policy says 5 to 7.</span>
+          <span style={{ "--i": 4 } as React.CSSProperties} className="ln flex gap-1.5 text-[11px] text-muted">
+            <svg viewBox="0 0 24 24" className="sparkle size-3.5 shrink-0 text-accent" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z" />
+            </svg>
+            Coaching: quote the refund macro&apos;s 5 to 7 business days.
           </span>
         </div>
       </div>

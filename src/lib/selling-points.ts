@@ -3,7 +3,7 @@
 // is a claim about the shipped product, so keep it in step with the code.
 
 import { SWITCH_TRIAL_DAYS, TRIAL_DAYS } from "@/lib/billing";
-import { COPILOT } from "@/lib/copilot-config";
+import { QUALITY } from "@/lib/quality-config";
 import { BILLING_FAQ } from "@/lib/faq";
 import { PLAN, PRICE_PHRASE, usd } from "@/lib/pricing";
 import { TEST_DRIVE } from "@/lib/test-drive";
@@ -112,41 +112,45 @@ export const SELLING_POINTS: SellingPoint[] = [
     isNew: true,
   },
   {
-    slug: "ai-copilot",
-    name: "AI copilot, included",
-    short: `Summarize any ticket, draft a reply from your macros and help center, or rewrite what you typed. It's in every seat at ${usd(PLAN.annualSeatPrice)}, where other help desks sell a copilot as a per-agent add-on.`,
-    headline: "An AI copilot for every agent, included in the seat",
-    answer: `Flatdesk's copilot helps the person answering a ticket. It summarizes the conversation with the customer's mood and the next step, drafts a reply from your team's macros, notes and help center, and rewrites what you typed to be shorter, friendlier, more formal or correctly spelled. Nothing is sent without the agent. It's included in every seat with up to ${COPILOT.perAgent} copilot actions per seat a month, pooled, and it never uses your AI resolutions.`,
-    metaTitle: "AI copilot for support agents, included in every seat",
-    metaDescription: `Ticket summaries, drafted replies and rewrites for every agent, included in Flatdesk's ${usd(PLAN.annualSeatPrice)} seat instead of sold as a per-agent add-on.`,
+    slug: "ai-quality-review",
+    name: "AI quality review",
+    short: `The AI grades every reply your team and AI answers send, for accuracy, tone and resolution, and flags the weak ones with a coaching note. It's in every seat at ${usd(PLAN.annualSeatPrice)}, where other help desks sell QA as a separate product.`,
+    headline: "AI quality review of every support reply, included in the seat",
+    answer: `Flatdesk's AI reviews every reply sent to a customer, whether an agent or AI answers wrote it. It checks the reply against your team's macros, notes and help center for accuracy, and grades the tone and whether it solved what the customer asked. Replies scoring ${QUALITY.flagAt} out of 5 or lower are flagged with what went wrong and one line of coaching, and every agent gets a scorecard. It's included in every seat with up to ${QUALITY.perAgent} reviews per seat a month, pooled, and it never uses your AI resolutions.`,
+    metaTitle: "AI QA for support replies, included in every seat",
+    metaDescription: `Every support reply graded by AI for accuracy, tone and resolution, with per-agent scorecards and coaching, included in Flatdesk's ${usd(PLAN.annualSeatPrice)} seat.`,
     steps: [
-      { title: "Open a ticket", body: "The copilot summarizes it: what the customer wants, where it stands, their mood and what to do next." },
-      { title: "Draft a reply", body: "One click drafts the next reply from your macros, notes and help center. Where it needs a detail it doesn't have, it leaves a placeholder and tells you." },
-      { title: "Rewrite it", body: "Make your reply shorter, friendlier or more formal, or just fix the spelling." },
-      { title: "You send it", body: "Nothing goes to the customer until you press send." },
+      { title: "A reply goes out", body: "From an agent or from AI answers, by email or chat. Internal notes aren't reviewed." },
+      { title: "The AI grades it", body: "Accuracy against your macros, notes and help center, tone, and whether it answered what the customer asked, each from 1 to 5." },
+      { title: "Weak replies are flagged", body: "You see what went wrong and one line of coaching, on the ticket and on the Quality page." },
+      { title: "Scorecards add up", body: "Each agent, and AI answers, gets an average and a flagged count over 7, 30 or 90 days." },
     ],
     facts: [
-      "Ticket summaries with the customer's mood and a next step",
-      "Drafted replies from your macros, notes and help center",
-      "Rewrites: shorter, friendlier, more formal, or fix grammar",
-      `Up to ${COPILOT.perAgent} copilot actions per seat a month, pooled across the team`,
-      "Never uses AI resolutions and never sends anything by itself",
+      "Every customer-facing reply is reviewed, not a sample",
+      "Checks accuracy against your own macros, notes and help center",
+      "Scorecards per agent and for AI answers",
+      `Up to ${QUALITY.perAgent} reviews per seat a month, pooled across the team`,
+      "Never uses AI resolutions and never changes or sends anything",
     ],
     faq: [
       {
-        q: "Does the copilot cost extra?",
-        a: `No. It's part of every seat. Each seat adds ${COPILOT.perAgent} copilot actions a month to a team pool, and a summary you've already made is shown again for free until the conversation changes.`,
+        q: "Does quality review cost extra?",
+        a: `No. It's part of every seat. Each seat adds ${QUALITY.perAgent} reviews a month to a team pool. When the pool runs out, reviews pause until next month.`,
       },
       {
-        q: "Do copilot drafts count as AI resolutions?",
-        a: "No. Resolutions count only when the AI answers a customer by itself. The copilot only helps an agent, who sends the reply.",
+        q: "What does the AI check a reply against?",
+        a: "Your team's macros, AI instructions and published help center articles, plus the conversation before the reply, including internal notes.",
       },
       {
-        q: "What does the copilot draft from?",
-        a: "Your team's macros, AI instructions and published help center articles, plus the whole conversation, including internal notes the customer never saw.",
+        q: "Does it review AI answers too?",
+        a: "Yes. AI answers get their own scorecard, so you can see whether the AI is getting things right before you let it answer more.",
+      },
+      {
+        q: "Do reviews count as AI resolutions?",
+        a: "No. Resolutions count only when the AI answers a customer by itself. Reviews never contact the customer.",
       },
     ],
-    icon: "M4 6h16v10H8l-4 4zM8 10h8M8 13h5",
+    icon: "M9 12l2 2 4-4M12 3l7 3v5c0 4.5-3 8.5-7 10-4-1.5-7-5.5-7-10V6z",
     isNew: true,
   },
   {
