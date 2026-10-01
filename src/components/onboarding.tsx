@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useActionState, useEffect, useState } from "react";
-import { inviteAction, sendTestEmailAction, type InviteState, type TestState } from "@/app/app/welcome/actions";
+import { inviteAction, sendTestEmailAction, tryAiAction, type InviteState, type TestState, type TryState } from "@/app/app/welcome/actions";
 
 // Client pieces of the onboarding checklist at /app/welcome.
 
@@ -101,6 +101,58 @@ export function TestEmailButton({ to }: { to: string }) {
         {pending ? "Sending…" : `Email ${to}`}
       </button>
       {state.error && <p role="alert" className="text-sm text-warn">{state.error}</p>}
+    </form>
+  );
+}
+
+// Setup's "watch the AI answer" step: what the AI should know, and a question
+// to try it on. The answer appears right here; nothing is sent to anyone.
+export function TryAi({ notes, saved }: { notes: string; saved: number }) {
+  const [state, action, pending] = useActionState<TryState, FormData>(tryAiAction, { result: null, question: "", error: null });
+  const r = state.result;
+  return (
+    <form action={action} className="grid gap-4">
+      <label className="grid gap-1.5">
+        <span className="label">1. What the AI should know</span>
+        <textarea
+          name="aiInstructions"
+          rows={6}
+          defaultValue={notes}
+          placeholder={"A few lines is plenty. For example:\nWe ship from Portland within 2 business days and send a tracking link by email.\nReturns are free within 30 days: reply to the order email and we send a label.\nWe're open Monday to Friday, 9 to 5 Pacific."}
+          className="field"
+        />
+        <span className="text-xs text-muted">
+          Things like your policies, products, hours and how you like to sound.{" "}
+          {saved > 0 ? `It also uses your ${saved} saved ${saved === 1 ? "reply" : "replies"}.` : "It will also use any macros and help articles you add later."} You can change this later in
+          Settings.
+        </span>
+      </label>
+      <label className="grid gap-1.5">
+        <span className="label">2. A question a customer might ask</span>
+        <input name="question" defaultValue={state.question} placeholder="How long does shipping take?" className="field" maxLength={2000} />
+      </label>
+      <button className="btn btn-primary w-max" disabled={pending}>
+        {pending ? "The AI is answering…" : "Save and ask the AI"}
+      </button>
+      {state.error && <p role="alert" className="text-sm text-warn">{state.error}</p>}
+      {r && (
+        <div aria-live="polite" className={`grid gap-2 rounded-lg px-4 py-3 text-sm ${r.decision === "answer" ? "bg-accent-soft" : "bg-warn-soft"}`}>
+          {r.decision === "answer" ? (
+            <>
+              <p className="font-medium">The AI would send this reply:</p>
+              <p className="whitespace-pre-wrap">{r.reply}</p>
+              {r.sources.length > 0 && <p className="text-xs text-muted">Based on: {r.sources.join(", ")}</p>}
+              <p className="text-xs text-muted">This wasn&apos;t sent to anyone. Once you&apos;re live, the AI replies to new emails and chats this way and passes anything else to your team.</p>
+            </>
+          ) : (
+            <>
+              <p className="font-medium">The AI would hand this one to your team.</p>
+              {r.reason && <p className="text-muted">{r.reason}</p>}
+              <p className="text-muted">It only answers questions your notes cover. Add what it needs above, then ask again.</p>
+            </>
+          )}
+        </div>
+      )}
     </form>
   );
 }

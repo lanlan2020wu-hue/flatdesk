@@ -10,11 +10,12 @@ import type { OnboardingStep } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
 import { clerkEnabled } from "@/lib/auth-config";
 import { emailConfig, inboundAddress, resend } from "@/lib/email";
-import { TEST_TAG, updateOnboarding } from "@/lib/onboarding";
+import { TEST_TAG, tryTheAi, updateOnboarding, type TryResult } from "@/lib/onboarding";
+import { TestDriveError } from "@/lib/test-drive";
 import { createTicket } from "@/lib/tickets";
 
 const EMAIL = /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/;
-const STEPS: OnboardingStep[] = ["invite", "inbox", "import", "test"];
+const STEPS: OnboardingStep[] = ["ai", "invite", "inbox", "import", "test"];
 
 export type InviteState = { sent: string[]; failed: { email: string; reason: string }[]; error: string | null };
 
@@ -70,6 +71,34 @@ export async function confirmForwardingAction() {
   const s = await requireAdmin();
   await updateOnboarding(s.orgId, (ob) => ({ ...ob, forwardingConfirmed: true }));
   revalidatePath("/app/welcome");
+}
+
+export async function confirmWidgetAction() {
+  const s = await requireAdmin();
+  await updateOnboarding(s.orgId, (ob) => ({ ...ob, widgetAdded: true }));
+  revalidatePath("/app/welcome");
+}
+
+export type TryState = { result: TryResult | null; question: string; error: string | null };
+
+// Saves what the AI should know, then asks it the admin's question. Saving
+// first means the answer reflects exactly what's in the box.
+export async function tryAiAction(_prev: TryState, form: FormData): Promise<TryState> {
+  const s = await requireAdmin();
+  const notes = String(form.get("aiInstructions") ?? "").trim().slice(0, 20000);
+  const question = String(form.get("question") ?? "").trim().slice(0, 2000);
+  await db.update(schema.orgs).set({ aiInstructions: notes }).where(eq(schema.orgs.id, s.orgId));
+  if (!question) return { result: null, question, error: "Type a question a customer might ask." };
+  try {
+    const result = await tryTheAi(s.orgId, question);
+    revalidatePath("/app/welcome");
+    revalidatePath("/app", "layout");
+    return { result, question, error: null };
+  } catch (e) {
+    if (e instanceof TestDriveError) return { result: null, question, error: e.message };
+    console.error("setup AI try failed", e);
+    return { result: null, question, error: "The AI couldn't answer just now. Try again in a moment." };
+  }
 }
 
 export async function skipStepAction(form: FormData) {

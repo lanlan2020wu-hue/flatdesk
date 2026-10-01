@@ -60,3 +60,44 @@ test("Gmail's forwarding confirmation is shown in onboarding, and the test email
   );
   assert.equal(o.ob.testToken, undefined, "a retried delivery doesn't make a second ticket");
 });
+
+test("setup shows the AI answering before anything else is connected, and a sample ticket doesn't finish setup", async () => {
+  process.env.ANTHROPIC_API_KEY ||= "test-key";
+  const { db, schema } = await import("@/db");
+  const { getOnboarding, tryTheAi, TEST_TAG } = await import("./onboarding");
+  const { createTicket } = await import("./tickets");
+  const ORG2 = "org_test_onboarding_ai";
+  await db.delete(schema.orgs).where(eq(schema.orgs.id, ORG2));
+  await db.insert(schema.orgs).values({ id: ORG2, name: "Fresh team", inboundKey: "obtest0002", aiInstructions: "We ship within 2 days." });
+  await db.insert(schema.agents).values({ orgId: ORG2, userId: "u1", name: "Ana", email: "ana@acme.com", role: "admin" });
+
+  let o = await getOnboarding(ORG2);
+  assert.deepEqual(o.steps.map((s) => s.id), ["team", "ai", "inbox", "invite", "import", "test"]);
+  assert.deepEqual(o.steps.filter((s) => s.done).map((s) => s.id), ["team"]);
+
+  // Hand-offs don't finish the step; the AI has to actually answer.
+  const metered = { model: "test", inputTokens: 100, outputTokens: 50, costUsd: "0.03000" };
+  const handoff = await tryTheAi(ORG2, "Can I get a refund?", async () => ({ decision: "handoff", reply: "", reason: "Refunds go to the team.", sources: [], metered }));
+  assert.equal(handoff.decision, "handoff");
+  o = await getOnboarding(ORG2);
+  assert.equal(o.steps.find((s) => s.id === "ai")?.done, false);
+
+  let seen: { body: string } | null = null;
+  const answer = await tryTheAi(ORG2, "How long does shipping take?", async (_org, _kb, msg) => {
+    seen = msg;
+    return { decision: "answer", reply: "Within 2 days.", reason: "Notes cover it.", sources: [], metered };
+  });
+  assert.equal(answer.reply, "Within 2 days.");
+  assert.equal(seen!.body, "How long does shipping take?");
+  o = await getOnboarding(ORG2);
+  assert.equal(o.steps.find((s) => s.id === "ai")?.done, true);
+  assert.equal(Number(o.org.testDriveSpentUsd), 0.06, "both tries are paid from the test drive budget");
+
+  // A sample ticket is for looking around; a chat from the widget connects the team and proves it works.
+  await createTicket({ orgId: ORG2, channel: "email", customerEmail: "sam.sample@example.com", subject: "Sample", body: "Hi", authorType: "customer", tags: [TEST_TAG] });
+  o = await getOnboarding(ORG2);
+  assert.deepEqual(o.steps.filter((s) => s.done).map((s) => s.id), ["team", "ai"]);
+  await createTicket({ orgId: ORG2, channel: "chat", customerEmail: "visitor@x.com", subject: "Chat", body: "Hello", authorType: "customer" });
+  o = await getOnboarding(ORG2);
+  assert.deepEqual(o.steps.filter((s) => s.done).map((s) => s.id), ["team", "ai", "inbox", "test"]);
+});
