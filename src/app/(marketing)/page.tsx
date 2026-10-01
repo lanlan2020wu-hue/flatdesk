@@ -143,8 +143,7 @@ export default function Home() {
               </a>
             </div>
             <p style={{ "--d": 3 } as React.CSSProperties} className="enter text-sm text-field-muted">
-              Small team moving off Zendesk or Freshdesk?{" "}
-              <a href="#partner" className="link font-medium text-field-ink">Apply as a design partner</a> for half off and an import we run for you.
+              {TRIAL_DAYS} days free with every feature. No card to start.
             </p>
           </div>
           <div className="enter-fade">
@@ -269,6 +268,14 @@ export default function Home() {
             <h3 className="ink font-display text-3xl">Elsewhere, AI help with macros takes a higher plan or an add-on, if it&apos;s offered. Here it&apos;s in the seat.</h3>
             <AddOnTable />
           </div>
+          {/* The first ask after the strongest chapter, so nobody has to scroll to the close to act on it. */}
+          <div data-play="" suppressHydrationWarning className="flex flex-wrap items-center justify-between gap-4 rounded-[8px] bg-surface-2 px-5 py-6 sm:px-8">
+            <p className="max-w-[52ch] text-lg">
+              <span className="font-semibold">See it write macros from your own replies.</span>{" "}
+              <span className="text-muted">Import your history in the trial and the suggestions show up the same day.</span>
+            </p>
+            <Link href="/sign-up" className="btn btn-primary">Start your free trial</Link>
+          </div>
         </div>
       </section>
 
@@ -376,7 +383,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* The close, back on the green field: what trying it costs, and the design partner offer. */}
+      {/* The close, back on the green field: what trying it costs, with the design partner offer folded beside it. */}
       <section id="partner" className="mt-24 -mb-24 scroll-mt-20 bg-field text-field-ink sm:mt-32">
         <div className="mx-auto grid max-w-6xl gap-12 px-4 py-20 sm:px-6 sm:py-28 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-16">
           <div data-play="" suppressHydrationWarning className="grid content-start gap-6">
@@ -389,16 +396,23 @@ export default function Home() {
               <Link href="/calculator" className="btn btn-ghost-field">Compare your bill in detail</Link>
             </div>
           </div>
-          <div data-play="" suppressHydrationWarning className="grid content-start gap-5 rounded-[8px] bg-surface p-6 text-ink sm:p-8">
-            <div className="grid gap-2">
-              <h3 className="font-display text-2xl">Or become a design partner</h3>
+          {/* The trial is the one ask; the design-partner program stays one click away for the few teams it suits. */}
+          <details data-play="" suppressHydrationWarning className="group self-start rounded-[8px] bg-surface p-6 text-ink sm:p-8">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 [&::-webkit-details-marker]:hidden">
+              <span className="grid gap-1">
+                <span className="font-display text-2xl">Moving a small team off Zendesk or Freshdesk?</span>
+                <span className="text-muted">Apply as a design partner for half off and an import we run for you.</span>
+              </span>
+              <span aria-hidden="true" className="text-2xl text-muted transition-transform group-open:rotate-45">+</span>
+            </summary>
+            <div className="mt-5 grid gap-5">
               <p className="text-muted">
-                A small group of teams gets <span className="hl hl-draw text-ink">50% off monthly billing for their first 12 months</span> ({usd(PLAN.seatPrice / 2, true)} per
+                A small group of teams gets <span className="hl text-ink">50% off monthly billing for their first 12 months</span> ({usd(PLAN.seatPrice / 2, true)} per
                 agent), and we run the import from their old help desk for them. The discount replaces the yearly price rather than adding to it.
               </p>
+              <WaitlistForm stacked />
             </div>
-            <WaitlistForm stacked />
-          </div>
+          </details>
         </div>
       </section>
     </div>

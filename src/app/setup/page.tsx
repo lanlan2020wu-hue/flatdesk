@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Logo from "@/components/Logo";
 import { clerkEnabled } from "@/lib/auth-config";
-import { CreateOrganization, OrganizationList } from "@clerk/nextjs";
+import TeamSetup from "@/components/TeamSetup";
 
 export const metadata = { title: "Set up your team", robots: { index: false } };
 
@@ -14,13 +14,9 @@ export default function SetupPage() {
         <Logo />
         <p className="eyebrow">Step 1 of 5</p>
         <h1 className="font-display text-4xl">Set up your support team</h1>
-        <p className="text-muted">Create a team for your company, or join one you&apos;ve been invited to. Each teammate you add is one seat.</p>
+        <p className="text-muted">You&apos;ll invite teammates on the next screen. Each teammate you add is one seat.</p>
       </div>
-      <div className="grid gap-6 md:grid-cols-2">
-        <OrganizationList hidePersonal afterSelectOrganizationUrl="/app" afterCreateOrganizationUrl="/app/welcome" />
-        {/* Invites happen on the next screen, alongside importing and connecting email. */}
-        <CreateOrganization afterCreateOrganizationUrl="/app/welcome" skipInvitationScreen />
-      </div>
+      <TeamSetup />
     </div>
   );
 }
