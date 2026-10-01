@@ -18,6 +18,7 @@ const EVENT: Record<Milestone, string> = {
   forwarding_confirmed: "Forwarding confirmed",
   test_email_sent: "Test email sent",
   sample_ticket_created: "Sample ticket created",
+  skipped_ai: "Setup step skipped",
   skipped_invite: "Setup step skipped",
   skipped_inbox: "Setup step skipped",
   skipped_import: "Setup step skipped",

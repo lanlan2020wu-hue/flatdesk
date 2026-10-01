@@ -122,7 +122,12 @@ export function excerpt(body: string, max = 160) {
 
 // ---- Data ------------------------------------------------------------------
 
+// Postgres can't compare text holding a NUL byte; it throws instead of
+// finding nothing. Help center addresses and searches come from anyone.
+const hasNul = (s: string) => s.includes("\0");
+
 export async function orgByHelpSlug(helpSlug: string) {
+  if (hasNul(helpSlug)) return undefined;
   return db.query.orgs.findFirst({ where: eq(orgs.helpSlug, helpSlug.toLowerCase()) });
 }
 
@@ -131,7 +136,9 @@ export async function ensureHelpSlug(orgId: string): Promise<string> {
   const org = await db.query.orgs.findFirst({ where: eq(orgs.id, orgId), columns: { helpSlug: true, name: true } });
   if (!org) throw new Error("Unknown team");
   if (org.helpSlug) return org.helpSlug;
-  const base = slugify(org.name, "help");
+  // Kept within the rule the settings form enforces (3 to 40 characters), with room for a "-49".
+  const named = slugify(org.name, "help").slice(0, 36).replace(/-+$/, "");
+  const base = named.length < 3 ? `${named}-help` : named;
   for (let n = 1; n < 50; n++) {
     const candidate = n === 1 ? base : `${base}-${n}`;
     const [row] = await db
@@ -172,7 +179,8 @@ export function publishedArticles(orgId: string) {
     .orderBy(articles.title);
 }
 
-export function publishedArticle(orgId: string, slug: string) {
+export async function publishedArticle(orgId: string, slug: string) {
+  if (hasNul(slug)) return undefined;
   return db.query.articles.findFirst({ where: and(eq(articles.orgId, orgId), eq(articles.slug, slug), eq(articles.published, true)) });
 }
 
@@ -180,7 +188,7 @@ export function publishedArticle(orgId: string, slug: string) {
 // (so "refunds" finds "refund") with a plain substring match as a fallback for
 // partial words and product names.
 export async function searchArticles(orgId: string, query: string, limit = 20) {
-  const q = query.trim().slice(0, 200);
+  const q = query.replace(/\0/g, "").trim().slice(0, 200);
   if (!q) return [];
   const doc = sql`to_tsvector('english', ${articles.title} || ' ' || ${articles.body})`;
   const tsq = sql`websearch_to_tsquery('english', ${q})`;

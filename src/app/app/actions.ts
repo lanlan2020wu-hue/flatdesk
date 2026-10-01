@@ -97,6 +97,7 @@ export async function updateTicketAction(form: FormData) {
         where: and(eq(schema.agents.orgId, s.orgId), eq(schema.agents.userId, assignee)),
       });
       if (!member) throw new Error("That agent isn't on this team.");
+      if (member.viewer) throw new Error("Viewers can't reply, so tickets can't be assigned to them.");
     }
     patch.assigneeId = assignee || null;
   }
@@ -185,7 +186,7 @@ export async function saveRuleAction(form: FormData) {
   const [ifTag] = tagList(str(form, "ifTag"));
   const assignTo = str(form, "assignTo");
   const member = await db.query.agents.findFirst({
-    where: and(eq(schema.agents.orgId, s.orgId), eq(schema.agents.userId, assignTo)),
+    where: and(eq(schema.agents.orgId, s.orgId), eq(schema.agents.userId, assignTo), eq(schema.agents.viewer, false)),
   });
   if (!ifTag || !member) throw new Error("Pick a tag and an agent on this team.");
   await db.insert(schema.rules).values({ orgId: s.orgId, ifTag, assignTo });

@@ -9,7 +9,7 @@ export default function NotFound() {
       <Logo />
       <p className="eyebrow">404</p>
       <h1 className="font-display text-4xl">This page doesn&apos;t exist</h1>
-      <p className="text-muted">The link may be old, or the ticket may belong to another team.</p>
+      <p className="text-muted">The link might be out of date, or the ticket might belong to a different team.</p>
       <p className="flex flex-wrap gap-3">
         <Link href="/" className="btn btn-primary">Home page</Link>
         <Link href="/pricing" className="btn btn-secondary">Pricing</Link>

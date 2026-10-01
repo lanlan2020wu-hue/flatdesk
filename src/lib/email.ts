@@ -3,6 +3,7 @@ import { Resend } from "resend";
 import { db, schema } from "@/db";
 import { emailAttachments } from "@/lib/attachments";
 import { csatText, replyHtml } from "@/lib/csat";
+import { parseTicketNumber } from "@/lib/tickets";
 
 // Email runs through Resend. Inbound mail for every org arrives at
 // <inboundKey>@INBOUND_DOMAIN; replies go out from EMAIL_FROM with a
@@ -47,8 +48,7 @@ export function matchRecipient(addresses: string[]): { key: string; number: numb
     const [local, host] = email.split("@");
     if (host !== domain || !local) continue;
     const [key, num] = local.split("+");
-    const n = Number(num);
-    return { key, number: num && Number.isInteger(n) && n > 0 ? n : null };
+    return { key, number: parseTicketNumber(num) };
   }
   return null;
 }

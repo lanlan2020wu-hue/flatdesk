@@ -31,7 +31,9 @@ export default function ImportRunner({ id, retryAt }: { id: string; retryAt: str
           setWaitingUntil(job.retryAt);
           router.refresh();
           if (job.status !== "running") return;
-          wait = job.retryAt ? new Date(job.retryAt).getTime() - Date.now() : job.busy ? 3000 : 0;
+          // At least 2 seconds while paused: a browser clock running ahead of the
+          // server's would otherwise ask again and again until the pause ends.
+          wait = job.retryAt ? Math.max(2000, new Date(job.retryAt).getTime() - Date.now()) : job.busy ? 3000 : 0;
         } catch {
           failures++;
           setProblem(failures > 2);

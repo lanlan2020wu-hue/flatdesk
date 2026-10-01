@@ -17,7 +17,7 @@ import { cachedSummary } from "@/lib/copilot";
 import { identifyMacro, repeatPrompt } from "@/lib/macro-suggestions";
 import { STATUS_LABEL } from "@/lib/receipts";
 import { formatDue, shortDuration, slaState, targetLabel } from "@/lib/sla";
-import { getTicket, listAgents } from "@/lib/tickets";
+import { getTicket, listAgents, parseTicketNumber } from "@/lib/tickets";
 import { replyAction, updateTicketAction } from "../../actions";
 
 export async function generateMetadata({ params }: PageProps<"/app/tickets/[number]">) {
@@ -29,8 +29,8 @@ const heading = "eyebrow";
 
 export default async function TicketPage({ params }: PageProps<"/app/tickets/[number]">) {
   const s = await requireSession();
-  const number = Number((await params).number);
-  if (!Number.isInteger(number)) notFound();
+  const number = parseTicketNumber((await params).number);
+  if (!number) notFound();
   const data = await getTicket(s.orgId, number);
   if (!data) notFound();
   const { ticket, customer, thread } = data;
@@ -215,7 +215,8 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
           <label htmlFor="assigneeId" className={heading}>Assignee</label>
           <AutoSubmitSelect id="assigneeId" name="assigneeId" defaultValue={ticket.assigneeId ?? ""} className={field}>
             <option value="">Unassigned</option>
-            {agents.map((a) => <option key={a.userId} value={a.userId}>{a.userId === s.userId ? `${a.name} (me)` : a.name}</option>)}
+            {/* Viewers can't reply, so they're only listed when one already holds the ticket. */}
+            {agents.filter((a) => !a.viewer || a.userId === ticket.assigneeId).map((a) => <option key={a.userId} value={a.userId}>{a.userId === s.userId ? `${a.name} (me)` : a.name}</option>)}
           </AutoSubmitSelect>
         </form>
 

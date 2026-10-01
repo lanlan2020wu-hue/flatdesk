@@ -9,7 +9,7 @@ export async function GET(request: Request, ctx: RouteContext<"/api/chat/[key]/[
   const { key, number, id } = await ctx.params;
   const token = new URL(request.url).searchParams.get("t") ?? "";
   const org = await orgByWidgetKey(key);
-  const ticket = org && (await ticketForVisitor(org.id, Number(number), token));
+  const ticket = org && (await ticketForVisitor(org.id, number, token));
   const row = ticket ? await loadAttachment(org.id, id, ticket.id) : null;
   if (!row) return new Response("Not found", { status: 404 });
   // Files on internal notes are never shown to visitors.

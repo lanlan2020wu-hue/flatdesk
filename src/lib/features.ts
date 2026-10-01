@@ -35,16 +35,16 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
     id: "pricing",
     title: "Flat rate",
     features: [
-      { id: "billing", title: "One flat price", body: "Seats times one price, with AI answers included. No tiers, no add-ons, and the seat count follows your team.", icon: I.card },
-      { id: "cap", title: "A cap that's on by default", body: "The AI pauses at your included resolutions. Admins get an email at 80% and at 100%.", icon: I.cap },
-      { id: "receipts", title: "AI receipts", body: "Every AI answer itemized, with the saved answers it used. Refund a wrong one and it stops counting.", icon: I.receipt, isNew: true },
+      { id: "billing", title: "One flat price", body: "One price per agent, with AI answers included. There are no tiers or add-ons, and you pay for the people actually on your team.", icon: I.card },
+      { id: "cap", title: "A limit that's on by default", body: "The AI stops when your included answers run out. Admins get an email at 80% and again at 100%.", icon: I.cap },
+      { id: "receipts", title: "AI receipts", body: "A list of every AI answer and the saved replies it used. Refund a wrong one and it stops counting.", icon: I.receipt, isNew: true },
     ],
   },
   {
     id: "automation",
     title: "AI macros and automation",
     features: [
-      { id: "suggested-macros", title: "AI macros", body: "Evolving macros: Flatdesk identifies the answers your team sends on 5 or more tickets, the AI writes each one up, new tickets asking the same thing get it offered, and macros your team keeps editing the same way get updated.", icon: I.spark, isNew: true },
+      { id: "suggested-macros", title: "AI macros", body: "When your team sends the same answer on 5 or more tickets, the AI writes it up as a macro and suggests it on new tickets that ask the same thing. If your team keeps editing a macro the same way, it gets updated.", icon: I.spark, isNew: true },
       { id: "macros", title: "Macros that take action", body: "One click replies with the customer's name filled in, assigns the ticket, sets the status, adds tags, and can send right away.", icon: I.macro },
       { id: "rules", title: "Assignment rules", body: 'When a ticket is tagged, rules like "if tagged billing, assign to Sam" pick who gets it.', icon: I.rule },
       { id: "tags", title: "Tags", body: "Tag tickets by hand, from a macro, or from your old help desk's data.", icon: I.tag },
@@ -55,7 +55,7 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
     title: "AI",
     features: [
       { id: "ai", title: "AI answers", body: "Answers routine questions from your macros and notes, and hands everything else to your team. On those, agents can ask it for a draft or a ticket summary.", icon: I.ai },
-      { id: "test-drive", title: "AI test drive", body: "After you import, the AI drafts answers to 50 of your recent tickets beside what your team sent. Nothing is sent and it doesn't use your allowance.", icon: I.check, isNew: true },
+      { id: "test-drive", title: "AI test drive", body: "After you import, the AI drafts replies to 50 of your recent tickets next to what your team sent. Nothing is sent, and it doesn't use up AI answers.", icon: I.check, isNew: true },
     ],
   },
   {

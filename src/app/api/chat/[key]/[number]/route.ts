@@ -7,7 +7,7 @@ async function load(ctx: RouteContext<"/api/chat/[key]/[number]">, token: string
   const { key, number } = await ctx.params;
   const org = await orgByWidgetKey(key);
   if (!org) return null;
-  const ticket = await ticketForVisitor(org.id, Number(number), token);
+  const ticket = await ticketForVisitor(org.id, number, token);
   return ticket ? { org, ticket, link: { orgId: org.id, key, number: ticket.number, token } } : null;
 }
 

@@ -254,7 +254,8 @@ export async function billOverage(orgId: string, month = previousMonth()) {
     // again the next day, after Stripe's idempotency keys expire, so look for
     // the item first.
     const existing = await stripe().invoiceItems.list({ customer, limit: 100 });
-    const already = existing.data.some((i) => i.metadata?.overageMonth === month);
+    const item = existing.data.find((i) => i.metadata?.overageMonth === month);
+    const already = Boolean(item);
     if (!already) {
       await stripe().invoiceItems.create(
         {
@@ -271,7 +272,9 @@ export async function billOverage(orgId: string, month = previousMonth()) {
     // none, so those get an invoice now. During a Stripe trial the item waits
     // for the first invoice, as the trial promises.
     const invoiceNow = (org.billingInterval === "year" && org.subscriptionStatus !== "trialing") || !isActive(org.subscriptionStatus);
-    if (invoiceNow && !already) {
+    // An item still waiting for an invoice means an earlier run stopped before
+    // creating it, so that invoice is still owed.
+    if (invoiceNow && (!item || !item.invoice)) {
       await stripe().invoices.create(
         { customer: org.stripeCustomerId, pending_invoice_items_behavior: "include", auto_advance: true, description: `AI overage, ${month}` },
         { idempotencyKey: `overage-invoice-${orgId}-${month}` },

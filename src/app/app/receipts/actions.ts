@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { RefundError, refundResolution } from "@/lib/receipts";
+import { isUuid } from "@/lib/ids";
 
 export async function refundAction(form: FormData) {
   const s = await requireAdmin();
@@ -12,6 +13,7 @@ export async function refundAction(form: FormData) {
   const note = String(form.get("note") ?? "").trim();
   let error = "";
   try {
+    if (!isUuid(eventId)) throw new RefundError("Only a counted AI answer can be refunded.");
     await refundResolution(s.orgId, eventId, { userId: s.userId, name: s.name }, note);
   } catch (err) {
     if (!(err instanceof RefundError)) throw err;

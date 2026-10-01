@@ -13,6 +13,7 @@ import { createHash } from "node:crypto";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { answerPart, similarity, words } from "@/lib/macro-suggestions";
+import { isUuid } from "@/lib/ids";
 
 export const DRIFT = {
   minUses: 3, // sends of the current version before an edit can count
@@ -239,7 +240,7 @@ export async function macroUpdates(orgId: string): Promise<MacroUpdate[]> {
 
 // Records which macros a reply started from, with their text at that moment.
 export async function recordMacroUses(orgId: string, messageId: string, macroIds: string[]) {
-  const ids = [...new Set(macroIds)].filter((id) => /^[0-9a-f-]{36}$/i.test(id)).slice(0, 5);
+  const ids = [...new Set(macroIds)].filter(isUuid).slice(0, 5);
   if (!ids.length) return;
   const macros = await db.select({ id: schema.macros.id, body: schema.macros.body }).from(schema.macros).where(and(eq(schema.macros.orgId, orgId), inArray(schema.macros.id, ids)));
   if (macros.length) await db.insert(schema.macroUses).values(macros.map((m) => ({ orgId, macroId: m.id, messageId, macroBody: m.body })));
