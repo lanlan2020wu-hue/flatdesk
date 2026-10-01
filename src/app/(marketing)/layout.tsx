@@ -53,7 +53,7 @@ export default function MarketingLayout({ children }: LayoutProps<"/">) {
         <div className="mx-auto grid max-w-6xl gap-8 border-t border-field-line px-4 py-12 sm:grid-cols-[1.4fr_1fr] sm:px-6">
           <div className="grid content-start gap-3">
             <Logo onField />
-            <p className="max-w-xs text-sm text-field-muted">Busy month, same bill. One flat price for support teams.</p>
+            <p className="max-w-xs text-sm text-field-muted">A help desk for small support teams, at one flat price per agent.</p>
           </div>
           <div className="grid content-start gap-2 text-sm">
             {FOOTER.map((n) => (

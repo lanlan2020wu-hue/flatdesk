@@ -11,10 +11,10 @@ export default function ErrorPanel({ error, retry }: { error: Error & { digest?:
   }, [error]);
   return (
     <div className="grid max-w-lg gap-4 px-4 py-10 md:px-8 md:py-14" role="alert">
-      <p className="eyebrow">Something went wrong</p>
-      <h1 className="font-display text-3xl">That didn&apos;t work</h1>
+      <p className="eyebrow">Error</p>
+      <h1 className="font-display text-3xl">Something went wrong</h1>
       <p className="text-muted">
-        Nothing you had already saved is lost. Try again; if it keeps happening, email us and include the reference below.
+        Anything you saved before this is still there. Try again, and if it keeps happening, email us the reference number below.
       </p>
       <p className="flex flex-wrap items-center gap-3">
         <button type="button" onClick={() => retry()} className="btn btn-primary">Try again</button>

@@ -9,20 +9,20 @@ import { PLAN } from "@/lib/pricing";
 
 export const WHY_CHEAPER = [
   {
-    title: "The AI costs cents, and the cap keeps it there",
-    body: `Answers are written by Claude Opus from Anthropic. One answer costs us cents to run, so ${PLAN.includedPerAgent} a seat fit inside the seat price. The cap is why the AI pauses instead of billing you: it keeps one team's busy month from being priced into everyone's seat.`,
+    title: "Each AI answer costs us a few cents",
+    body: `Answers are written by Claude Opus from Anthropic. Each one costs us cents to run, so ${PLAN.includedPerAgent} per seat fit inside the seat price. That's also why the AI stops at the limit instead of charging you more. We don't have to raise everyone's price to pay for one team's busy month.`,
   },
   {
     title: "No sales team to pay for",
-    body: "You sign up, import and pay on your own. There are no demos, account executives or quote calls built into the price.",
+    body: "You sign up and pay on your own, so the price doesn't have to cover demos and sales calls.",
   },
   {
-    title: "One plan, so nothing is held back to sell later",
-    body: "Tiers exist to move you up a plan. With one plan there's nothing to gate, so every seat gets the whole product.",
+    title: "One plan, so nothing is held back",
+    body: "Pricing tiers are there to get you onto a bigger plan. With only one plan, every seat gets everything.",
   },
   {
-    title: "A narrower help desk, built for small teams",
-    body: "Email and chat for teams of 3 to 15. Fewer channels and no marketplace means fewer things to build, and more time on the ones you use.",
+    title: "It does less, on purpose",
+    body: "Flatdesk only handles email and chat, for teams of 3 to 15. No phone, no social channels and no app marketplace means a lot less for us to build and run.",
   },
 ];
 
@@ -37,8 +37,8 @@ export const LEFT_OUT = [
 
 // Ways to judge the quality before the first charge.
 export const CHECK_IT = [
-  { title: "AI test drive", body: "The AI drafts answers to your last 50 tickets, shown beside what your team actually sent. Nothing goes to customers.", href: "/features/ai-test-drive" },
-  { title: `${TRIAL_DAYS}-day trial, no card`, body: "Import your old help desk and keep it running alongside while your team tries Flatdesk on real tickets.", href: "/features/lossless-import" },
-  { title: "Refund a wrong AI answer", body: "Every counted answer is on the monthly receipt. If one was wrong, an admin refunds it in one click.", href: "/features/ai-receipts" },
-  { title: "Leave any time", body: "Monthly billing has no contract, and a one-click export takes every ticket, customer and macro with you.", href: "/faq" },
+  { title: "AI test drive", body: "The AI drafts replies to your last 50 tickets, next to what your team actually sent. Customers don't see them.", href: "/features/ai-test-drive" },
+  { title: `${TRIAL_DAYS}-day trial, no card`, body: "Import from your old help desk and keep using it while your team tries Flatdesk on real tickets.", href: "/features/lossless-import" },
+  { title: "Refund a wrong AI answer", body: "Every AI answer you're charged for is on the monthly statement. An admin can refund a wrong one with one click.", href: "/features/ai-receipts" },
+  { title: "Leave any time", body: "Monthly plans have no contract, and you can export every ticket, customer and macro in one click.", href: "/faq" },
 ];

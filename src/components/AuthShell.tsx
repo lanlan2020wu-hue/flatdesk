@@ -16,7 +16,7 @@ export default function AuthShell({ title, children }: { title: string; children
           <div className="grid gap-3">
             <p className="eyebrow">Every seat includes</p>
             <h2 className="font-display text-3xl leading-tight sm:text-4xl">
-              The whole help desk from {usd(PLAN.annualSeatPrice)} an agent. <span className="text-muted">AI included, and capped.</span>
+              Every feature, from {usd(PLAN.annualSeatPrice)} per agent a month. <span className="text-muted">AI answers included, with a limit so the bill can&apos;t jump.</span>
             </h2>
           </div>
           <div className="grid gap-x-8 gap-y-7 sm:grid-cols-2">
