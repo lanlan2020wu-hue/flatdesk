@@ -11,10 +11,10 @@ export default function WhyFlat({ headingLevel = "h3", leftOut = true }: { headi
   return (
     <div className="grid gap-10">
       <div data-play="" suppressHydrationWarning className="grid max-w-3xl gap-4">
-        <H className="ink font-display text-3xl leading-tight">How this much fits in one seat, and what that doesn&apos;t cut.</H>
+        <H className="ink font-display text-3xl leading-tight">Why it costs less, and what you give up.</H>
         <p className="max-w-[62ch] text-muted">
-          A low flat price with this much in it can sound too good to be true. Here is where the difference comes from, what Flatdesk leaves out, and how to
-          judge the quality on your own tickets before you pay anything.
+          If the price looks low for what&apos;s included, here&apos;s why. Below is where the savings come from, what Flatdesk doesn&apos;t do, and how
+          to check the quality on your own tickets before you pay.
         </p>
       </div>
 

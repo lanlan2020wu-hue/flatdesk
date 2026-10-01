@@ -21,16 +21,16 @@ const SOURCES = ["Zendesk", "Intercom", "Freshdesk", "Help Scout"];
 
 // Under the hero: what switching costs you, before anyone asks.
 const TERMS = [
-  { title: `${TRIAL_DAYS} days free`, body: `No card to start. Every feature on your real tickets, with ${PLAN.trialPerAgent} AI answers per agent for the trial.` },
-  { title: "Month to month", body: "No contract on monthly billing. Stop whenever you like." },
+  { title: `${TRIAL_DAYS} days free`, body: `No card needed. You get every feature, plus ${PLAN.trialPerAgent} AI answers per agent during the trial.` },
+  { title: "Month to month", body: "Monthly plans have no contract. Cancel whenever you want." },
   { title: "Bring your history", body: `Tickets, customers and macros from ${SOURCES.slice(0, 3).join(", ")} or Help Scout.` },
-  { title: "Take it with you", body: "Export every ticket and macro as CSV or JSON, any time." },
+  { title: "Export everything", body: "Download every ticket and macro as CSV or JSON whenever you want." },
 ];
 
 const MACRO_STEPS = [
-  { title: "Flatdesk spots the repeats", body: "When the same answer has gone out on 5 tickets and no macro covers it, Flatdesk flags it. Imported history counts, so it works on day one." },
-  { title: "The AI writes the macro", body: "From the versions your team sent, the AI writes a name, the customer question it answers, and one clean reply with placeholders for names and order numbers." },
-  { title: "New tickets get it offered", body: "Save it, and when a new ticket asks the same thing, the reply box offers that macro. AI answers use your macros too." },
+  { title: "Flatdesk notices repeated replies", body: "If your team has sent the same answer on 5 tickets and there's no macro for it, Flatdesk flags it. Imported tickets count too, so this works from your first day." },
+  { title: "The AI drafts a macro", body: "It reads the replies your team sent and writes one macro from them, with blanks for things like the customer's name or order number." },
+  { title: "It shows up on new tickets", body: "Once you save it, the reply box suggests it when a new ticket asks the same thing. The AI uses your macros when it answers, too." },
 ];
 
 // What one macro does when an agent uses it. Zendesk macros also run actions,
@@ -47,24 +47,24 @@ const MACRO_ACTIONS = [
 const TOUR: { id: string; title: string; body: string; points: string[]; shot: React.ReactNode; href?: string; more?: string }[] = [
   {
     id: "ai",
-    title: "AI takes the routine questions, and stops at your cap.",
-    body: `The AI answers from your own macros and notes, and hands anything account-specific, upset or unclear to your team. Each seat includes ${PLAN.includedPerAgent} AI answers a month, pooled.`,
-    points: ["Pauses at the included amount unless an admin opts in", "Emails admins at 80% and at 100%", "Try it first: the AI test drive drafts answers to 50 of your past tickets"],
+    title: "The AI answers the easy questions and stops at your limit.",
+    body: `It answers from your macros and notes. When it isn't sure, or the customer is upset or asking about their account, a person on your team takes over. Each agent adds ${PLAN.includedPerAgent} AI answers a month to a pool the whole team shares.`,
+    points: ["Stops at the included amount unless an admin turns on overage", "Admins get an email at 80% and again at 100%", "You can test it on 50 of your past tickets before turning it on"],
     shot: <AiShot />,
     href: "/features/ai-test-drive",
     more: "How the AI test drive works",
   },
   {
     id: "inbox",
-    title: "Email and chat land in one queue.",
-    body: "Forward your support address and paste one script tag for the chat bubble. Every conversation becomes a ticket your whole team can see, assign and close.",
+    title: "Email and chat in one inbox.",
+    body: "Forward your support email to Flatdesk and add one line of code to your site for chat. Each conversation turns into a ticket anyone on the team can pick up.",
     points: ["Views for mine, unassigned, open, pending and closed", "Internal notes the customer never sees", 'Rules like "if tagged billing, assign to Sam"'],
     shot: <InboxShot />,
   },
   {
     id: "reports",
-    title: "Reports on volume, response times and what the AI handled.",
-    body: "Ticket volume by channel, median first response, median time to close, the share the AI answered, and each agent's load.",
+    title: "See how fast you reply and how much the AI took on.",
+    body: "Tickets by channel, how long first replies and resolutions take, how many tickets the AI answered, and how many each agent handled.",
     points: ["Last 7, 30 or 90 days", "Per-agent replies, closed and open", "AI answered versus handed off"],
     shot: <ReportShot />,
   },
@@ -75,15 +75,15 @@ const MORE = [
   { title: "Live chat widget", body: "One script tag. Chats become tickets.", href: "/features#all" },
   { title: "Help center", body: "Articles customers search and the AI links to.", href: "/features#all" },
   { title: "AI test drive", body: "AI drafts for your last 50 tickets, beside your team's replies.", href: "/features/ai-test-drive" },
-  { title: "Slack alerts, targets, ratings", body: "First-reply targets, one-click ratings, alerts when a person is needed.", href: "/features#all" },
+  { title: "Slack alerts and ratings", body: "A ping when a ticket needs a person, first-reply targets, and one-click ratings.", href: "/features#all" },
 ];
 
 // The route from an old help desk to Flatdesk, in the order an admin does it.
 const SWITCH_STEPS = [
-  { title: "Import your history", body: `Paste an API key from ${SOURCES.join(", ").replace(/, ([^,]*)$/, " or $1")}. Tickets with their full threads, customers, macros and tags come over. Rules come over for reference, and the ones Flatdesk can run (if tagged X, assign to Y) keep running.` },
-  { title: "Point your email and chat", body: "Forward your support address and paste one script tag for the chat bubble. Forwarding can be pointed back any time." },
-  { title: "Test drive the AI", body: "The AI drafts answers to your last 50 tickets, shown beside what your team sent. Nothing goes to customers." },
-  { title: "Turn it on", body: "Switch AI answers on with the cap in place, invite the team, and cancel the old plan when you're ready." },
+  { title: "Import your history", body: `Paste an API key from ${SOURCES.join(", ").replace(/, ([^,]*)$/, " or $1")}. Your tickets come over with their full threads, along with customers, macros and tags. Simple rules like "if tagged X, assign to Y" keep working, and the rest are copied over so you can look at them.` },
+  { title: "Connect email and chat", body: "Forward your support email and add one line of code to your site for chat. You can turn forwarding off again whenever you want." },
+  { title: "Test drive the AI", body: "The AI drafts replies to your last 50 tickets, and you compare them with what your team actually sent. Customers don't see any of it." },
+  { title: "Turn it on", body: "Turn on AI answers, invite your team, and cancel your old help desk once you're happy." },
 ];
 
 const mark = <span className="mt-[0.7em] h-[2px] w-3 shrink-0 bg-accent" aria-hidden="true" />;
@@ -125,14 +125,14 @@ export default function Home() {
         <div className="mx-auto grid max-w-6xl gap-12 px-4 pt-14 pb-16 sm:px-6 sm:pt-20 sm:pb-24 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] lg:items-center lg:gap-14">
           <div className="grid content-center gap-7">
             <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-[3.4rem] leading-[0.95] sm:text-[5.2rem]">
-              Busy month.
+              Busy months
               <br />
-              <span className="text-lime">Same bill.</span>
+              <span className="text-lime">don&apos;t cost extra.</span>
             </h1>
             <p style={{ "--d": 2 } as React.CSSProperties} className="enter max-w-[48ch] text-lg text-field-muted">
-              Flatdesk is an email and chat help desk for teams of 3 to 15. You pay per seat, {usd(PLAN.annualSeatPrice)} billed yearly or{" "}
-              {usd(PLAN.seatPrice)} month to month, and {PLAN.includedPerAgent} AI answers a seat come with it. When the AI reaches the cap it pauses
-              instead of billing you.
+              Flatdesk is an email and chat help desk for teams of 3 to 15. It&apos;s {usd(PLAN.annualSeatPrice)} per agent a month billed yearly, or{" "}
+              {usd(PLAN.seatPrice)} month to month. Each agent comes with {PLAN.includedPerAgent} AI answers a month, and if your team uses them all, the AI
+              stops rather than charging you more.
             </p>
             <div style={{ "--d": 3 } as React.CSSProperties} className="enter flex flex-wrap gap-3">
               <Link href="/sign-up" className="btn btn-on-field">
@@ -165,9 +165,9 @@ export default function Home() {
       </div>
 
       <section id="flat-rate" className="mx-auto grid w-full max-w-6xl scroll-mt-20 gap-14 px-4 pt-24 sm:px-6 sm:pt-32">
-        <ChapterHead id="flat-rate" tab="Flat rate" title="Per-answer AI pricing bills you for being busy. Flatdesk bills per seat.">
-          When AI is priced per answer, a launch or a holiday rush lands on the invoice. Here the bill is your seat count, and the cap is on unless an admin
-          changes it.
+        <ChapterHead id="flat-rate" tab="Flat rate" title="Many help desks charge for each AI answer. Flatdesk charges per agent.">
+          With per-answer pricing, a product launch or a holiday rush shows up on your invoice. Here the bill depends only on how many agents you have, and
+          the AI stops at its limit unless an admin changes that.
         </ChapterHead>
         <div className="grid gap-10 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-16">
           <div data-play="" suppressHydrationWarning>
@@ -190,13 +190,13 @@ export default function Home() {
         </div>
         <article className="grid items-center gap-8 lg:grid-cols-2 lg:gap-16">
           <div data-play="" suppressHydrationWarning className="grid content-start gap-4">
-            <h3 className="ink font-display text-3xl">See every AI answer you&apos;re charged for. Refund the wrong ones.</h3>
+            <h3 className="ink font-display text-3xl">Every AI answer is on your statement, and you can refund the bad ones.</h3>
             <p className="max-w-[60ch] text-muted">
-              Each month gets an itemized statement: which tickets the AI answered, the saved answers it used, and whether each one counted. If the AI got one
-              wrong, an admin refunds it in one click. It stops counting and the ticket goes back to your team.
+              Each month you get a list of every ticket the AI answered, the saved replies it used, and whether each answer counted. If one was wrong, an
+              admin can refund it with one click. It stops counting, and the ticket goes back to your team.
             </p>
             <ul className="grid gap-2 text-sm">
-              {["No tiers and no add-ons: every seat gets every feature", "Refunds free up allowance and come off any overage", "Download the month as CSV"].map((p) => (
+              {["One plan, and every seat gets every feature", "Refunded answers go back into your allowance, or come off any overage", "Download the month as a CSV"].map((p) => (
                 <li key={p} className="flex gap-2.5">{mark}{p}</li>
               ))}
             </ul>
@@ -212,9 +212,9 @@ export default function Home() {
 
       <section id="ai-macros" className="mt-24 scroll-mt-20 border-y border-line bg-surface py-24 sm:mt-32 sm:py-32">
         <div className="mx-auto grid w-full max-w-6xl gap-14 px-4 sm:px-6">
-          <ChapterHead id="ai-macros" tab="AI macros" title="Your team's best replies become macros, and keep up as things change.">
-            Flatdesk finds the answers your team keeps typing and the AI turns each one into a macro. When prices or policies change, the macros learn it from
-            how your team edits them. Macros are in the seat and never use your AI allowance.
+          <ChapterHead id="ai-macros" tab="AI macros" title="Flatdesk turns the replies your team keeps retyping into macros.">
+            It finds answers your team types out again and again, and the AI writes each one up as a macro. When a price or policy changes, Flatdesk updates
+            the macro based on how your team edits it. Macros come with every seat and don&apos;t use up AI answers.
           </ChapterHead>
           <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] lg:gap-16">
             <div data-play="" suppressHydrationWarning className="relative">
@@ -234,13 +234,13 @@ export default function Home() {
           </div>
           <article className="grid items-center gap-10 border-t border-line pt-14 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-16">
             <div data-play="" suppressHydrationWarning className="grid content-start gap-4">
-              <h3 className="ink font-display text-3xl">When most sends make the same edit, the macro learns it.</h3>
+              <h3 className="ink font-display text-3xl">If your team keeps making the same edit, the macro gets updated.</h3>
               <p className="text-muted">
-                A new shipping time, a changed refund policy, a step that no longer applies: your team fixes it by hand in the reply first. Flatdesk sees when
-                most sends make the same edit, and the AI rewrites the macro with it. An admin applies it in one click, so the macros grow with the business.
+                Say your shipping time changes. For a while, agents fix it by hand every time they send the macro. Once most sends include the same edit, the
+                AI rewrites the macro with the new wording, and an admin approves the change with one click.
               </p>
               <ul className="grid gap-2 text-sm">
-                {["Counts only sends of the current version, so one fix starts the count again", "Keeps your placeholders, greeting and sign-off", "Included in the seat, where Zendesk sells macro suggestions in its $50 Copilot add-on"].map((p) => (
+                {["Only sends of the current version count, so the count starts over after each update", "Your placeholders, greeting and sign-off stay as they are", "Included in every seat. Zendesk sells macro suggestions in its $50 Copilot add-on."].map((p) => (
                   <li key={p} className="flex gap-2.5">{mark}{p}</li>
                 ))}
               </ul>
@@ -266,15 +266,15 @@ export default function Home() {
             </ul>
           </div>
           <div data-play="" suppressHydrationWarning className="grid gap-6 border-t border-line pt-14">
-            <h3 className="ink font-display text-3xl">Elsewhere, AI help with macros takes a higher plan or an add-on, if it&apos;s offered. Here it&apos;s in the seat.</h3>
+            <h3 className="ink font-display text-3xl">Other help desks put AI help with macros on a higher plan or a paid add-on, if they have it at all. Flatdesk includes it.</h3>
             <AddOnTable />
           </div>
         </div>
       </section>
 
       <section id="everything-else" className="mx-auto grid w-full max-w-6xl scroll-mt-20 gap-14 px-4 pt-24 sm:px-6 sm:pt-32">
-        <ChapterHead id="everything-else" tab="Everything else" title="The rest of the help desk, in the same seat.">
-          No tiers and no feature gates. Every seat gets all of it.
+        <ChapterHead id="everything-else" tab="Everything else" title="Everything else a help desk needs, for the same price.">
+          There&apos;s one plan, and every agent gets every feature.
         </ChapterHead>
         {TOUR.map((f, i) => (
           <article
@@ -313,16 +313,16 @@ export default function Home() {
 
       {/* Who it's for, and who it isn't. Saying so plainly is part of the case. */}
       <section id="fit" className="mx-auto grid w-full max-w-6xl scroll-mt-20 gap-10 px-4 pt-24 sm:px-6 sm:pt-32">
-        <h2 data-play="" suppressHydrationWarning className="ink max-w-3xl font-display text-[2.6rem] sm:text-6xl">Made for small support teams, and plain about what it leaves out.</h2>
+        <h2 data-play="" suppressHydrationWarning className="ink max-w-3xl font-display text-[2.6rem] sm:text-6xl">Built for small support teams. Here&apos;s what it doesn&apos;t do.</h2>
         <div className="grid gap-10 md:grid-cols-2 md:gap-0">
           <div data-play="" suppressHydrationWarning className="grid content-start gap-4 border-t-2 border-accent pt-5 md:pr-10">
             <p className="text-lg font-semibold">A good fit if you</p>
             <ul className="grid gap-3">
               {[
-                "Answer customers by email and website chat, with 3 to 15 people",
-                "Want AI answers without a per-answer meter running",
-                "Keep typing the same replies and want them written up for you",
-                `Are on ${SOURCES.join(", ").replace(/, ([^,]*)$/, " or $1")} and want your history to come with you`,
+                "Have 3 to 15 people answering email and website chat",
+                "Want AI answers without paying for each one",
+                "Keep typing the same replies and want macros made for you",
+                `Use ${SOURCES.join(", ").replace(/, ([^,]*)$/, " or $1")} and want to bring your old tickets`,
               ].map((p) => (
                 <li key={p} className="flex gap-2.5">{mark}{p}</li>
               ))}
@@ -345,8 +345,8 @@ export default function Home() {
 
       <section id="switch" className="mx-auto grid w-full max-w-6xl scroll-mt-20 gap-12 px-4 pt-24 sm:px-6 sm:pt-32">
         <div data-play="" suppressHydrationWarning className="grid gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-16">
-          <h2 className="ink font-display text-[2.6rem] sm:text-6xl">How a switch goes.</h2>
-          <p className="max-w-[52ch] self-end text-lg text-muted">Four steps, done by one admin. Nothing reaches a customer until you turn it on.</p>
+          <h2 className="ink font-display text-[2.6rem] sm:text-6xl">How to switch.</h2>
+          <p className="max-w-[52ch] self-end text-lg text-muted">One admin can do all four steps. The AI doesn&apos;t reply to any customer until you turn it on.</p>
         </div>
         <ol data-play="" suppressHydrationWarning className="relative grid gap-8 md:grid-cols-4 md:gap-6">
           <span aria-hidden="true" className="absolute top-[11px] right-[calc(25%-0.75rem)] left-3 hidden h-[2px] bg-ink md:block" />
@@ -366,10 +366,10 @@ export default function Home() {
             <ImportShot />
           </div>
           <div data-play="" suppressHydrationWarning className="grid content-start gap-3">
-            <h3 className="ink font-display text-2xl">Nothing is lost on the way over.</h3>
+            <h3 className="ink font-display text-2xl">Nothing gets dropped in the import.</h3>
             <p className="text-muted">
-              Every original record is archived with its ticket, anything that didn&apos;t map is listed in a report, and you can download the raw archive.
-              Imports can be run again without making duplicates.
+              Flatdesk keeps the original record with each ticket and lists anything it couldn&apos;t match in a report. You can download the raw data too.
+              Running an import again won&apos;t create duplicates.
             </p>
             <Link href="/features/lossless-import" className="link w-max text-sm font-medium text-accent">How the import works</Link>
           </div>
@@ -382,7 +382,8 @@ export default function Home() {
           <div data-play="" suppressHydrationWarning className="grid content-start gap-6">
             <h2 className="ink font-display text-4xl sm:text-6xl">Try it on your own tickets first.</h2>
             <p className="max-w-[46ch] text-lg text-field-muted">
-              Import your history, let the AI draft answers to 50 real tickets beside your team&apos;s replies, and decide from that. No card for {TRIAL_DAYS} days.
+              Import your old tickets and see how the AI would have answered 50 of them, next to what your team wrote. The first {TRIAL_DAYS} days are free and
+              you don&apos;t need a card.
             </p>
             <div className="flex flex-wrap gap-3">
               <Link href="/sign-up" className="btn btn-on-field">Start your free trial</Link>

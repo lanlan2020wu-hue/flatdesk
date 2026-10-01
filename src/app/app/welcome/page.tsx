@@ -208,7 +208,7 @@ export default async function WelcomePage({ searchParams }: PageProps<"/app/welc
           </p>
         ) : (
           <p className="text-muted">
-            Tickets with their full history, macros, tags, rules, contacts and agents. Nothing is dropped: anything that doesn&apos;t fit is
+            Brings over your tickets with their full history, plus macros, tags, rules, contacts and agents. Anything that doesn&apos;t fit is
             listed in a report and kept in an archive.
           </p>
         )}
