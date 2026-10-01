@@ -1,10 +1,13 @@
 import { and, eq, inArray, isNotNull, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import type { Onboarding, OnboardingStep } from "@/db/schema";
+import { aiConfigured, draftAnswer, loadKnowledge } from "@/lib/ai";
+import { access } from "@/lib/billing";
+import { TEST_DRIVE, TestDriveError } from "@/lib/test-drive";
 
 // The new-team checklist at /app/welcome. Each step is done when the real
-// thing happened (a forwarded email arrived, an import ran), when the admin
-// said so, or when they chose to skip it.
+// thing happened (the AI answered, a forwarded email arrived, an import ran),
+// when the admin said so, or when they chose to skip it.
 
 export const TEST_TAG = "flatdesk-test";
 export type StepId = "team" | OnboardingStep;
@@ -16,7 +19,7 @@ export async function getOnboarding(orgId: string) {
   const ob = org.onboarding;
   const skipped = new Set(ob.skipped ?? []);
 
-  const [[agents], [inbound], [testEmails], [imports], testTicket] = await Promise.all([
+  const [[agents], [inbound], [testEmails], [chats], [imports], aiAnswers, aiDrafts, testTicket] = await Promise.all([
     db.select({ n: sql<number>`count(*)::int` }).from(schema.agents).where(eq(schema.agents.orgId, orgId)),
     // A real email reached the team's inbox (not the test email).
     db
@@ -30,7 +33,15 @@ export async function getOnboarding(orgId: string) {
       .from(schema.messages)
       .innerJoin(schema.tickets, eq(schema.tickets.id, schema.messages.ticketId))
       .where(and(eq(schema.messages.orgId, orgId), isNotNull(schema.messages.emailMessageId), sql`${TEST_TAG} = any(${schema.tickets.tags})`)),
+    // Someone wrote in through the chat widget (the admin trying it counts).
+    db
+      .select({ n: sql<number>`count(*)::int` })
+      .from(schema.tickets)
+      .where(and(eq(schema.tickets.orgId, orgId), eq(schema.tickets.channel, "chat"), sql`not (${TEST_TAG} = any(${schema.tickets.tags}))`)),
     db.select({ n: sql<number>`count(*)::int` }).from(schema.imports).where(and(eq(schema.imports.orgId, orgId), inArray(schema.imports.status, ["running", "done"]))),
+    // The AI answered a real ticket, or drafted an answer in the test drive.
+    db.$count(schema.aiEvents, and(eq(schema.aiEvents.orgId, orgId), eq(schema.aiEvents.kind, "resolution"))),
+    db.$count(schema.testDriveDrafts, and(eq(schema.testDriveDrafts.orgId, orgId), eq(schema.testDriveDrafts.status, "done"))),
     db.query.tickets.findFirst({
       columns: { number: true, createdAt: true, channel: true },
       where: and(eq(schema.tickets.orgId, orgId), sql`${TEST_TAG} = any(${schema.tickets.tags})`),
@@ -39,13 +50,21 @@ export async function getOnboarding(orgId: string) {
   ]);
 
   const testEmailArrived = testEmails.n > 0;
+  const chatSeen = chats.n > 0;
   const invited = (ob.invited?.length ?? 0) > 0 || agents.n > 1;
+  const aiSeen = Boolean(ob.aiAnswered) || aiAnswers > 0 || aiDrafts > 0;
+  const connected = inbound.n > 0 || testEmailArrived || chatSeen || Boolean(ob.forwardingConfirmed) || Boolean(ob.widgetAdded);
+  // A real message has to come through. A sample ticket is for a look around and doesn't count.
+  const proven = inbound.n > 0 || testEmailArrived || chatSeen;
+  const step = (id: StepId, title: string, done: boolean): Step => ({ id, title, done: done || (id !== "team" && skipped.has(id)), skipped: !done && id !== "team" && skipped.has(id) });
+  // Seeing the AI answer comes right after the team: it's what Flatdesk is for, and it needs nothing set up.
   const steps: Step[] = [
-    { id: "team", title: "Create your team", done: true, skipped: false },
-    { id: "invite", title: "Invite your agents", done: invited || skipped.has("invite"), skipped: !invited && skipped.has("invite") },
-    { id: "inbox", title: "Connect your support inbox", done: inbound.n > 0 || testEmailArrived || Boolean(ob.forwardingConfirmed) || skipped.has("inbox"), skipped: inbound.n === 0 && !testEmailArrived && !ob.forwardingConfirmed && skipped.has("inbox") },
-    { id: "import", title: "Bring over your old help desk", done: imports.n > 0 || skipped.has("import"), skipped: imports.n === 0 && skipped.has("import") },
-    { id: "test", title: "Send a test ticket", done: Boolean(testTicket) || skipped.has("test"), skipped: !testTicket && skipped.has("test") },
+    step("team", "Create your team", true),
+    step("ai", "Watch the AI answer a question", aiSeen),
+    step("inbox", "Connect email or website chat", connected),
+    step("invite", "Invite your agents", invited),
+    step("import", "Bring over your old help desk", imports.n > 0),
+    step("test", "Get a real ticket through", proven),
   ];
   const doneCount = steps.filter((s) => s.done).length;
   return {
@@ -59,7 +78,36 @@ export async function getOnboarding(orgId: string) {
     testTicket: testTicket ?? null,
     testEmailArrived,
     inboundSeen: inbound.n > 0,
+    chatSeen,
   };
+}
+
+export type TryResult = { decision: "answer" | "handoff"; reply: string; reason: string | null; sources: string[] };
+
+// One question the admin types during setup, answered by the AI exactly as it
+// would answer a customer, from the team's notes and saved answers. Nothing is
+// sent and nothing counts against the AI allowance; the call is paid from the
+// same per-team budget as the test drive. `draft` is swappable for tests.
+export async function tryTheAi(orgId: string, question: string, draft: typeof draftAnswer = draftAnswer): Promise<TryResult> {
+  if (!aiConfigured()) throw new TestDriveError("The AI isn't connected on this server yet.");
+  const org = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, orgId) });
+  if (!org) throw new TestDriveError("Team not found.");
+  if (access(org).state === "locked") throw new TestDriveError("The free trial has ended. Add a card in Settings to keep going.");
+  if (Number(org.testDriveSpentUsd) + TEST_DRIVE.reserveUsd > TEST_DRIVE.budgetUsd) {
+    throw new TestDriveError("This team has used its free tries. Connect your inbox and the AI answers real tickets.");
+  }
+  const d = await draft(
+    org,
+    await loadKnowledge(orgId),
+    { from: "A customer <customer@example.com>", subject: question.split("\n")[0].slice(0, 120), body: question, attached: [] },
+    { timeout: TEST_DRIVE.callTimeoutMs, maxRetries: 0 },
+  );
+  await db
+    .update(schema.orgs)
+    .set({ testDriveSpentUsd: sql`${schema.orgs.testDriveSpentUsd} + ${d.metered.costUsd}` })
+    .where(eq(schema.orgs.id, orgId));
+  if (d.decision === "answer") await updateOnboarding(orgId, (ob) => ({ ...ob, aiAnswered: true }));
+  return { decision: d.decision, reply: d.reply, reason: d.reason, sources: d.sources };
 }
 
 export async function updateOnboarding(orgId: string, patch: (ob: Onboarding) => Onboarding) {

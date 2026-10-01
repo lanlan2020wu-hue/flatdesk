@@ -80,6 +80,8 @@ export type Onboarding = {
   dismissed?: boolean;
   invited?: string[]; // emails invited from the checklist
   forwardingConfirmed?: boolean; // the admin said forwarding is set up
+  widgetAdded?: boolean; // the admin said the chat widget is on their site
+  aiAnswered?: boolean; // the AI answered a question the admin tried during setup
   gmailConfirmation?: { code: string | null; link: string | null; receivedAt: string };
   testToken?: string; // subject token of the end-to-end test email
   testSentAt?: string;
@@ -92,7 +94,7 @@ export type BusinessHours = {
   start: number; // minutes after local midnight
   end: number;
 };
-export type OnboardingStep = "invite" | "inbox" | "import" | "test";
+export type OnboardingStep = "ai" | "invite" | "inbox" | "import" | "test";
 
 export const agentRole = pgEnum("agent_role", ["admin", "agent"]);
 
