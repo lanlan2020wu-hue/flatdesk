@@ -2,6 +2,7 @@ import { randomBytes, timingSafeEqual } from "node:crypto";
 import { and, asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { attachmentsByMessage, filesFromForm, saveAttachments, type AttachmentInfo, type NewFile } from "@/lib/attachments";
+import { milestone } from "@/lib/funnel";
 import { addCustomerMessage, createTicket } from "@/lib/tickets";
 
 // The website chat widget. A visitor starts a conversation with their name,
@@ -62,6 +63,8 @@ export async function startConversation(orgId: string, v: { email: string; name:
   });
   await db.update(schema.tickets).set({ visitorToken: token }).where(eq(schema.tickets.id, ticket.id));
   await saveAttachments(orgId, ticket.id, ticket.messageId, files);
+  await milestone(orgId, "channel_connected", { channel: "chat" });
+  await milestone(orgId, "first_customer_ticket", { channel: "chat" });
   return { ticket, token };
 }
 

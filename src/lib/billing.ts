@@ -3,6 +3,7 @@ import { and, count, eq, isNotNull, sql } from "drizzle-orm";
 import Stripe from "stripe";
 import { db, schema } from "@/db";
 import { clerkEnabled } from "@/lib/auth-config";
+import { milestone } from "@/lib/funnel";
 import { PLAN, type Interval, seatInvoiceAmount } from "@/lib/pricing";
 
 // Billing runs through Stripe Checkout and the customer portal, so card
@@ -199,6 +200,7 @@ export async function refreshSubscription(orgId: string) {
     })
     .where(eq(orgs.id, orgId))
     .returning();
+  if (isActive(sub?.status) && !updated?.onboarding.milestones?.card_added) await milestone(orgId, "card_added", { interval: item?.price.recurring?.interval });
   return updated;
 }
 

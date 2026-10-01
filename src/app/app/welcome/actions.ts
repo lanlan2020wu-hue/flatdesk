@@ -10,6 +10,7 @@ import type { OnboardingStep } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
 import { clerkEnabled } from "@/lib/auth-config";
 import { emailConfig, inboundAddress, resend } from "@/lib/email";
+import { milestone } from "@/lib/funnel";
 import { TEST_TAG, updateOnboarding } from "@/lib/onboarding";
 import { createTicket } from "@/lib/tickets";
 
@@ -45,6 +46,7 @@ export async function inviteAction(_prev: InviteState, form: FormData): Promise<
     sent.push(...valid);
   }
   if (sent.length) await updateOnboarding(s.orgId, (ob) => ({ ...ob, invited: [...new Set([...(ob.invited ?? []), ...sent])] }));
+  if (sent.length) await milestone(s.orgId, "agent_invited", { count: sent.length });
   revalidatePath("/app/welcome");
   return { sent, failed, error: null };
 }
@@ -69,6 +71,7 @@ export async function saveSupportEmailAction(form: FormData) {
 export async function confirmForwardingAction() {
   const s = await requireAdmin();
   await updateOnboarding(s.orgId, (ob) => ({ ...ob, forwardingConfirmed: true }));
+  await milestone(s.orgId, "forwarding_confirmed");
   revalidatePath("/app/welcome");
 }
 
@@ -77,6 +80,7 @@ export async function skipStepAction(form: FormData) {
   const step = String(form.get("step")) as OnboardingStep;
   if (!STEPS.includes(step)) return;
   await updateOnboarding(s.orgId, (ob) => ({ ...ob, skipped: [...new Set([...(ob.skipped ?? []), step])] }));
+  await milestone(s.orgId, `skipped_${step}`);
   revalidatePath("/app/welcome");
 }
 
@@ -103,6 +107,7 @@ export async function sendTestEmailAction(): Promise<TestState> {
     ].join("\n"),
   });
   if (error) return { error: `The test email couldn't be sent: ${error.message}`, sentTo: null };
+  await milestone(s.orgId, "test_email_sent");
   revalidatePath("/app/welcome");
   return { error: null, sentTo: org.supportEmail };
 }
@@ -119,6 +124,7 @@ export async function createSampleTicketAction() {
     authorType: "customer",
     tags: [TEST_TAG],
   });
+  await milestone(s.orgId, "sample_ticket_created");
   revalidatePath("/app/welcome");
   revalidatePath("/app", "layout");
 }
@@ -126,5 +132,6 @@ export async function createSampleTicketAction() {
 export async function dismissOnboardingAction() {
   const s = await requireAdmin();
   await updateOnboarding(s.orgId, (ob) => ({ ...ob, dismissed: true }));
+  await milestone(s.orgId, "onboarding_dismissed");
   redirect("/app/overview");
 }

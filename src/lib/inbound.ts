@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { emailConfig, isAutoReply, matchRecipient, parseAddress, stripQuoted, ticketFromHeaders } from "@/lib/email";
+import { milestone } from "@/lib/funnel";
 import { TEST_TAG, updateOnboarding } from "@/lib/onboarding";
 import { saveAttachments, type NewFile } from "@/lib/attachments";
 import { addCustomerMessage, createTicket } from "@/lib/tickets";
@@ -82,6 +83,7 @@ export async function handleInboundEmail(mail: Inbound) {
     });
     await storeFiles(mail, org.id, ticket.id, ticket.messageId);
     await updateOnboarding(org.id, (ob) => ({ ...ob, testToken: undefined }));
+    await milestone(org.id, "channel_connected", { channel: "email" });
     return { ticket: ticket.number, action: "created" };
   }
 
@@ -132,5 +134,9 @@ export async function handleInboundEmail(mail: Inbound) {
   }).catch(duplicate);
   if (!ticket) return { ignored: "duplicate" };
   await storeFiles(mail, org.id, ticket.id, ticket.messageId);
+  if (!org.onboarding.milestones?.first_customer_ticket) {
+    await milestone(org.id, "channel_connected", { channel: "email" });
+    await milestone(org.id, "first_customer_ticket", { channel: "email" });
+  }
   return { ticket: ticket.number, action: "created", orgId: org.id, ticketId: ticket.id };
 }

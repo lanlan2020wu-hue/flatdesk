@@ -83,7 +83,31 @@ export type Onboarding = {
   gmailConfirmation?: { code: string | null; link: string | null; receivedAt: string };
   testToken?: string; // subject token of the end-to-end test email
   testSentAt?: string;
+  source?: SignupSource; // where the person who created the team came from (lib/attribution.ts)
+  milestones?: Partial<Record<Milestone, string>>; // when each funnel milestone first happened (lib/funnel.ts)
 };
+export type SignupSource = {
+  source: string; // utm_source, ?ref=, the referring site, or "direct"
+  medium?: string;
+  campaign?: string;
+  referrer?: string; // referring host
+  landing?: string; // first page seen
+  at: string;
+};
+export type Milestone =
+  | "team_created"
+  | "agent_invited"
+  | "forwarding_confirmed"
+  | "test_email_sent"
+  | "sample_ticket_created"
+  | `skipped_${OnboardingStep}`
+  | "onboarding_dismissed"
+  | "channel_connected"
+  | "first_customer_ticket"
+  | "import_started"
+  | "test_drive_started"
+  | "first_ai_answer"
+  | "card_added";
 // "team": only tickets that need a person. "all": every new ticket, saying whether the AI answered it.
 export type AlertOn = "team" | "all";
 export type BusinessHours = {

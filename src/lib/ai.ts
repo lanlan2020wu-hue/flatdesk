@@ -7,6 +7,7 @@ import { alertHandedBack } from "@/lib/alerts";
 import { attachmentsByMessage } from "@/lib/attachments";
 import { access } from "@/lib/billing";
 import { deliverReply, emailConfig, resend } from "@/lib/email";
+import { milestone } from "@/lib/funnel";
 import { articleKnowledge } from "@/lib/help";
 import { PLAN } from "@/lib/pricing";
 
@@ -343,6 +344,7 @@ export async function answerNewTicket(orgId: string, ticketId: string) {
       await db.update(aiEvents).set({ kind: "handoff", reason: "A person picked the ticket up first.", ...metered }).where(eq(aiEvents.id, slot.eventId));
       return;
     }
+    await milestone(orgId, "first_ai_answer", { channel: ticket.channel });
     // The answer is saved and counted. A failed send is retried from the
     // ticket like any reply, so it must not un-count the answer below.
     try {

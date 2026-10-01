@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin, requireEditor } from "@/lib/auth";
+import { milestone } from "@/lib/funnel";
 import { rateDraft, startTestDrive, TestDriveError, VERDICT_LABEL, type Verdict } from "@/lib/test-drive";
 
 export async function startTestDriveAction() {
@@ -10,6 +11,7 @@ export async function startTestDriveAction() {
   let error = "";
   try {
     await startTestDrive(s.orgId);
+    await milestone(s.orgId, "test_drive_started");
   } catch (err) {
     if (!(err instanceof TestDriveError)) throw err;
     error = err.message;

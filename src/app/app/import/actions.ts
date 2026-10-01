@@ -2,6 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
+import { milestone } from "@/lib/funnel";
 import { ADAPTERS, cancelImport, ImportError, isSource, startImport } from "@/lib/import/engine";
 
 export type StartState = { error: string | null; values: Record<string, string> };
@@ -24,6 +25,7 @@ export async function startImportAction(_prev: StartState, form: FormData): Prom
     if (e instanceof ImportError) return { error: e.message, values };
     throw e;
   }
+  await milestone(s.orgId, "import_started", { source });
   redirect(`/app/import/${id}`);
 }
 
