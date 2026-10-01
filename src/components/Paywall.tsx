@@ -12,7 +12,7 @@ export default function Paywall({ isAdmin }: { isAdmin: boolean }) {
         <p className="text-muted">
           Your tickets, macros and settings are all here, and new customer email is still being collected. Add a card to open the inbox
           again: {usd(PLAN.seatPrice)} per agent per month, or {usd(PLAN.annualSeatPrice)} billed yearly ({annualSavingsPct}% less), with{" "}
-          {PLAN.includedPerAgent} AI resolutions per agent included either way. Cancel any time.
+          {PLAN.includedPerAgent} AI answers per agent included either way. Cancel any time.
         </p>
       </div>
       {isAdmin ? (

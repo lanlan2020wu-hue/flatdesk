@@ -7,13 +7,15 @@ import { breadcrumbs, faqPage, pageMeta } from "@/lib/seo";
 
 export const metadata = pageMeta({
   title: "Help desk questions, answered",
-  description: "Straight answers about Flatdesk: what it costs, how AI resolutions are counted and capped, AI macros, AI receipts, and importing from another help desk.",
+  description: "Straight answers about Flatdesk: what it costs, how AI answers are counted and capped, AI macros, AI receipts, and importing from another help desk.",
   path: "/faq",
 });
 
 export default function FaqPage() {
   const all = [...GENERAL_FAQ, ...BILLING_FAQ, ...SELLING_POINTS.flatMap((p) => p.faq)];
   const unique = all.filter((f, i) => all.findIndex((g) => g.q === f.q) === i);
+  // Questions already answered in the two general groups aren't repeated under each feature.
+  const shown = new Set([...GENERAL_FAQ, ...BILLING_FAQ].map((f) => f.q));
   return (
     <div className="mx-auto grid max-w-5xl gap-16 px-4 pt-14 sm:px-6 sm:pt-20">
       <JsonLd data={[breadcrumbs([{ name: "FAQ", path: "/faq" }]), faqPage(unique)]} />
@@ -26,7 +28,7 @@ export default function FaqPage() {
       <Faq items={GENERAL_FAQ} title="About Flatdesk" id="about" />
       <Faq items={BILLING_FAQ} title="Pricing and billing" id="billing" />
       {SELLING_POINTS.map((p) => (
-        <Faq key={p.slug} items={p.faq.filter((f) => unique.includes(f))} title={p.name} id={p.slug} />
+        <Faq key={p.slug} items={p.faq.filter((f) => !shown.has(f.q) && unique.includes(f))} title={p.name} id={p.slug} />
       ))}
     </div>
   );

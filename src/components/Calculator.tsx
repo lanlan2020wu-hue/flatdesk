@@ -87,7 +87,7 @@ export default function Calculator({ initialTool, initialAgents, initialResoluti
   const bar = (n: number) => `scaleX(${Math.max(0.02, n / barMax)})`;
 
   return (
-    <div data-play="" style={{ "--d": 2 } as React.CSSProperties} className="enter grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+    <div data-play="" suppressHydrationWarning style={{ "--d": 2 } as React.CSSProperties} className="enter grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
       <form className="card grid content-start gap-5 self-start p-5 sm:p-6 lg:sticky lg:top-24" onSubmit={(e) => e.preventDefault()}>
         <p className="eyebrow">Your numbers</p>
         <label className="grid gap-1.5" htmlFor="tool">
@@ -153,7 +153,7 @@ export default function Calculator({ initialTool, initialAgents, initialResoluti
             <p className="num mt-1 text-4xl tracking-tight">{usd(ours.withOverage)}<span className="text-base text-muted">/mo</span></p>
             <dl className="mt-4 grid gap-1.5 border-t border-accent/20 pt-3 text-sm">
               <div className="flex justify-between gap-3"><dt className="text-muted">Seats, {a} × {usd(seatPriceFor(interval))} ({interval === "year" ? "annual" : "monthly"})</dt><dd className="num">{usd(ours.seats)}</dd></div>
-              <div className="flex justify-between gap-3"><dt className="text-muted">AI resolutions included</dt><dd className="num">{ours.included.toLocaleString()}</dd></div>
+              <div className="flex justify-between gap-3"><dt className="text-muted">AI answers included</dt><dd className="num">{ours.included.toLocaleString()}</dd></div>
               {ours.extra > 0 && <div className="flex justify-between gap-3"><dt className="text-muted">Overage, {ours.extra.toLocaleString()} × {usd(PLAN.overageRate, true)}</dt><dd className="num">{usd(ours.withOverage - ours.capped)}</dd></div>}
             </dl>
           </div>
@@ -174,7 +174,7 @@ export default function Calculator({ initialTool, initialAgents, initialResoluti
           <p className="flex gap-3 rounded-xl border border-warn/25 bg-warn-soft px-4 py-3 text-sm">
             <svg viewBox="0 0 20 20" className="mt-0.5 size-4 shrink-0 text-warn" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="10" cy="10" r="7.5" /><path d="M10 6.5v4M10 13.5h.01" /></svg>
             <span>
-              You&apos;d go {ours.extra.toLocaleString()} resolutions past the included {ours.included.toLocaleString()}. By default the AI pauses and those
+              You&apos;d go {ours.extra.toLocaleString()} AI answers past the included {ours.included.toLocaleString()}. By default the AI pauses and those
               tickets go to your team, so the bill stays {usd(ours.capped)}. If an admin turns on overage, they cost {usd(PLAN.overageRate, true)} each,
               for {usd(ours.withOverage)} in total.
             </span>

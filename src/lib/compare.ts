@@ -20,7 +20,7 @@ type CostRow = { label: string; costs: number[]; approx: boolean; aiBilling: str
 export type Rival = {
   slug: string;
   name: string;
-  // Short "vs" name for titles, e.g. "Intercom (Fin)".
+  // Short "vs" name for titles, e.g. "Fin (formerly Intercom)".
   title: string;
   answer: string;
   flatdeskWins: string[];
@@ -38,7 +38,7 @@ const flat: CostRow = {
   label: "Flatdesk",
   costs: TEAMS.map((t) => flatdeskMonthly(t.agents, t.ai, "year").capped),
   approx: false,
-  aiBilling: `${usd(PLAN.annualSeatPrice)} per agent billed yearly (${usd(PLAN.seatPrice)} monthly). ${PLAN.includedPerAgent} AI resolutions per agent included, pauses at the cap`,
+  aiBilling: `${usd(PLAN.annualSeatPrice)} per agent billed yearly (${usd(PLAN.seatPrice)} monthly). ${PLAN.includedPerAgent} AI answers per agent included, pauses at the cap`,
 };
 
 export function costRows(r: Rival): CostRow[] {
@@ -70,10 +70,10 @@ export const RIVALS: Rival[] = [
   {
     slug: "intercom",
     name: "Intercom",
-    title: "Intercom (Fin)",
-    answer: `Intercom, now sold as Fin and owned by Salesforce since September 10, 2026, charges $0.99 for every AI outcome on top of seats from $29, with no AI included on those seat plans. Flatdesk is ${usd(PLAN.annualSeatPrice)} per agent on annual billing (${usd(PLAN.seatPrice)} monthly) with ${PLAN.includedPerAgent} AI resolutions per agent included and a cap that's on by default, so it costs less once the AI answers a real share of tickets. Intercom is ahead on live chat, proactive messaging and channels.`,
+    title: "Fin (formerly Intercom)",
+    answer: `Intercom, now sold as Fin and owned by Salesforce since September 10, 2026, charges $0.99 for every AI outcome on top of seats from $29, with no AI included on those seat plans. Flatdesk is ${usd(PLAN.annualSeatPrice)} per agent on annual billing (${usd(PLAN.seatPrice)} monthly) with ${PLAN.includedPerAgent} AI answers per agent included and a cap that's on by default, so it costs less once the AI answers a real share of tickets. Intercom is ahead on live chat, proactive messaging and channels.`,
     flatdeskWins: [
-      `${PLAN.includedPerAgent} AI resolutions per agent included, instead of paying for each one`,
+      `${PLAN.includedPerAgent} AI answers per agent included, instead of paying for each one`,
       "The AI pauses at the cap unless you opt in, so the bill can't grow on its own",
       "AI receipts itemize every answer, and you can refund a wrong one",
       "AI macros, identified from your team's repeated replies and updated when your team keeps editing them",
@@ -97,7 +97,7 @@ export const RIVALS: Rival[] = [
     slug: "zendesk",
     name: "Zendesk",
     title: "Zendesk",
-    answer: `Zendesk Suite starts at $55 per agent on annual billing and charges for automated resolutions past a small allowance. It doesn't publish the per-resolution rate; third parties put it near $1.50 to $2.00. Flatdesk is ${usd(PLAN.annualSeatPrice)} per agent on annual billing (${usd(PLAN.seatPrice)} monthly) with ${PLAN.includedPerAgent} AI resolutions per agent included and a cap on by default. Zendesk is far broader: community forums, many channels, a large app marketplace.`,
+    answer: `Zendesk Suite starts at $55 per agent on annual billing and charges for automated resolutions past a small allowance. It doesn't publish the per-resolution rate; third parties put it near $1.50 to $2.00. Flatdesk is ${usd(PLAN.annualSeatPrice)} per agent on annual billing (${usd(PLAN.seatPrice)} monthly) with ${PLAN.includedPerAgent} AI answers per agent included and a cap on by default. Zendesk is far broader: community forums, many channels, a large app marketplace.`,
     flatdeskWins: [
       "One public price, with AI included and capped",
       "Evolving macros that update from your team's edits, included in the seat (Zendesk's macro suggestions need its Copilot add-on, $50 per agent)",
@@ -126,9 +126,9 @@ export const RIVALS: Rival[] = [
     slug: "help-scout",
     name: "Help Scout",
     title: "Help Scout",
-    answer: `Help Scout charges $0.75 per AI resolution on top of seats from $25, and lets admins set a monthly spend cap. Flatdesk is ${usd(PLAN.annualSeatPrice)} per agent on annual billing (${usd(PLAN.seatPrice)} monthly) with ${PLAN.includedPerAgent} AI resolutions per agent included, so it costs less once the AI is doing real work. Help Scout has a free plan for up to 5 users and a built-in Docs help center.`,
+    answer: `Help Scout charges $0.75 per AI resolution on top of seats from $25, and lets admins set a monthly spend cap. Flatdesk is ${usd(PLAN.annualSeatPrice)} per agent on annual billing (${usd(PLAN.seatPrice)} monthly) with ${PLAN.includedPerAgent} AI answers per agent included, so it costs less once the AI is doing real work. Help Scout has a free plan for up to 5 users and a built-in Docs help center.`,
     flatdeskWins: [
-      `${PLAN.includedPerAgent} AI resolutions per agent included instead of paying per resolution`,
+      `${PLAN.includedPerAgent} AI answers per agent included instead of paying per resolution`,
       "AI receipts with one-click refunds",
       "Evolving AI macros, written from your replies and updated from your team's edits, that also assign, tag and close tickets",
       "Lossless import with a raw archive of every record",
@@ -152,9 +152,9 @@ export const RIVALS: Rival[] = [
     slug: "freshdesk",
     name: "Freshdesk",
     title: "Freshdesk",
-    answer: `Freshdesk Growth is $19 per agent on annual billing ($23 monthly), but its 500 Freddy AI Agent sessions are a one-time pack for new customers. After that every session costs 49¢, counted whenever the AI replies, whether or not it solves anything. Flatdesk (${usd(PLAN.annualSeatPrice)} per agent on annual billing) includes ${PLAN.includedPerAgent} AI resolutions per agent every month, counts a conversation once, only when the AI finishes it without handing it to your team, and itemizes each one. Once your AI answers about 41 tickets per agent a month, Flatdesk costs less.`,
+    answer: `Freshdesk Growth is $19 per agent on annual billing ($23 monthly), but its 500 Freddy AI Agent sessions are a one-time pack for new customers. After that every session costs 49¢, counted whenever the AI replies, whether or not it solves anything. Flatdesk (${usd(PLAN.annualSeatPrice)} per agent on annual billing) includes ${PLAN.includedPerAgent} AI answers per agent every month, counts a conversation once, only when the AI finishes it without handing it to your team, and itemizes each one. Once your AI answers about 41 tickets per agent a month, Flatdesk costs less.`,
     flatdeskWins: [
-      `${PLAN.includedPerAgent} AI resolutions per agent every month, not a one-time 500`,
+      `${PLAN.includedPerAgent} AI answers per agent every month, not a one-time 500`,
       "Counts resolutions, not sessions, and hand-offs don't count",
       "AI receipts with one-click refunds",
       "A free AI test drive on your own past tickets before you switch",
@@ -185,7 +185,7 @@ export const RIVALS: Rival[] = [
     slug: "front",
     name: "Front",
     title: "Front",
-    answer: `Front is a collaborative shared inbox with seats from $25 (Starter, up to 10 seats) and an AI agent from $0.05 per conversation, so its AI is cheaper than Flatdesk's overage. Flatdesk (${usd(PLAN.annualSeatPrice)} per agent on annual billing) is built as a help desk: AI resolutions included and capped, AI receipts, AI macros that update themselves and lossless import.`,
+    answer: `Front is a collaborative shared inbox with seats from $25 (Starter, up to 10 seats) and an AI agent from $0.05 per conversation, so its AI is cheaper than Flatdesk's overage. Flatdesk (${usd(PLAN.annualSeatPrice)} per agent on annual billing) is built as a help desk: AI resolutions included and capped, AI receipts, AI macros that suggest their own updates, and lossless import.`,
     flatdeskWins: [
       "AI included in the seat, with a cap on by default",
       "AI receipts with one-click refunds",
@@ -213,7 +213,7 @@ export const RIVALS: Rival[] = [
     slug: "gorgias",
     name: "Gorgias",
     title: "Gorgias",
-    answer: `Gorgias prices by ticket volume rather than seats, and third parties report its AI Agent at about $0.90 to $1.00 per automated interaction on top of the ticket fee. Flatdesk is ${usd(PLAN.annualSeatPrice)} per agent on annual billing (${usd(PLAN.seatPrice)} monthly) with ${PLAN.includedPerAgent} AI resolutions per agent included. Gorgias is built for ecommerce, with native Shopify order data and revenue attribution, which Flatdesk doesn't have.`,
+    answer: `Gorgias prices by ticket volume rather than seats, and third parties report its AI Agent at about $0.90 to $1.00 per automated interaction on top of the ticket fee. Flatdesk is ${usd(PLAN.annualSeatPrice)} per agent on annual billing (${usd(PLAN.seatPrice)} monthly) with ${PLAN.includedPerAgent} AI answers per agent included. Gorgias is built for ecommerce, with native Shopify order data and revenue attribution, which Flatdesk doesn't have.`,
     flatdeskWins: [
       "AI included in the seat instead of charged per interaction",
       "An AI answer is never charged on top of a ticket fee",

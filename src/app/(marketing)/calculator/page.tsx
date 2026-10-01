@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/calculator" },
   title: "Support bill calculator",
   description:
-    "Enter your agent count and AI resolutions to compare your Zendesk, Fin (Intercom), Freshdesk or Help Scout bill with one flat price.",
+    "Enter your agent count and AI resolutions to compare your Zendesk, Fin (formerly Intercom), Freshdesk or Help Scout bill with one flat price.",
 };
 
 export default function CalculatorPage() {

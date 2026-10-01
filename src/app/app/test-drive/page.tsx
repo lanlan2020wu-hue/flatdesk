@@ -119,7 +119,6 @@ export default async function TestDrivePage({ searchParams }: PageProps<"/app/te
   return (
     <div className="grid max-w-5xl gap-8 px-4 py-6 md:px-8 md:py-8">
       <header className="grid gap-1.5">
-        <p className="eyebrow">Judge it on your own tickets</p>
         <h1 className="font-display text-3xl">AI test drive</h1>
         <p className="max-w-2xl text-muted">
           The AI drafts answers to your team&apos;s {TEST_DRIVE.tickets} most recent tickets, using your macros and AI notes, and shows each draft

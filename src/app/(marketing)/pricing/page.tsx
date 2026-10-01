@@ -8,7 +8,7 @@ import { PLAN, PRICE_PHRASE, annualSavingsPct, usd } from "@/lib/pricing";
 export const metadata: Metadata = {
   alternates: { canonical: "/pricing" },
   title: "Pricing",
-  description: `${PRICE_PHRASE}, with ${PLAN.includedPerAgent} AI resolutions per agent included and capped by default.`,
+  description: `${PRICE_PHRASE}, with ${PLAN.includedPerAgent} AI answers per agent included and capped by default.`,
 };
 
 const FAQ = BILLING_FAQ.map((f) => [f.q, f.a] as const);
@@ -48,7 +48,7 @@ export default function PricingPage() {
           </div>
           <dl className="grid gap-px border-y border-line bg-line sm:grid-cols-3">
             <div className="grid gap-1 bg-surface py-4 sm:pr-4">
-              <dt className="text-sm text-muted">AI resolutions included</dt>
+              <dt className="text-sm text-muted">AI answers included</dt>
               <dd className="num">{PLAN.includedPerAgent} per agent</dd>
             </div>
             <div className="grid gap-1 bg-surface py-4 sm:px-4">
@@ -83,12 +83,12 @@ export default function PricingPage() {
         <WhyFlat headingLevel="h2" />
       </section>
 
-      <section data-play="" className="grid gap-6">
-        <h2 className="ink font-display text-3xl">AI macros: included here, a higher plan or add-on elsewhere</h2>
+      <section data-play="" suppressHydrationWarning className="grid gap-6">
+        <h2 className="ink font-display text-3xl">AI macros: included here; elsewhere a higher plan, an add-on, or not offered</h2>
         <AddOnTable />
       </section>
 
-      <section data-play="" className="grid gap-6 md:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">
+      <section data-play="" suppressHydrationWarning className="grid gap-6 md:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">
         <h2 className="ink font-display text-3xl">Questions about billing</h2>
         <div className="grid border-b border-line">
           {FAQ.map(([q, a]) => (

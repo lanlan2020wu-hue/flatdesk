@@ -34,20 +34,20 @@ export const SELLING_POINTS: SellingPoint[] = [
   {
     slug: "flat-pricing",
     name: "One flat price",
-    short: `Seats × ${usd(PLAN.annualSeatPrice)} billed yearly (${usd(PLAN.seatPrice)} monthly), with ${PLAN.includedPerAgent} AI resolutions per seat. The AI pauses at the cap unless an admin opts in. No meters, no add-on tiers.`,
+    short: `Seats × ${usd(PLAN.annualSeatPrice)} billed yearly (${usd(PLAN.seatPrice)} monthly), with ${PLAN.includedPerAgent} AI answers per seat. The AI pauses at the cap unless an admin opts in. No meters, no add-on tiers.`,
     headline: "A help desk with AI included, and a bill that doesn't move",
-    answer: `Flatdesk costs ${PRICE_PHRASE}, and every seat includes ${PLAN.includedPerAgent} AI resolutions a month, pooled across the team. When the team reaches the included amount, the AI pauses and new conversations go to your agents. Nothing extra is charged unless an admin turns overage on (${usd(PLAN.overageRate, true)} per resolution).`,
+    answer: `Flatdesk costs ${PRICE_PHRASE}, and every seat includes ${PLAN.includedPerAgent} AI answers a month, pooled across the team. When the team reaches the included amount, the AI pauses and new conversations go to your agents. Nothing extra is charged unless an admin turns overage on (${usd(PLAN.overageRate, true)} per resolution).`,
     metaTitle: "Flat-price help desk with AI included",
-    metaDescription: `${PRICE_PHRASE}, with ${PLAN.includedPerAgent} AI resolutions per agent included. The AI pauses at the cap, so the support bill is the same every month.`,
+    metaDescription: `${PRICE_PHRASE}, with ${PLAN.includedPerAgent} AI answers per agent included. The AI pauses at the cap, so the support bill is the same every month.`,
     steps: [
       { title: "Pick your seats", body: `Every agent seat is ${usd(PLAN.seatPrice)} a month, or ${usd(PLAN.annualSeatPrice)} a month billed yearly, and gets every feature. There are no tiers or add-ons.` },
-      { title: "Share the AI allowance", body: `Each seat adds ${PLAN.includedPerAgent} AI resolutions a month to one team pool, however the tickets fall.` },
+      { title: "Share the AI allowance", body: `Each seat adds ${PLAN.includedPerAgent} AI answers a month to one team pool, however the tickets fall.` },
       { title: "Hit the cap, not a surprise", body: "Admins get an email at 80% and at 100%. At 100% the AI pauses and your team answers as normal." },
       { title: "Opt in to more if you want", body: `An admin can turn on overage at ${usd(PLAN.overageRate, true)} per resolution and turn it off again at any time.` },
     ],
     facts: [
       `${usd(PLAN.seatPrice)} per agent per month billed monthly with no contract, or ${usd(PLAN.annualSeatPrice)} billed yearly`,
-      `${PLAN.includedPerAgent} AI resolutions per agent per month, pooled`,
+      `${PLAN.includedPerAgent} AI answers per agent per month, pooled`,
       "AI pauses at the included amount by default",
       "The AI answers up to 3 follow-ups in one conversation, counted once; conversations it hands to your team don't count",
       `${TRIAL_DAYS}-day free trial without a card`,
@@ -55,7 +55,7 @@ export const SELLING_POINTS: SellingPoint[] = [
     faq: [
       {
         q: "What does Flatdesk cost?",
-        a: `${PRICE_PHRASE}. Either way that includes every feature and ${PLAN.includedPerAgent} AI resolutions per agent each month, shared by the team.`,
+        a: `${PRICE_PHRASE}. Either way that includes every feature and ${PLAN.includedPerAgent} AI answers per agent each month, shared by the team.`,
       },
       {
         q: "Is Flatdesk the cheapest help desk?",
@@ -70,9 +70,9 @@ export const SELLING_POINTS: SellingPoint[] = [
     slug: "ai-macros",
     name: "AI macros",
     short: "Evolving macros: the AI writes them from the answers your team keeps retyping and updates them as your business changes. Each one can also assign, tag, set the status and send.",
-    headline: "Evolving AI macros that scale with your business, and do the work around the reply too",
+    headline: "Your best replies become macros, and keep up when things change",
     answer:
-      "Flatdesk watches the replies your agents send. Once essentially the same answer has gone out on 5 different tickets, it identifies it as a macro, and the AI writes it up from the versions your team sent: a short name, the customer question it answers, and one reply with placeholders where each customer's details go. Save it in one click. From then on, when a new ticket asks that question, the macro is offered right in the reply box. And when agents keep making the same edit to a macro before sending it (a new time frame, an extra line, a step that no longer applies), the AI rewrites the macro with that edit for an admin to apply in one click. So the macros evolve as your prices, policies and products do. Each macro also does the work around the reply: it fills in the customer's first name, assigns the ticket to a teammate, sets the status, adds tags, and can send the reply the moment it's used. None of this uses your AI allowance.",
+      "Once your team has sent essentially the same answer on 5 tickets, Flatdesk spots it and the AI writes it up as a macro, offered on new tickets that ask the same thing. When agents keep making the same edit to a macro before sending it, the AI drafts the update for an admin to apply in one click. Each macro can also assign, tag, set the status and send the reply right away, and none of this uses your AI allowance.",
     metaTitle: "AI macros: canned responses identified and written automatically",
     metaDescription:
       "Flatdesk identifies the replies your team sends over and over, has the AI write them up as macros, and offers the right macro on new tickets. Works from imported history too.",
@@ -99,7 +99,7 @@ export const SELLING_POINTS: SellingPoint[] = [
         a: "It groups agent replies from the last 90 days by how many words they share. When one answer has gone out on 5 different tickets and no existing macro covers it, it becomes a suggestion, and the AI writes it up.",
       },
       {
-        q: "How does a macro update itself?",
+        q: "How does a macro get updated?",
         a: "When an agent inserts a macro, Flatdesk remembers the macro's text. If on most of the last sends (at least 3) agents made the same change before sending, like a different time frame, an added sentence or a deleted step, the AI rewrites the macro with that change. An admin applies it in one click or keeps the macro as it is. Zendesk offers macro suggestions, including edits to existing macros, in its Copilot add-on at $50 per agent a month billed yearly. In Flatdesk they're part of every seat.",
       },
       {
@@ -107,7 +107,7 @@ export const SELLING_POINTS: SellingPoint[] = [
         a: "A macro can assign the ticket to a teammate, set it to open, pending or closed, add tags, and send the reply as soon as it's used. [customer name] is filled in with the customer's first name. A macro set to send right away waits if it still has blanks like [order number], so nothing goes out half filled in.",
       },
       {
-        q: "Do AI macros use AI resolutions?",
+        q: "Do AI macros use AI answers?",
         a: "No. Writing macros and matching them to tickets never counts toward the AI allowance. Resolutions only count when the AI answers a customer.",
       },
       {
@@ -185,7 +185,7 @@ export const SELLING_POINTS: SellingPoint[] = [
     ],
     faq: [
       {
-        q: "How can I tell if the AI is good enough before switching?",
+        q: "Does the test drive use our real tickets?",
         a: `Run the AI test drive. After you import your help desk, the AI drafts answers to your ${TEST_DRIVE.tickets} most recent tickets and shows each beside the reply your team sent, so you judge it on your own customers.`,
       },
       {

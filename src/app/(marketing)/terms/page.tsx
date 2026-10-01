@@ -42,7 +42,7 @@ export default function TermsPage() {
       <Section title="3. Price, trial and billing">
         <ul className="grid list-disc gap-2 pl-5">
           <li>
-            New teams get {TRIAL_DAYS} days free with no card, with {PLAN.trialPerAgent} AI resolutions per agent for the whole trial and no
+            New teams get {TRIAL_DAYS} days free with no card, with {PLAN.trialPerAgent} AI answers per agent for the whole trial and no
             overage. To keep using Flatdesk after that, or to get the full monthly AI allowance sooner, an admin adds a card; the first charge
             is on the day the trial ends.
           </li>
@@ -54,10 +54,10 @@ export default function TermsPage() {
             monthly to yearly starts the year that day, with unused monthly time credited.
           </li>
           <li>
-            Each month includes {PLAN.includedPerAgent} AI resolutions per agent, shared by the team. When they run out, AI answers pause
-            until the next month and nothing extra is charged, unless an admin turns on overage. With overage on, each resolution past the
+            Each month includes {PLAN.includedPerAgent} AI answers per agent, shared by the team. When they run out, AI answers pause
+            until the next month and nothing extra is charged, unless an admin turns on overage. With overage on, each AI answer past the
             allowance costs {usd(PLAN.overageRate, true)} and is billed after the month ends: on the next invoice for monthly billing, or on
-            its own invoice for yearly billing. A resolution is a conversation the AI
+            its own invoice for yearly billing. An AI answer is a conversation the AI
             finished without handing it to your team, including up to 3 follow-up answers; an admin can mark any AI answer as wrong on the AI receipts page and it stops counting.
           </li>
           <li>Prices exclude taxes, which are added where the law requires.</li>

@@ -28,7 +28,6 @@ export default function AuthShell({ title, children }: { title: string; children
                     <li key={f.id} className="flex items-center gap-2.5 text-sm" title={f.body}>
                       <FeatureIcon d={f.icon} className="size-7 bg-surface p-[5px] shadow-sm ring-1 ring-line" />
                       <span>{f.title}</span>
-                      {f.isNew && <span className="text-xs font-medium text-accent">New</span>}
                     </li>
                   ))}
                 </ul>

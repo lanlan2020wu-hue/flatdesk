@@ -15,8 +15,8 @@ export async function generateMetadata({ params }: PageProps<"/compare/[slug]">)
   const r = rival((await params).slug);
   if (!r) return {};
   return pageMeta({
-    title: `Flatdesk vs ${r.title}: pricing, AI billing and features`,
-    description: r.answer.split(". ").slice(0, 2).join(". ") + ".",
+    title: `Flatdesk vs ${r.title}: pricing and AI billing`,
+    description: r.answer.split(". ")[0].replace(/\.*$/, "."),
     path: `/compare/${r.slug}`,
     image: `/og/compare/${r.slug}`,
   });
@@ -70,17 +70,17 @@ export default async function RivalPage({ params }: PageProps<"/compare/[slug]">
         <p style={{ "--d": 2 } as React.CSSProperties} className="enter text-sm text-muted">Checked {COMPARED_ON} against list prices. Sources are at the bottom.</p>
       </div>
 
-      <section data-play="" aria-label="Monthly cost" className="grid gap-4">
+      <section data-play="" suppressHydrationWarning aria-label="Monthly cost" className="grid gap-4">
         <CostTable rows={costRows(r)} caption={`Monthly cost with the AI answering the stated number of conversations, with annual billing where offered, Flatdesk included.${costRows(r).some((x) => x.approx) ? ' "~" marks estimates.' : ""}`} />
         <Link href="/calculator" className="link w-max text-sm font-medium text-accent">Try it with your own numbers</Link>
       </section>
 
-      <section data-play="" className="grid gap-4 md:grid-cols-2">
+      <section data-play="" suppressHydrationWarning className="grid gap-4 md:grid-cols-2">
         <List title="Where Flatdesk is stronger" items={r.flatdeskWins} tone="accent" />
         <List title={`Where ${r.name} is stronger`} items={r.theyWin} tone="muted" />
       </section>
 
-      <section data-play="" className="card grid gap-3 bg-surface-2/60 p-6 sm:p-8 [&>p]:max-w-[70ch]">
+      <section data-play="" suppressHydrationWarning className="card grid gap-3 bg-surface-2/60 p-6 sm:p-8 [&>p]:max-w-[70ch]">
         <h2 className="ink font-display text-2xl">Which should you pick?</h2>
         <p><span className="font-medium">Pick {r.name} if</span> {r.pickThem.charAt(0).toLowerCase() + r.pickThem.slice(1)}</p>
         <p>

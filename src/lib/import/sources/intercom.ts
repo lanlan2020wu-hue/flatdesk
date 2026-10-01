@@ -55,7 +55,7 @@ async function author(ctx: Ctx, a: Raw | undefined) {
 
 export const intercom: Adapter = {
   id: "intercom",
-  name: "Intercom (Fin)",
+  name: "Fin (formerly Intercom)",
   credentialFields: [{ name: "token", label: "Access token", secret: true }],
   help: [
     "In Intercom, open Settings, then Integrations, then Developer Hub, and create a new app for your workspace.",

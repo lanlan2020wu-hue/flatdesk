@@ -4,7 +4,7 @@ import type { QA } from "@/lib/selling-points";
 // crawlers and work without JavaScript.
 export default function Faq({ items, title = "Questions", id }: { items: QA[]; title?: string; id?: string }) {
   return (
-    <section data-play="" id={id} className="grid scroll-mt-24 gap-6 md:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">
+    <section data-play="" suppressHydrationWarning id={id} className="grid scroll-mt-24 gap-6 md:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">
       <h2 className="ink font-display text-3xl">{title}</h2>
       <div className="grid border-b border-line">
         {items.map(({ q, a }) => (
