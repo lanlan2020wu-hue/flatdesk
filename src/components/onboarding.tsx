@@ -118,12 +118,12 @@ export function TryAi({ notes, saved }: { notes: string; saved: number }) {
           name="aiInstructions"
           rows={6}
           defaultValue={notes}
-          placeholder={"A few lines is enough to start. For example:\nWe ship from Portland within 2 business days and send a tracking link by email.\nReturns are free within 30 days: reply to the order email and we send a label.\nWe're open Monday to Friday, 9 to 5 Pacific."}
+          placeholder={"A few lines is plenty. For example:\nWe ship from Portland within 2 business days and send a tracking link by email.\nReturns are free within 30 days: reply to the order email and we send a label.\nWe're open Monday to Friday, 9 to 5 Pacific."}
           className="field"
         />
         <span className="text-xs text-muted">
-          Policies, product facts, hours, tone.{" "}
-          {saved > 0 ? `Your ${saved} saved ${saved === 1 ? "answer is" : "answers are"} included too.` : "Macros and help articles you add later are included too."} You can change this any time in
+          Things like your policies, products, hours and how you like to sound.{" "}
+          {saved > 0 ? `It also uses your ${saved} saved ${saved === 1 ? "reply" : "replies"}.` : "It will also use any macros and help articles you add later."} You can change this later in
           Settings.
         </span>
       </label>
@@ -142,13 +142,13 @@ export function TryAi({ notes, saved }: { notes: string; saved: number }) {
               <p className="font-medium">The AI would send this reply:</p>
               <p className="whitespace-pre-wrap">{r.reply}</p>
               {r.sources.length > 0 && <p className="text-xs text-muted">Based on: {r.sources.join(", ")}</p>}
-              <p className="text-xs text-muted">Nothing was sent. Live, it answers new email and chat tickets like this and hands the rest to your team.</p>
+              <p className="text-xs text-muted">This wasn&apos;t sent to anyone. Once you&apos;re live, the AI replies to new emails and chats this way and passes anything else to your team.</p>
             </>
           ) : (
             <>
               <p className="font-medium">The AI would hand this one to your team.</p>
               {r.reason && <p className="text-muted">{r.reason}</p>}
-              <p className="text-muted">It only answers what your notes cover. Add the facts it needs above and ask again.</p>
+              <p className="text-muted">It only answers questions your notes cover. Add what it needs above, then ask again.</p>
             </>
           )}
         </div>

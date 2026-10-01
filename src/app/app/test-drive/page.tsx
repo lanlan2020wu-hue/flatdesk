@@ -145,8 +145,8 @@ export default async function TestDrivePage({ searchParams }: PageProps<"/app/te
               <p className="text-sm text-muted">
                 {isAdmin ? (
                   <>
-                    <Link href="/app/import" className="link text-accent">Import your help desk history</Link> and the test drive can start right away. Until then,{" "}
-                    <Link href="/app/welcome?step=ai" className="link text-accent">ask the AI a question of your own</Link> to see how it answers.
+                    <Link href="/app/import" className="link text-accent">Import your help desk history</Link> and the test drive can start right away. In the meantime,{" "}
+                    <Link href="/app/welcome?step=ai" className="link text-accent">ask the AI a question yourself</Link> in setup.
                   </>
                 ) : (
                   "Once your team has answered some tickets, or an admin imports your history, the test drive can start."

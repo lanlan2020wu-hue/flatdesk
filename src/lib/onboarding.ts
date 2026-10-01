@@ -60,11 +60,11 @@ export async function getOnboarding(orgId: string) {
   // Seeing the AI answer comes right after the team: it's what Flatdesk is for, and it needs nothing set up.
   const steps: Step[] = [
     step("team", "Create your team", true),
-    step("ai", "Watch the AI answer a question", aiSeen),
+    step("ai", "See the AI answer a question", aiSeen),
     step("inbox", "Connect email or website chat", connected),
     step("invite", "Invite your agents", invited),
     step("import", "Bring over your old help desk", imports.n > 0),
-    step("test", "Get a real ticket through", proven),
+    step("test", "Send a test message", proven),
   ];
   const doneCount = steps.filter((s) => s.done).length;
   return {
@@ -94,7 +94,7 @@ export async function tryTheAi(orgId: string, question: string, draft: typeof dr
   if (!org) throw new TestDriveError("Team not found.");
   if (access(org).state === "locked") throw new TestDriveError("The free trial has ended. Add a card in Settings to keep going.");
   if (Number(org.testDriveSpentUsd) + TEST_DRIVE.reserveUsd > TEST_DRIVE.budgetUsd) {
-    throw new TestDriveError("This team has used its free tries. Connect your inbox and the AI answers real tickets.");
+    throw new TestDriveError("You've used up the free tries. Once your inbox is connected, the AI will answer real tickets.");
   }
   const d = await draft(
     org,

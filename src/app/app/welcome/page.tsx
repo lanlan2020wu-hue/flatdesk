@@ -110,15 +110,15 @@ export default async function WelcomePage({ searchParams }: PageProps<"/app/welc
     ai: ai ? (
       <div className="grid gap-4 text-sm">
         <p className="text-muted">
-          Tell the AI a few things about your business, then ask it something a customer would. You&apos;ll see the reply it would send. Nothing
-          goes to anyone, and it doesn&apos;t use your AI answers.
+          Write a few lines about your business, then ask a question a customer might ask. You&apos;ll see the reply the AI would send.
+          Nobody else sees it, and it doesn&apos;t count toward your AI answers.
         </p>
         <TryAi notes={org.aiInstructions} saved={knowledge.length} />
         {testable > 0 && (
           <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line px-4 py-3">
             <span>
-              <span className="font-medium">Try it on your own tickets.</span>{" "}
-              <span className="text-muted">The test drive drafts {testable} of your past tickets beside the reply your team sent.</span>
+              <span className="font-medium">Want to see it on real tickets?</span>{" "}
+              <span className="text-muted">The test drive writes replies to {testable} of your past tickets so you can compare them with what your team sent.</span>
             </span>
             <Link href="/app/test-drive" className="btn btn-secondary btn-sm">
               Start the test drive
@@ -166,26 +166,26 @@ export default async function WelcomePage({ searchParams }: PageProps<"/app/welc
     inbox: (
       <div className="grid gap-6 text-sm">
         <p className="text-muted">
-          Start with whichever is quicker. Website chat is one line of code; email needs a forwarding rule in your mail settings. You can add the
-          other later in Settings.
+          Pick whichever is quicker to set up. Chat is one line of code on your site. Email needs a forwarding rule in your mail settings. You
+          can add the other one later in Settings.
         </p>
 
         <section className="grid gap-3" aria-labelledby="chat-option">
           <h3 id="chat-option" className="font-medium">Website chat</h3>
-          <p className="text-muted">Paste this before the closing &lt;/body&gt; tag of your website. Chats become tickets here, and the AI answers them.</p>
+          <p className="text-muted">Paste this just before &lt;/body&gt; on your site. Each chat shows up here as a ticket, and the AI replies when it can.</p>
           <div className="flex max-w-full flex-wrap items-center gap-2">
             <code className="num select-all break-all rounded-lg border border-dashed border-accent/40 bg-accent-soft px-3 py-2">{widgetTag}</code>
             <CopyButton text={widgetTag} />
           </div>
           <p className="text-muted">
-            Not ready to touch the site?{" "}
+            Can&apos;t edit your site yet?{" "}
             <a href={`/chat/${org.widgetKey}`} target="_blank" rel="noreferrer" className="link text-accent">
               Open your chat page
             </a>{" "}
-            and send a message, or share the link with customers as it is.
+            and send yourself a message. You can also share that link with customers.
           </p>
           {o.chatSeen ? (
-            <p className="text-accent">A chat came in. You&apos;re connected.</p>
+            <p className="text-accent">A chat came in, so chat is working.</p>
           ) : (
             !ob.widgetAdded && (
               <form action={confirmWidgetAction}>
@@ -262,7 +262,7 @@ export default async function WelcomePage({ searchParams }: PageProps<"/app/welc
                 </p>
               </details>
               <a href={itMail} className="link w-max text-accent">
-                Send these steps to whoever runs your email
+                Email these steps to your IT person
               </a>
             </div>
 
@@ -323,28 +323,28 @@ export default async function WelcomePage({ searchParams }: PageProps<"/app/welc
                 <Link href={`/app/tickets/${o.testTicket.number}`} className="link font-medium">
                   Ticket #{o.testTicket.number}
                 </Link>{" "}
-                came back through your forwarding, so email works end to end.
+                came back through your forwarding, so email is working.
               </>
             ) : o.inboundSeen ? (
               "A customer email came through your forwarding."
             ) : (
               "A chat came through your widget."
             )}{" "}
-            <Link href="/app/inbox" className="link">Open the inbox</Link> to see it, and what the AI did with it.
+            <Link href="/app/inbox" className="link">Open the inbox</Link> to see it and how the AI handled it.
           </p>
         ) : (
           <>
-            <p className="text-muted">Send yourself a message the way a customer would. When it arrives here as a ticket, you know customers will reach you.</p>
+            <p className="text-muted">Send a message the way a customer would. Once it shows up here as a ticket, you know customers can reach you.</p>
             <p>
               <a href={`/chat/${org.widgetKey}`} target="_blank" rel="noreferrer" className="link text-accent">
                 Open your chat page
               </a>{" "}
-              <span className="text-muted">and ask something. If your notes cover it, the AI answers right there in the chat.</span>
+              <span className="text-muted">and ask a question. If your notes cover it, the AI replies in the chat.</span>
             </p>
             {canSendTest && org.supportEmail && (
               <div className="grid gap-2">
                 <p className="text-muted">
-                  Or test email: Flatdesk emails {org.supportEmail}, and if forwarding works it comes back here as a ticket.
+                  To test email instead, we&apos;ll send a message to {org.supportEmail}. If forwarding works, it shows up here as a ticket.
                 </p>
                 <TestEmailButton to={org.supportEmail} />
                 {ob.testSentAt && current === "test" && (
@@ -364,12 +364,12 @@ export default async function WelcomePage({ searchParams }: PageProps<"/app/welc
                 <Link href={`/app/tickets/${o.testTicket.number}`} className="link">
                   #{o.testTicket.number}
                 </Link>
-                . It&apos;s there to look around and doesn&apos;t finish this step.
+                . It&apos;s only for looking around, so it doesn&apos;t count for this step.
               </p>
             ) : (
               <form action={createSampleTicketAction} className="grid gap-1">
                 <button className="link w-max">Create a sample ticket to look around</button>
-                <span className="text-xs text-muted">It doesn&apos;t finish this step; a real message does.</span>
+                <span className="text-xs text-muted">It won&apos;t complete this step. Only a real message does.</span>
               </form>
             )}
           </>
