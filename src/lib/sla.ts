@@ -49,7 +49,9 @@ export function dueAt(from: Date, minutes: number, hours: BusinessHours | null):
   if (!hours) return new Date(from.getTime() + minutes * MIN);
   let t = from.getTime();
   let left = minutes;
-  for (let i = 0; i < 64; i++) {
+  // Each pass crosses one open or closed stretch, so even a team open one hour
+  // a week with a 24-hour target (about 350 passes) gets a true due time.
+  for (let i = 0; i < 20_000; i++) {
     const { day, minute } = localClock(new Date(t), hours.tz);
     const open = hours.days.includes(day);
     if (open && minute < hours.start) {

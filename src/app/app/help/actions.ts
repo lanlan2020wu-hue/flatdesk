@@ -7,10 +7,11 @@ import { db, schema } from "@/db";
 import { requireAdmin, requireEditor } from "@/lib/auth";
 import { access } from "@/lib/billing";
 import { MAX_BODY, MAX_TITLE, uniqueArticleSlug, validHelpSlug } from "@/lib/help";
+import { isUuid } from "@/lib/ids";
 
 const { articles, orgs } = schema;
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
-const isId = (v: string) => /^[0-9a-f-]{36}$/i.test(v);
+const isId = isUuid;
 
 async function requireOpenEditor() {
   const s = await requireEditor();

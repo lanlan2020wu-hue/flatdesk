@@ -5,7 +5,7 @@ import { after, before, describe, test } from "node:test";
 import { and, eq } from "drizzle-orm";
 import { db, pool, schema } from "@/db";
 import { createTicket } from "@/lib/tickets";
-import { runStep, startImport } from "./engine";
+import { cancelImport, runStep, startImport } from "./engine";
 import { linkImportedAgent } from "./link";
 import { importReport } from "./report";
 import { fakeApi, FIXTURES } from "./fixtures";
@@ -164,6 +164,39 @@ describe("Zendesk", () => {
     assert.equal(job?.status, "running");
     assert.ok(job?.retryAt && job.retryAt > new Date());
     assert.equal(job?.phase, "group");
+  });
+
+  test("a NUL character in a ticket doesn't stop the import", async () => {
+    await newOrg(`${ORG}_nul`);
+    const withNul = structuredClone(routes) as typeof routes;
+    const comments = withNul["tickets/4521/comments.json?page[size]=100&include=users"] as { comments: { body: string; plain_body: string }[] };
+    comments.comments[0].plain_body = comments.comments[0].body = "I was charged\u0000 twice.";
+    const job = await runToEnd(`${ORG}_nul`, "zendesk", { subdomain: "acme", email: "ana@acme.com", token: "t" }, fakeApi(Z, withNul));
+    assert.equal(job.status, "done", job.error ?? "");
+    const t = await ticketByNumber(`${ORG}_nul`, 4521);
+    assert.ok(t);
+    assert.match((await messagesOf(t.id))[0].body, /^I was charged twice\./);
+  });
+
+  test("cancelling while a step runs stays cancelled", async () => {
+    const org = `${ORG}_cancel`;
+    await newOrg(org);
+    const inner = fakeApi(Z, routes);
+    let id = "";
+    let cancelled = false;
+    const api: FetchLike = async (url, init) => {
+      if (id && !cancelled && url.includes("tickets")) {
+        cancelled = true;
+        await cancelImport(org, id);
+      }
+      return inner(url, init);
+    };
+    ({ id } = await startImport({ orgId: org, userId: "user_ana", source: "zendesk", creds: { subdomain: "acme", email: "a@b.c", token: "t" }, fetchImpl: api }));
+    let job;
+    for (let i = 0; i < 20 && job?.status !== "cancelled" && job?.status !== "done"; i++) job = await runStep(org, id, { fetchImpl: api, budgetMs: 5_000 });
+    assert.ok(cancelled);
+    assert.equal(job?.status, "cancelled");
+    await cancelImport(org, "000000000000000000000000000000000000"); // not an import id: nothing happens
   });
 });
 

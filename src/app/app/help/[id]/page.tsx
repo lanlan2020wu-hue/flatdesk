@@ -7,6 +7,7 @@ import { requireSession } from "@/lib/auth";
 import { articleUrl, ensureHelpSlug } from "@/lib/help";
 import { deleteArticleAction } from "../actions";
 import ArticleForm from "../ArticleForm";
+import { isUuid } from "@/lib/ids";
 
 export const metadata = { title: "Edit article" };
 
@@ -14,7 +15,7 @@ export default async function EditArticle({ params, searchParams }: PageProps<"/
   const s = await requireSession();
   const { id } = await params;
   const { saved } = await searchParams;
-  if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
+  if (!isUuid(id)) notFound();
   const [article, helpSlug] = await Promise.all([
     db.query.articles.findFirst({ where: and(eq(schema.articles.orgId, s.orgId), eq(schema.articles.id, id)) }),
     ensureHelpSlug(s.orgId),

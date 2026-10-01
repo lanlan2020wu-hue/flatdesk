@@ -2,7 +2,7 @@ import { randomBytes, timingSafeEqual } from "node:crypto";
 import { and, asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { attachmentsByMessage, filesFromForm, saveAttachments, type AttachmentInfo, type NewFile } from "@/lib/attachments";
-import { addCustomerMessage, createTicket } from "@/lib/tickets";
+import { addCustomerMessage, createTicket, parseTicketNumber } from "@/lib/tickets";
 
 // The website chat widget. A visitor starts a conversation with their name,
 // email and first message; that creates a chat ticket and returns a token the
@@ -65,8 +65,9 @@ export async function startConversation(orgId: string, v: { email: string; name:
   return { ticket, token };
 }
 
-export async function ticketForVisitor(orgId: string, number: number, token: string) {
-  if (!Number.isInteger(number) || !token) return null;
+export async function ticketForVisitor(orgId: string, raw: string | number, token: string) {
+  const number = parseTicketNumber(raw);
+  if (!number || !token) return null;
   const ticket = await db.query.tickets.findFirst({ where: and(eq(schema.tickets.orgId, orgId), eq(schema.tickets.number, number)) });
   if (!ticket?.visitorToken) return null;
   const a = Buffer.from(ticket.visitorToken);
