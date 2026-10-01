@@ -84,7 +84,7 @@ export default function PricingPage() {
       </section>
 
       <section data-play="" className="grid gap-6">
-        <h2 className="ink font-display text-3xl">AI macros: an add-on elsewhere, included here</h2>
+        <h2 className="ink font-display text-3xl">AI macros: included here, a higher plan or add-on elsewhere</h2>
         <AddOnTable />
       </section>
 

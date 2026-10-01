@@ -3,9 +3,9 @@
 // from the vendor's own pricing page or help article on ADDONS_CHECKED_ON;
 // keep each one sourced. Gorgias isn't listed: it publishes no macro AI price.
 
-import { PLAN, competitorById, usd } from "@/lib/pricing";
+import { CHECKED_ON, PLAN, competitorById, usd } from "@/lib/pricing";
 
-export const ADDONS_CHECKED_ON = "2026-09-30";
+export const ADDONS_CHECKED_ON = CHECKED_ON;
 
 export const FEATURES = [
   "Writes new macros from repeated replies",
@@ -52,7 +52,11 @@ export const GRID: GridRow[] = [
     cells: [null, null, "$29/agent Copilot", each("fin-essential")],
     note: "Copilot includes 10 free conversations per agent a month.",
   },
-  { vendor: "Front", cells: [null, null, null, "from $0.05 each"] },
+  {
+    vendor: "Front",
+    cells: [null, null, null, "from $0.05 each"],
+    note: "Copilot ($20/seat, included on Enterprise) drafts replies from past conversations and help content, but doesn't write or update templates.",
+  },
   { vendor: "Help Scout", cells: [null, null, null, each("helpscout-standard")] },
 ];
 

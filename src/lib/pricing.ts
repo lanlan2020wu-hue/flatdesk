@@ -1,7 +1,7 @@
 // Every number here is shown to visitors. Keep each one traceable to a
 // source URL, and update CHECKED_ON whenever competitor figures are re-checked.
 
-export const CHECKED_ON = "2026-09-28";
+export const CHECKED_ON = "2026-09-30";
 
 export const PLAN = {
   name: "Flatdesk",
@@ -84,7 +84,7 @@ export const COMPETITORS: Competitor[] = [
     included: 0,
     includedPer: "account",
     estimated: false,
-    aiNote: "$0.99 per Fin outcome, with no volume discount.",
+    aiNote: "$0.99 per Fin outcome at list price.",
     sources: FIN_SOURCES,
   },
   {
@@ -97,7 +97,7 @@ export const COMPETITORS: Competitor[] = [
     included: 0,
     includedPer: "account",
     estimated: false,
-    aiNote: "$0.99 per Fin outcome, with no volume discount.",
+    aiNote: "$0.99 per Fin outcome at list price.",
     sources: FIN_SOURCES,
   },
   {
@@ -110,7 +110,7 @@ export const COMPETITORS: Competitor[] = [
     included: 0,
     includedPer: "account",
     estimated: false,
-    aiNote: "$0.99 per Fin outcome, with no volume discount.",
+    aiNote: "$0.99 per Fin outcome at list price.",
     sources: FIN_SOURCES,
   },
   {
