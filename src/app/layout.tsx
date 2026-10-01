@@ -1,3 +1,4 @@
+import { Analytics } from "@vercel/analytics/next";
 import type { Metadata } from "next";
 import { Red_Hat_Mono, Schibsted_Grotesk } from "next/font/google";
 import { PLAN, usd } from "@/lib/pricing";
@@ -39,6 +40,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     >
       <body className="min-h-full flex flex-col font-sans text-[15px] leading-relaxed">
         {children}
+        {/* Page views for the trial funnel; the later steps are server events (lib/funnel.ts). */}
+        <Analytics />
       </body>
     </html>
   );

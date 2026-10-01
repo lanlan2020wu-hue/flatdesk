@@ -1,10 +1,13 @@
 import { auth, clerkClient, currentUser } from "@clerk/nextjs/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { after, connection } from "next/server";
 import { cache } from "react";
 import { db, schema } from "@/db";
+import { decodeSource, SOURCE_COOKIE } from "@/lib/attribution";
 import { syncSeats } from "@/lib/billing";
+import { milestone } from "@/lib/funnel";
 import { clerkEnabled, devAuthEnabled } from "./auth-config";
 import { linkImportedAgent } from "./import/link";
 
@@ -62,10 +65,14 @@ export async function requireAdmin(): Promise<Session> {
 }
 
 async function ensureRows(session: Session, orgName: string, email: string) {
-  await db.insert(schema.orgs).values({ id: session.orgId, name: orgName }).onConflictDoUpdate({
-    target: schema.orgs.id,
-    set: { name: orgName },
-  });
+  // A new team keeps where its creator came from (lib/attribution.ts).
+  const source = decodeSource((await cookies()).get(SOURCE_COOKIE)?.value);
+  const [org] = await db
+    .insert(schema.orgs)
+    .values({ id: session.orgId, name: orgName, onboarding: source ? { source } : {} })
+    .onConflictDoUpdate({ target: schema.orgs.id, set: { name: orgName } })
+    .returning({ created: sql<boolean>`xmax = 0` }); // true when the row was inserted, not updated
+  if (org?.created) await milestone(session.orgId, "team_created", { source: source?.source ?? "direct", campaign: source?.campaign });
   await db
     .insert(schema.agents)
     .values({ orgId: session.orgId, userId: session.userId, name: session.name, email, role: session.role })
