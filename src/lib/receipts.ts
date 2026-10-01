@@ -133,7 +133,7 @@ export async function refundResolution(orgId: string, eventId: string, by: { use
       .from(aiEvents)
       .where(and(eq(aiEvents.id, eventId), eq(aiEvents.orgId, orgId)))
       .for("update");
-    if (!event || event.kind !== "resolution") throw new RefundError("Only a counted AI resolution can be refunded.");
+    if (!event || event.kind !== "resolution") throw new RefundError("Only a counted AI answer can be refunded.");
     const [org] = await tx.select({ billed: orgs.overageBilledMonth }).from(orgs).where(eq(orgs.id, orgId));
     if (org?.billed && org.billed >= event.month) throw new RefundError("This month has already been billed, so it can't be refunded here.");
 

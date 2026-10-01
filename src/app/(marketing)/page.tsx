@@ -48,7 +48,7 @@ const TOUR: { id: string; title: string; body: string; points: string[]; shot: R
   {
     id: "ai",
     title: "AI takes the routine questions, and stops at your cap.",
-    body: `The AI answers from your own macros and notes, and hands anything account-specific, upset or unclear to your team. Each seat includes ${PLAN.includedPerAgent} resolutions a month, pooled.`,
+    body: `The AI answers from your own macros and notes, and hands anything account-specific, upset or unclear to your team. Each seat includes ${PLAN.includedPerAgent} AI answers a month, pooled.`,
     points: ["Pauses at the included amount unless an admin opts in", "Emails admins at 80% and at 100%", "Try it first: the AI test drive drafts answers to 50 of your past tickets"],
     shot: <AiShot />,
     href: "/features/ai-test-drive",
@@ -103,7 +103,7 @@ function Rate({ label, children }: { label: string; children: React.ReactNode })
 // in a ledger, then the headline that answers the worry.
 function ChapterHead({ tab, title, children, id }: { tab: string; title: string; children?: React.ReactNode; id: string }) {
   return (
-    <header data-play="" className="grid gap-5">
+    <header data-play="" suppressHydrationWarning className="grid gap-5">
       <a href={`#${id}`} className="w-max rounded-t-[5px] border-x border-t border-ink/80 px-3 pt-1.5 pb-1 text-sm font-semibold">{tab}</a>
       <div className="grid gap-5 border-t-2 border-ink pt-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-16">
         <h2 className="ink font-display text-4xl sm:text-[3.4rem]">{title}</h2>
@@ -170,10 +170,10 @@ export default function Home() {
           changes it.
         </ChapterHead>
         <div className="grid gap-10 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-16">
-          <div data-play="">
+          <div data-play="" suppressHydrationWarning>
             <YearChart />
           </div>
-          <div data-play="" className="grid content-start gap-4">
+          <div data-play="" suppressHydrationWarning className="grid content-start gap-4">
             <dl className="border-t border-ink/70">
               <Rate label="Per agent, billed yearly"><span className="num">{usd(PLAN.annualSeatPrice)}</span> a month</Rate>
               <Rate label="Per agent, month to month"><span className="num">{usd(PLAN.seatPrice)}</span> a month</Rate>
@@ -189,7 +189,7 @@ export default function Home() {
           </div>
         </div>
         <article className="grid items-center gap-8 lg:grid-cols-2 lg:gap-16">
-          <div data-play="" className="grid content-start gap-4">
+          <div data-play="" suppressHydrationWarning className="grid content-start gap-4">
             <h3 className="ink font-display text-3xl">See every AI answer you&apos;re charged for. Refund the wrong ones.</h3>
             <p className="max-w-[60ch] text-muted">
               Each month gets an itemized statement: which tickets the AI answered, the saved answers it used, and whether each one counted. If the AI got one
@@ -201,7 +201,7 @@ export default function Home() {
               ))}
             </ul>
           </div>
-          <div data-play="">
+          <div data-play="" suppressHydrationWarning>
             <ReceiptShot />
           </div>
         </article>
@@ -217,10 +217,10 @@ export default function Home() {
             how your team edits them. Macros are in the seat and never use your AI allowance.
           </ChapterHead>
           <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] lg:gap-16">
-            <div data-play="" className="relative">
+            <div data-play="" suppressHydrationWarning className="relative">
               <MacroShot />
             </div>
-            <ol data-play="" className="grid gap-7">
+            <ol data-play="" suppressHydrationWarning className="grid gap-7">
               {MACRO_STEPS.map((step, i) => (
                 <li key={step.title} style={{ "--i": i } as React.CSSProperties} className="ln grid grid-cols-[2.5rem_minmax(0,1fr)] gap-x-3 border-t border-line pt-4">
                   <span className="num text-sm font-semibold text-accent">{String(i + 1).padStart(2, "0")}</span>
@@ -233,7 +233,7 @@ export default function Home() {
             </ol>
           </div>
           <article className="grid items-center gap-10 border-t border-line pt-14 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-16">
-            <div data-play="" className="grid content-start gap-4">
+            <div data-play="" suppressHydrationWarning className="grid content-start gap-4">
               <h3 className="ink font-display text-3xl">When most sends make the same edit, the macro learns it.</h3>
               <p className="text-muted">
                 A new shipping time, a changed refund policy, a step that no longer applies: your team fixes it by hand in the reply first. Flatdesk sees when
@@ -246,11 +246,11 @@ export default function Home() {
               </ul>
               <Link href="/features/ai-macros" className="link w-max text-sm font-medium text-accent">How AI macros work</Link>
             </div>
-            <div data-play="">
+            <div data-play="" suppressHydrationWarning>
               <MacroUpdateShot />
             </div>
           </article>
-          <div data-play="" className="grid gap-6 border-t border-line pt-14">
+          <div data-play="" suppressHydrationWarning className="grid gap-6 border-t border-line pt-14">
             <h3 className="ink font-display text-3xl">One click on a macro can also assign, tag and close the ticket.</h3>
             <ul className="grid sm:grid-cols-2 lg:grid-cols-5">
               {MACRO_ACTIONS.map((a, i) => (
@@ -265,7 +265,7 @@ export default function Home() {
               ))}
             </ul>
           </div>
-          <div data-play="" className="grid gap-6 border-t border-line pt-14">
+          <div data-play="" suppressHydrationWarning className="grid gap-6 border-t border-line pt-14">
             <h3 className="ink font-display text-3xl">Elsewhere, AI help with macros takes a higher plan or an add-on, if it&apos;s offered. Here it&apos;s in the seat.</h3>
             <AddOnTable />
           </div>
@@ -282,7 +282,7 @@ export default function Home() {
             id={f.id}
             className={`grid scroll-mt-24 items-center gap-8 lg:gap-16 ${i === 0 ? "lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]" : "lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)]"}`}
           >
-            <div data-play="" className={`grid content-start gap-3 ${i === 1 ? "lg:order-2" : ""}`}>
+            <div data-play="" suppressHydrationWarning className={`grid content-start gap-3 ${i === 1 ? "lg:order-2" : ""}`}>
               <h3 className="ink font-display text-3xl">{f.title}</h3>
               <p className="max-w-[60ch] text-muted">{f.body}</p>
               <ul className="grid gap-1.5 text-sm">
@@ -292,10 +292,10 @@ export default function Home() {
               </ul>
               {f.href && <Link href={f.href} className="link w-max text-sm font-medium text-accent">{f.more}</Link>}
             </div>
-            <div data-play="">{f.shot}</div>
+            <div data-play="" suppressHydrationWarning>{f.shot}</div>
           </article>
         ))}
-        <div data-play="" className="grid gap-4">
+        <div data-play="" suppressHydrationWarning className="grid gap-4">
           <h3 className="text-lg font-semibold">Also in every seat</h3>
           <ul className="grid border-t border-line sm:grid-cols-2 lg:grid-cols-4">
             {MORE.map((m, i) => (
@@ -313,9 +313,9 @@ export default function Home() {
 
       {/* Who it's for, and who it isn't. Saying so plainly is part of the case. */}
       <section id="fit" className="mx-auto grid w-full max-w-6xl scroll-mt-20 gap-10 px-4 pt-24 sm:px-6 sm:pt-32">
-        <h2 data-play="" className="ink max-w-3xl font-display text-[2.6rem] sm:text-6xl">Made for small support teams, and plain about what it leaves out.</h2>
+        <h2 data-play="" suppressHydrationWarning className="ink max-w-3xl font-display text-[2.6rem] sm:text-6xl">Made for small support teams, and plain about what it leaves out.</h2>
         <div className="grid gap-10 md:grid-cols-2 md:gap-0">
-          <div data-play="" className="grid content-start gap-4 border-t-2 border-accent pt-5 md:pr-10">
+          <div data-play="" suppressHydrationWarning className="grid content-start gap-4 border-t-2 border-accent pt-5 md:pr-10">
             <p className="text-lg font-semibold">A good fit if you</p>
             <ul className="grid gap-3">
               {[
@@ -328,7 +328,7 @@ export default function Home() {
               ))}
             </ul>
           </div>
-          <div data-play="" className="grid content-start gap-4 border-t-2 border-line-strong pt-5 md:border-l md:border-l-line md:pl-10">
+          <div data-play="" suppressHydrationWarning className="grid content-start gap-4 border-t-2 border-line-strong pt-5 md:border-l md:border-l-line md:pl-10">
             <p className="text-lg font-semibold">Look elsewhere if you need</p>
             <ul className="grid gap-3 text-muted">
               {LEFT_OUT.map((item) => (
@@ -344,11 +344,11 @@ export default function Home() {
       </section>
 
       <section id="switch" className="mx-auto grid w-full max-w-6xl scroll-mt-20 gap-12 px-4 pt-24 sm:px-6 sm:pt-32">
-        <div data-play="" className="grid gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-16">
+        <div data-play="" suppressHydrationWarning className="grid gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-16">
           <h2 className="ink font-display text-[2.6rem] sm:text-6xl">How a switch goes.</h2>
           <p className="max-w-[52ch] self-end text-lg text-muted">Four steps, done by one admin. Nothing reaches a customer until you turn it on.</p>
         </div>
-        <ol data-play="" className="relative grid gap-8 md:grid-cols-4 md:gap-6">
+        <ol data-play="" suppressHydrationWarning className="relative grid gap-8 md:grid-cols-4 md:gap-6">
           <span aria-hidden="true" className="absolute top-[11px] right-[calc(25%-0.75rem)] left-3 hidden h-[2px] bg-ink md:block" />
           {SWITCH_STEPS.map((step, i) => (
             <li key={step.title} style={{ "--i": i } as React.CSSProperties} className="ln relative grid content-start gap-2 pl-9 md:pl-0">
@@ -362,10 +362,10 @@ export default function Home() {
           ))}
         </ol>
         <div className="grid items-center gap-8 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] lg:gap-16">
-          <div data-play="">
+          <div data-play="" suppressHydrationWarning>
             <ImportShot />
           </div>
-          <div data-play="" className="grid content-start gap-3">
+          <div data-play="" suppressHydrationWarning className="grid content-start gap-3">
             <h3 className="ink font-display text-2xl">Nothing is lost on the way over.</h3>
             <p className="text-muted">
               Every original record is archived with its ticket, anything that didn&apos;t map is listed in a report, and you can download the raw archive.
@@ -379,7 +379,7 @@ export default function Home() {
       {/* The close, back on the green field: what trying it costs, and the design partner offer. */}
       <section id="partner" className="mt-24 -mb-24 scroll-mt-20 bg-field text-field-ink sm:mt-32">
         <div className="mx-auto grid max-w-6xl gap-12 px-4 py-20 sm:px-6 sm:py-28 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-16">
-          <div data-play="" className="grid content-start gap-6">
+          <div data-play="" suppressHydrationWarning className="grid content-start gap-6">
             <h2 className="ink font-display text-4xl sm:text-6xl">Try it on your own tickets first.</h2>
             <p className="max-w-[46ch] text-lg text-field-muted">
               Import your history, let the AI draft answers to 50 real tickets beside your team&apos;s replies, and decide from that. No card for {TRIAL_DAYS} days.
@@ -389,7 +389,7 @@ export default function Home() {
               <Link href="/calculator" className="btn btn-ghost-field">Compare your bill in detail</Link>
             </div>
           </div>
-          <div data-play="" className="grid content-start gap-5 rounded-[8px] bg-surface p-6 text-ink sm:p-8">
+          <div data-play="" suppressHydrationWarning className="grid content-start gap-5 rounded-[8px] bg-surface p-6 text-ink sm:p-8">
             <div className="grid gap-2">
               <h3 className="font-display text-2xl">Or become a design partner</h3>
               <p className="text-muted">

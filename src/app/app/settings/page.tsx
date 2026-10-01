@@ -178,7 +178,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
                 </div>
                 <p className="text-sm text-muted">
                   Yearly is {usd(PLAN.annualSeatPrice)} per seat a month, {usd(PLAN.annualSeatPrice * 12)} per seat a year, {annualSavingsPct}% less than
-                  monthly at {usd(PLAN.seatPrice)}. Same features and the same {PLAN.includedPerAgent} AI resolutions per seat each month.
+                  monthly at {usd(PLAN.seatPrice)}. Same features and the same {PLAN.includedPerAgent} AI answers per seat each month.
                 </p>
               </div>
             ) : (
@@ -243,14 +243,14 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
               <label className="flex items-start gap-2.5">
                 <input type="checkbox" name="aiOverageEnabled" defaultChecked={org.aiOverageEnabled} className="mt-1 size-4 accent-[var(--accent)]" />
                 <span>
-                  Keep answering after the allowance is used, at {usd(PLAN.overageRate, true)} per resolution
+                  Keep answering after the allowance is used, at {usd(PLAN.overageRate, true)} per answer
                   <span className="block text-sm text-muted">
                     Off by default. When off, the AI pauses and nothing extra is charged.{usage.trial && " Overage only applies once your team has a card on file."}
                   </span>
                 </span>
               </label>
               <label className="grid w-max gap-1">
-                <span className="label">Monthly overage limit (resolutions, blank for none)</span>
+                <span className="label">Monthly overage limit (AI answers, blank for none)</span>
                 <input
                   type="number"
                   min={0}

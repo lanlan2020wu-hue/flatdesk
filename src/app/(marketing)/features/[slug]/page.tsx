@@ -53,7 +53,6 @@ export default async function SellingPointPage({ params }: PageProps<"/features/
             <Link href="/features" className="transition-colors hover:text-ink">Product</Link>
             <span aria-hidden="true">/</span>
             {p.name}
-            {p.isNew && <span className="text-xs font-medium text-accent">New</span>}
           </p>
           <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-[2.6rem] sm:text-6xl">{p.headline}</h1>
           <p style={{ "--d": 2 } as React.CSSProperties} className="enter text-lg text-muted">{p.answer}</p>
@@ -64,12 +63,12 @@ export default async function SellingPointPage({ params }: PageProps<"/features/
             <Link href="/pricing" className="btn btn-secondary">See pricing</Link>
           </div>
         </div>
-        <div data-play="">
+        <div data-play="" suppressHydrationWarning>
           {SHOTS[p.slug]}
         </div>
       </section>
 
-      <section data-play="" aria-labelledby="how" className="grid gap-8">
+      <section data-play="" suppressHydrationWarning aria-labelledby="how" className="grid gap-8">
         <h2 id="how" className="ink font-display text-3xl sm:text-4xl">How it works</h2>
         <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {p.steps.map((s, i) => (
@@ -82,7 +81,7 @@ export default async function SellingPointPage({ params }: PageProps<"/features/
         </ol>
       </section>
 
-      <section data-play="" aria-labelledby="facts" className="grid gap-6 md:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">
+      <section data-play="" suppressHydrationWarning aria-labelledby="facts" className="grid gap-6 md:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">
         <h2 id="facts" className="ink font-display text-3xl">At a glance</h2>
         <ul className="grid gap-3">
           {p.facts.map((f, i) => (
@@ -95,7 +94,7 @@ export default async function SellingPointPage({ params }: PageProps<"/features/
       </section>
 
       {allRows && (
-        <section data-play="" aria-labelledby="costs" className="grid gap-6">
+        <section data-play="" suppressHydrationWarning aria-labelledby="costs" className="grid gap-6">
           <div className="grid max-w-2xl gap-3">
             <h2 id="costs" className="ink font-display text-3xl">What a team pays each month</h2>
             <p className="text-muted">
@@ -109,9 +108,9 @@ export default async function SellingPointPage({ params }: PageProps<"/features/
 
       <Faq items={p.faq} />
 
-      <section data-play="" aria-labelledby="more" className="grid gap-6">
-        <h2 id="more" className="ink font-display text-2xl">More reasons teams switch</h2>
-        <div className="grid gap-4 md:grid-cols-3">
+      <section data-play="" suppressHydrationWarning aria-labelledby="more" className="grid gap-6">
+        <h2 id="more" className="ink font-display text-2xl">Also in every seat</h2>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {others.map((o, i) => (
             <Link key={o.slug} href={`/features/${o.slug}`} style={{ "--i": i } as React.CSSProperties} className="lift card group flex flex-col gap-3 p-6">
               <FeatureIcon d={o.icon} />

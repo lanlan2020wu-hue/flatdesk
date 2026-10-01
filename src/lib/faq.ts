@@ -35,15 +35,15 @@ export const GENERAL_FAQ: QA[] = [
 export const BILLING_FAQ: QA[] = [
   {
     q: "Is there a free trial?",
-    a: `Yes, ${TRIAL_DAYS} days with every feature and no card, including ${PLAN.trialPerAgent} AI resolutions per agent for the trial (up to ${PLAN.trialPerAgent * PLAN.trialAgentCap} for the team). Add a card at any point to get the full ${PLAN.includedPerAgent} per agent a month; the first charge still waits until the trial ends.`,
+    a: `Yes, ${TRIAL_DAYS} days with every feature and no card, including ${PLAN.trialPerAgent} AI answers per agent for the trial (up to ${PLAN.trialPerAgent * PLAN.trialAgentCap} for the team). Add a card at any point to get the full ${PLAN.includedPerAgent} per agent a month; the first charge still waits until the trial ends.`,
   },
   {
     q: "Can viewers see tickets without paying for a seat?",
     a: "Yes. An admin can make any non-admin member a viewer in Settings. Viewers read every ticket and report but can't reply or change anything, and they aren't billed.",
   },
   {
-    q: "What counts as an AI resolution?",
-    a: "A conversation the AI finishes without your team. If the customer writes back, the AI answers up to 3 follow-ups in the same conversation, still as one resolution. If it hands the conversation to your team at any point, including when the customer asks for a person, it stops counting. Each conversation counts at most once.",
+    q: "What counts as an AI answer?",
+    a: "A conversation the AI finishes without your team (other help desks call this a resolution). If the customer writes back, the AI answers up to 3 follow-ups in the same conversation, still as one AI answer. If it hands the conversation to your team at any point, including when the customer asks for a person, it stops counting. Each conversation counts at most once.",
   },
   {
     q: "What happens when we use all the included resolutions?",
@@ -63,7 +63,7 @@ export const BILLING_FAQ: QA[] = [
   },
   {
     q: "Is there a discount for paying yearly?",
-    a: `Yes. Yearly billing is ${usd(PLAN.annualSeatPrice)} per agent per month, ${annualSavingsPct}% less than ${usd(PLAN.seatPrice)} month to month, charged as ${usd(PLAN.annualSeatPrice * 12)} per agent for the year. You get the same features and the same ${PLAN.includedPerAgent} AI resolutions per agent every month. Seats added mid-year are charged for the rest of the year; overage, if you turn it on, is billed monthly.`,
+    a: `Yes. Yearly billing is ${usd(PLAN.annualSeatPrice)} per agent per month, ${annualSavingsPct}% less than ${usd(PLAN.seatPrice)} month to month, charged as ${usd(PLAN.annualSeatPrice * 12)} per agent for the year. You get the same features and the same ${PLAN.includedPerAgent} AI answers per agent every month. Seats added mid-year are charged for the rest of the year; overage, if you turn it on, is billed monthly.`,
   },
   {
     q: "Can we take our data with us?",

@@ -4,7 +4,7 @@ import { CHECKED_ON, PLAN, usd } from "@/lib/pricing";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/ai-billing-changes-2026" },
-  title: "Zendesk and Fin (Intercom) AI billing changes in 2026",
+  title: "Zendesk and Fin (formerly Intercom) AI billing changes in 2026",
   description:
     "A dated, sourced timeline of the 2026 changes to AI resolution billing at Zendesk and Fin (formerly Intercom), and what to check on your own account.",
 };
@@ -115,7 +115,7 @@ export default function ChangesPage() {
         </ol>
       </section>
 
-      <section data-play="" className="grid gap-6">
+      <section data-play="" suppressHydrationWarning className="grid gap-6">
         <h2 className="ink font-display text-3xl">What to check on your account</h2>
         <dl className="grid gap-4">
           {CHECKS.map(([vendor, text, url]) => (
@@ -127,11 +127,11 @@ export default function ChangesPage() {
         </dl>
       </section>
 
-      <section data-play="" className="card relative grid gap-4 overflow-hidden border-accent/30 bg-accent-soft p-6 sm:p-8">
+      <section data-play="" suppressHydrationWarning className="card relative grid gap-4 overflow-hidden border-accent/30 bg-accent-soft p-6 sm:p-8">
         <h2 className="ink font-display text-3xl">How Flatdesk bills AI</h2>
         <p>
-          AI resolutions are part of the seat price: {PLAN.includedPerAgent} per agent per month, shared across the team, at{" "}
-          {usd(PLAN.seatPrice)} per agent a month ({usd(PLAN.annualSeatPrice)} billed yearly). At the limit the AI pauses. Overage at {usd(PLAN.overageRate, true)} per resolution exists only if
+          AI answers are part of the seat price: {PLAN.includedPerAgent} per agent per month, shared across the team, at{" "}
+          {usd(PLAN.seatPrice)} per agent a month ({usd(PLAN.annualSeatPrice)} billed yearly). At the limit the AI pauses. Overage at {usd(PLAN.overageRate, true)} per answer exists only if
           an admin turns it on.
         </p>
         <div className="flex flex-wrap gap-3">

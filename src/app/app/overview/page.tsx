@@ -145,7 +145,7 @@ export default async function OverviewPage() {
         </div>
       </Section>
 
-      <Section title="Everything else in your seat">
+      <Section title="More">
         <ul className="grid border-t border-line sm:grid-cols-2 lg:grid-cols-4">
           {[
             { href: "/app/receipts", title: "AI receipts", body: "Every AI answer itemized, refundable." },

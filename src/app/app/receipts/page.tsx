@@ -42,7 +42,6 @@ export default async function ReceiptsPage({ searchParams }: PageProps<"/app/rec
     <div className="grid max-w-5xl gap-8 px-4 py-6 md:px-8 md:py-8">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="grid gap-1.5">
-          <p className="eyebrow">Billing transparency</p>
           <h1 className="font-display text-3xl">AI receipts</h1>
           <p className="max-w-xl text-muted">
             Every answer the AI sent, itemized. Only counted lines use your allowance. If the AI got one wrong, refund it and it stops
@@ -81,7 +80,7 @@ export default async function ReceiptsPage({ searchParams }: PageProps<"/app/rec
             </figcaption>
             <div className="rule-dashed mb-2" />
             <Line label="Included this month" value={r.included.toLocaleString("en-US")} />
-            <Line label="Counted resolutions" value={r.counted.toLocaleString("en-US")} />
+            <Line label="Counted AI answers" value={r.counted.toLocaleString("en-US")} />
             <div className="my-1.5 h-1.5 overflow-hidden rounded-full bg-line" aria-hidden="true">
               <span className={`meter block h-full rounded-full ${pct >= 100 ? "bg-warn" : "bg-accent"}`} style={{ width: `${pct}%` }} />
             </div>

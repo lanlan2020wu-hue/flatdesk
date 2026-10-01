@@ -35,7 +35,7 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
     id: "pricing",
     title: "Flat rate",
     features: [
-      { id: "billing", title: "One flat price", body: "Seats times one price, with AI resolutions included. No tiers, no add-ons, and the seat count follows your team.", icon: I.card },
+      { id: "billing", title: "One flat price", body: "Seats times one price, with AI answers included. No tiers, no add-ons, and the seat count follows your team.", icon: I.card },
       { id: "cap", title: "A cap that's on by default", body: "The AI pauses at your included resolutions. Admins get an email at 80% and at 100%.", icon: I.cap },
       { id: "receipts", title: "AI receipts", body: "Every AI answer itemized, with the saved answers it used. Refund a wrong one and it stops counting.", icon: I.receipt, isNew: true },
     ],

@@ -26,7 +26,6 @@ function PointCard({ p, big = false }: { p: (typeof SELLING_POINTS)[number]; big
     <Link href={`/features/${p.slug}`} className={`lift card group grid content-start gap-3 ${big ? "border-accent/40 bg-accent-soft/40 p-6 sm:p-10" : "p-6 sm:p-8"}`}>
       <span className="flex items-center justify-between">
         <FeatureIcon d={p.icon} className={big ? "size-11 bg-accent-soft p-2.5" : undefined} />
-        {p.isNew && <span className="text-xs font-medium text-accent">New</span>}
       </span>
       <h3 className={`font-display ${big ? "text-3xl sm:text-4xl" : "text-2xl"}`}>{big ? p.headline : p.name}</h3>
       <p className={`text-muted ${big ? "max-w-[65ch] text-lg" : ""}`}>{big ? p.answer : p.short}</p>
@@ -47,7 +46,7 @@ export default function FeaturesPage() {
       </div>
 
       {CHAPTERS.map((c) => (
-        <section key={c.n} data-play="" aria-labelledby={`ch-${c.n}`} className="grid gap-6">
+        <section key={c.n} data-play="" suppressHydrationWarning aria-labelledby={`ch-${c.n}`} className="grid gap-6">
           <h2 id={`ch-${c.n}`} className="font-display text-2xl">{c.title}</h2>
           {c.lead && <PointCard p={c.lead} big />}
           {c.more.length > 0 && (
@@ -60,7 +59,7 @@ export default function FeaturesPage() {
         </section>
       ))}
 
-      <section data-play="" id="all" aria-labelledby="all-heading" className="grid scroll-mt-24 gap-10">
+      <section data-play="" suppressHydrationWarning id="all" aria-labelledby="all-heading" className="grid scroll-mt-24 gap-10">
         <h2 id="all-heading" className="ink font-display text-3xl sm:text-4xl">Included in every seat</h2>
         <div className="grid gap-x-10 gap-y-10 md:grid-cols-2 lg:grid-cols-3">
           {FEATURE_GROUPS.map((g) => (
@@ -73,7 +72,6 @@ export default function FeaturesPage() {
                     <span className="grid gap-0.5">
                       <span className="flex items-center gap-2 font-medium">
                         {f.title}
-                        {f.isNew && <span className="text-xs font-medium text-accent">New</span>}
                       </span>
                       <span className="text-sm text-muted">{f.body}</span>
                     </span>

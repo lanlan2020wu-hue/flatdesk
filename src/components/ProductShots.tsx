@@ -210,7 +210,7 @@ export function AiShot() {
 export function ReceiptShot() {
   const lines: [string, string, string, string][] = [
     ["#1042", "Can't reset my password", "Counted, included", "pill bg-accent-soft text-accent"],
-    ["#1038", "Where is my order?", "Not counted, handed to the team after the AI replied", "pill bg-surface-2 text-muted"],
+    ["#1038", "Where is my order?", "Not counted, handed off", "pill bg-surface-2 text-muted"],
     ["#1035", "Change billing email", "Refunded", "pill strike bg-surface-2 text-muted"],
   ];
   return (
@@ -303,7 +303,7 @@ export function PriceShot() {
     <div className="shot num grid gap-1 p-4 text-[12px]" aria-hidden="true">
       <span className="eyebrow mb-1 font-sans">Your invoice</span>
       <span className="flex justify-between"><span>8 agents × {usd(PLAN.seatPrice)}</span><span>{usd(8 * PLAN.seatPrice)}</span></span>
-      <span className="flex justify-between text-muted"><span>{8 * PLAN.includedPerAgent} AI resolutions</span><span>included</span></span>
+      <span className="flex justify-between text-muted"><span>{8 * PLAN.includedPerAgent} AI answers</span><span>included</span></span>
       <span className="flex justify-between text-muted"><span>Overage</span><span>off</span></span>
       <span className="mt-1 flex justify-between border-t border-line pt-1.5 font-medium"><span>Total</span><span>{usd(8 * PLAN.seatPrice)}</span></span>
     </div>

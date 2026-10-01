@@ -10,7 +10,7 @@ export default function WhyFlat({ headingLevel = "h3", leftOut = true }: { headi
   const H = headingLevel;
   return (
     <div className="grid gap-10">
-      <div data-play="" className="grid max-w-3xl gap-4">
+      <div data-play="" suppressHydrationWarning className="grid max-w-3xl gap-4">
         <H className="ink font-display text-3xl leading-tight">How this much fits in one seat, and what that doesn&apos;t cut.</H>
         <p className="max-w-[62ch] text-muted">
           A low flat price with this much in it can sound too good to be true. Here is where the difference comes from, what Flatdesk leaves out, and how to
@@ -18,7 +18,7 @@ export default function WhyFlat({ headingLevel = "h3", leftOut = true }: { headi
         </p>
       </div>
 
-      <ul data-play="" className="grid border-t border-ink/70 sm:grid-cols-2">
+      <ul data-play="" suppressHydrationWarning className="grid border-t border-ink/70 sm:grid-cols-2">
         {WHY_CHEAPER.map((r, i) => (
           <li
             key={r.title}
@@ -33,7 +33,7 @@ export default function WhyFlat({ headingLevel = "h3", leftOut = true }: { headi
 
       <div className={`grid gap-10 ${leftOut ? "lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16" : ""}`}>
         {leftOut && (
-        <div data-play="" className="grid content-start gap-3">
+        <div data-play="" suppressHydrationWarning className="grid content-start gap-3">
           <p className="font-medium">What Flatdesk doesn&apos;t do</p>
           <ul className="grid gap-2 text-sm text-muted">
             {LEFT_OUT.map((item) => (
@@ -46,7 +46,7 @@ export default function WhyFlat({ headingLevel = "h3", leftOut = true }: { headi
           <Link href="/compare" className="link w-max text-sm font-medium text-accent">Where other help desks are ahead</Link>
         </div>
         )}
-        <div data-play="" className="grid content-start gap-3">
+        <div data-play="" suppressHydrationWarning className="grid content-start gap-3">
           <p className="font-medium">Check it before the first charge</p>
           <ul className={`grid border-t border-line sm:grid-cols-2 ${leftOut ? "" : "lg:grid-cols-4"}`}>
             {CHECK_IT.map((c) => (

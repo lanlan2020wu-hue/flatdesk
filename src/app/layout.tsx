@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     template: "%s · Flatdesk",
   },
   description:
-    `${usd(PLAN.seatPrice)} per agent per month, or ${usd(PLAN.annualSeatPrice)} billed yearly. AI resolutions included and capped, so your support bill is the same every month.`,
+    `${usd(PLAN.seatPrice)} per agent per month, or ${usd(PLAN.annualSeatPrice)} billed yearly. AI answers included and capped, so your support bill is the same every month.`,
 };
 
 // Clerk is provided only by the routes that sign people in (AuthProvider), so

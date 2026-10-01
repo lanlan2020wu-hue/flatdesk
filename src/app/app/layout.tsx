@@ -14,7 +14,7 @@ import { getOnboarding } from "@/lib/onboarding";
 import { seatPriceFor, usd } from "@/lib/pricing";
 import { VIEWS, viewCounts } from "@/lib/tickets";
 
-export const metadata = { title: { default: "Inbox", template: "%s · Flatdesk" }, robots: { index: false } };
+export const metadata = { title: { default: "Inbox", template: "%s · Flatdesk" }, description: "Your Flatdesk workspace.", robots: { index: false } };
 
 function SideMeter({ label, used, of }: { label: string; used: number; of: number }) {
   return (
@@ -89,8 +89,8 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
               </NavLink>
             ))}
           </nav>
-          <nav className="grid gap-px" aria-label="Also included">
-            <p className="nav-group">Also included</p>
+          <nav className="grid gap-px" aria-label="Tools">
+            <p className="nav-group">Tools</p>
             <NavLink href="/app/receipts">AI receipts</NavLink>
             <NavLink href="/app/test-drive">AI test drive</NavLink>
             <NavLink href="/app/help">Help center</NavLink>

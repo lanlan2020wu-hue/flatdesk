@@ -6,14 +6,15 @@ import type { QA } from "@/lib/selling-points";
 import { PLAN, PRICE_PHRASE } from "@/lib/pricing";
 import { SITE } from "@/lib/site";
 
-export const DESCRIPTION = `Flatdesk is a help desk for teams of 3–15 agents: ${PRICE_PHRASE}, with ${PLAN.includedPerAgent} AI resolutions per agent included and capped, itemized AI receipts, evolving AI macros that are written from your replies, update from your team's edits and assign, tag or close tickets, and lossless import.`;
+export const DESCRIPTION = `Flatdesk is a help desk for teams of 3–15 agents: ${PRICE_PHRASE}, with ${PLAN.includedPerAgent} AI answers per agent included and capped, itemized AI receipts, evolving AI macros that are written from your replies, update from your team's edits and assign, tag or close tickets, and lossless import.`;
 
 // A page's openGraph replaces the layout's, image included, so every page
 // names its card: the site-wide one, or its own from /og/<kind>/<slug>.
 export function pageMeta({ title, description, path, image = "/opengraph-image" }: { title: string; description: string; path: string; image?: string }): Metadata {
   const IMAGE = { url: image, width: 1200, height: 630, alt: title };
   return {
-    title,
+    // Titles that already name Flatdesk skip the " · Flatdesk" suffix.
+    title: title.startsWith("Flatdesk") ? { absolute: title } : title,
     description,
     alternates: { canonical: path },
     openGraph: { title, description, url: path, siteName: "Flatdesk", type: "website", images: [IMAGE] },
