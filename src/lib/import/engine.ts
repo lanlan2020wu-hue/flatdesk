@@ -9,6 +9,7 @@ import { helpscout } from "./sources/helpscout";
 import { intercom } from "./sources/intercom";
 import { zendesk } from "./sources/zendesk";
 import { ATTACHMENTS_LINKED, type Adapter, type Attachment, type Ctx, type Kind, type Mapped, type Msg, type Phase, type Raw, type SourceId } from "./types";
+import { isUuid } from "@/lib/ids";
 
 // Runs imports in short steps so each fits in one serverless request: the
 // import page calls runStep() in a loop, and an import resumes where it
@@ -105,6 +106,7 @@ export async function startImport(opts: {
 }
 
 export async function cancelImport(orgId: string, id: string) {
+  if (!isUuid(id)) return;
   await db
     .update(imports)
     .set({ status: "cancelled", credentials: null, finishedAt: new Date(), updatedAt: new Date() })
@@ -120,6 +122,18 @@ export async function expireIdleImports(days = 7) {
     .where(and(eq(imports.status, "running"), lt(imports.updatedAt, new Date(Date.now() - days * 86_400_000))))
     .returning({ id: imports.id });
   return rows.length;
+}
+
+// Postgres refuses the NUL character in text and jsonb, and one in a single
+// record used to stop the whole import on every run. Old help desks do store
+// them, so they're dropped from everything a source returns.
+export function stripNul<T>(v: T): T {
+  if (typeof v === "string") return (v.includes("\0") ? v.replace(/\0/g, "") : v) as T;
+  if (Array.isArray(v)) return v.map(stripNul) as T;
+  if (v && typeof v === "object" && Object.getPrototypeOf(v) === Object.prototype) {
+    return Object.fromEntries(Object.entries(v).map(([k, x]) => [stripNul(k), stripNul(x)])) as T;
+  }
+  return v;
 }
 
 // Runs one step. Returns the job as it stands afterwards.
@@ -184,7 +198,8 @@ export async function runStep(orgId: string, id: string, opts: { budgetMs?: numb
       }
 
       if (!cursor.listed) {
-        const page = await phase.list(ctx, cursor.list);
+        const listed = await phase.list(ctx, cursor.list);
+        const page = { ...listed, records: listed.records.map((r) => ({ ...r, raw: stripNul(r.raw) })) };
         count(phase.kind, "found", page.records.length);
         if (page.records.length) {
           // Store every raw record first: the archive is complete even if mapping fails later.
@@ -222,19 +237,22 @@ export async function runStep(orgId: string, id: string, opts: { budgetMs?: numb
       console.error("import step failed", job.id, e);
       Object.assign(patch, {
         status: "failed",
-        error: e instanceof ApiError ? e.message : `Something went wrong: ${(e as Error).message}`,
+        // Database errors carry the query's values (customer emails, message
+        // text), so only the source's own errors are shown on the page.
+        error: e instanceof ApiError ? e.message : "Something went wrong on our side. You can start the import again; nothing is added twice.",
         finishedAt: new Date(),
         credentials: null,
       });
     }
   }
 
+  // A Cancel clicked while this step ran wins over whatever the step ended with.
   const [after] = await db
     .update(imports)
     .set({ ...patch, phase: adapter.phases[phaseIdx]?.kind ?? job.phase, cursor, counts, notes: [...notes], lockedUntil: null, updatedAt: new Date() })
-    .where(eq(imports.id, job.id))
+    .where(and(eq(imports.id, job.id), eq(imports.status, "running")))
     .returning();
-  return after;
+  return after ?? db.query.imports.findFirst({ where: eq(imports.id, job.id) });
 }
 
 // Runs fn over items, a few at a time. After a failure no new items start,
@@ -268,7 +286,7 @@ async function processRecord(job: Job, adapter: Adapter, phase: Phase, ctx: Ctx,
   let full = raw;
   let result: { mappedId: string | null; imported: boolean; issues: string[]; label: string };
   try {
-    if (phase.hydrate) full = await phase.hydrate(ctx, raw);
+    if (phase.hydrate) full = stripNul(await phase.hydrate(ctx, raw));
     const mapped = await phase.map(full, ctx);
     const prev = await db.query.importRecords.findFirst({ columns: { mappedId: true }, where });
     const written = await write(job, adapter, externalId, mapped, prev?.mappedId ?? null);

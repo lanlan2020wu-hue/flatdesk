@@ -194,7 +194,7 @@ export async function rewriteText(orgId: string, userId: string, ticketId: strin
   const input = text.trim();
   if (!input) throw new CopilotError("Write something first, then the copilot can rewrite it.");
   if (input.length > 8000) throw new CopilotError("That's too long to rewrite in one go. Try a shorter part.");
-  if (!(style in REWRITE_STYLES)) throw new CopilotError("Unknown rewrite style.");
+  if (!Object.hasOwn(REWRITE_STYLES, style)) throw new CopilotError("Unknown rewrite style.");
   await checkRoom(orgId);
   // Only this team's tickets are linked to the event.
   const ticket = ticketId ? await db.query.tickets.findFirst({ where: and(eq(tickets.orgId, orgId), eq(tickets.id, ticketId)), columns: { id: true } }) : null;

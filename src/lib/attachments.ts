@@ -1,5 +1,6 @@
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { isUuid } from "@/lib/ids";
 
 // Files on tickets: what customers attach to emails, and what agents attach to
 // replies. Bytes live in Postgres (the attachments table), so a download is
@@ -62,7 +63,7 @@ export async function attachmentsByMessage(orgId: string, messageIds: string[]) 
 }
 
 export async function loadAttachment(orgId: string, id: string, ticketId?: string) {
-  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+  if (!isUuid(id)) return null;
   const where = [eq(attachments.orgId, orgId), eq(attachments.id, id)];
   if (ticketId) where.push(eq(attachments.ticketId, ticketId));
   const [row] = await db.select().from(attachments).where(and(...where));

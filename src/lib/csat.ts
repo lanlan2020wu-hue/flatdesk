@@ -2,6 +2,7 @@ import { and, eq, gte, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { RATINGS, type Rating } from "@/lib/csat-ratings";
 import { SITE } from "@/lib/site";
+import { isUuid } from "@/lib/ids";
 
 // One-click satisfaction ratings. Every reply email (an agent's or the AI's)
 // ends with three links; a click rates that reply. The rating page records the
@@ -40,7 +41,7 @@ export function replyHtml(body: string, messageId: string | null) {
 // The reply a rating link points at, if it can be rated: a sent reply from an
 // agent or the AI.
 export async function ratableReply(messageId: string) {
-  if (!/^[0-9a-f-]{36}$/i.test(messageId)) return null;
+  if (!isUuid(messageId)) return null;
   const [row] = await db
     .select({ message: schema.messages, ticket: schema.tickets, org: schema.orgs })
     .from(schema.messages)
@@ -85,7 +86,7 @@ export async function recordRating(messageId: string, rating: Rating, opts: { ch
 
 export async function saveComment(messageId: string, comment: string) {
   const text = comment.trim().slice(0, 2000);
-  if (!text) return;
+  if (!text || !isUuid(messageId)) return;
   await db.update(schema.csatRatings).set({ comment: text }).where(eq(schema.csatRatings.messageId, messageId));
 }
 

@@ -18,6 +18,17 @@ export function isView(v: unknown): v is View {
   return VIEWS.some((x) => x.id === v);
 }
 
+// Ticket numbers come from URLs and email addresses. Anything that isn't a
+// positive whole number Postgres can store as an integer is no ticket, rather
+// than a query that throws.
+const MAX_TICKET_NUMBER = 2_147_483_647;
+export function parseTicketNumber(raw: string | number | null | undefined): number | null {
+  const s = String(raw ?? "").trim();
+  if (!/^\d{1,10}$/.test(s)) return null;
+  const n = Number(s);
+  return n >= 1 && n <= MAX_TICKET_NUMBER ? n : null;
+}
+
 export async function listTickets(orgId: string, userId: string, view: View) {
   const where = [eq(tickets.orgId, orgId)];
   if (view === "mine") where.push(eq(tickets.assigneeId, userId), inArray(tickets.status, ["open", "pending"]));
@@ -162,12 +173,15 @@ export async function createTicket(input: NewTicket) {
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
-// v1 rules: the first enabled rule whose tag is on the ticket decides the assignee.
+// v1 rules: the first enabled rule whose tag is on the ticket decides the
+// assignee. A rule pointing at someone who is now a viewer is skipped, since
+// viewers can't reply to the tickets it would give them.
 async function ruleAssignee(tx: Tx | typeof db, orgId: string, tags: string[]): Promise<string | null> {
   if (tags.length === 0) return null;
   const [rule] = await tx
     .select({ assignTo: rules.assignTo })
     .from(rules)
+    .innerJoin(agents, and(eq(agents.orgId, rules.orgId), eq(agents.userId, rules.assignTo), eq(agents.viewer, false)))
     .where(and(eq(rules.orgId, orgId), eq(rules.enabled, true), inArray(rules.ifTag, tags)))
     .orderBy(asc(rules.createdAt))
     .limit(1);

@@ -2,6 +2,7 @@ import { and, desc, eq, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { ADAPTERS } from "./engine";
 import type { Kind } from "./types";
+import { isUuid } from "@/lib/ids";
 
 const { imports, importRecords } = schema;
 
@@ -29,7 +30,7 @@ export async function listImports(orgId: string) {
 }
 
 export async function getImport(orgId: string, id: string) {
-  if (!/^[0-9a-f-]{36}$/i.test(id)) return null;
+  if (!isUuid(id)) return null;
   return (await db.query.imports.findFirst({ where: and(eq(imports.orgId, orgId), eq(imports.id, id)) })) ?? null;
 }
 

@@ -139,7 +139,7 @@ export default async function MacrosPage() {
             <label className="grid gap-1.5 font-medium" htmlFor="ifTag">If tagged<input id="ifTag" name="ifTag" required placeholder="billing" className={`${field} font-normal`} /></label>
             <label className="grid gap-1.5 font-medium" htmlFor="assignTo">assign to
               <select id="assignTo" name="assignTo" required className={`${field} font-normal`}>
-                {agents.map((a) => <option key={a.userId} value={a.userId}>{a.name}</option>)}
+                {team.map((a) => <option key={a.userId} value={a.userId}>{a.name}</option>)}
               </select>
             </label>
             <button className="btn btn-primary">Add rule</button>
