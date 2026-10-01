@@ -35,7 +35,7 @@ export default function AuthShell({ title, children }: { title: string; children
             ))}
           </div>
           <p className="text-sm text-muted">
-            <Link href="/#features" className="link">Take the product tour</Link> or{" "}
+            <Link href="/features" className="link">Take the product tour</Link> or{" "}
             <Link href="/calculator" className="link">compare your current bill</Link>.
           </p>
         </div>
