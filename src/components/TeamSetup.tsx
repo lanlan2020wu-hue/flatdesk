@@ -68,7 +68,7 @@ export default function TeamSetup() {
           onChange={(e) => setName(e.target.value)}
           className="field font-normal"
         />
-        <span className="font-normal text-muted">Usually your company name. You can change it later in Settings.</span>
+        <span className="font-normal text-muted">This is usually your company name. You can change it later in Settings.</span>
       </label>
       <button type="submit" disabled={state === "creating" || !value.trim()} className="btn btn-primary w-max">
         {state === "creating" ? "Creating your team…" : "Continue"}

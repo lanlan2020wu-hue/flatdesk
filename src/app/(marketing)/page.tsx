@@ -143,7 +143,7 @@ export default function Home() {
               </a>
             </div>
             <p style={{ "--d": 3 } as React.CSSProperties} className="enter text-sm text-field-muted">
-              {TRIAL_DAYS} days free with every feature. No card to start.
+              The trial is free for {TRIAL_DAYS} days, and you don&apos;t need a card to start.
             </p>
           </div>
           <div className="enter-fade">
@@ -271,8 +271,8 @@ export default function Home() {
           {/* The first ask after the strongest chapter, so nobody has to scroll to the close to act on it. */}
           <div data-play="" suppressHydrationWarning className="flex flex-wrap items-center justify-between gap-4 rounded-[8px] bg-surface-2 px-5 py-6 sm:px-8">
             <p className="max-w-[52ch] text-lg">
-              <span className="font-semibold">See it write macros from your own replies.</span>{" "}
-              <span className="text-muted">Import your history in the trial and the suggestions show up the same day.</span>
+              <span className="font-semibold">Watch it turn your team&apos;s replies into macros.</span>{" "}
+              <span className="text-muted">Import your old tickets during the trial and you&apos;ll see macro suggestions the same day.</span>
             </p>
             <Link href="/sign-up" className="btn btn-primary">Start your free trial</Link>
           </div>
@@ -401,7 +401,7 @@ export default function Home() {
             <summary className="flex cursor-pointer list-none items-center justify-between gap-4 [&::-webkit-details-marker]:hidden">
               <span className="grid gap-1">
                 <span className="font-display text-2xl">Moving a small team off Zendesk or Freshdesk?</span>
-                <span className="text-muted">Apply as a design partner for half off and an import we run for you.</span>
+                <span className="text-muted">Apply to be a design partner. You get half off, and we run the import for you.</span>
               </span>
               <span aria-hidden="true" className="text-2xl text-muted transition-transform group-open:rotate-45">+</span>
             </summary>
