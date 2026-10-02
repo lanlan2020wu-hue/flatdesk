@@ -63,8 +63,11 @@ export default async function MacrosPage() {
 
         <SuggestionsSection suggestions={suggestions} aiOn={aiConfigured()} />
 
+        {/* Saved macros as one ruled list; each row opens to edit. */}
+        {macros.length > 0 && (
+        <div className="card divide-y divide-line overflow-hidden">
         {macros.map((m) => (
-          <details key={m.id} className="card overflow-hidden">
+          <details key={m.id}>
             <summary className="flex cursor-pointer items-center justify-between gap-3 px-5 py-4 font-medium transition-colors hover:bg-surface-2/60">
               <span className="flex min-w-0 items-center gap-2">
                 <span className="truncate">{m.name}</span>
@@ -96,16 +99,20 @@ export default async function MacrosPage() {
             </form>
           </details>
         ))}
-
-        <div className="rounded-2xl border border-dashed border-line-strong">
-          <p className="px-5 pt-4 font-medium">New macro</p>
-          <MacroForm agents={team} />
         </div>
+        )}
+
+        <details className="grid gap-3">
+          <summary className="btn btn-secondary w-max cursor-pointer list-none">New macro</summary>
+          <div className="card mt-3">
+            <MacroForm agents={team} />
+          </div>
+        </details>
       </section>
 
-      <section className="grid gap-4">
+      <section className="grid gap-4 border-t-2 border-ink pt-4">
         <div className="grid gap-1">
-          <h2 className="font-display text-3xl">Assignment rules</h2>
+          <h2 className="text-lg font-semibold">Assignment rules</h2>
           <p className="text-sm text-muted">When an unassigned ticket gets a tag, assign it to someone. The oldest matching rule wins.{s.role !== "admin" && " Only admins can change rules."}</p>
         </div>
 
@@ -135,7 +142,7 @@ export default async function MacrosPage() {
         )}
 
         {s.role === "admin" && (
-          <form action={saveRuleAction} className="card flex flex-wrap items-end gap-3 p-5 text-sm">
+          <form action={saveRuleAction} className="flex flex-wrap items-end gap-3 text-sm">
             <label className="grid gap-1.5 font-medium" htmlFor="ifTag">If tagged<input id="ifTag" name="ifTag" required placeholder="billing" className={`${field} font-normal`} /></label>
             <label className="grid gap-1.5 font-medium" htmlFor="assignTo">assign to
               <select id="assignTo" name="assignTo" required className={`${field} font-normal`}>

@@ -55,14 +55,8 @@ export function SuggestionCard({ s, aiOn }: { s: Suggestion; aiOn: boolean }) {
 }
 
 export function SuggestionsSection({ suggestions, aiOn }: { suggestions: Suggestion[]; aiOn: boolean }) {
-  if (!suggestions.length) {
-    return (
-      <p className="flex items-start gap-2 rounded-xl border border-dashed border-line-strong px-4 py-3 text-sm text-muted">
-        <Spark className="mt-0.5 size-4 shrink-0 text-accent" />
-        When your team sends the same answer on 5 tickets, Flatdesk identifies it and the AI writes it up here as a ready-made macro.
-      </p>
-    );
-  }
+  // Nothing found yet: the page intro already says how macros get found.
+  if (!suggestions.length) return null;
   return (
     <div className="grid gap-3 rounded-2xl bg-accent-soft/60 p-4 sm:p-5">
       <div className="grid gap-1">

@@ -35,6 +35,26 @@ export default function CopilotSummary({ ticketId, initial, stale, disabled }: {
       } else setError(r.error);
     });
 
+  // Before the first summary this is just a button, not a card that explains itself.
+  if (!summary) {
+    if (disabled) return null;
+    return (
+      <div className="flex flex-wrap items-center gap-3 text-sm">
+        <button
+          type="button"
+          onClick={run}
+          disabled={pending}
+          title="The copilot reads the whole conversation and tells you what the customer wants, where it stands and what to do next."
+          className="btn btn-secondary btn-sm text-accent"
+        >
+          <CopilotMark />
+          {pending ? "Reading…" : "Summarize"}
+        </button>
+        {error && <p role="alert" className="text-warn">{error}</p>}
+      </div>
+    );
+  }
+
   return (
     <section aria-labelledby="copilot-summary" className="grid gap-3 rounded-2xl border border-accent/25 bg-accent-soft/60 p-4 text-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -42,31 +62,27 @@ export default function CopilotSummary({ ticketId, initial, stale, disabled }: {
           <CopilotMark />
           Copilot summary
         </h2>
-        {!disabled && (!summary || isStale) && (
+        {!disabled && isStale && (
           <button type="button" onClick={run} disabled={pending} className="btn btn-secondary btn-sm">
-            {pending ? "Reading…" : summary ? "Update" : "Summarize"}
+            {pending ? "Reading…" : "Update"}
           </button>
         )}
       </div>
-      {summary ? (
-        <div aria-busy={pending} className={`grid gap-2 ${pending ? "opacity-60" : ""}`}>
-          <ul className="grid gap-1.5">
-            {summary.points.map((p) => (
-              <li key={p} className="flex gap-2">
-                <span aria-hidden="true" className="mt-2 size-1 shrink-0 rounded-full bg-accent" />
-                <span>{p}</span>
-              </li>
-            ))}
-          </ul>
-          <p className="flex flex-wrap items-center gap-2 border-t border-accent/15 pt-2">
-            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${MOOD[summary.mood]?.tone ?? ""}`}>{MOOD[summary.mood]?.label ?? summary.mood}</span>
-            <span className="text-muted">Next: <span className="text-ink">{summary.next}</span></span>
-          </p>
-          {isStale && <p className="text-xs text-muted">There are new messages since this summary.</p>}
-        </div>
-      ) : (
-        <p className="text-muted">The copilot reads the whole conversation and tells you what the customer wants, where it stands and what to do next.</p>
-      )}
+      <div aria-busy={pending} className={`grid gap-2 ${pending ? "opacity-60" : ""}`}>
+        <ul className="grid gap-1.5">
+          {summary.points.map((p) => (
+            <li key={p} className="flex gap-2">
+              <span aria-hidden="true" className="mt-2 size-1 shrink-0 rounded-full bg-accent" />
+              <span>{p}</span>
+            </li>
+          ))}
+        </ul>
+        <p className="flex flex-wrap items-center gap-2 border-t border-accent/15 pt-2">
+          <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${MOOD[summary.mood]?.tone ?? ""}`}>{MOOD[summary.mood]?.label ?? summary.mood}</span>
+          <span className="text-muted">Next: <span className="text-ink">{summary.next}</span></span>
+        </p>
+        {isStale && <p className="text-xs text-muted">There are new messages since this summary.</p>}
+      </div>
       {error && <p role="alert" className="text-warn">{error}</p>}
     </section>
   );

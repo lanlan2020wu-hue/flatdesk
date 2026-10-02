@@ -23,14 +23,16 @@ export default async function HelpCenterAdmin({ searchParams }: PageProps<"/app/
   return (
     <div className="grid max-w-3xl gap-12 px-4 py-6 md:px-8 md:py-8">
       <section className="grid gap-4">
-        <div className="grid gap-1">
-          <h1 className="font-display text-3xl">Help center</h1>
-          <p className="text-sm text-muted">
-            Articles your customers can search on their own. The AI reads published articles too, and links to them in its answers.
-          </p>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="grid max-w-xl gap-1">
+            <h1 className="font-display text-3xl">Help center</h1>
+            <p className="text-sm text-muted">
+              Articles your customers can search on their own. The AI reads published articles too, and links to them in its answers.
+            </p>
+          </div>
+          {!s.viewer && <Link href="/app/help/new" className="btn btn-primary">New article</Link>}
         </div>
-        {!s.viewer && <Link href="/app/help/new" className="btn btn-primary w-max">New article</Link>}
-        <p className="card px-5 py-3.5 text-sm">
+        <p className="text-sm">
           {live === 0 ? "Nothing is published yet. Your help center is" : `${live} published ${live === 1 ? "article" : "articles"} at`}{" "}
           <a href={url} target="_blank" rel="noopener" className="link font-medium text-accent">{url.replace(/^https?:\/\//, "")}</a>
         </p>
@@ -53,18 +55,18 @@ export default async function HelpCenterAdmin({ searchParams }: PageProps<"/app/
             ))}
           </ul>
         ) : (
-          <div className="rounded-2xl border border-dashed border-line-strong px-5 py-4 text-sm text-muted">
+          <div className="text-sm text-muted">
             <p className="font-medium text-ink">Start with the questions you answer most.</p>
-            <p className="mt-1">
+            <p className="mt-1 max-w-xl">
               Your macros are a good place to start, since each is an answer your team already sends. Shipping, refunds, password resets and plan changes are common first articles.
             </p>
           </div>
         )}
       </section>
 
-      <section className="grid gap-4">
-        <h2 className="font-display text-2xl">Address</h2>
-        <form action={saveHelpSlugAction} className="card grid gap-3 p-5 text-sm">
+      <section className="grid gap-4 border-t border-line pt-6">
+        <h2 className="text-lg font-semibold">Address</h2>
+        <form action={saveHelpSlugAction} className="grid gap-3 text-sm">
           <label htmlFor="helpSlug" className="font-medium">Your help center lives at</label>
           <div className="flex flex-wrap items-center gap-x-1 gap-y-2">
             <span className="text-muted">{host}/help/</span>

@@ -21,7 +21,6 @@ export default async function ImportPage() {
   return (
     <div className="grid max-w-3xl gap-6 px-4 py-6 md:px-8 md:py-8">
       <header className="grid gap-2">
-        <p className="eyebrow">Workspace</p>
         <h1 className="font-display text-3xl">Bring your help desk with you</h1>
         <p className="text-muted">
           Flatdesk copies everything it can read and keeps the original of every record. Anything without a place in Flatdesk yet is listed in a report. Your old help desk isn&apos;t changed.
@@ -31,14 +30,11 @@ export default async function ImportPage() {
       {s.role !== "admin" ? (
         <p className="card p-5 text-muted">Ask an admin on your team to run the import.</p>
       ) : (
-        <ul className="grid gap-3 sm:grid-cols-2">
+        <ul className="card divide-y divide-line overflow-hidden">
           {Object.values(ADAPTERS).map((a) => (
             <li key={a.id}>
-              <Link href={`/app/import/new/${a.id}`} className="card group grid h-full gap-2 p-5 transition-shadow hover:shadow-md">
-                <span className="flex items-center justify-between gap-2">
-                  <span className="font-medium">{a.name}</span>
-                  <span aria-hidden="true" className="text-muted transition-transform group-hover:translate-x-0.5">→</span>
-                </span>
+              <Link href={`/app/import/new/${a.id}`} className="group grid gap-1 px-5 py-4 transition-colors hover:bg-surface-2/60">
+                <span className="font-medium group-hover:text-accent">{a.name}</span>
                 <span className="text-sm text-muted">{WHAT[a.id]}</span>
               </Link>
             </li>
