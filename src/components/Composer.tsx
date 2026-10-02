@@ -163,22 +163,26 @@ export default function Composer({
             {macros.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
           </select>
         )}
+        {/* One copilot control at a time: draft into an empty box, rewrite what's there. */}
         {copilot && (
           <span className="flex flex-wrap items-center gap-2 sm:ml-auto">
-            <button type="button" onClick={draft} disabled={thinking} className="btn btn-secondary btn-sm text-accent">
-              <CopilotMark />
-              Draft reply
-            </button>
-            <select
-              aria-label="Rewrite with the copilot"
-              className="field field-sm w-auto"
-              value=""
-              disabled={thinking || !body.trim()}
-              onChange={(e) => e.target.value && rewrite(e.target.value as RewriteStyle)}
-            >
-              <option value="">Rewrite…</option>
-              {(Object.keys(REWRITE_LABEL) as RewriteStyle[]).map((k) => <option key={k} value={k}>{REWRITE_LABEL[k]}</option>)}
-            </select>
+            {body.trim() ? (
+              <select
+                aria-label="Rewrite with the copilot"
+                className="field field-sm w-auto"
+                value=""
+                disabled={thinking}
+                onChange={(e) => e.target.value && rewrite(e.target.value as RewriteStyle)}
+              >
+                <option value="">Rewrite…</option>
+                {(Object.keys(REWRITE_LABEL) as RewriteStyle[]).map((k) => <option key={k} value={k}>{REWRITE_LABEL[k]}</option>)}
+              </select>
+            ) : (
+              <button type="button" onClick={draft} disabled={thinking} className="btn btn-secondary btn-sm text-accent">
+                <CopilotMark />
+                Draft reply
+              </button>
+            )}
           </span>
         )}
       </div>
@@ -188,7 +192,7 @@ export default function Composer({
           <span className="min-w-0 flex-1">
             This looks like <strong className="font-medium">{suggested.name}</strong>, one of your macros.
           </span>
-          <button type="button" onClick={() => applyMacro(suggested.id)} className="btn btn-primary btn-sm">Use macro</button>
+          <button type="button" onClick={() => applyMacro(suggested.id)} className="btn btn-secondary btn-sm">Use macro</button>
           <button type="button" onClick={() => setUsedSuggestion(true)} className="link px-1 text-muted">Dismiss</button>
         </p>
       )}

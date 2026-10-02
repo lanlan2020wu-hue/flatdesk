@@ -11,7 +11,7 @@ import { db, schema } from "@/db";
 import { attachmentsByMessage, formatBytes } from "@/lib/attachments";
 import { requireSession } from "@/lib/auth";
 import { RATING_LABEL, ratingsForTicket } from "@/lib/csat";
-import { STATUS_STYLE, timeAgo } from "@/lib/format";
+import { timeAgo } from "@/lib/format";
 import { aiConfigured } from "@/lib/ai";
 import { cachedSummary } from "@/lib/copilot";
 import { identifyMacro, repeatPrompt } from "@/lib/macro-suggestions";
@@ -79,15 +79,14 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
             Inbox
           </Link>
           <h1 className="font-display text-3xl sm:text-4xl">{ticket.subject}</h1>
+          {/* Status, assignee and the customer live in the rail; the header only says what the rail doesn't. */}
           <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
             <span className="num">#{ticket.number}</span>
-            <span className="chip capitalize">{ticket.channel}</span>
+            <span className="capitalize">· {ticket.channel}</span>
             {ticket.channel === "chat" && (
               <span className="chip" title="Chat visitors type their own email address; nothing checks it belongs to them.">Email not verified</span>
             )}
-            <span className={`capitalize ${STATUS_STYLE[ticket.status]}`}>{ticket.status}</span>
             <SlaBadge state={sla} hours={org?.businessHours ?? null} />
-            <span>· {customer.name || customer.email}</span>
           </p>
         </header>
 
@@ -177,7 +176,7 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
 
       <aside className="grid content-start gap-5 self-start border-t border-line pt-5 text-sm xl:sticky xl:top-8 xl:border-t-0 xl:border-l xl:pt-0 xl:pl-6">
         <section className="grid gap-2">
-          <h2 className={heading}>Customer</h2>
+          <h2 className="sr-only">Customer</h2>
           <div className="flex items-center gap-3">
             <Avatar name={customer.name || customer.email} className="size-10 text-sm" />
             <div className="min-w-0">
@@ -198,7 +197,8 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
         </section>
 
         <fieldset disabled={s.viewer} className="contents">
-        <form key={`status-${ticket.status}`} action={updateTicketAction} className="grid gap-1.5 border-t border-line pt-4">
+        <div className="grid grid-cols-2 gap-3 border-t border-line pt-4">
+        <form key={`status-${ticket.status}`} action={updateTicketAction} className="grid gap-1.5">
           <input type="hidden" name="ticketId" value={ticket.id} />
           <input type="hidden" name="number" value={ticket.number} />
           <label htmlFor="status" className={heading}>Status</label>
@@ -219,6 +219,7 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
             {agents.filter((a) => !a.viewer || a.userId === ticket.assigneeId).map((a) => <option key={a.userId} value={a.userId}>{a.userId === s.userId ? `${a.name} (me)` : a.name}</option>)}
           </AutoSubmitSelect>
         </form>
+        </div>
 
         <form key={`tags-${ticket.tags.join()}`} action={updateTicketAction} className="grid gap-1.5">
           <input type="hidden" name="ticketId" value={ticket.id} />
@@ -232,9 +233,12 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
         </fieldset>
 
         {fieldEntries.length > 0 && (
-          <section className="grid gap-2 border-t border-line pt-4">
-            <h2 className={heading}>{ticket.source ? "Original fields" : "Fields"}</h2>
-            <dl className="grid gap-2">
+          <details className="group grid gap-2 border-t border-line pt-4">
+            <summary className={`${heading} flex cursor-pointer list-none items-center justify-between`}>
+              {ticket.source ? "Original fields" : "Fields"}
+              <span className="num text-xs text-muted group-open:hidden">{fieldEntries.length}</span>
+            </summary>
+            <dl className="mt-2 grid gap-2">
               {fieldEntries.map(([k, v]) => (
                 <div key={k} className="grid gap-0.5">
                   <dt className="text-xs text-muted">{k}</dt>
@@ -242,7 +246,7 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
                 </div>
               ))}
             </dl>
-          </section>
+          </details>
         )}
 
         <section className="grid gap-1 border-t border-line pt-4 text-muted">
