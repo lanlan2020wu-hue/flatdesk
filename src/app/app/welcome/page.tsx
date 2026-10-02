@@ -333,7 +333,7 @@ export default async function WelcomePage({ searchParams }: PageProps<"/app/welc
               <a href={`/chat/${org.widgetKey}`} target="_blank" rel="noreferrer" className="link text-accent">
                 Open your chat page
               </a>{" "}
-              <span className="text-muted">and ask a question. If your notes cover it, the AI replies in the chat.</span>
+              <span className="text-muted">and ask a question. If your macros or the facts you gave the AI cover it, the AI replies in the chat.</span>
             </p>
             {canSendTest && org.supportEmail && (
               <div className="grid gap-2">

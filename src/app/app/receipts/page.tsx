@@ -1,4 +1,5 @@
 import Link from "next/link";
+import HowItWorks from "@/components/HowItWorks";
 import { requireOpenPage } from "@/lib/auth";
 import { monthKey } from "@/lib/ai";
 import { PLAN, usd } from "@/lib/pricing";
@@ -63,6 +64,19 @@ export default async function ReceiptsPage({ searchParams }: PageProps<"/app/rec
           </a>
         </div>
       </header>
+
+      <HowItWorks
+        title="How AI receipts work"
+        open={r.lines.length === 0}
+        summary={`Your plan includes ${PLAN.includedPerAgent} AI answers per agent each month, shared by the team. This page shows where each one went, like an itemized bill.`}
+        steps={[
+          { title: "The AI picks up a new ticket", body: "It replies to new email and chat tickets when your macros, help articles or the facts you gave it in Settings cover the question." },
+          { title: "A line is added here", body: "Every ticket the AI touched gets a line, with the macros and articles it used." },
+          { title: "Only finished answers count", body: "If the AI hands a ticket to your team, before or after replying, that line doesn't count. Only answers that settle the question without your team use the allowance." },
+          { title: "Refund a wrong answer", body: "If the AI got one wrong, an admin clicks Refund and reopen. It stops counting and the ticket goes back to your team as open." },
+        ]}
+        example="a customer asks for your opening hours and the AI answers from the facts you gave it. That's one counted line. Another customer asks to cancel their account and the AI hands it to your team. That line is free."
+      />
 
       {error && <p role="alert" className="rounded-lg border border-warn/40 bg-warn-soft px-4 py-3 text-sm text-warn">{error}</p>}
       {refunded && !error && (

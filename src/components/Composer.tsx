@@ -154,12 +154,12 @@ export default function Composer({
       <div className="flex flex-wrap items-center gap-3 text-sm">
         <div role="radiogroup" aria-label="Message type" className="flex gap-0.5 rounded-lg bg-surface-2 p-0.5">
           <button type="button" role="radio" aria-checked={!internal} onClick={() => setInternal(false)} className={`rounded-md px-3 py-1 transition-colors ${!internal ? "bg-surface font-medium shadow-sm" : "text-muted hover:text-ink"}`}>Reply</button>
-          <button type="button" role="radio" aria-checked={internal} onClick={() => setInternal(true)} className={`rounded-md px-3 py-1 transition-colors ${internal ? "bg-surface font-medium text-warn shadow-sm" : "text-muted hover:text-ink"}`}>Internal note</button>
+          <button type="button" role="radio" aria-checked={internal} title="Only your team sees internal notes" onClick={() => setInternal(true)} className={`rounded-md px-3 py-1 transition-colors ${internal ? "bg-surface font-medium text-warn shadow-sm" : "text-muted hover:text-ink"}`}>Internal note</button>
         </div>
         {internal && <input type="hidden" name="internal" value="on" />}
         {macros.length > 0 && (
           <select aria-label="Insert macro" className="field field-sm w-auto" value="" onChange={(e) => applyMacro(e.target.value)}>
-            <option value="">Insert macro…</option>
+            <option value="">Insert saved reply (macro)…</option>
             {macros.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
           </select>
         )}
@@ -190,7 +190,8 @@ export default function Composer({
         <p className="flex flex-wrap items-center gap-2 rounded-lg bg-accent-soft px-3 py-2 text-sm">
           <CopilotMark className="size-4 shrink-0 text-accent" />
           <span className="min-w-0 flex-1">
-            This looks like <strong className="font-medium">{suggested.name}</strong>, one of your macros.
+            The customer seems to be asking what your <strong className="font-medium">{suggested.name}</strong> macro answers.{" "}
+            {suggested.sendNow ? "Using it sends the reply right away, unless it has blanks to fill." : "Use it to fill in the reply, then check it and send."}
           </span>
           <button type="button" onClick={() => applyMacro(suggested.id)} className="btn btn-secondary btn-sm">Use macro</button>
           <button type="button" onClick={() => setUsedSuggestion(true)} className="link px-1 text-muted">Dismiss</button>

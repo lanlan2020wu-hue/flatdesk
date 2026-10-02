@@ -28,9 +28,9 @@ const TERMS = [
 ];
 
 const MACRO_STEPS = [
-  { title: "Flatdesk notices repeated replies", body: "When your team sends the same answer on 5 tickets and no macro covers it, Flatdesk flags it. Imported tickets count, so this works on day one." },
+  { title: "Flatdesk notices repeated replies", body: "Your team answers customers as usual. When roughly the same answer has gone out on 5 tickets and no macro covers it, Flatdesk flags it. Imported tickets count, so this works on day one." },
   { title: "The AI drafts a macro", body: "It reads those replies and writes one macro, with blanks for things like the customer's name or order number." },
-  { title: "It shows up on new tickets", body: "Save it, and the reply box suggests it when a new ticket asks the same thing. The AI answers from your macros too." },
+  { title: "It shows up on new tickets", body: "You check it and save it. When a new ticket asks the same thing, the reply box offers it and one click fills it in. The AI answers from your macros too." },
 ];
 
 // What one macro does when an agent uses it. Zendesk macros also run actions,
@@ -48,7 +48,7 @@ const TOUR: { id: string; title: string; body: string; points: string[]; shot: R
   {
     id: "ai",
     title: "The AI answers the easy questions and stops at your limit.",
-    body: `It answers from your macros and notes. When it isn't sure, or the customer is upset or asks about their account, it hands the ticket to your team. Each agent adds ${PLAN.includedPerAgent} AI answers a month to a shared pool.`,
+    body: `It answers from your macros, help articles and the facts you give it. When it isn't sure, or the customer is upset or asks about their account, it hands the ticket to your team. Each agent adds ${PLAN.includedPerAgent} AI answers a month to a shared pool.`,
     points: ["Stops at the included amount unless an admin turns on overage", "Admins get an email at 80% and 100%", "Test it on 50 past tickets your team answered first"],
     shot: <AiShot />,
     href: "/features/ai-test-drive",
@@ -212,8 +212,9 @@ export default function Home() {
       <section id="ai-macros" className="mt-24 scroll-mt-20 border-y border-line bg-surface py-24 sm:mt-32 sm:py-32">
         <div className="mx-auto grid w-full max-w-6xl gap-14 px-4 sm:px-6">
           <ChapterHead id="ai-macros" tab="AI macros" title="Flatdesk turns the replies your team keeps retyping into macros.">
-            Flatdesk spots answers your team keeps typing and the AI writes each one up as a macro. When a price or policy changes, the AI suggests an update
-            from your team&apos;s edits. Macros come with every seat and don&apos;t use AI answers.
+            A macro is a saved reply. Your team sends it with one click instead of typing the same answer again. Flatdesk finds the answers your team keeps
+            retyping and the AI writes each one up as a macro for you to check and save. When a price or policy changes, the AI suggests an update from your
+            team&apos;s edits. Macros come with every seat and don&apos;t use AI answers.
           </ChapterHead>
           <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] lg:gap-16">
             <div data-play="" suppressHydrationWarning className="relative">

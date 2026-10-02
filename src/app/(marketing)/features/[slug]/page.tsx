@@ -79,6 +79,7 @@ export default async function SellingPointPage({ params }: PageProps<"/features/
             </li>
           ))}
         </ol>
+        <p className="max-w-3xl rounded-[8px] border-l-4 border-accent bg-surface px-5 py-4 text-lg">{p.example}</p>
       </section>
 
       <section data-play="" suppressHydrationWarning aria-labelledby="facts" className="grid gap-6 md:grid-cols-[minmax(0,4fr)_minmax(0,8fr)]">

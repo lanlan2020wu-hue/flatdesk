@@ -54,7 +54,7 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
     id: "ai",
     title: "AI",
     features: [
-      { id: "ai", title: "AI answers", body: "Answers routine questions from your macros and notes and hands the rest to your team. Agents can ask it for a draft or a summary.", icon: I.ai },
+      { id: "ai", title: "AI answers", body: "Replies to routine questions from your macros, help articles and the facts you give it, and hands the rest to your team. Agents can ask it for a draft or a summary.", icon: I.ai },
       { id: "test-drive", title: "AI test drive", body: "After you import, the AI drafts replies to the 50 most recent tickets your team answered, next to your team's reply. Nothing is sent and it uses no AI answers.", icon: I.check, isNew: true },
     ],
   },

@@ -1,6 +1,8 @@
 import { asc, eq } from "drizzle-orm";
+import Link from "next/link";
 import { after } from "next/server";
 import { db, schema } from "@/db";
+import HowItWorks from "@/components/HowItWorks";
 import { SuggestionsSection } from "@/components/MacroSuggestion";
 import MacroUpdates from "@/components/MacroUpdates";
 import { requireOpenPage } from "@/lib/auth";
@@ -54,10 +56,31 @@ export default async function MacrosPage() {
       <section className="grid gap-4">
         <div className="grid gap-1">
           <h1 className="page-title">AI macros</h1>
-          <p className="text-sm text-muted">
-            Flatdesk finds the answers your team keeps retyping and the AI writes them up as macros. New tickets get the right macro offered in the reply box. A macro can also assign, set the status, add tags and send right away. When your team keeps editing a macro the same way, the AI drafts an update you apply in one click.
+          <p className="text-muted">
+            A macro is a saved reply. Anyone on your team inserts it with one click instead of typing the answer again. Flatdesk makes macros for you from the replies your team already sends.
           </p>
         </div>
+
+        <HowItWorks
+          title="How AI macros work"
+          open={macros.length === 0}
+          summary="Nothing here needs setting up. It runs on the replies your team sends to customers."
+          steps={[
+            { title: "Your team answers tickets as usual", body: "Flatdesk reads the replies your team sent in the last 90 days, including tickets imported from your old help desk." },
+            { title: "Flatdesk spots repeats", body: "When roughly the same reply has gone out on 5 different tickets, it shows up on this page as a suggested macro." },
+            { title: "The AI writes it up", body: "It turns your team's versions into one clean reply with blanks like [customer name] or [order number], and notes which customer question it answers." },
+            { title: "You check it and save it", body: "Edit anything you like, then click Save as macro. Nothing is offered to anyone until it's saved." },
+            { title: "It's offered on new tickets", body: "When a customer asks the same thing, the reply box on the ticket shows the macro with a Use macro button. One click fills it in. The AI also uses saved macros when it answers customers on its own." },
+            { title: "It keeps up with changes", body: "If your team keeps making the same edit before sending it (on most of the last 3 or more sends), the AI drafts an updated macro here. An admin applies it or keeps the old one." },
+          ]}
+          example={
+            <>
+              customers keep asking where their order is. Over a week, Sam, Priya and Lee each type a similar answer on 5 tickets. Flatdesk suggests a
+              &quot;Where is my order&quot; macro with [order number] as a blank. The next time a customer asks, the reply box offers it.
+            </>
+          }
+          footnote="A macro can also assign the ticket, set its status, add tags or send right away. Set these when you edit it. Writing and updating macros is included in your plan and doesn't use your AI answers."
+        />
 
         <MacroUpdates updates={updates} aiOn={aiConfigured()} canApply={s.role === "admin"} />
 
@@ -102,8 +125,19 @@ export default async function MacrosPage() {
         </div>
         )}
 
+        {macros.length === 0 && suggestions.length === 0 && updates.length === 0 && (
+          <div className="card grid gap-2 p-5 text-sm">
+            <p className="font-medium">No macros yet</p>
+            <p className="text-muted">
+              Suggestions show up here once your team has sent the same reply on 5 tickets. Importing from your old help desk brings its macros and past replies, so
+              suggestions can start today. You can also write one yourself.
+            </p>
+            {s.role === "admin" && <Link href="/app/import" className="link w-max font-medium text-accent">Import from your old help desk</Link>}
+          </div>
+        )}
+
         <details className="grid gap-3">
-          <summary className="btn btn-secondary w-max cursor-pointer list-none">New macro</summary>
+          <summary className="btn btn-secondary w-max cursor-pointer list-none">Write a macro yourself</summary>
           <div className="card mt-3">
             <MacroForm agents={team} />
           </div>
@@ -113,7 +147,7 @@ export default async function MacrosPage() {
       <section className="grid gap-4 border-t border-line pt-4">
         <div className="grid gap-1">
           <h2 className="text-lg font-semibold">Assignment rules</h2>
-          <p className="text-sm text-muted">When an unassigned ticket gets a tag, assign it to someone. The oldest matching rule wins.{s.role !== "admin" && " Only admins can change rules."}</p>
+          <p className="text-sm text-muted">Pick who gets a ticket from its tags. For example, &quot;if tagged billing, assign to Sam&quot; sends every unassigned billing ticket to Sam. Tags come from a person, a macro or your old help desk. If two rules match, the older one wins.{s.role !== "admin" && " Only admins can change rules."}</p>
         </div>
 
         {rules.length > 0 && (

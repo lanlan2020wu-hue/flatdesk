@@ -148,7 +148,7 @@ export function TryAi({ notes, saved }: { notes: string; saved: number }) {
             <>
               <p className="font-medium">The AI would hand this one to your team.</p>
               {r.reason && <p className="text-muted">{r.reason}</p>}
-              <p className="text-muted">It only answers questions your notes cover. Add what it needs above, then ask again.</p>
+              <p className="text-muted">It only answers when what you gave it covers the question. Add what it needs above, then ask again.</p>
             </>
           )}
         </div>
