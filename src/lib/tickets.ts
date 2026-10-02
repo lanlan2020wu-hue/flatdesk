@@ -106,8 +106,9 @@ export async function getTicket(orgId: string, number: number) {
   return { ...row, thread };
 }
 
+// The team as it is now: people removed in Clerk are left out.
 export async function listAgents(orgId: string) {
-  return db.select().from(agents).where(eq(agents.orgId, orgId)).orderBy(asc(agents.name));
+  return db.select().from(agents).where(and(eq(agents.orgId, orgId), isNull(agents.removedAt))).orderBy(asc(agents.name));
 }
 
 type NewTicket = {
@@ -192,7 +193,7 @@ async function ruleAssignee(tx: Tx | typeof db, orgId: string, tags: string[]): 
   const [rule] = await tx
     .select({ assignTo: rules.assignTo })
     .from(rules)
-    .innerJoin(agents, and(eq(agents.orgId, rules.orgId), eq(agents.userId, rules.assignTo), eq(agents.viewer, false)))
+    .innerJoin(agents, and(eq(agents.orgId, rules.orgId), eq(agents.userId, rules.assignTo), eq(agents.viewer, false), isNull(agents.removedAt)))
     .where(and(eq(rules.orgId, orgId), eq(rules.enabled, true), inArray(rules.ifTag, tags)))
     .orderBy(asc(rules.createdAt))
     .limit(1);
@@ -200,7 +201,7 @@ async function ruleAssignee(tx: Tx | typeof db, orgId: string, tags: string[]): 
 }
 
 export function normalizeTags(tags: string[]): string[] {
-  return [...new Set(tags.map((t) => t.trim().toLowerCase().replace(/\s+/g, "-")).filter(Boolean))].slice(0, 20);
+  return [...new Set(tags.map((t) => t.trim().toLowerCase().replace(/\s+/g, "-").slice(0, 50)).filter(Boolean))].slice(0, 20);
 }
 
 export async function addReply(opts: {

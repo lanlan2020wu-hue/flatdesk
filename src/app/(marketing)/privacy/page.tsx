@@ -17,7 +17,7 @@ const PROCESSORS: [string, string, string][] = [
   ["Clerk", "Sign-in and team membership", "https://clerk.com/legal/privacy"],
   ["Stripe", "Payments and invoices (card details go to Stripe, never to us)", "https://stripe.com/privacy"],
   ["Resend", "Sending and receiving email", "https://resend.com/legal/privacy-policy"],
-  ["Anthropic", "AI answers (message text and your team's notes and macros, when the AI is on)", "https://www.anthropic.com/legal/privacy"],
+  ["Anthropic", "The AI (ticket messages, your team's notes, macros and help articles, sent when an AI feature runs)", "https://www.anthropic.com/legal/privacy"],
 ];
 
 export default function PrivacyPage() {
@@ -45,7 +45,13 @@ export default function PrivacyPage() {
       <Section title="What we use it for">
         <ul className="grid list-disc gap-2 pl-5">
           <li>Running the help desk: receiving and sending email, showing chats, storing tickets and attachments.</li>
-          <li>AI answers, when your team switches them on (it is on for new teams, and an admin can switch it off in Settings).</li>
+          <li>
+            AI answers to customers, when your team has them on. They are on for new teams, and an admin can switch them off in Settings.
+          </li>
+          <li>
+            Other AI features your team uses: reply drafts and summaries, writing and updating macros, and the AI test drive. These send
+            ticket messages to our AI provider even when automatic AI answers are off.
+          </li>
           <li>Billing your team (Stripe sends receipts and payment notices), and emailing admins when the AI allowance is 80% and 100% used.</li>
           <li>Keeping the service secure and fixing problems.</li>
         </ul>
@@ -70,8 +76,11 @@ export default function PrivacyPage() {
 
       <Section title="Cookies">
         <p>
-          We use only the cookies needed to keep you signed in. The website chat widget keeps a conversation token in the visitor&apos;s browser
-          so they can come back to the same chat. There are no advertising or tracking cookies.
+          We use cookies to keep you signed in. On our own website, a first-party cookie called fd_src notes where you came from (a
+          campaign tag or the site that linked to us). If you sign up, it&apos;s saved with your team so we can see which sources bring
+          sign-ups. It lasts 90 days and isn&apos;t shared.
+          The website chat widget keeps a conversation token in the visitor&apos;s browser so they can come back to the same chat. There are
+          no advertising cookies.
         </p>
       </Section>
 
@@ -95,7 +104,8 @@ export default function PrivacyPage() {
         <p>
           Data is encrypted in transit and at rest by our hosting and database providers. Attachments can be downloaded only by your team, and
           by the chat visitor they were sent to. API keys for importing from another help desk are encrypted while an import runs and erased
-          when it ends. To stop spam, the chat widget and waitlist keep a one-way hash of the sender&apos;s IP address for a few days at most.
+          when it ends. To stop spam, the chat widget, satisfaction ratings and waitlist count requests by a one-way hash of the sender&apos;s IP address.
+          We store the hash, not the address.
         </p>
       </Section>
 

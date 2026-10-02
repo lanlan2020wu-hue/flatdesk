@@ -2,12 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireAdmin } from "@/lib/auth";
+import { requireAdmin, requireOpen } from "@/lib/auth";
 import { RefundError, refundResolution } from "@/lib/receipts";
 import { isUuid } from "@/lib/ids";
 
 export async function refundAction(form: FormData) {
-  const s = await requireAdmin();
+  const s = await requireOpen(await requireAdmin());
   const eventId = String(form.get("eventId") ?? "");
   const month = String(form.get("month") ?? "");
   const note = String(form.get("note") ?? "").trim();

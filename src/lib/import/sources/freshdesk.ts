@@ -1,6 +1,6 @@
 import { htmlToText } from "@/lib/email";
-import { ApiError } from "../http";
-import { date, fieldMap, str, type Adapter, type Ctx, type Mapped, type Msg, type Raw, type Status } from "../types";
+import { ApiError, CredentialError } from "../http";
+import { cut, date, fieldMap, str, type Adapter, type Ctx, type Mapped, type Msg, type Raw, type Status } from "../types";
 
 // Freshdesk API v2. Auth: the API key from Profile settings, sent as the
 // Basic auth user. Lists use page numbers; the ticket list stops at page 300,
@@ -29,7 +29,7 @@ function pages(path: string, idOf: (r: Raw) => string = (r) => str(r.id)) {
 
 function domain(creds: Record<string, string>) {
   const raw = str(creds.domain).trim().toLowerCase().replace(/^https?:\/\//, "").split("/")[0].replace(/\.freshdesk\.com$/, "");
-  if (!/^[a-z0-9][a-z0-9-]{0,62}$/.test(raw)) throw new Error("Enter your Freshdesk domain, like acme for acme.freshdesk.com.");
+  if (!/^[a-z0-9][a-z0-9-]{0,62}$/.test(raw)) throw new CredentialError("Enter your Freshdesk domain, like acme for acme.freshdesk.com.");
   return raw;
 }
 
@@ -61,7 +61,7 @@ async function describe(ctx: Ctx, a: Raw) {
     case "ticket_type":
       return `Set type to ${v}`;
     case "add_note":
-      return `Add a private note: ${htmlToText(str(a.note_body ?? a.value)).slice(0, 200)}`;
+      return `Add a private note: ${cut(htmlToText(str(a.note_body ?? a.value)), 200)}`;
     case "send_email_to_requester":
     case "send_email_to_group":
     case "send_email_to_agent":
@@ -112,7 +112,7 @@ export const freshdesk: Adapter = {
   ],
   account: (creds) => `${domain(creds)}.freshdesk.com`,
   async connect(creds) {
-    if (!str(creds.apiKey).trim()) throw new Error("Enter your Freshdesk API key.");
+    if (!str(creds.apiKey).trim()) throw new CredentialError("Enter your Freshdesk API key.");
     return {
       base: `https://${domain(creds)}.freshdesk.com/api/v2/`,
       headers: { Authorization: `Basic ${Buffer.from(`${str(creds.apiKey).trim()}:X`).toString("base64")}` },
@@ -123,6 +123,7 @@ export const freshdesk: Adapter = {
     if (!data.id) throw new ApiError(401, "Freshdesk didn't accept the API key.");
     ctx.note("Freshdesk's API doesn't list spam or deleted tickets, so those weren't imported.");
     ctx.note("Freshdesk groups aren't in Flatdesk yet; each ticket keeps its group as a field.");
+    return { key: `${domain(ctx.creds)}.freshdesk.com` };
   },
   phases: [
     {
@@ -154,12 +155,15 @@ export const freshdesk: Adapter = {
       kind: "macro",
       label: "Canned responses and scenarios",
       async list(ctx, cursor) {
-        type C = { stage: "folders" | "responses" | "scenarios"; folders: string[]; i: number; page: number };
+        // personal: ids of folders holding one agent's own responses.
+        type C = { stage: "folders" | "responses" | "scenarios"; folders: string[]; personal?: string[]; i: number; page: number };
         const c = (cursor as C | null) ?? { stage: "folders", folders: [], i: 0, page: 1 };
         if (c.stage === "folders") {
           const { data } = await ctx.get("canned_response_folders");
-          const folders = ((Array.isArray(data) ? data : []) as Raw[]).map((f) => str(f.id));
-          return { records: [], next: folders.length ? { stage: "responses", folders, i: 0, page: 1 } : { stage: "scenarios", folders, i: 0, page: 1 } };
+          const list = (Array.isArray(data) ? data : []) as Raw[];
+          const folders = list.map((f) => str(f.id));
+          const personal = list.filter((f) => f.personal === true).map((f) => str(f.id));
+          return { records: [], next: { stage: folders.length ? "responses" : "scenarios", folders, personal, i: 0, page: 1 } };
         }
         if (c.stage === "responses") {
           const { data } = await ctx.get(`canned_response_folders/${c.folders[c.i]}/responses?per_page=${PER_PAGE}&page=${c.page}`);
@@ -170,7 +174,8 @@ export const freshdesk: Adapter = {
               : c.i + 1 < c.folders.length
                 ? { ...c, i: c.i + 1, page: 1 }
                 : { ...c, stage: "scenarios", page: 1 };
-          return { records: rows.map((raw) => ({ externalId: `canned:${raw.id}`, raw: { ...raw, _type: "canned" } })), next };
+          const personal = c.personal?.includes(c.folders[c.i]) ?? false;
+          return { records: rows.map((raw) => ({ externalId: `canned:${raw.id}`, raw: { ...raw, _type: "canned", _personal: personal } })), next };
         }
         const { data } = await ctx.get(`scenario_automations?per_page=${PER_PAGE}&page=${c.page}`);
         const rows = (Array.isArray(data) ? data : []) as Raw[];
@@ -185,7 +190,9 @@ export const freshdesk: Adapter = {
           const issues: string[] = [];
           if (/\{\{.+?\}\}/.test(body)) issues.push("Uses placeholders like {{ticket.requester.name}}, kept as plain text");
           if (r.attachments?.length) issues.push("Its attachments weren't added; Flatdesk macros are text only");
-          return { kind: "macro", label: str(r.title), name: str(r.title), body, addTags: [], setStatus: null, notApplied: [], active: true, issues };
+          // Visibility 1 is "Myself": a response only its author could see.
+          const internal = r._personal === true || Number(r.visibility) === 1;
+          return { kind: "macro", label: str(r.title), name: str(r.title), body, addTags: [], setStatus: null, notApplied: [], active: true, internal, issues };
         }
         // Scenario automations are action bundles: Flatdesk keeps tags and status and lists the rest.
         const addTags: string[] = [];
@@ -261,8 +268,21 @@ export const freshdesk: Adapter = {
         const rows = (Array.isArray(data) ? data : []) as Raw[];
         let next: unknown = null;
         if (rows.length === PER_PAGE) {
-          // Past page 300 Freshdesk refuses; restart from the last updated_at (re-seen tickets are skipped).
-          next = c.page < MAX_PAGE ? { ...c, page: c.page + 1 } : { since: str(rows[rows.length - 1].updated_at), page: 1 };
+          if (c.page < MAX_PAGE) next = { ...c, page: c.page + 1 };
+          else {
+            // Past page 300 Freshdesk refuses; restart from the last updated_at
+            // (re-seen tickets are skipped). If all 300 pages share one
+            // updated_at, restarting there would read the same pages forever,
+            // so move one second on and say some may be missing.
+            const last = date(rows[rows.length - 1].updated_at, new Date(NaN));
+            const since = Date.parse(c.since);
+            let nextSince = Number.isFinite(last.getTime()) ? last.getTime() : since;
+            if (!(nextSince > since)) {
+              nextSince = since + 1000;
+              ctx.note("More than 30,000 Freshdesk tickets were updated in the same second, which is more than its API can list. Some of them may be missing.");
+            }
+            next = { since: new Date(nextSince).toISOString().replace(/\.\d{3}Z$/, "Z"), page: 1 };
+          }
         }
         return { records: rows.map((raw) => ({ externalId: str(raw.id), raw })), next };
       },

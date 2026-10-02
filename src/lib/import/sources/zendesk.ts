@@ -1,5 +1,5 @@
 import { htmlToText } from "@/lib/email";
-import { ApiError } from "../http";
+import { ApiError, CredentialError } from "../http";
 import { date, fieldMap, str, type Adapter, type Ctx, type Mapped, type Msg, type Raw, type Status } from "../types";
 
 // Zendesk Support API v2. Auth: agent email + API token (Admin Center >
@@ -22,7 +22,7 @@ function pager(path: string, key: string, idOf: (r: Raw) => string = (r) => str(
 
 function subdomain(creds: Record<string, string>) {
   const raw = str(creds.subdomain).trim().toLowerCase().replace(/^https?:\/\//, "").split("/")[0].replace(/\.zendesk\.com$/, "");
-  if (!/^[a-z0-9][a-z0-9-]{0,62}$/.test(raw)) throw new Error("Enter your Zendesk subdomain, like acme for acme.zendesk.com.");
+  if (!/^[a-z0-9][a-z0-9-]{0,62}$/.test(raw)) throw new CredentialError("Enter your Zendesk subdomain, like acme for acme.zendesk.com.");
   return raw;
 }
 
@@ -118,7 +118,7 @@ export const zendesk: Adapter = {
   account: (creds) => `${subdomain(creds)}.zendesk.com`,
   async connect(creds) {
     const email = str(creds.email).trim();
-    if (!email || !creds.token) throw new Error("Enter the admin email and API token.");
+    if (!email || !creds.token) throw new CredentialError("Enter the admin email and API token.");
     return {
       base: `https://${subdomain(creds)}.zendesk.com/api/v2/`,
       headers: { Authorization: `Basic ${Buffer.from(`${email}/token:${str(creds.token).trim()}`).toString("base64")}` },
@@ -128,6 +128,7 @@ export const zendesk: Adapter = {
     const { data } = await ctx.get("users/me.json");
     if (!data.user?.id) throw new ApiError(401, "Zendesk didn't accept the email and token.");
     if (data.user.role !== "admin") ctx.note("The token belongs to an agent, not an admin, so some macros and triggers may be missing.");
+    return { key: `${subdomain(ctx.creds)}.zendesk.com` };
   },
   phases: [
     {
@@ -177,7 +178,9 @@ export const zendesk: Adapter = {
         if (notApplied.length) issues.push("Some actions have no Flatdesk equivalent; they're listed on the macro");
         if (!body) issues.push("Has no reply text");
         if (r.active === false) issues.push("Inactive in the old help desk, so it wasn't added to your macros");
-        return { kind: "macro", label: str(r.title), name: str(r.title), body, addTags, setStatus, notApplied, active: r.active !== false, issues };
+        // A macro restricted to one user is that agent's personal macro.
+        const internal = r.restriction?.type === "User";
+        return { kind: "macro", label: str(r.title), name: str(r.title), body, addTags, setStatus, notApplied, active: r.active !== false, internal, issues };
       },
     },
     {

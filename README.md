@@ -61,7 +61,7 @@ npm test                       # import and onboarding tests; point DATABASE_URL
 | `INBOUND_DOMAIN` | Resend receiving domain. Each team's inbox is `<key>@INBOUND_DOMAIN`, shown in Settings. |
 | `RESEND_WEBHOOK_SECRET` | Signing secret of the Resend webhook pointing at `/api/inbound/resend` (event `email.received`). |
 | `ANTHROPIC_API_KEY` | AI answers. Without it every ticket goes to the team. |
-| `IMPORT_SECRET` | Optional. Key for encrypting help desk API keys while an import runs (erased when it ends). Falls back to `CLERK_SECRET_KEY`. |
+| `IMPORT_SECRET` | Required in production. Key for encrypting help desk API keys while an import runs (erased when it ends). Any long random string, for example from `openssl rand -base64 32`. Imports refuse to start without it. |
 | `STRIPE_SECRET_KEY` | Billing. Set by the Stripe integration on Vercel. |
 | `CRON_SECRET` | Authorizes Vercel Cron's call to `/api/cron/daily`. |
 | `NEXT_PUBLIC_SITE_URL` | The public address, e.g. `https://flatdesk.app`. Used for sitemap, robots and link previews. Defaults to Vercel's production URL. |

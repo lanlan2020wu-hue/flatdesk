@@ -110,7 +110,7 @@ export default function Calculator({ initialTool, initialAgents, initialResoluti
           <span className="label">AI-resolved conversations per month</span>
           <input id="resolutions" type="number" min={0} step={50} className={field} value={resolutions}
             onChange={(e) => setResolutions(e.target.valueAsNumber)} />
-          <span className="text-xs text-muted">Check your last invoice or usage page. If you don&apos;t know, 10–20% of monthly tickets is typical.</span>
+          <span className="text-xs text-muted">Check your last invoice or usage page. If you don&apos;t know, 10 to 20% of monthly tickets is typical.</span>
         </label>
         <label className="grid gap-1.5" htmlFor="rate">
           <span className="label">Their price per AI resolution</span>

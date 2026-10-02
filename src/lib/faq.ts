@@ -20,11 +20,11 @@ export const GENERAL_FAQ: QA[] = [
   },
   {
     q: "How can we tell if the AI is good enough before we pay?",
-    a: "Run the AI test drive during your trial. After you import your help desk, the AI drafts answers to your 50 most recent tickets and shows each one beside the reply your team sent. Nothing goes to customers and it doesn't use your AI allowance.",
+    a: "Run the AI test drive during your trial. After you import your help desk, the AI drafts answers to the 50 most recent tickets your team answered and shows each one beside the reply your team sent. Nothing goes to customers and it doesn't use your AI allowance.",
   },
   {
     q: "How is this much included in one flat price? Is it a worse help desk?",
-    a: `It costs less because of what Flatdesk leaves out, not because the parts you use are worse. AI answers are written by Claude Opus from Anthropic. One answer costs cents to run, so ${PLAN.includedPerAgent} per seat fit in the seat price, and the cap keeps it that way. There's no sales team and only one plan. The product is narrower too: email and chat only, with no phone, SMS, social channels, app marketplace or SLA escalations. Before you pay, the AI test drive shows drafts for your last 50 tickets beside your team's real replies, and the ${TRIAL_DAYS}-day trial has every feature.`,
+    a: `It costs less because of what Flatdesk leaves out, not because the parts you use are worse. AI answers are written by Claude Opus from Anthropic. One answer costs cents to run, so ${PLAN.includedPerAgent} per seat fit in the seat price, and the cap keeps it that way. There's no sales team and only one plan. The product is narrower too: email and chat only, with no phone, SMS, social channels, app marketplace or SLA escalations. Before you pay, the AI test drive shows drafts for the last 50 tickets your team answered, beside its real replies, and the ${TRIAL_DAYS}-day trial has every feature.`,
   },
   {
     q: "Who is Flatdesk a good fit for?",
@@ -35,7 +35,7 @@ export const GENERAL_FAQ: QA[] = [
 export const BILLING_FAQ: QA[] = [
   {
     q: "Is there a free trial?",
-    a: `Yes, ${TRIAL_DAYS} days with every feature and no card, including ${PLAN.trialPerAgent} AI answers per agent for the trial (up to ${PLAN.trialPerAgent * PLAN.trialAgentCap} for the team). Add a card any time to get the full ${PLAN.includedPerAgent} per agent a month. You still aren't charged until the trial ends.`,
+    a: `Yes, ${TRIAL_DAYS} days with every feature and no card, including ${PLAN.trialPerAgent} AI answers per agent for the trial (up to ${PLAN.trialPerAgent * PLAN.trialAgentCap} for the team). Add a card any time to get the full ${PLAN.includedPerAgent} per agent a month. The first charge is when the trial ends, or 2 days after you add the card if that's later.`,
   },
   {
     q: "Can viewers see tickets without paying for a seat?",
@@ -51,7 +51,7 @@ export const BILLING_FAQ: QA[] = [
   },
   {
     q: "How does overage work?",
-    a: `Only an admin can turn it on, in billing settings. Each answer past the included amount then costs ${usd(PLAN.overageRate, true)}. You can set a monthly limit and turn it off any time.`,
+    a: `Only an admin can turn it on, in Settings under AI answers. Each answer past the included amount then costs ${usd(PLAN.overageRate, true)}. You can set a monthly limit and turn it off any time.`,
   },
   {
     q: "Are the resolutions per agent or per team?",
@@ -67,6 +67,6 @@ export const BILLING_FAQ: QA[] = [
   },
   {
     q: "Can we take our data with us?",
-    a: "Yes. Settings exports tickets (with tags), messages, customers and macros as CSV or JSON in one click. Attachments aren't included; download them from each ticket. You never have to ask us.",
+    a: "Yes. Settings exports tickets (with tags), messages, customers and macros as CSV or JSON. Attachments aren't included; download them from each ticket. You never have to ask us.",
   },
 ];

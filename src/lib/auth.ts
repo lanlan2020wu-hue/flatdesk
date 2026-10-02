@@ -6,7 +6,7 @@ import { after, connection } from "next/server";
 import { cache } from "react";
 import { db, schema } from "@/db";
 import { decodeSource, SOURCE_COOKIE } from "@/lib/attribution";
-import { syncSeats } from "@/lib/billing";
+import { access, billingConfigured, isActive, refreshSubscription, syncSeats, type Access } from "@/lib/billing";
 import { milestone } from "@/lib/funnel";
 import { clerkEnabled, devAuthEnabled } from "./auth-config";
 import { linkImportedAgent } from "./import/link";
@@ -43,10 +43,12 @@ export const requireSession = cache(async (): Promise<Session> => {
     where: and(eq(schema.agents.orgId, orgId), eq(schema.agents.userId, userId)),
   });
   const session: Session = { orgId, userId, role, name, viewer: role === "agent" && Boolean(existing?.viewer) };
-  if (!existing || existing.role !== session.role || existing.name !== name) {
+  // Also when they rejoined after being removed, or an admin row still says viewer.
+  const stale = !existing || existing.role !== session.role || existing.name !== name || existing.removedAt !== null || (role === "admin" && existing.viewer);
+  if (stale) {
     const org = await (await clerkClient()).organizations.getOrganization({ organizationId: orgId });
     await ensureRows(session, org.name, user?.primaryEmailAddress?.emailAddress ?? "");
-    if (!existing) after(() => syncSeats(orgId).catch((err) => console.error("seat sync failed", err)));
+    if (!existing || existing.removedAt) after(() => syncSeats(orgId).catch((err) => console.error("seat sync failed", err)));
   }
   return session;
 });
@@ -64,6 +66,35 @@ export async function requireAdmin(): Promise<Session> {
   return session;
 }
 
+// The team's plan, once per request. Right after Checkout the row is stale,
+// so a team that looks unpaid is checked with Stripe first.
+export const teamPlan = cache(async (orgId: string): Promise<{ org: typeof schema.orgs.$inferSelect | undefined; plan: Access }> => {
+  const org = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, orgId) });
+  let current = org;
+  if (org && billingConfigured() && !isActive(org.subscriptionStatus) && org.stripeCustomerId) {
+    current = await refreshSubscription(orgId).catch(() => org);
+  }
+  return { org: current, plan: current ? access(current) : { state: "open" } };
+});
+
+export const LOCKED_MESSAGE = "The free trial has ended. An admin can add a card in Settings.";
+
+// The /app layout shows the paywall once a trial ends without a card, but a
+// layout doesn't stop its pages or actions from running. Pages call
+// requireOpenPage and actions call requireOpen, so nothing behind the paywall
+// is read or changed. Billing and export stay open.
+export async function requireOpen<T extends Session>(session: T): Promise<T> {
+  if ((await teamPlan(session.orgId)).plan.state === "locked") throw new Error(LOCKED_MESSAGE);
+  return session;
+}
+
+export async function requireOpenPage(): Promise<Session> {
+  const session = await requireSession();
+  // /app/locked renders nothing, so the layout's paywall is all that shows.
+  if ((await teamPlan(session.orgId)).plan.state === "locked") redirect("/app/locked");
+  return session;
+}
+
 async function ensureRows(session: Session, orgName: string, email: string) {
   // A new team keeps where its creator came from (lib/attribution.ts).
   const source = decodeSource((await cookies()).get(SOURCE_COOKIE)?.value);
@@ -78,7 +109,8 @@ async function ensureRows(session: Session, orgName: string, email: string) {
     .values({ orgId: session.orgId, userId: session.userId, name: session.name, email, role: session.role })
     .onConflictDoUpdate({
       target: [schema.agents.orgId, schema.agents.userId],
-      set: { name: session.name, role: session.role, ...(email ? { email } : {}) },
+      // Signing in means they're on the team, so a removed mark is cleared. Admins are never viewers.
+      set: { name: session.name, role: session.role, removedAt: null, ...(session.role === "admin" ? { viewer: false } : {}), ...(email ? { email } : {}) },
     });
   // Tickets and rules imported from the team's old help desk wait for their agent by email.
   if (email) await linkImportedAgent(session.orgId, session.userId, email);

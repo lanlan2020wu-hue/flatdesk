@@ -1,5 +1,5 @@
 import { htmlToText } from "@/lib/email";
-import { ApiError } from "../http";
+import { ApiError, CredentialError } from "../http";
 import { date, fieldMap, str, type Adapter, type Ctx, type Msg, type Raw, type Status } from "../types";
 
 // Help Scout Inbox API 2. Auth: OAuth client credentials from a private app
@@ -57,7 +57,7 @@ export const helpscout: Adapter = {
     "Copy the App ID and App Secret. Use an account that can see every inbox.",
   ],
   account: (creds) => {
-    if (!str(creds.appId).trim() || !str(creds.appSecret).trim()) throw new Error("Enter the App ID and App secret.");
+    if (!str(creds.appId).trim() || !str(creds.appSecret).trim()) throw new CredentialError("Enter the App ID and App secret.");
     return "Help Scout account";
   },
   async connect(creds, fetchImpl = fetch) {
@@ -76,6 +76,8 @@ export const helpscout: Adapter = {
     if (!data.id) throw new ApiError(401, "Help Scout didn't accept the App ID and secret.");
     ctx.note("Help Scout's API shares workflow names but not their conditions or actions, so workflows are listed for reference only.");
     ctx.note("Help Scout inboxes aren't separate in Flatdesk yet; each ticket keeps its inbox as a field.");
+    // Help Scout's API doesn't name the account, so imports are told apart by label only.
+    return { key: null };
   },
   phases: [
     {

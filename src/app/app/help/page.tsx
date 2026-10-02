@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { and, count, desc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { requireSession } from "@/lib/auth";
+import { requireOpenPage } from "@/lib/auth";
 import { ensureHelpSlug, excerpt, HELP_SLUG_RULE, helpUrl } from "@/lib/help";
 import { SITE } from "@/lib/site";
 import { saveHelpSlugAction } from "./actions";
@@ -11,7 +11,7 @@ export const metadata = { title: "Help center" };
 const host = SITE.url.replace(/^https?:\/\//, "");
 
 export default async function HelpCenterAdmin({ searchParams }: PageProps<"/app/help">) {
-  const s = await requireSession();
+  const s = await requireOpenPage();
   const { error, saved } = await searchParams;
   const [helpSlug, list] = await Promise.all([
     ensureHelpSlug(s.orgId),

@@ -10,6 +10,7 @@
 // Issue sentences are grouped by exact text in the report, so keep them stable
 // (no ids or counts inside); the report lists which records each applies to.
 
+import { noNul } from "@/lib/ids";
 import type { FetchLike } from "./http";
 
 // Raw API payloads are untyped JSON.
@@ -62,7 +63,17 @@ export type Mapped = { label: string; issues: string[] } & (
   | { kind: "agent"; name: string; email: string | null; role: string; active: boolean }
   | { kind: "group" | "field" | "company" }
   | { kind: "tag"; name: string }
-  | { kind: "macro"; name: string; body: string; addTags: string[]; setStatus: Status | null; notApplied: string[]; active: boolean }
+  | {
+      kind: "macro";
+      name: string;
+      body: string;
+      addTags: string[];
+      setStatus: Status | null;
+      notApplied: string[];
+      active: boolean;
+      // Only its owner could see it in the old help desk (a personal macro).
+      internal?: boolean;
+    }
   | {
       kind: "rule";
       name: string;
@@ -112,9 +123,11 @@ export type Adapter = {
   account(creds: Record<string, string>): string;
   // Base URL and auth headers for API calls.
   connect(creds: Record<string, string>, fetchImpl?: FetchLike): Promise<{ base: string; headers: Record<string, string> }>;
-  // Cheap authenticated call proving the credentials work.
-  // May return a more exact account label than account() could tell from the credentials.
-  verify(ctx: Ctx): Promise<string | void>;
+  // Cheap authenticated call proving the credentials work. Returns the
+  // account's key: the source's own id for it (an Intercom workspace id, a
+  // Zendesk host), or null when the API has none. Imports from different keys
+  // can't share a team. May also return a more exact label than account().
+  verify(ctx: Ctx): Promise<{ label?: string; key: string | null }>;
   phases: Phase[];
 };
 
@@ -122,10 +135,37 @@ export type Adapter = {
 
 export const str = (v: unknown): string => (v === null || v === undefined ? "" : String(v));
 
+// Dates Postgres can store and people can read: years 1 to 9999.
+const MIN_TIME = Date.parse("0001-01-01T00:00:00Z");
+const MAX_TIME = Date.parse("9999-12-31T23:59:59Z");
+const valid = (d: Date) => Number.isFinite(d.getTime()) && d.getTime() >= MIN_TIME && d.getTime() <= MAX_TIME;
+
 export function date(v: unknown, fallback = new Date()): Date {
-  if (typeof v === "number") return new Date(v < 1e12 ? v * 1000 : v); // unix seconds or ms
+  if (typeof v === "number") {
+    if (!Number.isFinite(v)) return fallback;
+    const d = new Date(Math.abs(v) < 1e12 ? v * 1000 : v); // unix seconds or ms
+    return valid(d) ? d : fallback;
+  }
+  if (v instanceof Date) return valid(v) ? v : fallback;
   const d = new Date(str(v));
-  return Number.isNaN(d.getTime()) ? fallback : d;
+  return valid(d) ? d : fallback;
+}
+
+// Postgres refuses text holding NUL or a lone half of a UTF-16 surrogate
+// pair, and old help desks store both. Everything a source returns goes
+// through this before it's saved.
+const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/g;
+export function cleanText(s: string): string {
+  const t = s.includes("\0") ? noNul(s) : s;
+  const wf = (t as string & { toWellFormed?: () => string }).toWellFormed;
+  return typeof wf === "function" ? wf.call(t) : t.replace(LONE_SURROGATE, "\uFFFD");
+}
+
+// Cuts text to at most n characters without splitting a surrogate pair.
+export function cut(s: string, n: number): string {
+  if (s.length <= n) return s;
+  const code = s.charCodeAt(n - 1);
+  return s.slice(0, code >= 0xd800 && code <= 0xdbff ? n - 1 : n);
 }
 
 // label -> value, dropping empty values and flattening arrays and objects.

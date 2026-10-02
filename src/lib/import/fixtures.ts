@@ -153,7 +153,7 @@ const zendeskRoutes: Routes = {
 };
 
 const intercomRoutes: Routes = {
-  me: { id: "1", type: "admin" },
+  me: { id: "1", type: "admin", app: { id_code: "abc123", name: "Acme" } },
   admins: { admins: [{ id: "7", type: "admin", name: "Ana", email: "ana@acme.com" }] },
   teams: { teams: [{ id: "t1", name: "Support" }] },
   "data_attributes?model=conversation": { data: [{ id: 5, name: "order_id", label: "Order ID" }] },

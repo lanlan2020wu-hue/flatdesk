@@ -1,5 +1,5 @@
 import { htmlToText } from "@/lib/email";
-import { ApiError } from "../http";
+import { ApiError, CredentialError } from "../http";
 import { date, fieldMap, str, type Adapter, type Ctx, type Msg, type Raw, type Status } from "../types";
 
 // Intercom (now Fin) REST API. Auth: an access token from a private app in
@@ -63,7 +63,7 @@ export const intercom: Adapter = {
     "The app needs read permissions for conversations, contacts, admins, tags and teams.",
   ],
   account: (creds) => {
-    if (!str(creds.token).trim()) throw new Error("Paste your Intercom access token.");
+    if (!str(creds.token).trim()) throw new CredentialError("Paste your Intercom access token.");
     return "Intercom workspace";
   },
   async connect(creds) {
@@ -79,8 +79,11 @@ export const intercom: Adapter = {
       "Intercom's API doesn't share workflows or assignment rules, so none were imported. Recreate the tag assignments you need under Macros and rules.",
     );
     // The token alone doesn't say which workspace it opens; its app id does.
+    // It's required: two workspaces' conversation ids would collide in one team.
     const app = data.app as { id_code?: string; name?: string } | undefined;
-    if (app?.id_code) return `${app.name ? `${app.name} ` : ""}Intercom workspace (${app.id_code})`;
+    const key = str(app?.id_code).trim();
+    if (!key) throw new ApiError(400, "Intercom didn't say which workspace this token opens. Check the token and try again.");
+    return { label: `${app?.name ? `${app.name} ` : ""}Intercom workspace (${key})`, key };
   },
   phases: [
     {
@@ -127,7 +130,9 @@ export const intercom: Adapter = {
         if (notApplied.length) issues.push("Some actions have no Flatdesk equivalent; they're listed on the macro");
         if (/\{\{.+?\}\}/.test(body)) issues.push("Uses placeholders like {{first_name}}, kept as plain text");
         if (!body) issues.push("Has no reply text");
-        return { kind: "macro", label: str(r.name), name: str(r.name), body, addTags: [], setStatus: null, notApplied, active: true, issues };
+        // Shared macros are visible to everyone or to chosen teams; anything narrower is personal.
+        const internal = r.visible_to !== undefined && r.visible_to !== null && !["everyone", "specific_teams"].includes(str(r.visible_to));
+        return { kind: "macro", label: str(r.name), name: str(r.name), body, addTags: [], setStatus: null, notApplied, active: true, internal, issues };
       },
     },
     {

@@ -44,7 +44,7 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
     id: "automation",
     title: "AI macros and automation",
     features: [
-      { id: "suggested-macros", title: "AI macros", body: "When your team sends the same answer on 5 tickets, the AI writes it up as a macro and suggests it on new tickets. If your team keeps editing a macro the same way, it gets updated.", icon: I.spark, isNew: true },
+      { id: "suggested-macros", title: "AI macros", body: "When your team sends the same answer on 5 tickets, the AI writes it up as a macro and suggests it on new tickets. If your team keeps editing a macro the same way, the AI suggests an update you apply in one click.", icon: I.spark, isNew: true },
       { id: "macros", title: "Macros that take action", body: "One click replies with the customer's name filled in, assigns the ticket, sets the status, adds tags, and can send right away.", icon: I.macro },
       { id: "rules", title: "Assignment rules", body: 'Rules like "if tagged billing, assign to Sam" pick who gets a ticket.', icon: I.rule },
       { id: "tags", title: "Tags", body: "Tag tickets by hand, from a macro, or from your old help desk's data.", icon: I.tag },
@@ -55,7 +55,7 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
     title: "AI",
     features: [
       { id: "ai", title: "AI answers", body: "Answers routine questions from your macros and notes and hands the rest to your team. Agents can ask it for a draft or a summary.", icon: I.ai },
-      { id: "test-drive", title: "AI test drive", body: "After you import, the AI drafts replies to 50 recent tickets next to what your team sent. Nothing is sent and it uses no AI answers.", icon: I.check, isNew: true },
+      { id: "test-drive", title: "AI test drive", body: "After you import, the AI drafts replies to the 50 most recent tickets your team answered, next to your team's reply. Nothing is sent and it uses no AI answers.", icon: I.check, isNew: true },
     ],
   },
   {
@@ -77,7 +77,7 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
     features: [
       { id: "help-center", title: "Help center", body: "A public help center with search. Write an article once. Customers find it on their own and the AI links to it.", icon: I.book, isNew: true },
       { id: "import", title: "Lossless import", body: "Tickets, customers, macros and rules from Zendesk, Intercom, Freshdesk or Help Scout. Every original record is kept.", icon: I.import },
-      { id: "export", title: "Export any time", body: "Tickets, messages, customers and macros as CSV or JSON, without asking us.", icon: I.export },
+      { id: "export", title: "Export your data", body: "Tickets, messages, customers and macros as CSV or JSON, any time, without asking us.", icon: I.export },
       { id: "reports", title: "Reports", body: "Volume, reply and close times, targets met, ratings, the AI's share, and each agent's load.", icon: I.report },
     ],
   },

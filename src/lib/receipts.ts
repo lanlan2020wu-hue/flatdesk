@@ -1,6 +1,7 @@
 import { and, asc, eq, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { aiUsage, monthKey } from "@/lib/ai";
+import { lockBillingMonth } from "@/lib/billing";
 import { PLAN } from "@/lib/pricing";
 
 // AI receipts: every time the AI touched a ticket, itemized per month, with
@@ -134,6 +135,9 @@ export async function refundResolution(orgId: string, eventId: string, by: { use
       .where(and(eq(aiEvents.id, eventId), eq(aiEvents.orgId, orgId)))
       .for("update");
     if (!event || event.kind !== "resolution") throw new RefundError("Only a counted AI answer can be refunded.");
+    // The month's billing lock, so the month can't be billed between this
+    // check and the refund (billOverage takes the same lock).
+    await lockBillingMonth(tx, orgId, event.month);
     const [org] = await tx.select({ billed: orgs.overageBilledMonth }).from(orgs).where(eq(orgs.id, orgId));
     if (org?.billed && org.billed >= event.month) throw new RefundError("This month has already been billed, so it can't be refunded here.");
 

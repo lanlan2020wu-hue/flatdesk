@@ -1,10 +1,12 @@
+import { requireOpenPage } from "@/lib/auth";
 import { createTicketAction } from "../../actions";
 
 export const metadata = { title: "New ticket" };
 
 const field = "field font-normal";
 
-export default function NewTicketPage() {
+export default async function NewTicketPage() {
+  await requireOpenPage();
   return (
     <div className="grid max-w-2xl gap-6 px-4 py-6 md:px-8 md:py-8">
       <div className="grid gap-1">

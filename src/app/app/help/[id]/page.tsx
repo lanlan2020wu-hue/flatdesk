@@ -3,7 +3,7 @@ import { and, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import ArticleBody from "@/components/ArticleBody";
 import { db, schema } from "@/db";
-import { requireSession } from "@/lib/auth";
+import { requireOpenPage } from "@/lib/auth";
 import { articleUrl, ensureHelpSlug } from "@/lib/help";
 import { deleteArticleAction } from "../actions";
 import ArticleForm from "../ArticleForm";
@@ -12,7 +12,7 @@ import { isUuid } from "@/lib/ids";
 export const metadata = { title: "Edit article" };
 
 export default async function EditArticle({ params, searchParams }: PageProps<"/app/help/[id]">) {
-  const s = await requireSession();
+  const s = await requireOpenPage();
   const { id } = await params;
   const { saved } = await searchParams;
   if (!isUuid(id)) notFound();

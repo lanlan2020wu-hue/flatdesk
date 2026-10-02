@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import Link from "next/link";
 import { db, schema } from "@/db";
 import TestDriveRunner from "@/components/TestDriveRunner";
-import { requireSession } from "@/lib/auth";
+import { requireOpenPage } from "@/lib/auth";
 import { aiConfigured } from "@/lib/ai";
 import { pickTickets, scorecard, spentUsd, TEST_DRIVE, testDriveDrafts, VERDICT_LABEL, type DraftRow, type Verdict } from "@/lib/test-drive";
 import { rateDraftAction, startTestDriveAction } from "./actions";
@@ -101,7 +101,7 @@ function Row({ r }: { r: DraftRow }) {
 }
 
 export default async function TestDrivePage({ searchParams }: PageProps<"/app/test-drive">) {
-  const s = await requireSession();
+  const s = await requireOpenPage();
   const sp = await searchParams;
   const error = typeof sp.error === "string" ? sp.error : null;
   const [rows, spent, org] = await Promise.all([

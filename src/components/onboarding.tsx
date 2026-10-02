@@ -66,7 +66,7 @@ export function InviteForm({ suggestions, source }: { suggestions: { name: strin
       <label className="grid gap-1.5">
         <span className="label">{suggestions.length ? "Anyone else" : "Email addresses"}</span>
         <textarea name="emails" rows={3} placeholder={"sam@yourcompany.com\nalex@yourcompany.com"} className="field" />
-        <span className="text-xs text-muted">One per line, or separated by commas. Each person who joins is one seat.</span>
+        <span className="text-xs text-muted">One per line, or separated by commas. Each person who joins is one seat. Viewers aren&apos;t billed. Make someone a viewer in Settings.</span>
       </label>
       <label className="grid w-max gap-1.5">
         <span className="label">Role</span>

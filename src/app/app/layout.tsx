@@ -1,15 +1,12 @@
 import Link from "next/link";
 import AccountMenu from "@/components/AccountMenu";
 import AuthProvider from "@/components/AuthProvider";
-import { eq } from "drizzle-orm";
 import Logo from "@/components/Logo";
 import MobileNav from "@/components/MobileNav";
 import Paywall from "@/components/Paywall";
 import NavLink from "@/components/NavLink";
-import { db, schema } from "@/db";
 import { aiUsage } from "@/lib/ai";
-import { requireSession } from "@/lib/auth";
-import { access, billingConfigured, isActive, refreshSubscription } from "@/lib/billing";
+import { requireSession, teamPlan } from "@/lib/auth";
 import { getOnboarding } from "@/lib/onboarding";
 import { seatPriceFor, usd } from "@/lib/pricing";
 import { VIEWS, viewCounts } from "@/lib/tickets";
@@ -34,18 +31,13 @@ function SideMeter({ label, used, of }: { label: string; used: number; of: numbe
 
 export default async function AppLayout({ children }: LayoutProps<"/app">) {
   const s = await requireSession();
-  const [counts, org, onboarding, ai] = await Promise.all([
+  const [counts, { org, plan }, onboarding, ai] = await Promise.all([
     viewCounts(s.orgId, s.userId),
-    db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) }),
+    teamPlan(s.orgId),
     s.role === "admin" ? getOnboarding(s.orgId) : null,
     aiUsage(s.orgId),
   ]);
-  let current = org;
-  // Right after Checkout the row is stale; ask Stripe before showing the banner.
-  if (org && billingConfigured() && !isActive(org.subscriptionStatus) && org.stripeCustomerId) {
-    current = await refreshSubscription(s.orgId).catch(() => org);
-  }
-  const plan = current ? access(current) : ({ state: "open" } as const);
+  // teamPlan asks Stripe first when the row looks unpaid (it's stale right after Checkout).
 
   const interval = org?.billingInterval === "year" ? "year" : "month";
   const seats = org?.billedSeats ?? null;

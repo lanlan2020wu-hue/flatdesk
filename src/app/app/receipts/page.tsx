@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireSession } from "@/lib/auth";
+import { requireOpenPage } from "@/lib/auth";
 import { monthKey } from "@/lib/ai";
 import { PLAN, usd } from "@/lib/pricing";
 import { monthReceipt, receiptMonths, refundOpen, STATUS_LABEL, type ReceiptStatus } from "@/lib/receipts";
@@ -28,7 +28,7 @@ function Line({ label, value, className = "" }: { label: React.ReactNode; value:
 }
 
 export default async function ReceiptsPage({ searchParams }: PageProps<"/app/receipts">) {
-  const s = await requireSession();
+  const s = await requireOpenPage();
   const sp = await searchParams;
   const raw = typeof sp.month === "string" ? sp.month : "";
   const month = /^\d{4}-\d{2}$/.test(raw) ? raw : monthKey();
@@ -44,7 +44,7 @@ export default async function ReceiptsPage({ searchParams }: PageProps<"/app/rec
         <div className="grid gap-1.5">
           <h1 className="font-display text-3xl">AI receipts</h1>
           <p className="max-w-xl text-muted">
-            Every answer the AI sent. Only counted lines use your allowance. If the AI got one wrong, refund it and it stops
+            Every ticket the AI answered or handed to your team. Only counted lines use your allowance. If the AI got one wrong, refund it and it stops
             counting{canRefund ? "" : " (refunds close once a month is billed)"}.
           </p>
         </div>

@@ -37,8 +37,8 @@ export const LEFT_OUT = [
 
 // Ways to judge the quality before the first charge.
 export const CHECK_IT = [
-  { title: "AI test drive", body: "The AI drafts replies to your last 50 tickets, next to what your team sent. Customers don't see them.", href: "/features/ai-test-drive" },
+  { title: "AI test drive", body: "The AI drafts replies to the last 50 tickets your team answered, next to what your team sent. Customers don't see them.", href: "/features/ai-test-drive" },
   { title: `${TRIAL_DAYS}-day trial, no card`, body: "Import from your old help desk and keep it running while your team tries Flatdesk on real tickets.", href: "/features/lossless-import" },
   { title: "Refund a wrong AI answer", body: "Every AI answer you pay for is on the monthly statement. An admin can refund a wrong one in one click.", href: "/features/ai-receipts" },
-  { title: "Leave any time", body: "Monthly plans have no contract, and you can export every ticket, customer and macro in one click.", href: "/faq" },
+  { title: "Leave any time", body: "Monthly plans have no contract, and you can export tickets, messages, customers and macros any time.", href: "/faq" },
 ];

@@ -1,14 +1,16 @@
-import { and, asc, eq, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { INBOUND_FILE_LIMIT, MAX_FILES, saveAttachments, type NewFile } from "@/lib/attachments";
 import { normalizeTags } from "@/lib/tickets";
 import { seal, unseal } from "./crypto";
-import { ApiError, makeGetter, RateLimited, type FetchLike } from "./http";
+import { claimRule } from "./link";
+import { safeDownload, readCapped, type Budget } from "./download";
+import { ApiError, CredentialError, makeGetter, RateLimited, type FetchLike } from "./http";
 import { freshdesk } from "./sources/freshdesk";
 import { helpscout } from "./sources/helpscout";
 import { intercom } from "./sources/intercom";
 import { zendesk } from "./sources/zendesk";
-import { ATTACHMENTS_LINKED, type Adapter, type Attachment, type Ctx, type Kind, type Mapped, type Msg, type Phase, type Raw, type SourceId } from "./types";
+import { ATTACHMENTS_LINKED, cleanText, cut, type Adapter, type Attachment, type Ctx, type Kind, type Mapped, type Msg, type Phase, type Raw, type SourceId } from "./types";
 import { isUuid } from "@/lib/ids";
 
 // Runs imports in short steps so each fits in one serverless request: the
@@ -21,13 +23,41 @@ export const ADAPTERS: Record<SourceId, Adapter> = { zendesk, intercom, freshdes
 
 const { imports, importRecords, externalAgents, importedRules } = schema;
 type Job = typeof imports.$inferSelect;
-type Cursor = { list: unknown | null; listed: boolean };
+// tries: records being worked on, by external id, with how many steps have
+// started on them. listTries: steps that started on the current page.
+// pages: pages listed in this phase so far.
+type Cursor = { list: unknown | null; listed: boolean; tries?: Record<string, number>; listTries?: number; pages?: number };
 
 const STEP_BUDGET_MS = 20_000;
 const HYDRATE_BATCH = 8;
 const CONCURRENCY = 4;
+// A record whose step died this many times (it hangs, or crashes the
+// process) is skipped with an issue, so it can't hold the import up forever.
+const MAX_TRIES = 3;
+// No source has this many pages of anything; past it, pagination is looping.
+const MAX_PAGES_PER_PHASE = 100_000;
+// Attachment bytes downloaded per step and per message. A step stops starting
+// new records once half its budget is used.
+const STEP_BYTES = 200 * 1024 * 1024;
+const MESSAGE_BYTES = 40 * 1024 * 1024;
+// Imported macros are trimmed to what the macro editor accepts.
+const MACRO_NAME_MAX = 200;
+const MACRO_BODY_MAX = 8000;
+
+export const GAVE_UP = "Couldn't be imported after several tries; the original is kept in the import archive";
 
 export class ImportError extends Error {}
+
+// Thrown when a save finds the import no longer running (someone cancelled it).
+class Stopped extends Error {}
+
+// Postgres unique violation on a given index, through drizzle's error wrapper.
+function isUniqueViolation(e: unknown, constraint: string): boolean {
+  for (let x = e as { code?: string; constraint?: string; cause?: unknown } | undefined, i = 0; x && i < 3; x = x.cause as typeof x, i++) {
+    if (x.code === "23505" && x.constraint === constraint) return true;
+  }
+  return false;
+}
 
 export function isSource(v: unknown): v is SourceId {
   return typeof v === "string" && v in ADAPTERS;
@@ -37,15 +67,13 @@ async function makeCtx(orgId: string, adapter: Adapter, creds: Record<string, st
   const conn = await adapter.connect(creds, fetchImpl);
   const cache = new Map<string, Raw | null>();
   const apiHost = new URL(conn.base).host;
-  const doFetch = fetchImpl ?? fetch;
   return {
     source: adapter.id,
     creds,
     get: makeGetter(conn.base, conn.headers, fetchImpl),
     download(url: string) {
-      const u = new URL(url, conn.base);
-      if (u.protocol !== "https:") throw new Error("Only https links are copied");
-      return doFetch(u.toString(), { headers: u.host === apiHost ? conn.headers : {}, signal: AbortSignal.timeout(15_000) });
+      // Checked on every redirect hop: https, a public address, credentials only for the API host.
+      return safeDownload(new URL(url, conn.base), (u) => (u.host === apiHost ? conn.headers : {}), fetchImpl);
     },
     async lookup(kind: Kind, externalId: string) {
       const key = `${kind}:${externalId}`;
@@ -75,41 +103,69 @@ export async function startImport(opts: {
   fetchImpl?: FetchLike;
 }): Promise<{ id: string }> {
   const adapter = ADAPTERS[opts.source];
+  const RUNNING = "An import is already running. Let it finish or cancel it first.";
   const running = await db.query.imports.findFirst({ where: and(eq(imports.orgId, opts.orgId), eq(imports.status, "running")) });
-  if (running) throw new ImportError("An import is already running. Let it finish or cancel it first.");
+  if (running) throw new ImportError(RUNNING);
 
   const notes = new Set<string>();
   let account: string;
+  let accountKey: string | null;
   try {
     account = adapter.account(opts.creds);
     const ctx = await makeCtx(opts.orgId, adapter, opts.creds, notes, opts.fetchImpl);
-    account = (await adapter.verify(ctx)) || account;
-    // Records are matched by their id in the old help desk, so two Zendesk (or
-    // Freshdesk...) accounts in one team would share ids and overwrite each other's tickets.
-    const other = await db.query.imports.findFirst({
-      columns: { account: true },
-      where: and(eq(imports.orgId, opts.orgId), eq(imports.source, opts.source), ne(imports.account, account)),
-    });
-    if (other) throw new ImportError(`This team already has an import from ${other.account}. To bring in ${account} too, create a separate team for it, so tickets from the two accounts don't get mixed up.`);
+    const verified = await adapter.verify(ctx);
+    account = cut(cleanText(verified.label || account), 300);
+    accountKey = verified.key ? cut(cleanText(verified.key.trim().toLowerCase()), 300) : null;
   } catch (e) {
-    if (e instanceof ApiError || e instanceof RateLimited) throw new ImportError(e instanceof RateLimited ? `${adapter.name} is busy. Try again in a minute.` : e.message);
-    if (e instanceof Error && !(e instanceof TypeError)) throw new ImportError(e.message);
+    if (e instanceof RateLimited) throw new ImportError(`${adapter.name} is busy. Try again in a minute.`);
+    // Our own messages, written for the admin.
+    if (e instanceof ApiError || e instanceof CredentialError) throw new ImportError(e.message);
+    console.error("import: couldn't connect", adapter.id, e);
+    throw new ImportError(`Couldn't connect to ${adapter.name}. Check the details and try again.`);
+  }
+  // Records are matched by their id in the old help desk, so two Zendesk (or
+  // Freshdesk...) accounts in one team would share ids and overwrite each
+  // other's tickets. Accounts are compared by key; imports from before keys
+  // were kept (or from a source without one) are compared by label.
+  const earlier = await db
+    .selectDistinct({ account: imports.account, accountKey: imports.accountKey })
+    .from(imports)
+    .where(and(eq(imports.orgId, opts.orgId), eq(imports.source, opts.source)));
+  const other = earlier.find((x) => (x.accountKey && accountKey ? x.accountKey !== accountKey : x.account !== account));
+  if (other) {
+    throw new ImportError(
+      `This team already has an import from ${other.account}. To bring in ${account} too, create a separate team for it, so tickets from the two accounts don't get mixed up.`,
+    );
+  }
+
+  let credentials: string;
+  try {
+    credentials = seal(opts.creds);
+  } catch (e) {
+    console.error("import: couldn't seal credentials", e);
+    throw new ImportError("Imports aren't set up on this server yet. Contact support.");
+  }
+  try {
+    const [job] = await db
+      .insert(imports)
+      .values({
+        orgId: opts.orgId,
+        source: opts.source,
+        account,
+        accountKey,
+        phase: adapter.phases[0].kind,
+        cursor: { list: null, listed: false } satisfies Cursor,
+        credentials,
+        notes: [...notes],
+        startedBy: opts.userId,
+      })
+      .returning({ id: imports.id });
+    return job;
+  } catch (e) {
+    // Two starts at the same moment both passed the check above; the index lets one through.
+    if (isUniqueViolation(e, "imports_org_running")) throw new ImportError(RUNNING);
     throw e;
   }
-  const [job] = await db
-    .insert(imports)
-    .values({
-      orgId: opts.orgId,
-      source: opts.source,
-      account,
-      phase: adapter.phases[0].kind,
-      cursor: { list: null, listed: false } satisfies Cursor,
-      credentials: seal(opts.creds),
-      notes: [...notes],
-      startedBy: opts.userId,
-    })
-    .returning({ id: imports.id });
-  return job;
 }
 
 export async function cancelImport(orgId: string, id: string) {
@@ -131,14 +187,15 @@ export async function expireIdleImports(days = 7) {
   return rows.length;
 }
 
-// Postgres refuses the NUL character in text and jsonb, and one in a single
-// record used to stop the whole import on every run. Old help desks do store
-// them, so they're dropped from everything a source returns.
-export function stripNul<T>(v: T): T {
-  if (typeof v === "string") return (v.includes("\0") ? v.replace(/\0/g, "") : v) as T;
-  if (Array.isArray(v)) return v.map(stripNul) as T;
+// Postgres refuses NUL and lone UTF-16 surrogates in text and jsonb, and one
+// in a single record used to stop the whole import on every run. Old help
+// desks do store them, so they're cleaned from everything a source returns
+// and everything mapped from it.
+export function clean<T>(v: T): T {
+  if (typeof v === "string") return cleanText(v) as T;
+  if (Array.isArray(v)) return v.map(clean) as T;
   if (v && typeof v === "object" && Object.getPrototypeOf(v) === Object.prototype) {
-    return Object.fromEntries(Object.entries(v).map(([k, x]) => [stripNul(k), stripNul(x)])) as T;
+    return Object.fromEntries(Object.entries(v).map(([k, x]) => [cleanText(k), clean(x)])) as T;
   }
   return v;
 }
@@ -173,63 +230,109 @@ export async function runStep(orgId: string, id: string, opts: { budgetMs?: numb
     counts[kind] ??= { found: 0, imported: 0, kept: 0 };
     counts[kind][key] += n;
   };
+  const bytes: Budget = { left: STEP_BYTES };
 
-  const save = () =>
-    db
+  // Saves progress, only while the import still runs: a Cancel clicked during
+  // the step stops it at the next save.
+  const save = async () => {
+    const saved = await db
       .update(imports)
       .set({ phase: adapter.phases[phaseIdx]?.kind ?? job.phase, cursor, counts, notes: [...notes], updatedAt: new Date() })
-      .where(eq(imports.id, job.id));
+      .where(and(eq(imports.id, job.id), eq(imports.status, "running")))
+      .returning({ id: imports.id });
+    if (!saved.length) throw new Stopped();
+  };
 
   try {
     const ctx = await makeCtx(orgId, adapter, unseal(job.credentials!), notes, opts.fetchImpl);
     const deadline = Date.now() + budget;
-    while (Date.now() < deadline) {
+    while (Date.now() < deadline && bytes.left > STEP_BYTES / 2) {
       const phase = adapter.phases[phaseIdx];
       if (!phase) {
         Object.assign(patch, { status: "done", finishedAt: new Date(), credentials: null });
         break;
       }
 
-      if (phase.hydrate) {
-        const waiting = await db
-          .select({ externalId: importRecords.externalId, raw: importRecords.raw })
-          .from(importRecords)
-          .where(and(eq(importRecords.importId, job.id), eq(importRecords.kind, phase.kind), eq(importRecords.pending, true)))
-          .orderBy(asc(importRecords.updatedAt))
-          .limit(HYDRATE_BATCH);
-        if (waiting.length) {
-          await eachLimit(waiting, CONCURRENCY, (r) => processRecord(job, adapter, phase, ctx, r.externalId, r.raw as Raw, count));
-          await save();
-          continue;
+      // Records queued for a second pass: a ticket's full conversation, or a
+      // page whose step died before its records were saved.
+      const waiting = await db
+        .select({ externalId: importRecords.externalId, raw: importRecords.raw })
+        .from(importRecords)
+        .where(and(eq(importRecords.importId, job.id), eq(importRecords.kind, phase.kind), eq(importRecords.pending, true)))
+        .orderBy(asc(importRecords.updatedAt), asc(importRecords.externalId))
+        .limit(HYDRATE_BATCH);
+      if (waiting.length) {
+        const tries = { ...cursor.tries };
+        // A record retried after its step died runs alone, so one that hangs
+        // doesn't take the others down with it.
+        const retried = waiting.filter((r) => tries[r.externalId]);
+        const batch = retried.length ? [retried[0]] : waiting;
+        const run = batch.filter((r) => (tries[r.externalId] ?? 0) < MAX_TRIES);
+        for (const r of batch.filter((r) => !run.includes(r))) {
+          await giveUp(job, adapter, phase, r.externalId);
+          count(phase.kind, "kept");
+          delete tries[r.externalId];
         }
+        for (const r of run) tries[r.externalId] = (tries[r.externalId] ?? 0) + 1;
+        // Saved before the work, so a step that dies still counts as a try.
+        cursor = { ...cursor, tries };
+        await save();
+        try {
+          await eachLimit(run, CONCURRENCY, (r) => processRecord(job, adapter, phase, ctx, r.externalId, r.raw as Raw, count, bytes));
+        } catch (e) {
+          // A rate limit isn't the record's fault.
+          if (e instanceof RateLimited) for (const r of run) if (!--tries[r.externalId]) delete tries[r.externalId];
+          throw e;
+        }
+        for (const r of run) delete tries[r.externalId];
+        await save();
+        continue;
       }
 
       if (!cursor.listed) {
-        const listed = await phase.list(ctx, cursor.list);
-        const page = { ...listed, records: listed.records.map((r) => ({ ...r, raw: stripNul(r.raw) })) };
-        count(phase.kind, "found", page.records.length);
-        if (page.records.length) {
-          // Store every raw record first: the archive is complete even if mapping fails later.
-          await db
-            .insert(importRecords)
-            .values(
-              page.records.map((r) => ({
-                orgId,
-                source: adapter.id,
-                kind: phase.kind,
-                externalId: r.externalId,
-                importId: job.id,
-                raw: r.raw,
-                pending: Boolean(phase.hydrate),
-              })),
-            )
-            .onConflictDoUpdate({
-              target: [importRecords.orgId, importRecords.source, importRecords.kind, importRecords.externalId],
-              set: { importId: job.id, raw: sql`excluded.raw`, pending: sql`excluded.pending`, updatedAt: new Date() },
-            });
-          if (!phase.hydrate) await eachLimit(page.records, CONCURRENCY, (r) => processRecord(job, adapter, phase, ctx, r.externalId, r.raw, count));
+        const listTries = (cursor.listTries ?? 0) + 1;
+        if (listTries > MAX_TRIES) {
+          console.error("import: page kept failing", job.id, phase.kind, cursor.list);
+          throw new ApiError(0, `Reading ${phase.label.toLowerCase()} from ${adapter.name} kept failing, so the import stopped. Start it again to retry.`);
         }
-        cursor = { list: page.next, listed: page.next === null };
+        cursor = { ...cursor, listTries };
+        await save();
+        try {
+          const listed = await phase.list(ctx, cursor.list);
+          // A page listing one record twice would otherwise process it twice at once.
+          const unique = new Map<string, Raw>();
+          for (const r of listed.records) unique.set(cleanText(r.externalId), clean(r.raw));
+          const records = [...unique].map(([externalId, raw]) => ({ externalId, raw }));
+          count(phase.kind, "found", records.length);
+          // A page retried after its step died queues its records, so they run
+          // one at a time and one that hangs is skipped after a few tries.
+          const queue = Boolean(phase.hydrate) || listTries > 1;
+          if (records.length) {
+            // Store every raw record first: the archive is complete even if mapping fails later.
+            await db
+              .insert(importRecords)
+              .values(
+                records.map((r) => ({ orgId, source: adapter.id, kind: phase.kind, externalId: r.externalId, importId: job.id, raw: r.raw, pending: queue })),
+              )
+              .onConflictDoUpdate({
+                target: [importRecords.orgId, importRecords.source, importRecords.kind, importRecords.externalId],
+                set: { importId: job.id, raw: sql`excluded.raw`, pending: sql`excluded.pending`, updatedAt: new Date() },
+              });
+            if (!queue) await eachLimit(records, CONCURRENCY, (r) => processRecord(job, adapter, phase, ctx, r.externalId, r.raw, count, bytes));
+          }
+          const pages = (cursor.pages ?? 0) + 1;
+          let next = listed.next ?? null;
+          // A source answering with the same page again, or without end, would list forever.
+          if (next !== null && (pages >= MAX_PAGES_PER_PHASE || JSON.stringify(next) === JSON.stringify(cursor.list))) {
+            console.error("import: pagination stopped", job.id, phase.kind, pages);
+            notes.add(`${adapter.name} kept returning more pages of ${phase.label.toLowerCase()}, so Flatdesk stopped reading them. Some may be missing.`);
+            next = null;
+          }
+          cursor = { list: next, listed: next === null, pages, tries: cursor.tries };
+        } catch (e) {
+          if (e instanceof RateLimited) cursor = { ...cursor, listTries: listTries - 1 };
+          throw e;
+        }
         await save();
         continue;
       }
@@ -239,7 +342,9 @@ export async function runStep(orgId: string, id: string, opts: { budgetMs?: numb
       await save();
     }
   } catch (e) {
-    if (e instanceof RateLimited) patch.retryAt = e.retryAt;
+    if (e instanceof Stopped) {
+      // Cancelled while the step ran: the update below matches nothing.
+    } else if (e instanceof RateLimited) patch.retryAt = e.retryAt;
     else {
       console.error("import step failed", job.id, e);
       Object.assign(patch, {
@@ -260,6 +365,17 @@ export async function runStep(orgId: string, id: string, opts: { budgetMs?: numb
     .where(and(eq(imports.id, job.id), eq(imports.status, "running")))
     .returning();
   return after ?? db.query.imports.findFirst({ where: eq(imports.id, job.id) });
+}
+
+// A record that kept killing its step: kept in the archive with an issue.
+async function giveUp(job: Job, adapter: Adapter, phase: Phase, externalId: string) {
+  console.error("import: giving up on record", job.id, adapter.id, phase.kind, externalId);
+  await db
+    .update(importRecords)
+    .set({ pending: false, issues: [GAVE_UP], label: `${phase.kind} ${externalId}`, updatedAt: new Date() })
+    .where(
+      and(eq(importRecords.orgId, job.orgId), eq(importRecords.source, adapter.id), eq(importRecords.kind, phase.kind), eq(importRecords.externalId, externalId)),
+    );
 }
 
 // Runs fn over items, a few at a time. After a failure no new items start,
@@ -283,7 +399,7 @@ async function eachLimit<T>(items: T[], limit: number, fn: (item: T) => Promise<
 
 type Count = (kind: string, key: "found" | "imported" | "kept") => void;
 
-async function processRecord(job: Job, adapter: Adapter, phase: Phase, ctx: Ctx, externalId: string, raw: Raw, count: Count) {
+async function processRecord(job: Job, adapter: Adapter, phase: Phase, ctx: Ctx, externalId: string, raw: Raw, count: Count, bytes: Budget) {
   const where = and(
     eq(importRecords.orgId, job.orgId),
     eq(importRecords.source, adapter.id),
@@ -293,18 +409,18 @@ async function processRecord(job: Job, adapter: Adapter, phase: Phase, ctx: Ctx,
   let full = raw;
   let result: { mappedId: string | null; imported: boolean; issues: string[]; label: string };
   try {
-    if (phase.hydrate) full = stripNul(await phase.hydrate(ctx, raw));
-    const mapped = await phase.map(full, ctx);
+    if (phase.hydrate) full = clean(await phase.hydrate(ctx, raw));
+    const mapped = clean(await phase.map(full, ctx));
     const prev = await db.query.importRecords.findFirst({ columns: { mappedId: true }, where });
     const written = await write(job, adapter, externalId, mapped, prev?.mappedId ?? null);
-    if (written.copy) written.issues.push(...(await copyAttachments(ctx, job.orgId, written.copy, count)));
-    result = { ...written, issues: [...new Set([...mapped.issues, ...written.issues])], label: mapped.label.slice(0, 300) };
+    if (written.copy) written.issues.push(...(await copyAttachments(ctx, job.orgId, written.copy, count, bytes)));
+    result = { ...written, issues: [...new Set([...mapped.issues, ...written.issues])], label: cut(mapped.label, 300) };
   } catch (e) {
     // A bad token or rate limit stops the step; anything about one record is
     // reported on that record, and the rest of the import carries on.
     if (e instanceof RateLimited || (e instanceof ApiError && (e.status === 401 || e.status === 403))) throw e;
     console.error("import record failed", adapter.id, phase.kind, externalId, e);
-    full = { ...full, _importError: (e as Error).message };
+    full = { ...full, _importError: cleanText(String((e as Error)?.message ?? e)) };
     result = { mappedId: null, imported: false, issues: ["Couldn't be imported; the original is kept in the import archive"], label: `${phase.kind} ${externalId}` };
   }
   await db
@@ -339,7 +455,10 @@ async function write(job: Job, adapter: Adapter, externalId: string, m: Mapped, 
     case "agent": {
       const email = lower(m.email);
       const linked = email
-        ? await db.query.agents.findFirst({ where: and(eq(schema.agents.orgId, orgId), sql`lower(${schema.agents.email}) = ${email}`) })
+        ? // Removed agents keep their row but mustn't be handed tickets.
+          await db.query.agents.findFirst({
+            where: and(eq(schema.agents.orgId, orgId), sql`lower(${schema.agents.email}) = ${email}`, isNull(schema.agents.removedAt)),
+          })
         : null;
       await db
         .insert(externalAgents)
@@ -357,17 +476,24 @@ async function write(job: Job, adapter: Adapter, externalId: string, m: Mapped, 
 
     case "macro": {
       if (!m.active) return { mappedId: null, imported: false, issues: [] };
-      const values = { name: m.name.slice(0, 200) || "Untitled macro", body: m.body, addTags: normalizeTags(m.addTags), setStatus: m.setStatus, notApplied: m.notApplied, source: adapter.id, externalId };
-      if (prevMappedId) {
-        const [updated] = await db
-          .update(schema.macros)
-          .set(values)
-          .where(and(eq(schema.macros.orgId, orgId), eq(schema.macros.id, prevMappedId)))
-          .returning({ id: schema.macros.id });
-        if (updated) return { mappedId: updated.id, imported: true, issues: [] };
-      }
-      const [row] = await db.insert(schema.macros).values({ orgId, ...values }).returning({ id: schema.macros.id });
-      return { mappedId: row.id, imported: true, issues: [] };
+      const values = {
+        name: cut(m.name.trim(), MACRO_NAME_MAX) || "Untitled macro",
+        body: cut(m.body, MACRO_BODY_MAX),
+        addTags: normalizeTags(m.addTags),
+        setStatus: m.setStatus,
+        notApplied: m.notApplied,
+        // A personal macro in the old help desk: agents can use it, the AI doesn't read it.
+        internal: Boolean(m.internal),
+      };
+      const issues = m.body.length > MACRO_BODY_MAX ? ["Its text was too long for a Flatdesk macro and was shortened; the full text is in the import archive"] : [];
+      // One macro per source record, however often the import runs (even two at once).
+      const mc = schema.macros;
+      const [row] = await db
+        .insert(mc)
+        .values({ orgId, source: adapter.id, externalId, ...values })
+        .onConflictDoUpdate({ target: [mc.orgId, mc.source, mc.externalId], targetWhere: sql`${mc.externalId} is not null`, set: values })
+        .returning({ id: mc.id });
+      return { mappedId: row.id, imported: true, issues };
     }
 
     case "rule": {
@@ -387,8 +513,9 @@ async function write(job: Job, adapter: Adapter, externalId: string, m: Mapped, 
       });
       if (agent?.linkedUserId) {
         if (!kept.flatdeskRuleId) {
-          const [rule] = await db.insert(schema.rules).values({ orgId, ifTag: tag, assignTo: agent.linkedUserId, enabled: m.active }).returning({ id: schema.rules.id });
-          await db.update(importedRules).set({ flatdeskRuleId: rule.id, pendingTag: null, pendingAssigneeEmail: null }).where(eq(importedRules.id, kept.id));
+          // The same tag and agent may already have a rule (made by hand, or by an earlier run).
+          const ruleId = await claimRule(orgId, tag, agent.linkedUserId, m.active);
+          await db.update(importedRules).set({ flatdeskRuleId: ruleId, pendingTag: null, pendingAssigneeEmail: null }).where(eq(importedRules.id, kept.id));
         }
         return { mappedId: kept.id, imported: true, issues: [] };
       }
@@ -439,22 +566,34 @@ function withAttachments(m: Msg, files = m.attachments) {
   return body ? `${body}\n\n${list}` : list;
 }
 
-async function fetchAttachment(ctx: Ctx, a: Attachment): Promise<NewFile | null> {
-  if (a.size && a.size > INBOUND_FILE_LIMIT) return null;
+// budgets: bytes this message and this step may still download. A file that
+// doesn't fit stays a link.
+async function fetchAttachment(ctx: Ctx, a: Attachment, budgets: Budget[]): Promise<NewFile | null> {
+  const room = Math.min(INBOUND_FILE_LIMIT, ...budgets.map((b) => b.left));
+  if (a.size && a.size > room) return null;
   try {
-    let data: Buffer;
+    let data: Buffer | null;
     if (a.dataPath) {
       const { data: json } = await ctx.get(a.dataPath);
       data = Buffer.from(String(json.data ?? ""), "base64");
+      if (data.length > room) return null;
+      for (const b of budgets) b.left -= data.length;
     } else {
       if (!a.url) return null;
       const res = await ctx.download(a.url);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      if (Number(res.headers.get("content-length")) > INBOUND_FILE_LIMIT) return null;
-      data = Buffer.from(await res.arrayBuffer());
+      if (!res.ok) {
+        await res.body?.cancel().catch(() => {});
+        throw new Error(`HTTP ${res.status}`);
+      }
+      if (Number(res.headers.get("content-length")) > room) {
+        await res.body?.cancel().catch(() => {});
+        return null;
+      }
+      // Read in chunks and stop at the limit: the header can be missing or wrong.
+      data = await readCapped(res, INBOUND_FILE_LIMIT, budgets);
     }
-    if (!data.length || data.length > INBOUND_FILE_LIMIT) return null;
-    return { filename: a.name, contentType: a.contentType || "application/octet-stream", data };
+    if (!data?.length) return null;
+    return { filename: cut(a.name, 255) || "attachment", contentType: cut(a.contentType || "application/octet-stream", 255), data };
   } catch (e) {
     // A rate limit or revoked token stops the step like any other call.
     if (e instanceof RateLimited || (e instanceof ApiError && (e.status === 401 || e.status === 403))) throw e;
@@ -466,14 +605,15 @@ async function fetchAttachment(ctx: Ctx, a: Attachment): Promise<NewFile | null>
 // Time one ticket may spend downloading, so a step stays inside its request.
 const COPY_BUDGET_MS = 20_000;
 
-async function copyAttachments(ctx: Ctx, orgId: string, copies: Copy[], count: Count): Promise<string[]> {
+async function copyAttachments(ctx: Ctx, orgId: string, copies: Copy[], count: Count, stepBytes: Budget): Promise<string[]> {
   let missed = false;
   const deadline = Date.now() + COPY_BUDGET_MS;
   for (const { ticketId, messageId, msg } of copies) {
     const files: NewFile[] = [];
     const left: Attachment[] = [];
+    const messageBytes: Budget = { left: MESSAGE_BYTES };
     for (const a of msg.attachments) {
-      const file = files.length < MAX_FILES && Date.now() < deadline ? await fetchAttachment(ctx, a) : null;
+      const file = files.length < MAX_FILES && Date.now() < deadline ? await fetchAttachment(ctx, a, [messageBytes, stepBytes]) : null;
       if (file) files.push(file);
       else left.push(a);
     }
@@ -565,7 +705,7 @@ async function writeTicket(job: Job, adapter: Adapter, externalId: string, m: Ex
   });
   const firstResponse = m.messages.filter((x) => x.author === "agent" && !x.internal).sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())[0];
   const ticketValues = {
-    subject: m.subject.slice(0, 500),
+    subject: cut(m.subject, 500),
     status: m.status,
     channel: m.channel,
     customerId,
@@ -608,10 +748,17 @@ async function writeTicket(job: Job, adapter: Adapter, externalId: string, m: Ex
         .update(t)
         .set(sourceNewer ? ticketValues : rest)
         .where(eq(t.id, existing.id));
-      const ids = (await tx.select({ id: schema.messages.externalId }).from(schema.messages).where(eq(schema.messages.ticketId, existing.id))).map((r) => r.id);
-      const seen = new Set(ids);
-      // Messages without ids came from an older import that didn't record them; don't guess which are new.
-      const fresh = ids.includes(null) ? [] : rows.filter((r) => !seen.has(r.externalId));
+      const have = await tx
+        .select({ externalId: schema.messages.externalId, createdAt: schema.messages.createdAt, authorType: schema.messages.authorType })
+        .from(schema.messages)
+        .where(eq(schema.messages.ticketId, existing.id));
+      const seen = new Set(have.map((r) => r.externalId).filter(Boolean));
+      // Messages without an id are replies written in Flatdesk, or came from an
+      // older import that didn't record ids. Those old ones keep the source's
+      // time to the millisecond, so a message matching one by time and author
+      // is taken as already there; everything else from the source is new.
+      const unnamed = new Set(have.filter((r) => !r.externalId).map((r) => `${r.authorType}:${r.createdAt.getTime()}`));
+      const fresh = rows.filter((r) => !seen.has(r.externalId) && !unnamed.has(`${r.authorType}:${r.createdAt.getTime()}`));
       const added = fresh.length
         ? await tx.insert(schema.messages).values(fresh.map((r) => ({ ...r, ticketId: existing.id }))).returning({ id: schema.messages.id, externalId: schema.messages.externalId })
         : [];
