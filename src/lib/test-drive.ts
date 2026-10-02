@@ -42,7 +42,7 @@ const lock = (tx: Pick<typeof db, "execute">, orgId: string) => tx.execute(sql`s
 export async function pickTickets(orgId: string, limit = TEST_DRIVE.tickets): Promise<string[]> {
   const { rows } = await db.execute<{ id: string }>(sql`
     select t.id from (
-      select id, created_at from ${tickets} where org_id = ${orgId} order by created_at desc limit ${limit * 20}
+      select id, created_at from ${tickets} where org_id = ${orgId} and not test order by created_at desc limit ${limit * 20}
     ) t
     where (
       select m.author_type from ${messages} m where m.ticket_id = t.id and not m.internal order by m.created_at, m.id limit 1

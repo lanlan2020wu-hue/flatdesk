@@ -110,7 +110,8 @@ export async function csatReport(orgId: string, since: Date) {
       bad: sql<number>`(count(*) filter (where ${schema.csatRatings.rating} = 'bad'))::int`,
     })
     .from(schema.csatRatings)
-    .where(and(eq(schema.csatRatings.orgId, orgId), gte(schema.csatRatings.createdAt, since)))
+    .innerJoin(schema.tickets, eq(schema.tickets.id, schema.csatRatings.ticketId))
+    .where(and(eq(schema.csatRatings.orgId, orgId), gte(schema.csatRatings.createdAt, since), eq(schema.tickets.test, false)))
     .groupBy(schema.csatRatings.ratedAuthorType, schema.csatRatings.agentId);
   const sum = (rs: typeof rows) => rs.reduce((a, r) => ({ total: a.total + r.total, great: a.great + r.great, bad: a.bad + r.bad }), { total: 0, great: 0, bad: 0 });
   return {

@@ -83,6 +83,9 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
           <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
             <span className="num">#{ticket.number}</span>
             <span className="capitalize">· {ticket.channel}</span>
+            {ticket.test && (
+              <Link href="/app/test-tickets" className="chip border-warn/40 bg-warn-soft text-warn" title="Left out of reports and the AI allowance.">Test ticket</Link>
+            )}
             {ticket.channel === "chat" && (
               <span className="chip" title="Chat visitors type their own email address; nothing checks it belongs to them.">Email not verified</span>
             )}

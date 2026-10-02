@@ -90,4 +90,9 @@ export const LIMITS = {
   invites: (orgId: string, count: number): Limit[] => [{ key: `invites:${orgId}`, max: 100, windowSec: DAY, cost: count }],
   tryAi: (orgId: string): Limit[] => [{ key: `try-ai:${orgId}`, max: 30, windowSec: HOUR }],
   testAlert: (orgId: string): Limit[] => [{ key: `test-alert:${orgId}`, max: 10, windowSec: HOUR }],
+  // Test tickets email the admin's own address and run the AI, so not too many.
+  testTickets: (orgId: string): Limit[] => [
+    { key: `test-tickets:${orgId}`, max: 30, windowSec: HOUR },
+    { key: `test-tickets-day:${orgId}`, max: 100, windowSec: DAY },
+  ],
 };
