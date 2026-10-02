@@ -52,6 +52,11 @@ export default async function ReceiptsPage({ searchParams }: PageProps<"/app/rec
             The AI replies to customers by itself, by email and in the chat. This is its receipt: every ticket it answered or handed to your team. Only counted lines use your allowance. If the AI got one wrong, refund it and it stops
             counting{canRefund ? "" : " (refunds close once a month is billed)"}.
           </p>
+          {canRefund && r.refundsLeft === 0 && (
+            <p className="max-w-xl text-sm text-muted">
+              This month&apos;s {r.refundLimit} refunds are used up. Refunds are capped at one in five of your included answers, so if the AI keeps getting things wrong, fix the facts or macros it uses in Settings or turn AI answers off.
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <form className="flex items-center gap-2" action="/app/receipts">
@@ -89,7 +94,7 @@ export default async function ReceiptsPage({ searchParams }: PageProps<"/app/rec
           { title: "The AI replies on its own", body: "When a new email or chat comes in, it answers if your macros, help articles or the facts you gave it in Settings cover the question. Nobody has to click anything." },
           { title: "A line is added here", body: "Every ticket the AI touched gets a line, with the macros and articles it used." },
           { title: "Only finished answers count", body: "If the AI hands a ticket to your team, before or after replying, that line doesn't count. Only answers that settle the question without your team use the allowance." },
-          { title: "Refund a wrong answer", body: "If the AI got one wrong, an admin clicks Refund and reopen. It stops counting and the ticket goes back to your team as open." },
+          { title: "Refund a wrong answer", body: `If the AI got one wrong, an admin clicks Refund and reopen. It stops counting and the ticket goes back to your team as open. Each month you can refund up to one in five of your included answers (${r.refundLimit} this month).` },
         ]}
         example="a customer asks for your opening hours and the AI answers from the facts you gave it. That's one counted line. Another customer asks to cancel their account and the AI hands it to your team. That line is free."
       />
@@ -116,6 +121,7 @@ export default async function ReceiptsPage({ searchParams }: PageProps<"/app/rec
             </div>
             <Line label="Not counted (handed to the team)" value={r.notCounted.toLocaleString("en-US")} className="text-muted" />
             <Line label="Refunded by your team" value={r.refunded.toLocaleString("en-US")} className="text-muted" />
+            <Line label="Refunds left this month" value={`${r.refundsLeft} of ${r.refundLimit}`} className="text-muted" />
             <div className="rule-dashed my-3" />
             <Line label={`Overage, ${r.overage} × ${usd(PLAN.overageRate, true)}`} value={usd(r.overageUsd, true)} />
             <div className="mt-2 flex items-baseline justify-between gap-4 rounded-lg bg-accent-soft px-3 py-2.5 font-medium text-accent">
@@ -176,7 +182,7 @@ export default async function ReceiptsPage({ searchParams }: PageProps<"/app/rec
                       {l.refundNote ? `: ${l.refundNote}` : "."}
                     </p>
                   )}
-                  {isAdmin && canRefund && (l.status === "included" || l.status === "overage") && (
+                  {isAdmin && canRefund && r.refundsLeft > 0 && (l.status === "included" || l.status === "overage") && (
                     <details className="group">
                       <summary className="w-max cursor-pointer text-sm text-muted transition-colors hover:text-ink">
                         The AI got this wrong

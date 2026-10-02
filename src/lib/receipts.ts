@@ -9,6 +9,18 @@ import { PLAN } from "@/lib/pricing";
 // resolution the AI got wrong; it stops counting and the ticket goes back to
 // the team. Refunds are open until that month's overage has been billed.
 
+// Refunds per month are capped at a share of the month's allowance. A refund
+// takes an answer off the count (and off any overage bill), so without a cap a
+// team could refund every answer and never reach overage. Our own AI cost is
+// already capped in ai.ts (refunded answers still count toward it), so this
+// protects the overage bill, not our spend. A team getting more than one in
+// five answers wrong should fix the AI's knowledge or turn it off.
+export const REFUND_SHARE = 0.2;
+export const MIN_REFUNDS = 5;
+export function refundLimit(included: number) {
+  return Math.max(MIN_REFUNDS, Math.floor(included * REFUND_SHARE));
+}
+
 const { orgs, aiEvents, tickets, messages } = schema;
 
 export type ReceiptStatus = "included" | "overage" | "refunded" | "customer-replied" | "handed-off";
@@ -109,6 +121,8 @@ export async function monthReceipt(orgId: string, month: string) {
   }
   const tally = (s: ReceiptStatus) => lines.filter((l) => l.status === s).length;
   const overage = tally("overage");
+  const refunded = tally("refunded");
+  const limit = refundLimit(usage.included);
   return {
     month,
     lines,
@@ -116,7 +130,9 @@ export async function monthReceipt(orgId: string, month: string) {
     counted: tally("included") + overage,
     overage,
     overageUsd: overage * PLAN.overageRate,
-    refunded: tally("refunded"),
+    refunded,
+    refundLimit: limit,
+    refundsLeft: Math.max(0, limit - refunded),
     notCounted: tally("customer-replied") + tally("handed-off"),
   };
 }
@@ -140,6 +156,17 @@ export async function refundResolution(orgId: string, eventId: string, by: { use
     await lockBillingMonth(tx, orgId, event.month);
     const [org] = await tx.select({ billed: orgs.overageBilledMonth }).from(orgs).where(eq(orgs.id, orgId));
     if (org?.billed && org.billed >= event.month) throw new RefundError("This month has already been billed, so it can't be refunded here.");
+    const { included } = await aiUsage(orgId, event.month, tx);
+    const [{ refunds }] = await tx
+      .select({ refunds: sql<number>`count(*)::int` })
+      .from(aiEvents)
+      .where(and(eq(aiEvents.orgId, orgId), eq(aiEvents.month, event.month), eq(aiEvents.kind, "refunded"), eq(aiEvents.test, false)));
+    const limit = refundLimit(included);
+    if (Number(refunds) >= limit) {
+      throw new RefundError(
+        `Your team has used this month's ${limit} refunds (one in five of your included AI answers). If the AI keeps getting answers wrong, fix the facts or macros it uses, or turn AI answers off in Settings.`,
+      );
+    }
 
     const now = new Date();
     await tx
