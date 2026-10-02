@@ -42,7 +42,7 @@ export default async function ReceiptsPage({ searchParams }: PageProps<"/app/rec
     <div className="grid max-w-5xl gap-8 px-4 py-6 md:px-8 md:py-8">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="grid gap-1.5">
-          <h1 className="font-display text-3xl">AI receipts</h1>
+          <h1 className="page-title">AI receipts</h1>
           <p className="max-w-xl text-muted">
             Every ticket the AI answered or handed to your team. Only counted lines use your allowance. If the AI got one wrong, refund it and it stops
             counting{canRefund ? "" : " (refunds close once a month is billed)"}.

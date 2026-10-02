@@ -119,7 +119,7 @@ export default async function TestDrivePage({ searchParams }: PageProps<"/app/te
   return (
     <div className="grid max-w-5xl gap-8 px-4 py-6 md:px-8 md:py-8">
       <header className="grid gap-1.5">
-        <h1 className="font-display text-3xl">AI test drive</h1>
+        <h1 className="page-title">AI test drive</h1>
         <p className="max-w-2xl text-muted">
           The AI drafts answers to your {TEST_DRIVE.tickets} most recent tickets from your macros and notes, and shows each one beside the reply your team sent. Nothing goes to customers and none of it uses your AI allowance.
         </p>

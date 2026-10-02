@@ -52,6 +52,8 @@ export async function listTickets(orgId: string, userId: string, view: View) {
       assigneeName: agents.name,
       customerName: customers.name,
       customerEmail: customers.email,
+      // The latest message the customer can see, for the row's one-line preview.
+      preview: sql<string | null>`(select left(${messages.body}, 200) from ${messages} where ${messages.ticketId} = ${tickets.id} and ${messages.internal} = false and ${messages.authorType} <> 'system' order by ${messages.createdAt} desc limit 1)`,
     })
     .from(tickets)
     .innerJoin(customers, eq(customers.id, tickets.customerId))

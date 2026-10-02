@@ -7,7 +7,10 @@
 //
 // We pay for these calls. They never count toward a team's AI allowance or
 // show on receipts. Each group of repeats is written once and cached, and a
-// team gets at most WRITER.perDay calls a day, failed ones included.
+// team gets at most WRITER.perDay calls a day, failed ones included, and
+// WRITER.usdPerSeat of writing a month per seat. A call costs about $0.01 to
+// $0.04, so the monthly budget only stops a team whose macros page keeps
+// finding new work, and keeps a one-seat team's worst month at a few dollars.
 //
 // Opening the Macros page starts the writing, so two tabs or a quick reload
 // must not start the same calls twice. A run claims each key first, under a
@@ -15,17 +18,46 @@
 // The call fills it in. A failed call leaves it as "failed:N" and is tried
 // again after a day, at most WRITER.maxAttempts times in all.
 
-import { and, eq, gte, inArray, ne, sql } from "drizzle-orm";
+import { and, count, eq, gte, inArray, isNull, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema } from "@/db";
 import { aiConfigured } from "@/lib/ai";
 import { structuredCall } from "@/lib/llm";
 import { applyDrift, type Drift, type MacroUpdate } from "@/lib/macro-drift";
 import type { Suggestion } from "@/lib/macro-suggestions";
+import { PLAN } from "@/lib/pricing";
 
-export const WRITER = { perDay: 12, perRun: 3, maxAttempts: 3 };
+export const WRITER = { perDay: 12, perRun: 3, maxAttempts: 3, usdPerSeat: 2 };
 
-const { macroAiDrafts: drafts } = schema;
+const { macroAiDrafts: drafts, orgs, agents } = schema;
+
+// Writes this run may make: what's left of today's count and this month's
+// spend. Seats are counted as the AI allowance counts them: paid seats, or
+// signed-in agents up to the trial cap.
+export function writeRoom(o: { writtenToday: number; spentThisMonth: number; seats: number }) {
+  if (o.spentThisMonth >= Math.max(1, o.seats) * WRITER.usdPerSeat) return 0;
+  return Math.max(0, Math.min(WRITER.perRun, WRITER.perDay - o.writtenToday));
+}
+
+async function room(orgId: string) {
+  const monthStart = new Date();
+  monthStart.setUTCDate(1);
+  monthStart.setUTCHours(0, 0, 0, 0);
+  const since = new Date(Date.now() - 86_400_000);
+  const [org, [{ agentCount }], [{ today, spent }]] = await Promise.all([
+    db.query.orgs.findFirst({ where: eq(orgs.id, orgId), columns: { billedSeats: true } }),
+    db.select({ agentCount: count() }).from(agents).where(and(eq(agents.orgId, orgId), eq(agents.viewer, false), isNull(agents.removedAt))),
+    db
+      .select({
+        today: sql<number>`count(*) filter (where ${drafts.createdAt} >= ${since.toISOString()})`,
+        spent: sql<string>`coalesce(sum(${drafts.costUsd}) filter (where ${drafts.createdAt} >= ${monthStart.toISOString()}), 0)`,
+      })
+      .from(drafts)
+      .where(and(eq(drafts.orgId, orgId), gte(drafts.createdAt, since < monthStart ? since : monthStart))),
+  ]);
+  const seats = org?.billedSeats ?? Math.min(Number(agentCount), PLAN.trialAgentCap);
+  return writeRoom({ writtenToday: Number(today), spentThisMonth: Number(spent), seats });
+}
 
 const Written = z.object({
   name: z.string().describe("A short macro name, 2 to 6 words, like 'Refund timing' or 'Reset a password'."),
@@ -89,12 +121,10 @@ export async function claimKeys(orgId: string, keys: { key: string; name: string
     const [{ locked }] = (await tx.execute<{ locked: boolean }>(sql`select pg_try_advisory_xact_lock(hashtext(${`macro-writer:${orgId}`})) as locked`)).rows;
     if (!locked) return []; // another run is claiming right now
     const since = new Date(Date.now() - 86_400_000);
-    const [{ n }] = await tx
-      .select({ n: sql<number>`count(*)` })
-      .from(drafts)
-      .where(and(eq(drafts.orgId, orgId), gte(drafts.createdAt, since)));
-    let room = Math.min(WRITER.perRun, WRITER.perDay - Number(n));
-    if (room <= 0) return [];
+    // Today's count and this month's spend. Earlier claims are committed, and
+    // the lock keeps any other run from claiming until this one is done.
+    let left = await room(orgId);
+    if (left <= 0) return [];
     const existing = new Map(
       (
         await tx
@@ -105,7 +135,7 @@ export async function claimKeys(orgId: string, keys: { key: string; name: string
     );
     const claimed: string[] = [];
     for (const k of keys) {
-      if (room <= 0) break;
+      if (left <= 0) break;
       const row = existing.get(k.key);
       if (!row) {
         await tx.insert(drafts).values({ orgId, key: k.key, name: k.name.slice(0, 80) || "Macro", question: "", body: "", model: PENDING }).onConflictDoNothing();
@@ -116,7 +146,7 @@ export async function claimKeys(orgId: string, keys: { key: string; name: string
         await tx.update(drafts).set({ createdAt: new Date() }).where(and(eq(drafts.orgId, orgId), eq(drafts.key, k.key)));
       }
       claimed.push(k.key);
-      room--;
+      left--;
     }
     return claimed;
   });
@@ -182,7 +212,7 @@ export async function writeMissingDrafts(orgId: string, missing: Suggestion[]) {
 // ---- Evolving macros ----------------------------------------------
 // lib/macro-drift.ts finds the edit a team keeps making to a macro. The AI
 // rewrites the macro with that edit, keeping its placeholders, and the result
-// is cached per macro and edit. It shares the daily limit above.
+// is cached per macro and edit. It shares the daily and monthly limits above.
 
 const Updated = z.object({ body: z.string().describe("The whole macro, rewritten with the team's edits, ready to send.") });
 

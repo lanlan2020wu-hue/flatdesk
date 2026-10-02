@@ -5,11 +5,12 @@ import { duration, REPORT_RANGES, type ReportRange, teamReport } from "@/lib/rep
 
 export const metadata = { title: "Reports" };
 
+// One figure in a ruled grid, like the overview: no boxes around numbers.
 function Tile({ label, value, note }: { label: string; value: string; note?: string }) {
   return (
-    <div className="grid gap-1 rounded-lg border border-line bg-surface px-4 py-3">
+    <div className="grid content-start gap-1 border-t border-line pt-3">
       <span className="text-sm text-muted">{label}</span>
-      <span className="num font-display text-3xl">{value}</span>
+      <span className="num text-3xl font-medium tracking-tight">{value}</span>
       {note && <span className="text-sm text-muted">{note}</span>}
     </div>
   );
@@ -23,9 +24,9 @@ export default async function ReportsPage({ searchParams }: PageProps<"/app/repo
   const pct = (v: number | null) => (v === null ? "–" : `${Math.round(v * 100)}%`);
 
   return (
-    <div className="grid max-w-4xl gap-8 px-4 py-6 md:px-8">
+    <div className="grid max-w-4xl gap-10 px-4 py-6 md:px-8 md:py-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display text-2xl">Reports</h1>
+        <h1 className="page-title">Reports</h1>
         <nav className="flex gap-1 text-sm" aria-label="Date range">
           {REPORT_RANGES.map((d) => (
             <Link
@@ -40,7 +41,7 @@ export default async function ReportsPage({ searchParams }: PageProps<"/app/repo
         </nav>
       </div>
 
-      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="Summary">
+      <section className="grid gap-x-6 gap-y-6 sm:grid-cols-2 lg:grid-cols-3" aria-label="Summary">
         <Tile label="New tickets" value={String(r.created)} note={`${r.email} email, ${r.chat} chat`} />
         <Tile label="Median first response" value={duration(r.medianFirstResponse)} note="From arrival to first reply" />
         <Tile label="Median time to close" value={duration(r.medianResolution)} note={`${r.closed} closed, ${r.stillOpen} still open`} />
@@ -49,9 +50,6 @@ export default async function ReportsPage({ searchParams }: PageProps<"/app/repo
           value={r.aiShare === null ? "–" : `${Math.round(r.aiShare * 100)}%`}
           note={`${r.aiResolved} answered, ${r.aiHandedOff} handed to the team`}
         />
-      </section>
-
-      <section className="grid gap-3 sm:grid-cols-2" aria-label="Service">
         <Tile
           label="First replies on target"
           value={r.target ? pct(r.target.share) : "–"}
@@ -73,7 +71,7 @@ export default async function ReportsPage({ searchParams }: PageProps<"/app/repo
       </section>
 
       <section className="grid gap-3">
-        <h2 className="font-medium">By agent</h2>
+        <h2 className="text-lg font-semibold">By agent</h2>
         {r.agents.length === 0 ? (
           <p className="text-muted">No agents yet.</p>
         ) : (

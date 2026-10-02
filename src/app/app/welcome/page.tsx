@@ -299,9 +299,8 @@ export default async function WelcomePage({ searchParams }: PageProps<"/app/welc
         <ul className="grid gap-2 sm:grid-cols-2">
           {Object.values(ADAPTERS).map((a) => (
             <li key={a.id}>
-              <Link href={`/app/import/new/${a.id}`} className="btn btn-secondary w-full justify-between">
+              <Link href={`/app/import/new/${a.id}`} className="btn btn-secondary w-full">
                 {a.name}
-                <span aria-hidden="true">→</span>
               </Link>
             </li>
           ))}
@@ -378,8 +377,7 @@ export default async function WelcomePage({ searchParams }: PageProps<"/app/welc
   return (
     <div className="grid max-w-3xl gap-6 px-4 py-6 md:px-8 md:py-8">
       <header className="grid gap-3">
-        <p className="eyebrow">Getting started</p>
-        <h1 className="font-display text-3xl">{o.complete ? "You're all set" : `Welcome to Flatdesk, ${org.name}`}</h1>
+        <h1 className="page-title">{o.complete ? "You're all set" : `Welcome to Flatdesk, ${org.name}`}</h1>
         <div className="grid max-w-sm gap-1.5">
           <div className="h-1.5 overflow-hidden rounded-full bg-line" role="progressbar" aria-valuenow={o.doneCount} aria-valuemin={0} aria-valuemax={steps.length} aria-label="Setup progress">
             <div className="h-full rounded-full bg-accent transition-[width] duration-700 ease-out" style={{ width: `${pct}%` }} />
@@ -390,9 +388,9 @@ export default async function WelcomePage({ searchParams }: PageProps<"/app/welc
         </div>
       </header>
 
-      <ol className="grid gap-3">
+      <ol className="card divide-y divide-line overflow-hidden">
         {steps.map((step, i) => (
-          <li key={step.id} id={step.id} className="card overflow-hidden">
+          <li key={step.id} id={step.id}>
             <details open={current === step.id}>
               <summary className="flex cursor-pointer items-center gap-4 px-5 py-4 transition-colors hover:bg-surface-2/60">
                 <span

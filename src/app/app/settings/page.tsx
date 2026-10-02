@@ -58,11 +58,10 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
   const team = await db.select().from(schema.agents).where(and(eq(schema.agents.orgId, s.orgId), isNull(schema.agents.removedAt))).orderBy(asc(schema.agents.name));
 
   return (
-    <div className="grid max-w-2xl gap-6 px-4 py-6 md:px-8 md:py-8">
-      <h1 className="font-display text-3xl">Settings</h1>
-      <section className="card grid gap-3 p-5 sm:p-6">
-        <h2 className="flex items-center gap-2 font-medium">
-          <svg viewBox="0 0 24 24" className="size-8 rounded-lg bg-accent-soft p-1.5 text-accent" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 6h16v12H4zM4 7l8 6 8-6" /></svg>
+    <div className="grid max-w-2xl gap-10 px-4 py-6 md:px-8 md:py-8">
+      <h1 className="page-title">Settings</h1>
+      <section className="grid gap-3 border-t border-line pt-6">
+        <h2 className="text-lg font-semibold">
           Email
         </h2>
         {address ? (
@@ -82,8 +81,8 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
       </section>
 
       {org && (
-        <section className="card grid gap-3 p-5 sm:p-6">
-          <h2 className="font-medium">Website chat</h2>
+        <section className="grid gap-3 border-t border-line pt-6">
+          <h2 className="text-lg font-semibold">Website chat</h2>
           <p className="text-muted">
             Paste this before the closing &lt;/body&gt; tag on your site. Visitors get a chat button. Their messages become tickets here, and your replies reach them in the chat and by email.
           </p>
@@ -96,8 +95,8 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
         </section>
       )}
 
-      <section className="card grid gap-3 p-5 sm:p-6">
-        <h2 className="font-medium">Export</h2>
+      <section className="grid gap-3 border-t border-line pt-6">
+        <h2 className="text-lg font-semibold">Export</h2>
         <p className="text-muted">
           Your data is yours. Download it any time, no need to ask us. Moving from another help desk?{" "}
           <Link href="/app/import" className="link text-accent">Import everything</Link>.
@@ -113,8 +112,8 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
         </ul>
       </section>
 
-      <section id="billing" className="card grid scroll-mt-6 gap-3 p-5 sm:p-6">
-        <h2 className="font-medium">Plan and billing</h2>
+      <section id="billing" className="grid scroll-mt-6 gap-3 border-t border-line pt-6">
+        <h2 className="text-lg font-semibold">Plan and billing</h2>
         {billing === "cancelled" && !subscribed && <p className="rounded-lg border border-line bg-surface-2/60 px-3 py-2 text-sm" role="status">No card was added. You can do it whenever you&apos;re ready.</p>}
         {billing === "annual" && <p className="rounded-lg border border-accent/30 bg-accent-soft px-3 py-2 text-sm" role="status">You&apos;re on yearly billing now. Any unused time on the monthly plan is credited on the first yearly invoice.</p>}
         {billing === "done" && <p className="rounded-lg border border-accent/30 bg-accent-soft px-3 py-2 text-sm" role="status">Thanks, your plan is set up.</p>}
@@ -186,10 +185,9 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
           </>
         )}
       </section>
-      <section className="card grid gap-4 p-5 sm:p-6">
+      <section className="grid gap-4 border-t border-line pt-6">
         <div className="grid gap-1">
-          <h2 className="flex items-center gap-2 font-medium">
-            <svg viewBox="0 0 24 24" className="size-8 rounded-lg bg-accent-soft p-1.5 text-accent" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.6L12 15l-1.8-4.4L5.5 9l4.7-1.4zM18 15l.9 2.1L21 18l-2.1.9L18 21l-.9-2.1L15 18l2.1-.9z" /></svg>
+          <h2 className="text-lg font-semibold">
             AI answers
           </h2>
           <p className="text-muted">
@@ -266,10 +264,9 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
         )}
       </section>
       {org && (
-        <section id="alerts" className="card grid scroll-mt-6 gap-4 p-5 sm:p-6">
+        <section id="alerts" className="grid scroll-mt-6 gap-4 border-t border-line pt-6">
           <div className="grid gap-1">
-            <h2 className="flex items-center gap-2 font-medium">
-              <svg viewBox="0 0 24 24" className="size-8 rounded-lg bg-accent-soft p-1.5 text-accent" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15zM10 20.5a2 2 0 0 0 4 0" /></svg>
+            <h2 className="text-lg font-semibold">
               Alerts in Slack or anywhere else
             </h2>
             <p className="text-muted">
@@ -338,10 +335,9 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
       )}
 
       {org && (
-        <section id="service" className="card grid scroll-mt-6 gap-4 p-5 sm:p-6">
+        <section id="service" className="grid scroll-mt-6 gap-4 border-t border-line pt-6">
           <div className="grid gap-1">
-            <h2 className="flex items-center gap-2 font-medium">
-              <svg viewBox="0 0 24 24" className="size-8 rounded-lg bg-accent-soft p-1.5 text-accent" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 21a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM12 9v4l2.5 2M9 2h6" /></svg>
+            <h2 className="text-lg font-semibold">
               Response target and ratings
             </h2>
             <p className="text-muted">
@@ -405,10 +401,9 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
         </section>
       )}
 
-      <section className="card grid gap-4 p-5 sm:p-6">
+      <section className="grid gap-4 border-t border-line pt-6">
         <div className="grid gap-1">
-          <h2 className="flex items-center gap-2 font-medium">
-            <svg viewBox="0 0 24 24" className="size-8 rounded-lg bg-accent-soft p-1.5 text-accent" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 11a4 4 0 100-8 4 4 0 000 8zM2 21v-1a6 6 0 0112 0v1M16 3.5a4 4 0 010 7M18 14a6 6 0 014 6v1" /></svg>
+          <h2 className="text-lg font-semibold">
             Team
           </h2>
           <p className="text-muted">

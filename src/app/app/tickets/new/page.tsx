@@ -10,7 +10,7 @@ export default async function NewTicketPage() {
   return (
     <div className="grid max-w-2xl gap-6 px-4 py-6 md:px-8 md:py-8">
       <div className="grid gap-1">
-        <h1 className="font-display text-3xl">New ticket</h1>
+        <h1 className="page-title">New ticket</h1>
         <p className="text-sm text-muted">Log a request that came in by phone or another channel. Email and chat create tickets automatically.</p>
       </div>
       <form action={createTicketAction} className="card grid gap-4 p-5 sm:p-6">

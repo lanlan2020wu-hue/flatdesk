@@ -17,7 +17,7 @@ const monthName = (m: string) => new Date(`${m}-01T00:00:00Z`).toLocaleDateStrin
 // A section of the overview: its name on a heavy rule, the link to act on it.
 function Section({ title, href, cta, children }: { title: string; href?: string; cta?: string; children: React.ReactNode }) {
   return (
-    <section className="grid gap-5 border-t-2 border-ink pt-4">
+    <section className="grid gap-5 border-t border-line pt-4">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <h2 className="text-lg font-semibold">{title}</h2>
         {href && <Link href={href} className="link text-sm font-medium text-accent">{cta}</Link>}
@@ -35,7 +35,7 @@ const Figure = ({ label, value, href, strong = false }: { label: string; value: 
   </Link>
 );
 
-// The app's landing page, in the order Flatdesk is sold: what the flat rate
+// The month at a glance, in the order Flatdesk is sold: what the flat rate
 // covers this month, then the AI macros waiting, then everything else.
 export default async function OverviewPage() {
   const s = await requireOpenPage();
@@ -59,10 +59,7 @@ export default async function OverviewPage() {
 
   return (
     <div className="grid max-w-5xl content-start gap-12 px-4 py-6 md:px-8 md:py-8">
-      <header className="grid gap-1">
-        <h1 className="font-display text-3xl sm:text-4xl">{monthName(ai.month)}</h1>
-        <p className="text-muted">What the flat rate covered this month, and what needs you.</p>
-      </header>
+      <h1 className="page-title">{monthName(ai.month)}</h1>
 
       {/* The bill first, on the same green field as the sidebar: the price, and what it has covered. */}
       <section className="grid gap-8 rounded-[8px] bg-field p-6 text-field-ink sm:p-8 md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] md:items-end">
@@ -101,7 +98,7 @@ export default async function OverviewPage() {
           <Figure label="Update ready from your edits" value={drifted.length} href="/app/macros#macro-updates" strong />
           <Figure label="Saved by your team" value={saved} href="/app/macros" />
         </div>
-        {suggestions.length || drifted.length ? (
+        {(suggestions.length > 0 || drifted.length > 0) && (
           <ul className="grid divide-y divide-line rounded-[8px] border border-line bg-surface">
             {drifted.slice(0, 2).map((u) => (
               <li key={u.macro.id}>
@@ -128,10 +125,6 @@ export default async function OverviewPage() {
               </li>
             ))}
           </ul>
-        ) : (
-          <p className="max-w-[70ch] text-sm text-muted">
-            When your team sends the same answer on 5 tickets, the AI writes it up and it shows here. When they keep editing a macro the same way, the AI suggests an update you apply in one click. Saved macros are offered on new tickets and can assign, tag, close and send.
-          </p>
         )}
       </Section>
 
@@ -144,23 +137,6 @@ export default async function OverviewPage() {
         </div>
       </Section>
 
-      <Section title="More">
-        <ul className="grid border-t border-line sm:grid-cols-2 lg:grid-cols-4">
-          {[
-            { href: "/app/receipts", title: "AI receipts", body: "Every AI answer itemized, refundable." },
-            { href: "/app/test-drive", title: "AI test drive", body: "AI drafts for your past tickets." },
-            { href: "/app/help", title: "Help center", body: "Articles your customers and the AI use." },
-            { href: "/app/reports", title: "Reports", body: "Volume, response times and AI share." },
-          ].map((l) => (
-            <li key={l.href} className="border-b border-line">
-              <Link href={l.href} className="group flex h-full flex-col gap-0.5 py-3 text-sm sm:pr-5">
-                <span className="font-semibold group-hover:text-accent">{l.title}</span>
-                <span className="text-muted">{l.body}</span>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </Section>
     </div>
   );
 }
