@@ -26,7 +26,7 @@ export default async function ReportsPage({ searchParams }: PageProps<"/app/repo
   return (
     <div className="grid max-w-4xl gap-10 px-4 py-6 md:px-8 md:py-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-display text-3xl">Reports</h1>
+        <h1 className="page-title">Reports</h1>
         <nav className="flex gap-1 text-sm" aria-label="Date range">
           {REPORT_RANGES.map((d) => (
             <Link

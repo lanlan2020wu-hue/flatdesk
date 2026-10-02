@@ -48,7 +48,7 @@ export default async function EditArticle({ params, searchParams }: PageProps<"/
       {saved === "saved" && <p className="text-sm text-accent">Saved.</p>}
 
       {s.viewer ? (
-        <h1 className="font-display text-3xl">{article.title}</h1>
+        <h1 className="page-title">{article.title}</h1>
       ) : (
         <ArticleForm key={article.updatedAt.toISOString()} article={article} />
       )}

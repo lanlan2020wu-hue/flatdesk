@@ -56,7 +56,7 @@ export default function CopilotSummary({ ticketId, initial, stale, disabled }: {
   }
 
   return (
-    <section aria-labelledby="copilot-summary" className="grid gap-3 rounded-2xl border border-accent/25 bg-accent-soft/60 p-4 text-sm">
+    <section aria-labelledby="copilot-summary" className="grid gap-3 rounded-[8px] border border-accent/25 bg-accent-soft/60 px-5 py-4 text-sm">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 id="copilot-summary" className="flex items-center gap-2 font-medium text-accent">
           <CopilotMark />

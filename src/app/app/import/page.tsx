@@ -21,7 +21,7 @@ export default async function ImportPage() {
   return (
     <div className="grid max-w-3xl gap-6 px-4 py-6 md:px-8 md:py-8">
       <header className="grid gap-2">
-        <h1 className="font-display text-3xl">Bring your help desk with you</h1>
+        <h1 className="page-title">Bring your help desk with you</h1>
         <p className="text-muted">
           Flatdesk copies everything it can read and keeps the original of every record. Anything without a place in Flatdesk yet is listed in a report. Your old help desk isn&apos;t changed.
         </p>

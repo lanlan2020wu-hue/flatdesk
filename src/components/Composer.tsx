@@ -144,7 +144,7 @@ export default function Composer({
         setAssignTo("");
         setActions([]);
       }}
-      className={`grid gap-3 rounded-2xl border p-3 shadow-md transition-colors focus-within:ring-2 focus-within:ring-accent/25 ${internal ? "border-warn/50 bg-warn-soft" : "border-line bg-surface"}`}
+      className={`grid gap-3 rounded-[8px] border p-3 shadow-sm transition-colors focus-within:ring-2 focus-within:ring-accent/25 ${internal ? "border-warn/50 bg-warn-soft" : "border-line bg-surface"}`}
     >
       <input type="hidden" name="ticketId" value={ticketId} />
       <input type="hidden" name="number" value={number} />

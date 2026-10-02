@@ -59,7 +59,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
 
   return (
     <div className="grid max-w-2xl gap-10 px-4 py-6 md:px-8 md:py-8">
-      <h1 className="font-display text-3xl">Settings</h1>
+      <h1 className="page-title">Settings</h1>
       <section className="grid gap-3 border-t border-line pt-6">
         <h2 className="text-lg font-semibold">
           Email

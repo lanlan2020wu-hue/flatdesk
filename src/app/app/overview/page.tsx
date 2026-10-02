@@ -17,7 +17,7 @@ const monthName = (m: string) => new Date(`${m}-01T00:00:00Z`).toLocaleDateStrin
 // A section of the overview: its name on a heavy rule, the link to act on it.
 function Section({ title, href, cta, children }: { title: string; href?: string; cta?: string; children: React.ReactNode }) {
   return (
-    <section className="grid gap-5 border-t-2 border-ink pt-4">
+    <section className="grid gap-5 border-t border-line pt-4">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <h2 className="text-lg font-semibold">{title}</h2>
         {href && <Link href={href} className="link text-sm font-medium text-accent">{cta}</Link>}
@@ -59,7 +59,7 @@ export default async function OverviewPage() {
 
   return (
     <div className="grid max-w-5xl content-start gap-12 px-4 py-6 md:px-8 md:py-8">
-      <h1 className="font-display text-3xl sm:text-4xl">{monthName(ai.month)}</h1>
+      <h1 className="page-title">{monthName(ai.month)}</h1>
 
       {/* The bill first, on the same green field as the sidebar: the price, and what it has covered. */}
       <section className="grid gap-8 rounded-[8px] bg-field p-6 text-field-ink sm:p-8 md:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] md:items-end">
