@@ -26,7 +26,7 @@ export async function getOnboarding(orgId: string) {
       .select({ n: sql<number>`count(*)::int` })
       .from(schema.messages)
       .innerJoin(schema.tickets, eq(schema.tickets.id, schema.messages.ticketId))
-      .where(and(eq(schema.messages.orgId, orgId), isNotNull(schema.messages.emailMessageId), sql`not (${TEST_TAG} = any(${schema.tickets.tags}))`)),
+      .where(and(eq(schema.messages.orgId, orgId), isNotNull(schema.messages.emailMessageId), sql`not (${TEST_TAG} = any(${schema.tickets.tags}))`, eq(schema.tickets.test, false))),
     // The end-to-end test email came back through forwarding.
     db
       .select({ n: sql<number>`count(*)::int` })
@@ -37,7 +37,7 @@ export async function getOnboarding(orgId: string) {
     db
       .select({ n: sql<number>`count(*)::int` })
       .from(schema.tickets)
-      .where(and(eq(schema.tickets.orgId, orgId), eq(schema.tickets.channel, "chat"), sql`not (${TEST_TAG} = any(${schema.tickets.tags}))`)),
+      .where(and(eq(schema.tickets.orgId, orgId), eq(schema.tickets.channel, "chat"), sql`not (${TEST_TAG} = any(${schema.tickets.tags}))`, eq(schema.tickets.test, false))),
     db.select({ n: sql<number>`count(*)::int` }).from(schema.imports).where(and(eq(schema.imports.orgId, orgId), inArray(schema.imports.status, ["running", "done"]))),
     // The AI answered a real ticket, or drafted an answer in the test drive.
     db.$count(schema.aiEvents, and(eq(schema.aiEvents.orgId, orgId), eq(schema.aiEvents.kind, "resolution"))),

@@ -83,6 +83,12 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
               AI test drive
             </NavLink>
             {s.role === "admin" && (
+              <NavLink href="/app/test-tickets">
+                <Icon d="M9 3h6M10 3v6L5 18a2 2 0 0 0 1.7 3h10.6a2 2 0 0 0 1.7-3L14 9V3M7.5 14h9" />
+                Test tickets
+              </NavLink>
+            )}
+            {s.role === "admin" && (
               <NavLink href="/app/import">
                 <Icon d="M12 3v11M7.5 9.5 12 14l4.5-4.5M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" />
                 Import

@@ -48,6 +48,7 @@ export async function listTickets(orgId: string, userId: string, view: View) {
       createdAt: tickets.createdAt,
       firstResponseAt: tickets.firstResponseAt,
       source: tickets.source,
+      test: tickets.test,
       assigneeId: tickets.assigneeId,
       assigneeName: agents.name,
       customerName: customers.name,
@@ -125,6 +126,7 @@ type NewTicket = {
   authorId?: string | null;
   tags?: string[];
   emailMessageId?: string | null;
+  test?: boolean;
 };
 
 export async function createTicket(raw: NewTicket) {
@@ -167,6 +169,7 @@ export async function createTicket(raw: NewTicket) {
         tags,
         assigneeId,
         visitorToken: input.visitorToken ?? null,
+        test: input.test ?? false,
       })
       .returning();
 

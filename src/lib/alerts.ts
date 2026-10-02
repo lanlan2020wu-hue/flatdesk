@@ -31,6 +31,7 @@ export type AlertPayload = {
     url: string;
     customer: { name: string | null; email: string };
     assignee: string | null;
+    test?: boolean; // made from /app/test-tickets
   } | null;
   sentAt: string;
 };
@@ -193,7 +194,7 @@ export function buildRequest(url: string, secret: string, p: AlertPayload): { bo
 
 export function alertText(event: AlertEvent, t: NonNullable<AlertPayload["ticket"]>, needsTeam: boolean, reason: string | null): string {
   const who = t.customer.name ? `${t.customer.name} (${t.customer.email})` : t.customer.email;
-  const ref = `#${t.number} ${t.subject}`;
+  const ref = `${t.test ? "test ticket " : ""}#${t.number} ${t.subject}`;
   if (event === "ticket.handed_back") return `Back with the team: ${ref} from ${who}.${reason ? ` ${reason}` : ""}`;
   const head = needsTeam ? `New ticket for the team: ${ref} from ${who} by ${t.channel}.` : `New ticket answered by the AI: ${ref} from ${who} by ${t.channel}.`;
   return reason && needsTeam ? `${head} ${reason}` : head;
@@ -241,6 +242,7 @@ async function ticketPayload(orgId: string, ticketId: string) {
       url: `${SITE.url}/app/tickets/${ticket.number}`,
       customer: { name: customer.name, email: customer.email },
       assignee: row.assignee ?? null,
+      ...(ticket.test ? { test: true } : {}),
     },
   };
 }

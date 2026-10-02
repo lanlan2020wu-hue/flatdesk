@@ -73,6 +73,8 @@ export const COST_PER_OVERAGE_USD = 0.25;
 // while the call is in flight, so parallel calls can't all pass the spend cap,
 // and it stays on a call that failed, which may still have been charged.
 export const CALL_RESERVE_USD = 0.25;
+// What test tickets may spend on AI per team per month, on our dime.
+export const TEST_AI_BUDGET_USD = 5;
 // Bounds on what the AI reads, so one huge saved answer can't crowd out the
 // rest or blow up the cost of every call.
 export const KNOWLEDGE_LIMITS = { itemChars: 8_000, totalChars: 120_000 };
@@ -87,7 +89,8 @@ type Org = typeof orgs.$inferSelect;
 // across the whole trial (it can span two months), not just this month.
 async function measure(q: Pick<typeof db, "select">, org: Org, month: string): Promise<Usage> {
   const trial = month === monthKey() && access(org).state === "trial";
-  const where = [eq(aiEvents.orgId, org.id)];
+  // Test tickets have their own budget and never count (lib/test-tickets.ts).
+  const where = [eq(aiEvents.orgId, org.id), eq(aiEvents.test, false)];
   if (!trial) where.push(eq(aiEvents.month, month));
   const counted = sql`(${aiEvents.kind} = 'resolution' or (${aiEvents.kind} = 'draft' and ${aiEvents.createdAt} > now() - make_interval(mins => ${DRAFT_TTL_MINUTES})))`;
   const [[{ agentCount }], [{ used, overage, attempts, spent }]] = await Promise.all([
@@ -131,6 +134,8 @@ export async function reserveSlot(orgId: string, ticketId: string, followUp = fa
     const org = await tx.query.orgs.findFirst({ where: eq(orgs.id, orgId) });
     if (!org) return { paused: "missing org" };
     const month = monthKey();
+    const [t] = await tx.select({ test: tickets.test }).from(tickets).where(and(eq(tickets.orgId, orgId), eq(tickets.id, ticketId)));
+    if (t?.test) return reserveTestSlot(tx, orgId, ticketId, month, followUp);
     const { included, used, overage, attempts, spentUsd, trial } = await measure(tx, org, month);
     // Overage extends the allowance, so it extends the attempt and cost limits with it.
     const overageRoom = org.aiOverageEnabled && !trial ? (org.aiOverageMonthlyLimit ?? included) : 0;
@@ -167,6 +172,34 @@ export async function reserveSlot(orgId: string, ticketId: string, followUp = fa
       .returning({ id: aiEvents.id });
     return { eventId: event.id, overage: isOverage };
   });
+}
+
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+// A test ticket's AI call: same model and prompt, but it never counts toward
+// the allowance or the bill. It's paid from a small monthly budget per team,
+// with calls in flight holding CALL_RESERVE_USD like real ones.
+async function reserveTestSlot(tx: Tx, orgId: string, ticketId: string, month: string, followUp: boolean): Promise<Slot> {
+  const [{ spent }] = await tx
+    .select({ spent: sql<string>`coalesce(sum(${aiEvents.costUsd}), 0)` })
+    .from(aiEvents)
+    .where(and(eq(aiEvents.orgId, orgId), eq(aiEvents.test, true), eq(aiEvents.month, month)));
+  if (Number(spent) + CALL_RESERVE_USD > TEST_AI_BUDGET_USD) {
+    return { paused: `Test tickets have used this month's $${TEST_AI_BUDGET_USD} of AI, so the AI skips them until next month. Real tickets aren't affected.` };
+  }
+  if (followUp) {
+    const [inFlight] = await tx
+      .select({ id: aiEvents.id })
+      .from(aiEvents)
+      .where(and(eq(aiEvents.ticketId, ticketId), eq(aiEvents.kind, "followup"), eq(aiEvents.inputTokens, 0), sql`${aiEvents.createdAt} > now() - make_interval(mins => 3)`))
+      .limit(1);
+    if (inFlight) return { busy: true as const };
+  }
+  const [event] = await tx
+    .insert(aiEvents)
+    .values({ orgId, ticketId, kind: followUp ? "followup" : "draft", month, model: MODEL, test: true, costUsd: CALL_RESERVE_USD.toFixed(5) })
+    .returning({ id: aiEvents.id });
+  return { eventId: event.id, overage: false };
 }
 
 const Decision = z.object({

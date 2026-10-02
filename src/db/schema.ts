@@ -187,6 +187,9 @@ export const tickets = pgTable(
     resolvedByAi: boolean("resolved_by_ai").notNull().default(false),
     // Chat tickets: the visitor's browser holds this to read and continue the thread.
     visitorToken: text("visitor_token"),
+    // Made by an admin from /app/test-tickets to see how Flatdesk handles a
+    // situation. Kept out of reports, the AI allowance and the test drive.
+    test: boolean("test").notNull().default(false),
   },
   (t) => [
     uniqueIndex("tickets_org_number").on(t.orgId, t.number),
@@ -361,6 +364,8 @@ export const aiEvents = pgTable(
     refundedAt: timestamp("refunded_at", { withTimezone: true }),
     refundedBy: text("refunded_by"),
     refundNote: text("refund_note"),
+    // On a test ticket: never counted or billed, paid from the test budget (lib/test-tickets.ts).
+    test: boolean("test").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("ai_events_org_month").on(t.orgId, t.month, t.kind)],

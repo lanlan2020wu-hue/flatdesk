@@ -26,7 +26,7 @@ export async function teamReport(orgId: string, days: ReportRange) {
         filter (where first_response_at is not null) as median_first_response,
       percentile_cont(0.5) within group (order by extract(epoch from closed_at - created_at))
         filter (where closed_at is not null) as median_resolution
-    from tickets where org_id = ${orgId} and created_at >= ${since}`);
+    from tickets where org_id = ${orgId} and created_at >= ${since} and not test`);
 
   // Share of this window's tickets the AI answered and the customer didn't reopen.
   const [ai] = await rows(sql`
@@ -34,17 +34,18 @@ export async function teamReport(orgId: string, days: ReportRange) {
       count(*) filter (where t.resolved_by_ai) as resolved,
       count(*) filter (where not t.resolved_by_ai and exists (
         select 1 from ai_events e where e.ticket_id = t.id and e.kind = 'handoff')) as handed_off
-    from tickets t where t.org_id = ${orgId} and t.created_at >= ${since}`);
+    from tickets t where t.org_id = ${orgId} and t.created_at >= ${since} and not t.test`);
 
   const agents = await rows(sql`
     select a.user_id, a.name,
       (select count(*) from messages m
         where m.org_id = a.org_id and m.author_type = 'agent' and m.author_id = a.user_id
-          and not m.internal and m.created_at >= ${since}) as replies,
+          and not m.internal and m.created_at >= ${since}
+          and not exists (select 1 from tickets t where t.id = m.ticket_id and t.test)) as replies,
       (select count(*) from tickets t
-        where t.org_id = a.org_id and t.assignee_id = a.user_id and t.closed_at >= ${since}) as closed,
+        where t.org_id = a.org_id and t.assignee_id = a.user_id and t.closed_at >= ${since} and not t.test) as closed,
       (select count(*) from tickets t
-        where t.org_id = a.org_id and t.assignee_id = a.user_id and t.status <> 'closed') as open_now
+        where t.org_id = a.org_id and t.assignee_id = a.user_id and t.status <> 'closed' and not t.test) as open_now
     from agents a where a.org_id = ${orgId}
     order by replies desc, a.name`);
 
@@ -88,7 +89,7 @@ async function targetReport(orgId: string, since: Date) {
   const tickets = await db
     .select({ status: schema.tickets.status, createdAt: schema.tickets.createdAt, firstResponseAt: schema.tickets.firstResponseAt, source: schema.tickets.source })
     .from(schema.tickets)
-    .where(and(eq(schema.tickets.orgId, orgId), gte(schema.tickets.createdAt, since), isNull(schema.tickets.source)))
+    .where(and(eq(schema.tickets.orgId, orgId), gte(schema.tickets.createdAt, since), isNull(schema.tickets.source), eq(schema.tickets.test, false)))
     .limit(20000);
   const now = new Date();
   let met = 0;

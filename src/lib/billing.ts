@@ -292,7 +292,7 @@ async function overageFor(tx: Tx, orgId: string, month: string) {
   const [{ resolutions, flagged }] = await tx
     .select({ resolutions: count(), flagged: sql<number>`count(*) filter (where ${aiEvents.overage})` })
     .from(aiEvents)
-    .where(and(eq(aiEvents.orgId, orgId), eq(aiEvents.month, month), eq(aiEvents.kind, "resolution")));
+    .where(and(eq(aiEvents.orgId, orgId), eq(aiEvents.month, month), eq(aiEvents.kind, "resolution"), eq(aiEvents.test, false)));
   const { aiUsage } = await import("@/lib/ai"); // ai.ts imports this file
   const { included } = await aiUsage(orgId, month, tx);
   return Math.min(Number(flagged), Math.max(0, Number(resolutions) - included));
@@ -360,6 +360,7 @@ export async function billUnbilledMonths(orgId: string, now = new Date()) {
         eq(aiEvents.orgId, orgId),
         eq(aiEvents.kind, "resolution"),
         eq(aiEvents.overage, true),
+        eq(aiEvents.test, false),
         sql`${aiEvents.month} <= ${last}`,
         sql`${aiEvents.month} >= ${oldest}`,
         org.overageBilledMonth ? sql`${aiEvents.month} > ${org.overageBilledMonth}` : undefined,

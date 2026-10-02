@@ -78,6 +78,7 @@ export default async function InboxPage({ searchParams }: PageProps<"/app/inbox"
                       <p className="flex min-w-0 items-baseline gap-2 text-sm">
                         <span className="truncate font-semibold">{who}</span>
                         <span className="num shrink-0 text-xs text-muted">#{t.number}</span>
+                        {t.test && <span className="chip shrink-0 border-warn/40 bg-warn-soft text-warn" title="Made from Test tickets. Left out of reports and the AI allowance.">Test</span>}
                         {t.tags.map((tag) => <span key={tag} className="chip hidden shrink-0 sm:inline-flex">{tag}</span>)}
                       </p>
                       {/* A div, not a p: the global p rule's text-wrap would undo truncate. */}
