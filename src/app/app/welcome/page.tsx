@@ -377,7 +377,7 @@ export default async function WelcomePage({ searchParams }: PageProps<"/app/welc
   return (
     <div className="grid max-w-3xl gap-6 px-4 py-6 md:px-8 md:py-8">
       <header className="grid gap-3">
-        <h1 className="font-display text-3xl">{o.complete ? "You're all set" : `Welcome to Flatdesk, ${org.name}`}</h1>
+        <h1 className="page-title">{o.complete ? "You're all set" : `Welcome to Flatdesk, ${org.name}`}</h1>
         <div className="grid max-w-sm gap-1.5">
           <div className="h-1.5 overflow-hidden rounded-full bg-line" role="progressbar" aria-valuenow={o.doneCount} aria-valuemin={0} aria-valuemax={steps.length} aria-label="Setup progress">
             <div className="h-full rounded-full bg-accent transition-[width] duration-700 ease-out" style={{ width: `${pct}%` }} />

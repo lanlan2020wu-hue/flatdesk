@@ -53,7 +53,7 @@ export default async function MacrosPage() {
     <div className="grid max-w-3xl gap-12 px-4 py-6 md:px-8 md:py-8">
       <section className="grid gap-4">
         <div className="grid gap-1">
-          <h1 className="font-display text-3xl">AI macros</h1>
+          <h1 className="page-title">AI macros</h1>
           <p className="text-sm text-muted">
             Flatdesk finds the answers your team keeps retyping and the AI writes them up as macros. New tickets get the right macro offered in the reply box. A macro can also assign, set the status, add tags and send right away. When your team keeps editing a macro the same way, the AI drafts an update for an admin to apply.
           </p>
@@ -110,7 +110,7 @@ export default async function MacrosPage() {
         </details>
       </section>
 
-      <section className="grid gap-4 border-t-2 border-ink pt-4">
+      <section className="grid gap-4 border-t border-line pt-4">
         <div className="grid gap-1">
           <h2 className="text-lg font-semibold">Assignment rules</h2>
           <p className="text-sm text-muted">When an unassigned ticket gets a tag, assign it to someone. The oldest matching rule wins.{s.role !== "admin" && " Only admins can change rules."}</p>

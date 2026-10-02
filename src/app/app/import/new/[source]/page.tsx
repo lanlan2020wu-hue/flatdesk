@@ -21,7 +21,7 @@ export default async function NewImportPage({ params }: PageProps<"/app/import/n
         <Link href="/app/import" className="link w-max text-sm text-muted">
           All help desks
         </Link>
-        <h1 className="font-display text-3xl">Import from {a.name}</h1>
+        <h1 className="page-title">Import from {a.name}</h1>
       </header>
 
       <div className="grid items-start gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">

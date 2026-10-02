@@ -25,7 +25,7 @@ export default async function HelpCenterAdmin({ searchParams }: PageProps<"/app/
       <section className="grid gap-4">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="grid max-w-xl gap-1">
-            <h1 className="font-display text-3xl">Help center</h1>
+            <h1 className="page-title">Help center</h1>
             <p className="text-sm text-muted">
               Articles your customers can search on their own. The AI reads published articles too, and links to them in its answers.
             </p>

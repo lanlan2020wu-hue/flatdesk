@@ -78,7 +78,7 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
             <svg viewBox="0 0 16 16" className="size-3.5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M10 3.5 5.5 8l4.5 4.5" /></svg>
             Inbox
           </Link>
-          <h1 className="font-display text-3xl sm:text-4xl">{ticket.subject}</h1>
+          <h1 className="page-title">{ticket.subject}</h1>
           {/* Status, assignee and the customer live in the rail; the header only says what the rail doesn't. */}
           <p className="flex flex-wrap items-center gap-2 text-sm text-muted">
             <span className="num">#{ticket.number}</span>
@@ -103,17 +103,18 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
                   : m.authorType === "system"
                     ? (m.authorName ?? "Flatdesk")
                     : (m.agentName ?? m.authorName ?? "Agent");
+            // One card per message; the team's side is marked by an accent edge, notes by the warn tint.
             const tone = m.internal
               ? "border-warn/40 bg-warn-soft"
               : m.authorType === "customer"
                 ? "border-line bg-surface"
-                : "border-accent/30 bg-accent-soft";
+                : "border-line border-l-[3px] border-l-accent bg-surface";
             return (
-              <li key={m.id} style={{ "--d": Math.min(i, 6) } as React.CSSProperties} className="enter flex gap-3">
-                <Avatar name={who} className="mt-1 size-8 text-[11px]" />
-                <div className={`grid min-w-0 flex-1 gap-1.5 rounded-[6px] border px-4 py-3 ${tone}`}>
+              <li key={m.id} style={{ "--d": Math.min(i, 6) } as React.CSSProperties} className="enter">
+                <div className={`grid min-w-0 gap-2 rounded-[8px] border px-5 py-4 shadow-sm ${tone}`}>
                   <p className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                    <span className="flex items-center gap-2 font-medium">
+                    <span className="flex items-center gap-2.5 font-semibold">
+                      <Avatar name={who} className="size-7 text-[10px]" />
                       {who}
                       {m.internal && m.authorType !== "system" && <span className="pill bg-warn/15 text-warn">Internal note</span>}
                     </span>

@@ -14,6 +14,13 @@ import { viewCounts } from "@/lib/tickets";
 
 export const metadata = { title: { default: "Inbox", template: "%s · Flatdesk" }, description: "Your Flatdesk workspace.", robots: { index: false } };
 
+// Sidebar line icons: one 24px grid, one stroke weight.
+const Icon = ({ d }: { d: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d={d} />
+  </svg>
+);
+
 export default async function AppLayout({ children }: LayoutProps<"/app">) {
   const s = await requireSession();
   const [counts, org, onboarding] = await Promise.all([
@@ -33,7 +40,7 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
     <div className="grid min-h-screen flex-1 grid-rows-[auto_1fr] md:grid-cols-[236px_minmax(0,1fr)] md:grid-rows-none">
       <div className="bg-field text-field-ink">
         <MobileNav bar={<Logo href="/app/inbox" onField />}>
-        <aside className="flex w-full flex-col gap-5 px-3 pb-4 text-sm md:sticky md:top-0 md:h-screen md:overflow-y-auto md:py-5">
+        <aside className="flex w-full flex-col gap-4 px-3 pb-4 text-sm md:sticky md:top-0 md:h-screen md:overflow-y-auto md:py-5">
           <div className="hidden px-2 md:block">
             <Logo href="/app/inbox" onField />
           </div>
@@ -42,29 +49,57 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
             New ticket
           </Link>
           {/* Daily work first; the rest sits below as a quieter list. Inbox views are tabs on the inbox page. */}
-          <nav className="grid gap-px" aria-label="Main">
+          <nav className="grid gap-0.5" aria-label="Main">
             <NavLink href="/app/inbox" alsoActive="/app/tickets/">
+              <Icon d="M4 13h4l1.5 2.5h5L16 13h4M5.5 6h13L20 13v5H4v-5z" />
               <span>Inbox</span>
-              <span className="num text-xs">{counts.open}</span>
+              <span className="nav-count">{counts.open}</span>
             </NavLink>
-            <NavLink href="/app/overview">Overview</NavLink>
-            <NavLink href="/app/macros">AI macros</NavLink>
-            <NavLink href="/app/help">Help center</NavLink>
-            <NavLink href="/app/reports">Reports</NavLink>
+            <NavLink href="/app/overview">
+              <Icon d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" />
+              Overview
+            </NavLink>
+            <NavLink href="/app/macros">
+              <Icon d="M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7-4.7-1.8 4.7-1.8zM18 15l.9 2.1L21 18l-2.1.9L18 21l-.9-2.1L15 18l2.1-.9z" />
+              AI macros
+            </NavLink>
+            <NavLink href="/app/help">
+              <Icon d="M4 19.5V5a2 2 0 0 1 2-2h14v16H6a2 2 0 0 0-2 2zM9 7h7" />
+              Help center
+            </NavLink>
+            <NavLink href="/app/reports">
+              <Icon d="M5 20v-8M12 20V5M19 20v-5" />
+              Reports
+            </NavLink>
           </nav>
-          <nav className="grid gap-px text-[13px]" aria-label="More">
+          <nav className="grid gap-0.5 border-t border-field-line pt-4 text-[13px]" aria-label="More">
             {onboarding?.visible && (
               <NavLink href="/app/welcome">
+                <Icon d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM8.5 12l2.5 2.5 4.5-5" />
                 <span>Finish setup</span>
-                <span className="num text-xs">
+                <span className="nav-count">
                   {onboarding.doneCount}/{onboarding.steps.length}
                 </span>
               </NavLink>
             )}
-            <NavLink href="/app/receipts">AI receipts</NavLink>
-            <NavLink href="/app/test-drive">AI test drive</NavLink>
-            {s.role === "admin" && <NavLink href="/app/import">Import</NavLink>}
-            <NavLink href="/app/settings">Settings</NavLink>
+            <NavLink href="/app/receipts">
+              <Icon d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6" />
+              AI receipts
+            </NavLink>
+            <NavLink href="/app/test-drive">
+              <Icon d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM10 8.5v7l5.5-3.5z" />
+              AI test drive
+            </NavLink>
+            {s.role === "admin" && (
+              <NavLink href="/app/import">
+                <Icon d="M12 3v11M7.5 9.5 12 14l4.5-4.5M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4" />
+                Import
+              </NavLink>
+            )}
+            <NavLink href="/app/settings">
+              <Icon d="M4 7h9M17 7h3M4 17h3M11 17h9M15 5v4M9 15v4" />
+              Settings
+            </NavLink>
           </nav>
           <div className="mt-auto rounded-[6px] bg-surface px-2.5 py-2 text-ink">
             <AccountMenu fallbackName={s.name} />

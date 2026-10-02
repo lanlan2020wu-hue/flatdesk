@@ -32,7 +32,7 @@ export default async function ImportDetailPage({ params }: PageProps<"/app/impor
           Import
         </Link>
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="font-display text-3xl">
+          <h1 className="page-title">
             {adapter.name} <span className="text-muted">· {job.account}</span>
           </h1>
           <span className={`pill ${status.tone}`}>{status.label}</span>
