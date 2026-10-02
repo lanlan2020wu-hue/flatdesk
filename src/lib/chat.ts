@@ -13,7 +13,7 @@ import { addCustomerMessage, createTicket, parseTicketNumber } from "@/lib/ticke
 // closed tab doesn't lose the answer.
 
 export const MAX_MESSAGE = 5000;
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const EMAIL = /^[^\s@<>"(),;:]+@[^\s@<>"(),;:]+\.[^\s@<>"(),;:]+$/;
 
 export async function orgByWidgetKey(key: string) {
   if (!/^[0-9a-z]{6,64}$/i.test(key)) return undefined;
