@@ -3,12 +3,14 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { db, schema } from "@/db";
 import SlaBadge from "@/components/SlaBadge";
+import TagInput from "@/components/TagInput";
 import { WaitFor } from "@/components/onboarding";
 import { aiConfigured, monthKey, TEST_AI_BUDGET_USD } from "@/lib/ai";
 import { webhookLabel } from "@/lib/alerts";
 import { requireOpenPage } from "@/lib/auth";
 import { emailConfig } from "@/lib/email";
 import { shortDuration, slaState, targetLabel } from "@/lib/sla";
+import { orgTags } from "@/lib/tickets";
 import { AGES, listTestTickets, ownEmail, SCENARIOS, testAiSpent, type TestRow } from "@/lib/test-tickets";
 import { clearTestTicketsAction, createTestTicketAction, writeBackAction } from "./actions";
 
@@ -112,11 +114,12 @@ export default async function TestTicketsPage({ searchParams }: PageProps<"/app/
   if (s.role !== "admin") redirect("/app/inbox");
   const sp = await searchParams;
   const error = typeof sp.error === "string" ? sp.error : null;
-  const [org, rows, email, spent] = await Promise.all([
+  const [org, rows, email, spent, tags] = await Promise.all([
     db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) }),
     listTestTickets(s.orgId),
     ownEmail(s.orgId, s.userId),
     testAiSpent(s.orgId, monthKey()),
+    orgTags(s.orgId),
   ]);
   if (!org) redirect("/app/inbox");
   const aiOn = aiConfigured() && org.aiEnabled;
@@ -191,7 +194,7 @@ export default async function TestTicketsPage({ searchParams }: PageProps<"/app/
                 <option value="chat">Chat</option>
               </select>
             </label>
-            <label className="grid gap-1.5 text-sm font-medium" htmlFor="tags">Tags<input id="tags" name="tags" placeholder="billing" className={field} /></label>
+            <label className="grid gap-1.5 text-sm font-medium" htmlFor="tags">Tags<TagInput tags={tags} id="tags" name="tags" placeholder="billing" className={field} /></label>
             <label className="grid gap-1.5 text-sm font-medium" htmlFor="age-own">Arrived<AgeSelect id="age-own" /></label>
           </div>
           <button className="btn btn-primary w-max">Send it in</button>

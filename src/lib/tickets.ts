@@ -207,6 +207,22 @@ async function ruleAssignee(tx: Tx | typeof db, orgId: string, tags: string[]): 
   return rule?.assignTo ?? null;
 }
 
+// Every tag the team uses, most used first, for tag autocomplete. Counts
+// tickets, macros that add tags and assignment rules.
+export async function orgTags(orgId: string, limit = 300): Promise<string[]> {
+  const rows = await db.execute<{ tag: string }>(sql`
+    select tag from (
+      select unnest(${tickets.tags}) as tag from ${tickets} where ${tickets.orgId} = ${orgId}
+      union all select unnest(${schema.macros.addTags}) from ${schema.macros} where ${schema.macros.orgId} = ${orgId}
+      union all select ${rules.ifTag} from ${rules} where ${rules.orgId} = ${orgId}
+    ) t
+    where tag <> ''
+    group by tag
+    order by count(*) desc, tag
+    limit ${limit}`);
+  return rows.rows.map((r) => r.tag);
+}
+
 export function normalizeTags(tags: string[]): string[] {
   return [...new Set(tags.map((t) => t.trim().toLowerCase().replace(/\s+/g, "-").slice(0, 50)).filter(Boolean))].slice(0, 20);
 }

@@ -6,6 +6,7 @@ import Avatar from "@/components/Avatar";
 import Composer from "@/components/Composer";
 import CopilotSummary from "@/components/CopilotSummary";
 import SlaBadge from "@/components/SlaBadge";
+import TagInput from "@/components/TagInput";
 import { RepeatPrompt } from "@/components/MacroSuggestion";
 import { db, schema } from "@/db";
 import { attachmentsByMessage, formatBytes } from "@/lib/attachments";
@@ -17,7 +18,7 @@ import { cachedSummary } from "@/lib/copilot";
 import { identifyMacro, repeatPrompt } from "@/lib/macro-suggestions";
 import { STATUS_LABEL } from "@/lib/receipts";
 import { formatDue, shortDuration, slaState, targetLabel } from "@/lib/sla";
-import { getTicket, listAgents, parseTicketNumber } from "@/lib/tickets";
+import { getTicket, listAgents, orgTags, parseTicketNumber } from "@/lib/tickets";
 import { replyAction, updateTicketAction } from "../../actions";
 
 export async function generateMetadata({ params }: PageProps<"/app/tickets/[number]">) {
@@ -40,7 +41,7 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
   // Right after this agent replies with an answer they keep sending, offer to save it as a macro.
   const last = thread.at(-1);
   const justReplied = last && last.authorType === "agent" && !last.internal && last.authorId === s.userId;
-  const [agents, macros, [aiEvent], repeat, files, ratings, org, summary] = await Promise.all([
+  const [agents, macros, [aiEvent], repeat, files, ratings, org, summary, tagList] = await Promise.all([
     listAgents(s.orgId),
     db.select().from(schema.macros).where(and(eq(schema.macros.orgId, s.orgId))).orderBy(asc(schema.macros.name)),
     db
@@ -54,6 +55,7 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
     ratingsForTicket(s.orgId, ticket.id),
     db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) }),
     cachedSummary(s.orgId, ticket.id, last?.id),
+    orgTags(s.orgId),
   ]);
   const copilotOn = aiConfigured();
   // AI macros: when the customer is waiting on us, the macro that answers what they asked.
@@ -232,7 +234,9 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
           <input type="hidden" name="number" value={ticket.number} />
           <label htmlFor="tags" className={heading}>Tags</label>
           <div className="flex gap-2">
-            <input id="tags" name="tags" defaultValue={ticket.tags.join(", ")} className={field} />
+            <div className="min-w-0 flex-1">
+              <TagInput tags={tagList} id="tags" name="tags" defaultValue={ticket.tags.join(", ")} className={field} />
+            </div>
             <button className="btn btn-secondary btn-sm">Save</button>
           </div>
         </form>
