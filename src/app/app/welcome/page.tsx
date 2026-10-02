@@ -109,7 +109,9 @@ export default async function WelcomePage({ searchParams }: PageProps<"/app/welc
     ai: ai ? (
       <div className="grid gap-4 text-sm">
         <p className="text-muted">
-          Write a few lines about your business, then ask something a customer might. You&apos;ll see the reply the AI would send. Nobody else sees it and it doesn&apos;t count toward your AI answers.
+          Once you&apos;re live, the AI replies to customers by itself when a new email or chat comes in. It answers from the facts you write here, your
+          macros and your help articles, and leaves anything else for your team. Try it now: write a few lines about your business, then ask something a
+          customer might. You&apos;ll see the reply the AI would send. Nobody else sees it and it doesn&apos;t count toward your AI answers.
         </p>
         <TryAi notes={org.aiInstructions} saved={knowledge.length} />
         {testable > 0 && (

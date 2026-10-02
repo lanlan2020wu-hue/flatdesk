@@ -51,6 +51,10 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
               <Icon d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" />
               Overview
             </NavLink>
+            <NavLink href="/app/receipts">
+              <Icon d="M20 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 20 12zM9 12h.01M12 12h.01M15 12h.01" />
+              AI answers
+            </NavLink>
             <NavLink href="/app/macros">
               <Icon d="M12 3l1.8 4.7 4.7 1.8-4.7 1.8L12 16l-1.8-4.7-4.7-1.8 4.7-1.8zM18 15l.9 2.1L21 18l-2.1.9L18 21l-.9-2.1L15 18l2.1-.9z" />
               AI macros
@@ -74,10 +78,6 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
                 </span>
               </NavLink>
             )}
-            <NavLink href="/app/receipts">
-              <Icon d="M6 3h12v18l-3-2-3 2-3-2-3 2zM9 8h6M9 12h6" />
-              AI receipts
-            </NavLink>
             <NavLink href="/app/test-drive">
               <Icon d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM10 8.5v7l5.5-3.5z" />
               AI test drive

@@ -15,6 +15,14 @@ export const GENERAL_FAQ: QA[] = [
     a: "A ticket is one customer conversation, by email or chat. An agent is a person on your team who answers tickets, and each agent is a paid seat. A macro is a saved reply an agent sends with one click instead of typing it again. Flatdesk's AI writes macros for you from the answers your team keeps retyping.",
   },
   {
+    q: "Does the AI answer customers by itself?",
+    a: "Yes. When a new email or chat comes in, the AI replies on its own if your facts, macros or help articles cover the question. If they don't, it isn't sure, or the customer asks for a person, it leaves the ticket for your team with a note saying why. An admin can turn this off in Settings.",
+  },
+  {
+    q: "What's the difference between AI answers and AI macros?",
+    a: "AI answers reply to customers by themselves, with nobody on your team involved, and each one counts toward the AI answers in your plan. AI macros help your team with the tickets the AI leaves to them: Flatdesk finds replies your team keeps retyping and the AI writes them up as saved replies your team sends with one click. AI macros don't use AI answers.",
+  },
+  {
     q: "Which channels does Flatdesk support?",
     a: "Email (forward your support address) and a website chat widget you add with one script tag. Both become tickets in the same inbox. Phone, SMS and social channels aren't supported.",
   },

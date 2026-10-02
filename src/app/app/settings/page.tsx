@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { headers } from "next/headers";
+import HowItWorks from "@/components/HowItWorks";
 import { db, schema } from "@/db";
 import { requireSession } from "@/lib/auth";
 import { aiConfigured, aiUsage } from "@/lib/ai";
@@ -185,15 +186,40 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
           </>
         )}
       </section>
-      <section className="grid gap-4 border-t border-line pt-6">
+      <section id="ai" className="grid scroll-mt-6 gap-4 border-t border-line pt-6">
         <div className="grid gap-1">
           <h2 className="text-lg font-semibold">
             AI answers
           </h2>
           <p className="text-muted">
-            The AI replies to new email and chat tickets when the facts below, your macros or your help articles cover the question. Everything else goes to your team. It answers up to 3 follow-ups on a ticket. Each ticket counts as one AI answer, and not at all if the AI hands it to your team.
+            The AI replies to customers by itself, by email and in the chat, when the facts below, your macros or your help articles cover the question. Everything else goes to your team. Each ticket it answers counts as one AI answer, and one it hands to your team doesn&apos;t count.
           </p>
         </div>
+
+        <HowItWorks
+          title="How AI answers work"
+          open={usage.used === 0}
+          summary="Nobody on your team has to click anything. While AI answers are on, the AI reads every new email and chat."
+          steps={[
+            { title: "A customer writes in", body: "A new email or chat message arrives and becomes a ticket." },
+            { title: "The AI checks what it knows", body: "It reads the facts you write below, your macros and your published help articles. If they cover the question, it writes a reply." },
+            { title: "It sends the reply on its own", body: "The customer gets it by email or in the chat. The ticket moves to Pending, marked AI answered, and it shows up on your AI receipt." },
+            { title: "A person takes over when needed", body: "If the facts don't cover it, the AI isn't sure, or the customer asks for a person, it doesn't reply. The ticket stays open for your team with a note saying why. That doesn't count." },
+            { title: "Follow-ups", body: "If the customer writes back, the AI can answer up to 3 follow-ups on the same ticket. Past that, or if it can't answer, the ticket goes back to your team." },
+          ]}
+          example={
+            <>
+              a customer emails &quot;What are your opening hours?&quot; and your facts say 9 to 5 on weekdays. The AI replies with the hours and nobody on your
+              team has to touch it. Another customer writes &quot;I was charged twice&quot;. Your facts don&apos;t cover that, so the AI leaves it for your team.
+            </>
+          }
+          footnote={
+            <>
+              AI answers are not the same as AI macros. AI answers reply to customers on their own. <Link href="/app/macros" className="link">AI macros</Link> are saved replies your
+              team sends by hand on the tickets the AI leaves to them.
+            </>
+          }
+        />
 
         <div className="grid gap-2 rounded-xl border border-line bg-surface-2/60 px-4 py-3">
           <p className="flex justify-between gap-2 text-sm">
@@ -221,7 +247,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
             <fieldset disabled={!isAdmin} className="grid gap-4">
               <label className="flex items-center gap-2.5 font-medium">
                 <input type="checkbox" name="aiEnabled" defaultChecked={org.aiEnabled} className="size-4 accent-[var(--accent)]" />
-                Let the AI answer new email and chat tickets
+                Let the AI reply to new email and chat tickets on its own
               </label>
               <label className="grid gap-1.5">
                 <span className="label">What the AI should know</span>
