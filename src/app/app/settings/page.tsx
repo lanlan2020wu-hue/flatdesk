@@ -191,7 +191,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
             AI answers
           </h2>
           <p className="text-muted">
-            The AI answers new email and chat tickets when your notes or macros cover the question, and hands the rest to your team. It answers up to 3 follow-ups on a ticket. Each ticket counts once, and not at all if the AI hands it over.
+            The AI replies to new email and chat tickets when the facts below, your macros or your help articles cover the question. Everything else goes to your team. It answers up to 3 follow-ups on a ticket. Each ticket counts as one AI answer, and not at all if the AI hands it to your team.
           </p>
         </div>
 

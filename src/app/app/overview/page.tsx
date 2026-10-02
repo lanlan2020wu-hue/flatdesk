@@ -93,6 +93,11 @@ export default async function OverviewPage() {
       </section>
 
       <Section title="AI macros" href="/app/macros" cta={suggestions.length || drifted.length ? "Review them" : "Open AI macros"}>
+        <p className="-mt-2 max-w-2xl text-sm text-muted">
+          Macros are saved replies your team sends with one click. Flatdesk finds the answers your team keeps retyping, and the AI writes each one up for you to
+          check and save.
+          {!suggestions.length && !drifted.length && " Nothing is waiting yet. A suggestion appears once the same reply has gone out on 5 tickets."}
+        </p>
         <div className="grid sm:grid-cols-3">
           <Figure label="Found, waiting for review" value={suggestions.length} href="/app/macros" strong />
           <Figure label="Update ready from your edits" value={drifted.length} href="/app/macros#macro-updates" strong />

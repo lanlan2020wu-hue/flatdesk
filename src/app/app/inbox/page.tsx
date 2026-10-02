@@ -48,6 +48,7 @@ export default async function InboxPage({ searchParams }: PageProps<"/app/inbox"
             </Link>
           ))}
         </nav>
+        <p className="text-sm text-muted">{VIEWS.find((v) => v.id === view)?.hint}</p>
       </header>
       {rows.length === 0 ? (
         <div className="grid place-items-center gap-1 px-4 py-16 text-center">

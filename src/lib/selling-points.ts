@@ -22,6 +22,8 @@ export type SellingPoint = {
   metaTitle: string;
   metaDescription: string;
   steps: { title: string; body: string }[];
+  // One worked example in everyday terms, for readers the steps don't land with.
+  example: string;
   facts: string[];
   faq: QA[];
   icon: string;
@@ -39,6 +41,8 @@ export const SELLING_POINTS: SellingPoint[] = [
     answer: `Flatdesk costs ${PRICE_PHRASE}, and every seat includes ${PLAN.includedPerAgent} AI answers a month, pooled across the team. When the team uses them up, the AI pauses and new conversations go to your agents. You pay nothing extra unless an admin turns on overage (${usd(PLAN.overageRate, true)} per resolution).`,
     metaTitle: "Flat-price help desk with AI included",
     metaDescription: `${PRICE_PHRASE}, with ${PLAN.includedPerAgent} AI answers per agent included. The AI pauses at the cap, so the support bill is the same every month.`,
+    example:
+      `Say a team of 8 agents pays monthly. That's 8 × ${usd(PLAN.seatPrice)} = ${usd(8 * PLAN.seatPrice)} a month, and the team shares ${8 * PLAN.includedPerAgent} AI answers. In a busy month the AI uses all ${8 * PLAN.includedPerAgent}, then pauses, and the rest of the questions go to the team as normal tickets. The bill is still ${usd(8 * PLAN.seatPrice)}.`,
     steps: [
       { title: "Pick your seats", body: `Every agent seat is ${usd(PLAN.seatPrice)} a month, or ${usd(PLAN.annualSeatPrice)} a month billed yearly, with every feature. No tiers or add-ons.` },
       { title: "Share the AI allowance", body: `Each seat adds ${PLAN.includedPerAgent} AI answers a month to one team pool.` },
@@ -72,10 +76,12 @@ export const SELLING_POINTS: SellingPoint[] = [
     short: "The AI writes macros from the answers your team keeps retyping and suggests updates when things change. Each one can also assign, tag, set the status and send.",
     headline: "Your best replies become macros, and stay up to date",
     answer:
-      "When your team has sent the same answer on 5 tickets, Flatdesk spots it and the AI writes it up as a macro. New tickets that ask the same thing get it offered. When agents keep making the same edit to a macro before sending, the AI drafts the update and you apply it in one click. Macros can also assign, tag, set the status and send right away. None of this uses your AI allowance.",
+      "A macro is a saved reply your team sends with one click instead of typing it again. When your team has sent the same answer on 5 tickets, Flatdesk spots it and the AI writes it up as a macro. New tickets that ask the same thing get it offered. When agents keep making the same edit to a macro before sending, the AI drafts the update and you apply it in one click. Macros can also assign, tag, set the status and send right away. None of this uses your AI allowance.",
     metaTitle: "AI macros: canned responses found and written for you",
     metaDescription:
       "Flatdesk finds the replies your team sends over and over, the AI writes them up as macros, and new tickets get the right one. Works on imported history too.",
+    example:
+      "Say customers keep asking where their order is. Over a week, Sam, Priya and Lee each type a similar answer on 5 tickets. Flatdesk spots it and the AI writes one \"Where is my order\" macro with [order number] as a blank. You check it and save it. The next time a customer asks, the reply box offers it and one click fills it in. Later your shipping time changes and agents keep fixing that line by hand. The AI notices and suggests the updated macro.",
     steps: [
       { title: "Your team answers as usual", body: "Replies from the last 90 days count, including history you imported from your old help desk." },
       { title: "Flatdesk finds the repeats", body: "The same reply on 5 different tickets becomes one suggested macro." },
@@ -132,8 +138,10 @@ export const SELLING_POINTS: SellingPoint[] = [
     metaTitle: "AI receipts: every AI answer listed, wrong ones refunded",
     metaDescription:
       "See every AI answer your help desk charged for, with the macros and articles it used. Refund a wrong one in one click so it stops counting. Download as CSV.",
+    example:
+      "Say the AI answered 412 tickets in March. One of them told a customer the wrong return window. An admin finds that line on the March receipt and refunds it with a note. It stops counting, and the ticket goes back to the team to put right.",
     steps: [
-      { title: "The AI answers a ticket", body: "It answers from your macros and notes, and records which ones it used." },
+      { title: "The AI answers a ticket", body: "It answers from your macros, help articles and the facts you give it, and records which ones it used." },
       { title: "It lands on the month's receipt", body: "Each line shows the ticket, the answers cited and a status: included, overage, refunded, or handed to the team." },
       { title: "Refund anything wrong", body: "An admin refunds the line with a note. The ticket reopens for your team with that note attached." },
       { title: "Take it to finance", body: "Download any month as CSV to reconcile it with your invoice." },
@@ -170,6 +178,8 @@ export const SELLING_POINTS: SellingPoint[] = [
     answer: `During the free trial, Flatdesk's AI drafts answers to the ${TEST_DRIVE.tickets} most recent tickets your team answered, using your macros, and shows each draft beside the reply your team actually sent. Your team marks each one ready, needs edits, or wrong, and gets a scorecard. Nothing goes to customers and it doesn't use your AI allowance.`,
     metaTitle: "AI test drive: see AI answers to your own past tickets",
     metaDescription: `Flatdesk drafts AI answers to the ${TEST_DRIVE.tickets} most recent tickets your team answered and shows them beside your team's real replies, so you can judge the AI before you switch.`,
+    example:
+      `Say your team imports from Zendesk during the trial. The AI drafts replies to your last ${TEST_DRIVE.tickets} answered tickets and puts each one beside what your team sent. Your team marks each draft ready to send, needs edits, or wrong, and the scorecard adds them up. No customer sees any of it.`,
     steps: [
       { title: "Import your history", body: "Connect Zendesk, Intercom, Freshdesk or Help Scout. The test drive starts from the tickets you bring." },
       { title: "The AI drafts answers", body: `It answers the ${TEST_DRIVE.tickets} most recent customer questions your team answered, with the same model and macros it would use live, or says it would hand the ticket to your team.` },
@@ -209,6 +219,8 @@ export const SELLING_POINTS: SellingPoint[] = [
     metaTitle: "Lossless help desk import from Zendesk, Intercom, Freshdesk and Help Scout",
     metaDescription:
       "Import tickets, attachments, customers, macros and rules from Zendesk, Intercom, Freshdesk or Help Scout. Every original record is kept and nothing is dropped.",
+    example:
+      "Say your team has three years of tickets in Zendesk. You paste an API token and Flatdesk copies the tickets, customers, macros and tags. A rule like \"if tagged billing, assign to Ana\" keeps working. A rule Flatdesk can't run, like one that checks the subject line, is listed in the report so you can rebuild it or drop it.",
     steps: [
       { title: "Connect your old help desk", body: "Paste an API token. It's stored encrypted while the import runs and deleted when it ends." },
       { title: "Flatdesk copies your data", body: "Agents, tags, macros, rules, customers, then tickets with their messages and attachments. Big imports pick up where they left off." },

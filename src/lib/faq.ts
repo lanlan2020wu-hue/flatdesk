@@ -11,6 +11,10 @@ export const GENERAL_FAQ: QA[] = [
     a: `Flatdesk is a help desk for support teams of 3 to 15 agents. Email and website chat land in one inbox, and the AI answers routine questions from your macros. It costs ${PRICE_PHRASE}, with AI included and capped.`,
   },
   {
+    q: "What do ticket, agent and macro mean?",
+    a: "A ticket is one customer conversation, by email or chat. An agent is a person on your team who answers tickets, and each agent is a paid seat. A macro is a saved reply an agent sends with one click instead of typing it again. Flatdesk's AI writes macros for you from the answers your team keeps retyping.",
+  },
+  {
     q: "Which channels does Flatdesk support?",
     a: "Email (forward your support address) and a website chat widget you add with one script tag. Both become tickets in the same inbox. Phone, SMS and social channels aren't supported.",
   },

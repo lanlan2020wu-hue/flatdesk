@@ -7,12 +7,13 @@ const { tickets, messages, customers, agents, rules, orgs } = schema;
 export type TicketStatus = (typeof schema.ticketStatus.enumValues)[number];
 export type View = "mine" | "unassigned" | "open" | "pending" | "closed";
 
-export const VIEWS: { id: View; label: string }[] = [
-  { id: "mine", label: "Assigned to me" },
-  { id: "unassigned", label: "Unassigned" },
-  { id: "open", label: "All open" },
-  { id: "pending", label: "Pending" },
-  { id: "closed", label: "Closed" },
+// Each view with one line on what's in it, shown under the tabs.
+export const VIEWS: { id: View; label: string; hint: string }[] = [
+  { id: "mine", label: "Assigned to me", hint: "Open and pending tickets assigned to you." },
+  { id: "unassigned", label: "Unassigned", hint: "Open tickets nobody has taken yet. Open one and assign it to yourself or a teammate." },
+  { id: "open", label: "All open", hint: "Tickets waiting on a reply from your team." },
+  { id: "pending", label: "Pending", hint: "You replied and are waiting on the customer. When they write back, the ticket moves to open." },
+  { id: "closed", label: "Closed", hint: "Finished tickets. A new message from the customer reopens one." },
 ];
 
 export function isView(v: unknown): v is View {
