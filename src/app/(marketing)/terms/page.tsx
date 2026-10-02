@@ -60,7 +60,7 @@ export default function TermsPage() {
             allowance costs {usd(PLAN.overageRate, true)} and is billed after the month ends: on the next invoice for monthly billing, or on
             its own invoice for yearly billing. An AI answer is a conversation the AI finished without handing it to your team, including up
             to 3 follow-up answers. An admin can refund a wrong AI answer on the AI receipts page and it stops counting. Refunds are open until
-            that month is billed on the 1st of the next month.
+            that month is billed on the 1st of the next month, and each month a team can refund up to one in five of its included answers.
           </li>
           <li>Prices exclude taxes, which are added where the law requires.</li>
           <li>

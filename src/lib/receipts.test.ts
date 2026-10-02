@@ -74,3 +74,32 @@ test("refunding an included resolution stops it counting, moves overage inside t
 
   await db.delete(schema.orgs).where(eq(schema.orgs.id, ORG));
 });
+
+test("refunds stop at one in five of the month's included answers", async () => {
+  const ORG2 = "org_test_receipts_cap";
+  const { db, schema } = await import("@/db");
+  const { monthKey } = await import("./ai");
+  const { monthReceipt, refundResolution, refundLimit, RefundError } = await import("./receipts");
+  const { PLAN } = await import("./pricing");
+
+  await db.delete(schema.orgs).where(eq(schema.orgs.id, ORG2));
+  await db.insert(schema.orgs).values({ id: ORG2, name: "Refund cap team" });
+  await db.insert(schema.agents).values({ orgId: ORG2, userId: "u1", name: "Ana", email: "ana@acme.com", role: "admin" });
+
+  const month = monthKey();
+  const limit = refundLimit(PLAN.includedPerAgent);
+  assert.equal(limit, 20);
+  const events = await db
+    .insert(schema.aiEvents)
+    .values(Array.from({ length: limit + 1 }, () => ({ orgId: ORG2, kind: "resolution" as const, month, model: "test" })))
+    .returning();
+  for (const e of events.slice(0, limit)) await refundResolution(ORG2, e.id, { userId: "u1", name: "Ana" }, "");
+  await assert.rejects(refundResolution(ORG2, events[limit].id, { userId: "u1", name: "Ana" }, ""), RefundError);
+
+  const r = await monthReceipt(ORG2, month);
+  assert.equal(r.refunded, limit);
+  assert.equal(r.refundsLeft, 0);
+  assert.equal(r.counted, 1);
+
+  await db.delete(schema.orgs).where(eq(schema.orgs.id, ORG2));
+});
