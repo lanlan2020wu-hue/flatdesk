@@ -4,7 +4,7 @@ import assert from "node:assert/strict";
 import { after, test } from "node:test";
 import { eq } from "drizzle-orm";
 import { answerPart, identifyMacro, macroBody, macroName, repeatsOf, suggestMacros, type Reply } from "./macro-suggestions";
-import { cleanWritten, withAiDrafts, writerPrompt } from "./macro-writer";
+import { cleanWritten, withAiDrafts, writeRoom, writerPrompt } from "./macro-writer";
 
 const NOW = new Date("2026-09-28T12:00:00Z");
 const hoursAgo = (h: number) => new Date(NOW.getTime() - h * 3_600_000);
@@ -157,4 +157,14 @@ test("database: suggestions come from sent replies, and saving or dismissing one
   // Nothing here is an AI call, so the allowance is untouched.
   assert.equal((await db.select().from(schema.aiEvents).where(eq(schema.aiEvents.orgId, ORG))).length, 0);
   await db.delete(schema.orgs).where(eq(schema.orgs.id, ORG));
+});
+
+test("macro writing stops at the daily count or the monthly per-seat spend", () => {
+  assert.equal(writeRoom({ writtenToday: 0, spentThisMonth: 0, seats: 1 }), 3);
+  assert.equal(writeRoom({ writtenToday: 11, spentThisMonth: 0, seats: 1 }), 1);
+  assert.equal(writeRoom({ writtenToday: 12, spentThisMonth: 0, seats: 1 }), 0);
+  assert.equal(writeRoom({ writtenToday: 0, spentThisMonth: 1.99, seats: 1 }), 3);
+  assert.equal(writeRoom({ writtenToday: 0, spentThisMonth: 2, seats: 1 }), 0);
+  assert.equal(writeRoom({ writtenToday: 0, spentThisMonth: 2, seats: 0 }), 0);
+  assert.equal(writeRoom({ writtenToday: 0, spentThisMonth: 9, seats: 5 }), 3);
 });

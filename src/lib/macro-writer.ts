@@ -7,19 +7,51 @@
 //
 // We pay for these calls. They never count toward a team's AI allowance or
 // show on receipts. Each group of repeats is written once and cached, and a
-// team gets at most WRITER.perDay written a day.
+// team gets at most WRITER.perDay written a day and WRITER.usdPerSeat of
+// writing a month per seat. A call costs about $0.01 to $0.04, so the monthly
+// budget only stops a team whose macros page keeps finding new work, and
+// keeps a one-seat team's worst month at a few dollars instead of ~$14.
 
-import { and, eq, gte, inArray, sql } from "drizzle-orm";
+import { and, count, eq, gte, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema } from "@/db";
 import { aiConfigured } from "@/lib/ai";
 import { structuredCall } from "@/lib/llm";
 import { applyDrift, type Drift, type MacroUpdate } from "@/lib/macro-drift";
 import type { Suggestion } from "@/lib/macro-suggestions";
+import { PLAN } from "@/lib/pricing";
 
-export const WRITER = { perDay: 12, perRun: 3 };
+export const WRITER = { perDay: 12, perRun: 3, usdPerSeat: 2 };
 
-const { macroAiDrafts: drafts } = schema;
+const { macroAiDrafts: drafts, orgs, agents } = schema;
+
+// Writes this run may make: what's left of today's count and this month's
+// spend. Seats are counted as the AI allowance counts them: paid seats, or
+// signed-in agents up to the trial cap.
+export function writeRoom(o: { writtenToday: number; spentThisMonth: number; seats: number }) {
+  if (o.spentThisMonth >= Math.max(1, o.seats) * WRITER.usdPerSeat) return 0;
+  return Math.max(0, Math.min(WRITER.perRun, WRITER.perDay - o.writtenToday));
+}
+
+async function room(orgId: string) {
+  const monthStart = new Date();
+  monthStart.setUTCDate(1);
+  monthStart.setUTCHours(0, 0, 0, 0);
+  const since = new Date(Date.now() - 86_400_000);
+  const [org, [{ agentCount }], [{ today, spent }]] = await Promise.all([
+    db.query.orgs.findFirst({ where: eq(orgs.id, orgId), columns: { billedSeats: true } }),
+    db.select({ agentCount: count() }).from(agents).where(and(eq(agents.orgId, orgId), eq(agents.viewer, false))),
+    db
+      .select({
+        today: sql<number>`count(*) filter (where ${drafts.createdAt} >= ${since.toISOString()})`,
+        spent: sql<string>`coalesce(sum(${drafts.costUsd}) filter (where ${drafts.createdAt} >= ${monthStart.toISOString()}), 0)`,
+      })
+      .from(drafts)
+      .where(and(eq(drafts.orgId, orgId), gte(drafts.createdAt, since < monthStart ? since : monthStart))),
+  ]);
+  const seats = org?.billedSeats ?? Math.min(Number(agentCount), PLAN.trialAgentCap);
+  return writeRoom({ writtenToday: Number(today), spentThisMonth: Number(spent), seats });
+}
 
 const Written = z.object({
   name: z.string().describe("A short macro name, 2 to 6 words, like 'Refund timing' or 'Reset a password'."),
@@ -75,14 +107,8 @@ export async function withAiDrafts(orgId: string, suggestions: Suggestion[]) {
 export async function writeMissingDrafts(orgId: string, missing: Suggestion[]) {
   if (!aiConfigured() || !missing.length) return 0;
   try {
-    const since = new Date(Date.now() - 86_400_000);
-    const [{ n }] = await db
-      .select({ n: sql<number>`count(*)` })
-      .from(drafts)
-      .where(and(eq(drafts.orgId, orgId), gte(drafts.createdAt, since)));
-    const room = Math.min(WRITER.perRun, WRITER.perDay - Number(n));
     let written = 0;
-    for (const s of missing.slice(0, Math.max(0, room))) {
+    for (const s of missing.slice(0, await room(orgId))) {
       const { out, metered } = await structuredCall(Written, WRITER_SYSTEM, writerPrompt(s.samples));
       const clean = out && cleanWritten(out);
       if (!clean) continue;
@@ -102,7 +128,7 @@ export async function writeMissingDrafts(orgId: string, missing: Suggestion[]) {
 // ---- Evolving macros ----------------------------------------------
 // lib/macro-drift.ts finds the edit a team keeps making to a macro. The AI
 // rewrites the macro with that edit, keeping its placeholders, and the result
-// is cached per macro and edit. It shares the daily limit above.
+// is cached per macro and edit. It shares the daily and monthly limits above.
 
 const Updated = z.object({ body: z.string().describe("The whole macro, rewritten with the team's edits, ready to send.") });
 
@@ -146,14 +172,8 @@ export async function withUpdateDrafts(orgId: string, updates: MacroUpdate[]) {
 export async function writeMacroUpdates(orgId: string, missing: MacroUpdate[]) {
   if (!aiConfigured() || !missing.length) return 0;
   try {
-    const since = new Date(Date.now() - 86_400_000);
-    const [{ n }] = await db
-      .select({ n: sql<number>`count(*)` })
-      .from(drafts)
-      .where(and(eq(drafts.orgId, orgId), gte(drafts.createdAt, since)));
-    const room = Math.min(WRITER.perRun, WRITER.perDay - Number(n));
     let written = 0;
-    for (const u of missing.slice(0, Math.max(0, room))) {
+    for (const u of missing.slice(0, await room(orgId))) {
       const { out, metered } = await structuredCall(Updated, UPDATE_SYSTEM, updatePrompt(u.macro.body, u.drift));
       const body = out?.body.replace(/\*\*(.+?)\*\*/g, "$1").trim().slice(0, 4000);
       if (!body) continue;
