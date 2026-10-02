@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import { headers } from "next/headers";
 import { db, schema } from "@/db";
 import { requireSession } from "@/lib/auth";
@@ -55,7 +55,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
   const hours = org?.businessHours ?? DEFAULT_HOURS;
   const clock = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
   const zones = Intl.supportedValuesOf("timeZone");
-  const team = await db.select().from(schema.agents).where(eq(schema.agents.orgId, s.orgId)).orderBy(asc(schema.agents.name));
+  const team = await db.select().from(schema.agents).where(and(eq(schema.agents.orgId, s.orgId), isNull(schema.agents.removedAt))).orderBy(asc(schema.agents.name));
 
   return (
     <div className="grid max-w-2xl gap-10 px-4 py-6 md:px-8 md:py-8">
@@ -250,6 +250,8 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
                 <input
                   type="number"
                   min={0}
+                  max={100000}
+                  step={1}
                   name="aiOverageMonthlyLimit"
                   defaultValue={org.aiOverageMonthlyLimit ?? ""}
                   className="field num w-40"
@@ -281,7 +283,12 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
                   In Slack, create an incoming webhook for the channel (Slack&apos;s &quot;Incoming Webhooks&quot; app) and paste its address here.
                   Leave blank to turn alerts off.
                 </span>
-                <input type="url" name="alertWebhookUrl" defaultValue={org.alertWebhookUrl ?? ""} placeholder="https://hooks.slack.com/services/…" className="field num text-sm" />
+                {/* The address works as a password for the channel, so only admins see it. */}
+                {isAdmin ? (
+                  <input type="url" name="alertWebhookUrl" defaultValue={org.alertWebhookUrl ?? ""} placeholder="https://hooks.slack.com/services/…" className="field num text-sm" />
+                ) : (
+                  <span className="text-sm">{org.alertWebhookUrl ? `Set up by an admin (${webhookLabel(org.alertWebhookUrl)}).` : "Not set up."}</span>
+                )}
               </label>
               <div className="grid gap-2">
                 <span className="label">Post</span>

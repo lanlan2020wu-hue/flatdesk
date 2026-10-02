@@ -65,11 +65,11 @@ const DAY = 86_400;
 export const LIMITS = {
   // New chats: per visitor, and per team so a flood from many addresses can't
   // bury an inbox or spend the AI allowance.
-  chatStart: (ip: string, orgId: string): Limit[] => [
+  chatStart: (ip: string): Limit[] => [
     { key: `chat-start:ip:${ip}`, max: 5, windowSec: 10 * MIN },
     { key: `chat-start:ip-day:${ip}`, max: 20, windowSec: DAY },
-    { key: `chat-start:org:${orgId}`, max: 200, windowSec: HOUR },
   ],
+  chatStartTeam: (orgId: string): Limit[] => [{ key: `chat-start:org:${orgId}`, max: 200, windowSec: HOUR }],
   chatReply: (ip: string, ticketId: string): Limit[] => [
     { key: `chat-reply:ticket:${ticketId}`, max: 30, windowSec: 5 * MIN },
     { key: `chat-reply:ip:${ip}`, max: 60, windowSec: 5 * MIN },
@@ -79,4 +79,15 @@ export const LIMITS = {
   // Satisfaction ratings from the links in reply emails.
   rate: (ip: string): Limit[] => [{ key: `rate:ip:${ip}`, max: 30, windowSec: 10 * MIN }],
   waitlist: (ip: string): Limit[] => [{ key: `waitlist:ip:${ip}`, max: 5, windowSec: HOUR }],
+  // New chats naming one email address: stops the widget being used to make a
+  // team's AI email someone over and over.
+  chatTarget: (orgId: string, email: string): Limit[] => [{ key: `chat-start:to:${orgId}:${createHash("sha256").update(email).digest("hex").slice(0, 32)}`, max: 5, windowSec: DAY }],
+  // Things a team sends from Flatdesk's own domain or pays for from its setup budget.
+  testEmail: (orgId: string): Limit[] => [
+    { key: `test-email:${orgId}`, max: 5, windowSec: HOUR },
+    { key: `test-email-day:${orgId}`, max: 20, windowSec: DAY },
+  ],
+  invites: (orgId: string, count: number): Limit[] => [{ key: `invites:${orgId}`, max: 100, windowSec: DAY, cost: count }],
+  tryAi: (orgId: string): Limit[] => [{ key: `try-ai:${orgId}`, max: 30, windowSec: HOUR }],
+  testAlert: (orgId: string): Limit[] => [{ key: `test-alert:${orgId}`, max: 10, windowSec: HOUR }],
 };

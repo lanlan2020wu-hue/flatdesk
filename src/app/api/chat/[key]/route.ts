@@ -18,8 +18,12 @@ export async function POST(request: Request, ctx: RouteContext<"/api/chat/[key]"
   if ("error" in v) return Response.json({ error: v.error }, { status: 400 });
 
   const ip = ipKey(request);
-  const verdict = await hit([...LIMITS.chatStart(ip, org.id), ...LIMITS.chatFiles(ip, body.files.length)]);
-  if (!verdict.ok) return tooMany(verdict.retryAfter);
+  // The visitor's own limits first. Only chats that pass them count toward the
+  // team's hourly limit, so one sender being refused can't use it up for everyone.
+  const own = await hit([...LIMITS.chatStart(ip), ...LIMITS.chatFiles(ip, body.files.length)]);
+  if (!own.ok) return tooMany(own.retryAfter);
+  const team = await hit([...LIMITS.chatStartTeam(org.id), ...LIMITS.chatTarget(org.id, v.email)]);
+  if (!team.ok) return tooMany(team.retryAfter, "Too many new chats right now");
 
   const { ticket, token } = await startConversation(org.id, v, body.files);
   after(async () => {

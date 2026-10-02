@@ -63,8 +63,8 @@ const sourcesFor = (...ids: string[]) => {
 // Intercom's API doesn't share workflows or assignment rules (see import/sources/intercom.ts).
 const importAnswer = (name: string) =>
   name === "Intercom"
-    ? "Yes. Flatdesk imports conversations, messages, attachments, contacts, tags and macros (where the API returns them) from Intercom, archives every original record, and lists anything that didn't map. Intercom's API doesn't share workflows or assignment rules, so those are recreated in Flatdesk."
-    : `Yes. Flatdesk imports tickets, messages, attachments, customers, tags, macros and rules from ${name}, archives every original record, and lists anything that didn't map.`;
+    ? "Yes. Flatdesk imports conversations, messages, attachments, contacts, tags and macros (where the API returns them) from Intercom, archives every original record, and lists anything that didn't map. Intercom's API doesn't share workflows or assignment rules, so you set those up again in Flatdesk."
+    : `Yes. Flatdesk imports tickets, messages, attachments, customers, tags, macros and rules from ${name}, archives every original record, and lists anything that didn't map.${name === "Help Scout" ? " Help Scout workflows come over by name only, since its API doesn't share their conditions." : ""}`;
 
 export const RIVALS: Rival[] = [
   {
@@ -76,7 +76,7 @@ export const RIVALS: Rival[] = [
       `${PLAN.includedPerAgent} AI answers per agent included, instead of paying for each one`,
       "The AI pauses at the cap unless you opt in, so the bill can't grow on its own",
       "AI receipts itemize every answer, and you can refund a wrong one",
-      "AI macros, identified from your team's repeated replies and updated when your team keeps editing them",
+      "AI macros, found in your team's repeated replies, that suggest an update when your team keeps editing them",
     ],
     theyWin: [
       "Richer messenger with proactive and outbound messages",
@@ -100,7 +100,7 @@ export const RIVALS: Rival[] = [
     answer: `Zendesk Suite starts at $55 per agent on annual billing and charges for automated resolutions past a small allowance. It doesn't publish the per-resolution rate; third parties put it near $1.50 to $2.00. Flatdesk is ${usd(PLAN.annualSeatPrice)} per agent on annual billing (${usd(PLAN.seatPrice)} monthly) with ${PLAN.includedPerAgent} AI answers per agent included and a cap on by default. Zendesk is far broader: community forums, many channels, a large app marketplace.`,
     flatdeskWins: [
       "One public price, with AI included and capped",
-      "AI macros that update from your team's edits, included in the seat (Zendesk's macro suggestions need its Copilot add-on, $50 per agent)",
+      "AI macros that suggest updates from your team's edits, included in the seat (Zendesk's macro suggestions need its Copilot add-on, $50 per agent)",
       "AI receipts with one-click refunds",
       "No tiers or add-ons: every seat gets every feature",
     ],
@@ -130,7 +130,7 @@ export const RIVALS: Rival[] = [
     flatdeskWins: [
       `${PLAN.includedPerAgent} AI answers per agent included instead of paying per resolution`,
       "AI receipts with one-click refunds",
-      "AI macros written from your replies and updated from your team's edits. They can also assign, tag and close tickets",
+      "AI macros written from your replies, with updates suggested from your team's edits. They can also assign, tag and close tickets",
       "Lossless import with a raw archive of every record",
     ],
     theyWin: [
@@ -189,7 +189,7 @@ export const RIVALS: Rival[] = [
     flatdeskWins: [
       "AI included in the seat, with a cap on by default",
       "AI receipts with one-click refunds",
-      "AI macros written from your replies and updated from your team's edits. They can also assign, tag and close tickets",
+      "AI macros written from your replies, with updates suggested from your team's edits. They can also assign, tag and close tickets",
       "Lossless import from Zendesk, Intercom, Freshdesk and Help Scout",
     ],
     theyWin: [
@@ -218,7 +218,7 @@ export const RIVALS: Rival[] = [
       "AI included in the seat instead of charged per interaction",
       "An AI answer is never charged on top of a ticket fee",
       "AI receipts with one-click refunds",
-      "AI macros written from your replies and updated from your team's edits. They can also assign, tag and close tickets",
+      "AI macros written from your replies, with updates suggested from your team's edits. They can also assign, tag and close tickets",
     ],
     theyWin: [
       "Native Shopify integration with order data in the ticket",

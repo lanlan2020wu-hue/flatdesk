@@ -1,8 +1,8 @@
-import { and, count, eq } from "drizzle-orm";
+import { and, count, eq, isNull } from "drizzle-orm";
 import Link from "next/link";
 import { db, schema } from "@/db";
 import { aiUsage } from "@/lib/ai";
-import { requireSession } from "@/lib/auth";
+import { requireOpenPage } from "@/lib/auth";
 import { access } from "@/lib/billing";
 import { macroUpdates } from "@/lib/macro-drift";
 import { macroSuggestions } from "@/lib/macro-suggestions";
@@ -38,14 +38,14 @@ const Figure = ({ label, value, href, strong = false }: { label: string; value: 
 // The month at a glance, in the order Flatdesk is sold: what the flat rate
 // covers this month, then the AI macros waiting, then everything else.
 export default async function OverviewPage() {
-  const s = await requireSession();
+  const s = await requireOpenPage();
   const [org, ai, found, drifted, [{ aiMacros }], [{ seats }], counts] = await Promise.all([
     db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) }),
     aiUsage(s.orgId),
     macroSuggestions(s.orgId),
     macroUpdates(s.orgId),
     db.select({ aiMacros: count() }).from(schema.macros).where(and(eq(schema.macros.orgId, s.orgId), eq(schema.macros.source, "suggested"))),
-    db.select({ seats: count() }).from(schema.agents).where(and(eq(schema.agents.orgId, s.orgId), eq(schema.agents.viewer, false))),
+    db.select({ seats: count() }).from(schema.agents).where(and(eq(schema.agents.orgId, s.orgId), eq(schema.agents.viewer, false), isNull(schema.agents.removedAt))),
     viewCounts(s.orgId, s.userId),
   ]);
   const { suggestions } = await withAiDrafts(s.orgId, found);

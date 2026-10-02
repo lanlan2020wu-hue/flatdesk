@@ -3,7 +3,7 @@ import { after } from "next/server";
 import { db, schema } from "@/db";
 import { SuggestionsSection } from "@/components/MacroSuggestion";
 import MacroUpdates from "@/components/MacroUpdates";
-import { requireSession } from "@/lib/auth";
+import { requireOpenPage } from "@/lib/auth";
 import { aiConfigured } from "@/lib/ai";
 import { access } from "@/lib/billing";
 import { macroUpdates } from "@/lib/macro-drift";
@@ -18,7 +18,7 @@ const field = "field";
 const SOURCE_NAME: Record<string, string> = { zendesk: "Zendesk", intercom: "Intercom", freshdesk: "Freshdesk", helpscout: "Help Scout" };
 
 export default async function MacrosPage() {
-  const s = await requireSession();
+  const s = await requireOpenPage();
   const [macros, rules, agents, imported, found, drifted] = await Promise.all([
     db.select().from(schema.macros).where(eq(schema.macros.orgId, s.orgId)).orderBy(asc(schema.macros.name)),
     db.select().from(schema.rules).where(eq(schema.rules.orgId, s.orgId)).orderBy(asc(schema.rules.createdAt)),
@@ -55,11 +55,11 @@ export default async function MacrosPage() {
         <div className="grid gap-1">
           <h1 className="page-title">AI macros</h1>
           <p className="text-sm text-muted">
-            Flatdesk finds the answers your team keeps retyping and the AI writes them up as macros. New tickets get the right macro offered in the reply box. A macro can also assign, set the status, add tags and send right away. When your team keeps editing a macro the same way, the AI drafts an update for an admin to apply.
+            Flatdesk finds the answers your team keeps retyping and the AI writes them up as macros. New tickets get the right macro offered in the reply box. A macro can also assign, set the status, add tags and send right away. When your team keeps editing a macro the same way, the AI drafts an update you apply in one click.
           </p>
         </div>
 
-        <MacroUpdates updates={updates} aiOn={aiConfigured()} />
+        <MacroUpdates updates={updates} aiOn={aiConfigured()} canApply={s.role === "admin"} />
 
         <SuggestionsSection suggestions={suggestions} aiOn={aiConfigured()} />
 

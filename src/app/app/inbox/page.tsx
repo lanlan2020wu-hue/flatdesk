@@ -3,7 +3,7 @@ import Link from "next/link";
 import Avatar from "@/components/Avatar";
 import SlaBadge from "@/components/SlaBadge";
 import { db, schema } from "@/db";
-import { requireSession } from "@/lib/auth";
+import { requireOpenPage } from "@/lib/auth";
 import { STATUS_STYLE, timeAgo } from "@/lib/format";
 import { slaState } from "@/lib/sla";
 import { VIEWS, isView, listTickets, viewCounts } from "@/lib/tickets";
@@ -11,7 +11,7 @@ import { VIEWS, isView, listTickets, viewCounts } from "@/lib/tickets";
 export const metadata = { title: "Inbox" };
 
 export default async function InboxPage({ searchParams }: PageProps<"/app/inbox">) {
-  const s = await requireSession();
+  const s = await requireOpenPage();
   const sp = await searchParams;
   const view = isView(sp.view) ? sp.view : "open";
   const [tickets, org, counts] = await Promise.all([

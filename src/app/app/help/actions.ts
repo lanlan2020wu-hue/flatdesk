@@ -4,8 +4,7 @@ import { and, eq, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db, schema } from "@/db";
-import { requireAdmin, requireEditor } from "@/lib/auth";
-import { access } from "@/lib/billing";
+import { requireAdmin, requireEditor, requireOpen } from "@/lib/auth";
 import { MAX_BODY, MAX_TITLE, uniqueArticleSlug, validHelpSlug } from "@/lib/help";
 import { isUuid } from "@/lib/ids";
 
@@ -13,12 +12,7 @@ const { articles, orgs } = schema;
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 const isId = isUuid;
 
-async function requireOpenEditor() {
-  const s = await requireEditor();
-  const org = await db.query.orgs.findFirst({ where: eq(orgs.id, s.orgId) });
-  if (org && access(org).state === "locked") throw new Error("The free trial has ended. An admin can add a card in Settings.");
-  return s;
-}
+const requireOpenEditor = async () => requireOpen(await requireEditor());
 
 function revalidate(helpSlug?: string | null) {
   revalidatePath("/app/help", "layout");
@@ -77,7 +71,7 @@ export async function deleteArticleAction(form: FormData) {
 
 // The public address, /help/<slug>. Admins only, since it changes links customers already have.
 export async function saveHelpSlugAction(form: FormData) {
-  const s = await requireAdmin();
+  const s = await requireOpen(await requireAdmin());
   const slug = str(form, "helpSlug").toLowerCase();
   const old = await helpSlugOf(s.orgId);
   if (slug === old) redirect("/app/help");

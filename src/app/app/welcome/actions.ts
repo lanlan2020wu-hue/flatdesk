@@ -1,7 +1,7 @@
 "use server";
 
 import { clerkClient } from "@clerk/nextjs/server";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { randomBytes } from "node:crypto";
@@ -9,8 +9,10 @@ import { db, schema } from "@/db";
 import type { OnboardingStep } from "@/db/schema";
 import { requireAdmin } from "@/lib/auth";
 import { clerkEnabled } from "@/lib/auth-config";
+import { access } from "@/lib/billing";
 import { emailConfig, inboundAddress, resend } from "@/lib/email";
 import { milestone } from "@/lib/funnel";
+import { hit, LIMITS } from "@/lib/rate-limit";
 import { TEST_TAG, tryTheAi, updateOnboarding, type TryResult } from "@/lib/onboarding";
 import { TestDriveError } from "@/lib/test-drive";
 import { createTicket } from "@/lib/tickets";
@@ -28,6 +30,7 @@ export async function inviteAction(_prev: InviteState, form: FormData): Promise<
   const valid = emails.filter((e) => EMAIL.test(e)).slice(0, 25);
   if (!valid.length) return { sent: [], failed: [], error: invalid.length ? `These don't look like email addresses: ${invalid.join(", ")}` : "Add at least one email address." };
   const role = form.get("role") === "admin" ? "org:admin" : "org:member";
+  if (!(await hit(LIMITS.invites(s.orgId, valid.length))).ok) return { sent: [], failed: [], error: "That's a lot of invites for one day. Try again tomorrow." };
 
   const sent: string[] = [];
   const failed: InviteState["failed"] = invalid.map((email) => ({ email, reason: "Not an email address" }));
@@ -92,6 +95,7 @@ export async function tryAiAction(_prev: TryState, form: FormData): Promise<TryS
   const question = String(form.get("question") ?? "").trim().slice(0, 2000);
   await db.update(schema.orgs).set({ aiInstructions: notes }).where(eq(schema.orgs.id, s.orgId));
   if (!question) return { result: null, question, error: "Type a question a customer might ask." };
+  if (!(await hit(LIMITS.tryAi(s.orgId))).ok) return { result: null, question, error: "That's a lot of questions in an hour. Try again a bit later." };
   try {
     const result = await tryTheAi(s.orgId, question);
     revalidatePath("/app/welcome");
@@ -122,8 +126,13 @@ export async function sendTestEmailAction(): Promise<TestState> {
   const org = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) });
   if (!org?.supportEmail) return { error: "Add your support address in the step above first.", sentTo: null };
   if (!emailConfig.apiKey || !emailConfig.from || !inboundAddress(org.inboundKey)) return { error: "Email isn't connected on this server yet.", sentTo: null };
+  if (access(org).state === "locked") return { error: "Add a card in Settings to keep using Flatdesk.", sentTo: null };
+  // Only to the team's own address, and not often: this sends from Flatdesk's domain.
+  const verdict = await hit(LIMITS.testEmail(s.orgId));
+  if (!verdict.ok) return { error: "That's a lot of test emails. Wait a few minutes, then check the forwarding rule before sending another.", sentTo: null };
   const token = `ft-${randomBytes(3).toString("hex")}`;
-  await updateOnboarding(s.orgId, (ob) => ({ ...ob, testToken: token, testSentAt: new Date().toISOString() }));
+  const admin = await db.query.agents.findFirst({ where: and(eq(schema.agents.orgId, s.orgId), eq(schema.agents.userId, s.userId)), columns: { email: true } });
+  await updateOnboarding(s.orgId, (ob) => ({ ...ob, testToken: token, testSentAt: new Date().toISOString(), testReplyTo: admin?.email || undefined }));
   const { error } = await resend().emails.send({
     from: `Flatdesk <${emailConfig.from}>`,
     to: org.supportEmail,

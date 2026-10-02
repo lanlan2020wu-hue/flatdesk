@@ -21,8 +21,6 @@ function Bar({ title }: { title: string }) {
 
 const at = (ms: number) => ({ "--at": `${ms}ms` }) as React.CSSProperties;
 
-const Dot = ({ className }: { className: string }) => <span className={`size-1.5 shrink-0 rounded-full ${className}`} />;
-
 export function InboxShot() {
   const rows: [string, string, string, string, string][] = [
     ["1042", "Can't reset my password", "Ana Ruiz", "email", "AI answered"],
@@ -210,7 +208,7 @@ export function AiShot() {
 export function ReceiptShot() {
   const lines: [string, string, string, string][] = [
     ["#1042", "Can't reset my password", "Counted, included", "pill bg-accent-soft text-accent"],
-    ["#1038", "Where is my order?", "Not counted, handed off", "pill bg-surface-2 text-muted"],
+    ["#1038", "Where is my order?", "Not counted, handed to the team", "pill bg-surface-2 text-muted"],
     ["#1035", "Change billing email", "Refunded", "pill strike bg-surface-2 text-muted"],
   ];
   return (

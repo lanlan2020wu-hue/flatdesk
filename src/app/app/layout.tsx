@@ -1,14 +1,11 @@
 import Link from "next/link";
 import AccountMenu from "@/components/AccountMenu";
 import AuthProvider from "@/components/AuthProvider";
-import { eq } from "drizzle-orm";
 import Logo from "@/components/Logo";
 import MobileNav from "@/components/MobileNav";
 import Paywall from "@/components/Paywall";
 import NavLink from "@/components/NavLink";
-import { db, schema } from "@/db";
-import { requireSession } from "@/lib/auth";
-import { access, billingConfigured, isActive, refreshSubscription } from "@/lib/billing";
+import { requireSession, teamPlan } from "@/lib/auth";
 import { getOnboarding } from "@/lib/onboarding";
 import { viewCounts } from "@/lib/tickets";
 
@@ -23,17 +20,12 @@ const Icon = ({ d }: { d: string }) => (
 
 export default async function AppLayout({ children }: LayoutProps<"/app">) {
   const s = await requireSession();
-  const [counts, org, onboarding] = await Promise.all([
+  const [counts, { plan }, onboarding] = await Promise.all([
     viewCounts(s.orgId, s.userId),
-    db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) }),
+    teamPlan(s.orgId),
     s.role === "admin" ? getOnboarding(s.orgId) : null,
   ]);
-  let current = org;
-  // Right after Checkout the row is stale; ask Stripe before showing the banner.
-  if (org && billingConfigured() && !isActive(org.subscriptionStatus) && org.stripeCustomerId) {
-    current = await refreshSubscription(s.orgId).catch(() => org);
-  }
-  const plan = current ? access(current) : ({ state: "open" } as const);
+  // teamPlan asks Stripe first when the row looks unpaid (it's stale right after Checkout).
 
   return (
     <AuthProvider>

@@ -11,7 +11,8 @@ export const SOURCE_MAX_AGE = 90 * 86_400; // seconds
 // the app itself are not marketing traffic.
 const NOT_MARKETING = /^\/(app|api|chat|help|rate|__clerk)(\/|$)/;
 
-const clip = (v: string | null | undefined) => (v ? v.trim().slice(0, 100) || undefined : undefined);
+// Control characters are dropped: a NUL in a link would make Postgres refuse to save the team.
+const clip = (v: string | null | undefined) => (v ? v.replace(/[\x00-\x1f\x7f]/g, "").trim().slice(0, 100) || undefined : undefined);
 
 // The source to remember for this page view, or null to keep what we have.
 // A visit with campaign parameters replaces an earlier one; otherwise the

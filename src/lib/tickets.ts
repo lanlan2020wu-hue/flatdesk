@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { noNul } from "@/lib/ids";
 
 const { tickets, messages, customers, agents, rules, orgs } = schema;
 
@@ -107,12 +108,14 @@ export async function getTicket(orgId: string, number: number) {
   return { ...row, thread };
 }
 
+// The team as it is now: people removed in Clerk are left out.
 export async function listAgents(orgId: string) {
-  return db.select().from(agents).where(eq(agents.orgId, orgId)).orderBy(asc(agents.name));
+  return db.select().from(agents).where(and(eq(agents.orgId, orgId), isNull(agents.removedAt))).orderBy(asc(agents.name));
 }
 
 type NewTicket = {
   orgId: string;
+  visitorToken?: string; // chat: lets the visitor's browser read the conversation
   channel: "email" | "chat";
   customerEmail: string;
   customerName?: string | null;
@@ -124,7 +127,15 @@ type NewTicket = {
   emailMessageId?: string | null;
 };
 
-export async function createTicket(input: NewTicket) {
+export async function createTicket(raw: NewTicket) {
+  const input = {
+    ...raw,
+    customerEmail: noNul(raw.customerEmail),
+    customerName: raw.customerName ? noNul(raw.customerName) : raw.customerName,
+    subject: noNul(raw.subject),
+    body: noNul(raw.body),
+    emailMessageId: raw.emailMessageId ? noNul(raw.emailMessageId) : raw.emailMessageId,
+  };
   return db.transaction(async (tx) => {
     const [customer] = await tx
       .insert(customers)
@@ -155,6 +166,7 @@ export async function createTicket(input: NewTicket) {
         customerId: customer.id,
         tags,
         assigneeId,
+        visitorToken: input.visitorToken ?? null,
       })
       .returning();
 
@@ -183,7 +195,7 @@ async function ruleAssignee(tx: Tx | typeof db, orgId: string, tags: string[]): 
   const [rule] = await tx
     .select({ assignTo: rules.assignTo })
     .from(rules)
-    .innerJoin(agents, and(eq(agents.orgId, rules.orgId), eq(agents.userId, rules.assignTo), eq(agents.viewer, false)))
+    .innerJoin(agents, and(eq(agents.orgId, rules.orgId), eq(agents.userId, rules.assignTo), eq(agents.viewer, false), isNull(agents.removedAt)))
     .where(and(eq(rules.orgId, orgId), eq(rules.enabled, true), inArray(rules.ifTag, tags)))
     .orderBy(asc(rules.createdAt))
     .limit(1);
@@ -191,7 +203,7 @@ async function ruleAssignee(tx: Tx | typeof db, orgId: string, tags: string[]): 
 }
 
 export function normalizeTags(tags: string[]): string[] {
-  return [...new Set(tags.map((t) => t.trim().toLowerCase().replace(/\s+/g, "-")).filter(Boolean))].slice(0, 20);
+  return [...new Set(tags.map((t) => t.trim().toLowerCase().replace(/\s+/g, "-").slice(0, 50)).filter(Boolean))].slice(0, 20);
 }
 
 export async function addReply(opts: {
@@ -256,8 +268,8 @@ export async function addCustomerMessage(opts: { orgId: string; ticketId: string
       ticketId: opts.ticketId,
       authorType: "customer",
       authorId: opts.customerId,
-      body: opts.body,
-      emailMessageId: opts.emailMessageId ?? null,
+      body: noNul(opts.body),
+      emailMessageId: opts.emailMessageId ? noNul(opts.emailMessageId) : null,
     }).returning({ id: messages.id });
     await tx
       .update(tickets)

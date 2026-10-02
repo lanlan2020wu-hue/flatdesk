@@ -17,13 +17,31 @@ export const TARGET_CHOICES = [
 
 export const DEFAULT_HOURS: BusinessHours = { tz: "America/New_York", days: [1, 2, 3, 4, 5], start: 9 * 60, end: 17 * 60 };
 
+// Business hours must be open at least this long each open day. A shorter
+// window makes due times weeks away and the due-time loop run for ages.
+export const MIN_OPEN_MINUTES = 60;
+
+// The shape check, without the time zone (cheap enough for every ticket).
+function sensibleHours(h: BusinessHours): boolean {
+  return (
+    Array.isArray(h.days) &&
+    h.days.length > 0 &&
+    h.days.every((d) => Number.isInteger(d) && d >= 0 && d <= 6) &&
+    Number.isFinite(h.start) &&
+    Number.isFinite(h.end) &&
+    h.start >= 0 &&
+    h.end <= 1440 &&
+    h.end - h.start >= MIN_OPEN_MINUTES
+  );
+}
+
 export function validHours(h: BusinessHours): boolean {
   try {
     new Intl.DateTimeFormat("en-US", { timeZone: h.tz });
   } catch {
     return false;
   }
-  return h.days.length > 0 && h.days.every((d) => Number.isInteger(d) && d >= 0 && d <= 6) && h.start >= 0 && h.end <= 1440 && h.start < h.end;
+  return sensibleHours(h);
 }
 
 const WEEKDAY: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
@@ -46,7 +64,9 @@ const MIN = 60_000;
 // business hours when there are any. Steps by whole stretches of open or
 // closed time, re-reading the local clock each step so DST changes are handled.
 export function dueAt(from: Date, minutes: number, hours: BusinessHours | null): Date {
-  if (!hours) return new Date(from.getTime() + minutes * MIN);
+  // Hours saved before the minimum existed, or otherwise broken, count
+  // around the clock rather than looping or giving a nonsense time.
+  if (!hours || !sensibleHours(hours) || !(minutes > 0)) return new Date(from.getTime() + Math.max(0, minutes || 0) * MIN);
   let t = from.getTime();
   let left = minutes;
   // Each pass crosses one open or closed stretch, so even a team open one hour

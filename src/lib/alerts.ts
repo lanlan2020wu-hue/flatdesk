@@ -1,6 +1,8 @@
 import { createHmac } from "node:crypto";
-import { isIP } from "node:net";
-import { lookup } from "node:dns/promises";
+import { lookup, type LookupAddress } from "node:dns";
+import { request as httpRequest } from "node:http";
+import { request as httpsRequest } from "node:https";
+import { isIP, type LookupFunction } from "node:net";
 import { and, desc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { SITE } from "@/lib/site";
@@ -53,23 +55,104 @@ export function checkWebhookUrl(raw: string): { url: string } | { error: string 
   return { url: u.toString() };
 }
 
-// True for loopback, private, link-local, CGNAT and other non-public addresses.
+// True for loopback, private, link-local, CGNAT and other non-public
+// addresses, including IPv4 addresses carried inside IPv6 (mapped, NAT64,
+// 6to4), which reach the same private network.
 export function isPrivateAddress(ip: string): boolean {
-  const v4 = ip.startsWith("::ffff:") ? ip.slice(7) : ip;
-  if (isIP(v4) === 4) {
-    const [a, b] = v4.split(".").map(Number);
-    return a === 0 || a === 10 || a === 127 || (a === 100 && b >= 64 && b <= 127) || (a === 169 && b === 254) || (a === 172 && b >= 16 && b <= 31) || (a === 192 && b === 168) || (a === 198 && (b === 18 || b === 19)) || a >= 224;
-  }
-  const h = ip.toLowerCase();
-  return h === "::" || h === "::1" || h.startsWith("fc") || h.startsWith("fd") || /^fe[89ab]/.test(h) || h.startsWith("ff");
+  const kind = isIP(ip);
+  if (kind === 4) return privateV4(ip.split(".").map(Number));
+  if (kind !== 6) return true; // not an address at all: never treat it as public
+  const h = v6Hextets(ip);
+  if (!h) return true;
+  const v4At = (i: number) => [h[i] >> 8, h[i] & 255, h[i + 1] >> 8, h[i + 1] & 255];
+  const zero = (from: number, to: number) => h.slice(from, to).every((x) => x === 0);
+  if (zero(0, 8) || (zero(0, 7) && h[7] === 1)) return true; // :: and ::1
+  if (zero(0, 5) && h[5] === 0xffff) return privateV4(v4At(6)); // ::ffff:a.b.c.d, IPv4-mapped
+  if (zero(0, 6)) return true; // ::a.b.c.d, the old IPv4-compatible form
+  if (h[0] === 0x64 && h[1] === 0xff9b && zero(2, 6)) return privateV4(v4At(6)); // 64:ff9b::/96, NAT64
+  if (h[0] === 0x64 && h[1] === 0xff9b) return true; // 64:ff9b:1::/48, local NAT64
+  if (h[0] === 0x2002) return privateV4(v4At(1)); // 2002::/16, 6to4
+  if (h[0] === 0x2001 && h[1] === 0) return true; // 2001::/32, Teredo tunnels
+  if (h[0] === 0x2001 && h[1] === 0xdb8) return true; // documentation
+  if (h[0] === 0x100 && zero(1, 4)) return true; // 100::/64, discard
+  return (h[0] & 0xfe00) === 0xfc00 || (h[0] & 0xffc0) === 0xfe80 || (h[0] & 0xffc0) === 0xfec0 || (h[0] & 0xff00) === 0xff00;
 }
 
-// A public name can still point at a private address, so check where it resolves.
-// Tests post to a local server, so they switch this off.
-async function resolvesPublic(url: string): Promise<boolean> {
-  if (process.env.ALERTS_ALLOW_PRIVATE === "1") return true;
-  const addrs = await lookup(new URL(url).hostname, { all: true }).catch(() => []);
-  return addrs.length > 0 && addrs.every((a) => !isPrivateAddress(a.address));
+function privateV4([a, b, c]: number[]): boolean {
+  return (
+    a === 0 || a === 10 || a === 127 || a >= 224 ||
+    (a === 100 && b >= 64 && b <= 127) || // CGNAT
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168) ||
+    (a === 192 && b === 0 && (c === 0 || c === 2)) ||
+    (a === 198 && (b === 18 || b === 19)) ||
+    (a === 198 && b === 51 && c === 100) ||
+    (a === 203 && b === 0 && c === 113)
+  );
+}
+
+// An IPv6 address as its eight 16-bit groups, with "::" and a dotted IPv4 tail expanded.
+function v6Hextets(ip: string): number[] | null {
+  let s = ip.toLowerCase().split("%")[0];
+  const dotted = /(\d+\.\d+\.\d+\.\d+)$/.exec(s);
+  if (dotted) {
+    const [a, b, c, d] = dotted[1].split(".").map(Number);
+    s = s.slice(0, -dotted[1].length) + `${((a << 8) | b).toString(16)}:${((c << 8) | d).toString(16)}`;
+  }
+  const [head, tail] = s.split("::");
+  const part = (x: string | undefined) => (x ? x.split(":").map((g) => parseInt(g, 16)) : []);
+  const left = part(head);
+  const right = part(tail);
+  const fill = tail === undefined ? 0 : 8 - left.length - right.length;
+  const out = [...left, ...Array(Math.max(0, fill)).fill(0), ...right];
+  return out.length === 8 && out.every((n) => Number.isInteger(n) && n >= 0 && n <= 0xffff) ? out : null;
+}
+
+// Tests post to a local server, so they switch the address checks off.
+const allowPrivate = () => process.env.ALERTS_ALLOW_PRIVATE === "1";
+const NOT_PUBLIC = "The address doesn't resolve to a public server.";
+
+// DNS lookup for the alert request itself. Checking a name and then letting
+// fetch resolve it again would let the name change in between (DNS
+// rebinding), so the socket connects to exactly the addresses checked here.
+export const publicLookup: LookupFunction = (hostname, options, callback) => {
+  lookup(hostname, { all: true, family: options.family ?? 0 }, (err, addrs: LookupAddress[]) => {
+    if (err) return callback(err, "", 0);
+    if (!addrs.length || (!allowPrivate() && addrs.some((a) => isPrivateAddress(a.address)))) {
+      return callback(Object.assign(new Error(NOT_PUBLIC), { code: "ENOTPUBLIC" }), "", 0);
+    }
+    if (options.all) return (callback as unknown as (e: null, a: LookupAddress[]) => void)(null, addrs);
+    callback(null, addrs[0].address, addrs[0].family);
+  });
+};
+
+// Posts the alert. No redirects are followed: a redirect could point the
+// request somewhere the address check never saw.
+export function postAlert(url: string, body: string, headers: Record<string, string>): Promise<{ status: number; statusText: string }> {
+  return new Promise((resolve, reject) => {
+    const u = new URL(url);
+    const host = u.hostname.replace(/^\[|\]$/g, "");
+    if (u.protocol !== "https:" && !(allowPrivate() && u.protocol === "http:")) return reject(new Error("The webhook address has to start with https://."));
+    // A literal IP never goes through lookup, so it's checked here.
+    if (isIP(host) && !allowPrivate() && isPrivateAddress(host)) return reject(new Error(NOT_PUBLIC));
+    const send = u.protocol === "https:" ? httpsRequest : httpRequest;
+    const req = send(
+      u,
+      { method: "POST", headers: { ...headers, "content-length": String(Buffer.byteLength(body)) }, lookup: publicLookup, agent: false },
+      (res) => {
+        res.resume(); // only the status matters; the body could be anything
+        clearTimeout(timer);
+        resolve({ status: res.statusCode ?? 0, statusText: res.statusMessage ?? "" });
+      },
+    );
+    const timer = setTimeout(() => req.destroy(Object.assign(new Error("timeout"), { name: "TimeoutError" })), TIMEOUT_MS);
+    req.on("error", (err) => {
+      clearTimeout(timer);
+      reject(err);
+    });
+    req.end(body);
+  });
 }
 
 type Kind = "slack" | "discord" | "google-chat" | "generic";
@@ -102,7 +185,8 @@ export function buildRequest(url: string, secret: string, p: AlertPayload): { bo
     return { body: JSON.stringify({ text, unfurl_links: false }), headers };
   }
   if (kind === "discord") return { body: JSON.stringify({ content: p.text.slice(0, 1900) + (p.ticket ? `\n${p.ticket.url}` : ""), allowed_mentions: { parse: [] } }), headers };
-  if (kind === "google-chat") return { body: JSON.stringify({ text: p.text + (p.ticket ? `\n${p.ticket.url}` : "") }), headers };
+  // Google Chat reads <users/all> as an @-mention, and the text carries what a customer typed.
+  if (kind === "google-chat") return { body: JSON.stringify({ text: p.text.replace(/</g, "‹").replace(/>/g, "›") + (p.ticket ? `\n${p.ticket.url}` : "") }), headers };
   const body = JSON.stringify(p);
   return { body, headers: { ...headers, "x-flatdesk-event": p.event, "x-flatdesk-signature": sign(secret, body) } };
 }
@@ -123,12 +207,9 @@ export async function deliver(org: Pick<Org, "id" | "alertWebhookUrl" | "alertSe
   if (!org.alertWebhookUrl) return null;
   let error: string | null = null;
   try {
-    if (!(await resolvesPublic(org.alertWebhookUrl))) throw new Error("The address doesn't resolve to a public server.");
     const { body, headers } = buildRequest(org.alertWebhookUrl, org.alertSecret, payload);
-    // No redirects: a redirect could point the request somewhere the URL check never saw.
-    const res = await fetch(org.alertWebhookUrl, { method: "POST", body, headers, redirect: "manual", signal: AbortSignal.timeout(TIMEOUT_MS) });
-    // Only the status: the response body could be anything the server chose to send.
-    if (!res.ok) error = `${res.status} ${res.statusText}`.trim();
+    const res = await postAlert(org.alertWebhookUrl, body, headers);
+    if (res.status < 200 || res.status >= 300) error = `${res.status} ${res.statusText}`.trim();
   } catch (err) {
     error = err instanceof Error && err.name === "TimeoutError" ? "No answer within 5 seconds." : err instanceof Error ? err.message : "Couldn't reach the address.";
   }

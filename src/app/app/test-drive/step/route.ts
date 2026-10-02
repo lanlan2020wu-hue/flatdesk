@@ -1,4 +1,4 @@
-import { requireSession } from "@/lib/auth";
+import { LOCKED_MESSAGE, requireSession, teamPlan } from "@/lib/auth";
 import { runTestDriveStep } from "@/lib/test-drive";
 
 // The test drive page calls this in a loop while drafts are queued. Each call
@@ -7,5 +7,6 @@ export const maxDuration = 120; // one model call can take up to TEST_DRIVE.call
 
 export async function POST() {
   const s = await requireSession();
+  if ((await teamPlan(s.orgId)).plan.state === "locked") return Response.json({ error: LOCKED_MESSAGE }, { status: 402 });
   return Response.json(await runTestDriveStep(s.orgId));
 }

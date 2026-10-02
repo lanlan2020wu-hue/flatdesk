@@ -52,6 +52,15 @@ export async function importReport(orgId: string, id: string) {
   return { job, adapter: { id: adapter.id, name: adapter.name }, phases, counts: job.counts, issues: rows.rows };
 }
 
+// One CSV cell. Names and ids come from the old help desk, so a value a
+// spreadsheet would run as a formula (=, +, -, @, tab, CR) is prefixed with
+// a quote to be shown as text.
+export function csvCell(v: string | null | undefined): string {
+  let s = v ?? "";
+  if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
+  return `"${s.replace(/"/g, '""')}"`;
+}
+
 // Every record with at least one issue, for the CSV download.
 export async function issueRows(orgId: string, id: string) {
   return db

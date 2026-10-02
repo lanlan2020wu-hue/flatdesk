@@ -86,6 +86,7 @@ export type Onboarding = {
   gmailConfirmation?: { code: string | null; link: string | null; receivedAt: string };
   testToken?: string; // subject token of the end-to-end test email
   testSentAt?: string;
+  testReplyTo?: string; // the admin who sent the test, who gets replies to the test ticket
   source?: SignupSource; // where the person who created the team came from (lib/attribution.ts)
   milestones?: Partial<Record<Milestone, string>>; // when each funnel milestone first happened (lib/funnel.ts)
 };
@@ -133,6 +134,9 @@ export const agents = pgTable(
     role: agentRole("role").notNull().default("agent"),
     // A viewer reads tickets but can't change them, and isn't billed as a seat. Admins never are.
     viewer: boolean("viewer").notNull().default(false),
+    // Set when the person left the team in Clerk. They keep their name on old
+    // tickets but can't be assigned, get emails or count as a seat.
+    removedAt: timestamp("removed_at", { withTimezone: true }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [primaryKey({ columns: [t.orgId, t.userId] })],
@@ -280,8 +284,14 @@ export const macros = pgTable("macros", {
   // Actions from the original macro that Flatdesk can't perform, in words
   // ("Set priority to High"). Shown on the macro so nothing is silently lost.
   notApplied: text("not_applied").array().notNull().default(sql`'{}'::text[]`),
+  // Imported from a macro only the team could see (a Zendesk personal macro, a
+  // Freshdesk note). Agents can use it; the AI never reads it.
+  internal: boolean("internal").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (t) => [
+  // Re-running an import updates a macro instead of adding a second copy.
+  uniqueIndex("macros_org_source_external").on(t.orgId, t.source, t.externalId).where(sql`${t.externalId} is not null`),
+]);
 
 // Repeated replies an admin or agent chose not to turn into a macro. Kept as
 // the cleaned reply text so the same answer isn't suggested again, even after
@@ -324,7 +334,7 @@ export const rules = pgTable("rules", {
   assignTo: text("assign_to").notNull(), // agents.user_id
   enabled: boolean("enabled").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-});
+}, (t) => [uniqueIndex("rules_org_tag_assignee").on(t.orgId, t.ifTag, t.assignTo)]);
 
 // "refunded": an admin marked a resolution as wrong on the receipts page, so it no longer counts.
 // "followup": a call answering the customer again on a ticket that already counts; never counted itself.
@@ -492,6 +502,9 @@ export const imports = pgTable(
     orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
     source: importSource("source").notNull(),
     account: text("account").notNull(), // e.g. "acme.zendesk.com"
+    // The source's own id for the account, when it has one (an Intercom
+    // workspace id). Two imports with different keys are different accounts.
+    accountKey: text("account_key"),
     status: importStatus("status").notNull().default("running"),
     phase: text("phase").notNull(),
     cursor: jsonb("cursor").$type<unknown>(),
@@ -508,7 +521,11 @@ export const imports = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     finishedAt: timestamp("finished_at", { withTimezone: true }),
   },
-  (t) => [index("imports_org_created").on(t.orgId, t.createdAt)],
+  (t) => [
+    index("imports_org_created").on(t.orgId, t.createdAt),
+    // One running import per team, even when two start at the same moment.
+    uniqueIndex("imports_org_running").on(t.orgId).where(sql`${t.status} = 'running'`),
+  ],
 );
 
 // Every record read from the old help desk, verbatim. This is what makes an

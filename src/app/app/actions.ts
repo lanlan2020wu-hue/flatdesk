@@ -1,48 +1,56 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { db, schema } from "@/db";
-import { requireAdmin, requireEditor } from "@/lib/auth";
+import { findAssignable } from "@/lib/agents";
+import { INPUT, parseOverageLimit, validEmail } from "@/lib/app-input";
+import { LOCKED_MESSAGE, requireAdmin, requireEditor, requireOpen } from "@/lib/auth";
 import { filesFromForm, saveAttachments } from "@/lib/attachments";
 import { checkWebhookUrl, sendTestAlert } from "@/lib/alerts";
 import { handBackToTeam } from "@/lib/ai";
-import { access, checkoutUrl, portalUrl, switchToAnnual, syncSeats } from "@/lib/billing";
+import { checkoutUrl, portalUrl, switchToAnnual, syncSeats } from "@/lib/billing";
 import { CopilotError, draftReply, rewriteText, summarizeTicket, type TicketSummary } from "@/lib/copilot";
 import type { RewriteStyle } from "@/lib/copilot-config";
 import { deliverReply } from "@/lib/email";
+import { isUuid } from "@/lib/ids";
 import { recordMacroUses } from "@/lib/macro-drift";
 import { dismissSuggestion, saveSuggestedMacro } from "@/lib/macro-suggestions";
+import { hit, LIMITS } from "@/lib/rate-limit";
+import { addRule } from "@/lib/rules";
 import { TARGET_CHOICES, validHours } from "@/lib/sla";
 import { addReply, createTicket, normalizeTags, updateTicket, type TicketStatus } from "@/lib/tickets";
 
 // The paywall hides the app once a trial ends without a card; this keeps
-// direct requests from doing work behind it. Export and billing stay open.
-async function requireOpenSession() {
-  const s = await requireEditor();
-  const org = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) });
-  if (org && access(org).state === "locked") throw new Error("The free trial has ended. An admin can add a card in Settings.");
-  return s;
-}
+// direct requests from doing work behind it. Billing stays open.
+const requireOpenSession = async () => requireOpen(await requireEditor());
+const requireOpenAdmin = async () => requireOpen(await requireAdmin());
 
 const STATUSES: TicketStatus[] = ["open", "pending", "closed"];
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
 const status = (v: string): TicketStatus | null => (STATUSES.includes(v as TicketStatus) ? (v as TicketStatus) : null);
 const tagList = (v: string) => normalizeTags(v.split(","));
+// Ids come from hidden form fields; anything that isn't a uuid would be a Postgres error.
+const idOf = (f: FormData, k: string) => {
+  const v = str(f, k);
+  if (!isUuid(v)) throw new Error("That item doesn't exist.");
+  return v;
+};
 
 export async function createTicketAction(form: FormData) {
   const s = await requireOpenSession();
-  const email = str(form, "email");
-  const subject = str(form, "subject");
+  const email = str(form, "email").toLowerCase();
+  const subject = str(form, "subject").slice(0, INPUT.subject);
   const body = str(form, "body");
   if (!email || !subject || !body) throw new Error("Email, subject and message are required.");
+  if (!validEmail(email)) throw new Error("Enter the customer's email address, like sam@example.com.");
   const ticket = await createTicket({
     orgId: s.orgId,
     channel: "email",
     customerEmail: email,
-    customerName: str(form, "name") || null,
+    customerName: str(form, "name").slice(0, INPUT.name) || null,
     subject,
     body,
     authorType: "customer",
@@ -53,14 +61,12 @@ export async function createTicketAction(form: FormData) {
 
 export async function replyAction(form: FormData) {
   const s = await requireOpenSession();
-  const ticketId = str(form, "ticketId");
+  const ticketId = idOf(form, "ticketId");
   const number = str(form, "number");
   const files = await filesFromForm(form);
   // A macro can hand the ticket to someone on the team.
   const assignTo = str(form, "assignTo");
-  const assignee = assignTo
-    ? await db.query.agents.findFirst({ where: and(eq(schema.agents.orgId, s.orgId), eq(schema.agents.userId, assignTo), eq(schema.agents.viewer, false)) })
-    : null;
+  const assignee = assignTo ? await findAssignable(s.orgId, assignTo) : null;
   const { messageId, ticket } = await addReply({
     orgId: s.orgId,
     ticketId,
@@ -80,21 +86,21 @@ export async function replyAction(form: FormData) {
     await handBackToTeam(s.orgId, ticketId, "A person on the team replied.", false);
   }
   // Which macros this reply started from, so Flatdesk can see how the team edits them.
-  if (messageId && form.get("internal") !== "on") await recordMacroUses(s.orgId, messageId, str(form, "macroIds").split(",").filter(Boolean));
+  if (messageId && form.get("internal") !== "on") await recordMacroUses(s.orgId, messageId, str(form, "macroIds").split(",").filter(isUuid).slice(0, 20));
   revalidatePath(`/app/tickets/${number}`);
   revalidatePath("/app/inbox");
 }
 
 export async function updateTicketAction(form: FormData) {
   const s = await requireOpenSession();
-  const ticketId = str(form, "ticketId");
+  const ticketId = idOf(form, "ticketId");
   const patch: Parameters<typeof updateTicket>[2] = {};
   if (form.has("status")) patch.status = status(str(form, "status")) ?? undefined;
   if (form.has("assigneeId")) {
     const assignee = str(form, "assigneeId");
     if (assignee) {
       const member = await db.query.agents.findFirst({
-        where: and(eq(schema.agents.orgId, s.orgId), eq(schema.agents.userId, assignee)),
+        where: and(eq(schema.agents.orgId, s.orgId), eq(schema.agents.userId, assignee), isNull(schema.agents.removedAt)),
       });
       if (!member) throw new Error("That agent isn't on this team.");
       if (member.viewer) throw new Error("Viewers can't reply, so tickets can't be assigned to them.");
@@ -105,6 +111,11 @@ export async function updateTicketAction(form: FormData) {
   await updateTicket(s.orgId, ticketId, patch);
   revalidatePath(`/app/tickets/${str(form, "number")}`);
   revalidatePath("/app/inbox");
+}
+
+function checkMacroSize(name: string, body: string) {
+  if (name.length > INPUT.macroName) throw new Error(`A macro name can be up to ${INPUT.macroName} characters.`);
+  if (body.length > INPUT.macroBody) throw new Error(`A macro reply can be up to ${INPUT.macroBody.toLocaleString("en-US")} characters.`);
 }
 
 export async function saveMacroAction(form: FormData) {
@@ -118,13 +129,12 @@ export async function saveMacroAction(form: FormData) {
     sendNow: form.get("sendNow") === "on",
   };
   if (!values.name || !values.body) throw new Error("A macro needs a name and a reply.");
+  checkMacroSize(values.name, values.body);
   const assignTo = str(form, "assignTo");
-  if (assignTo) {
-    const member = await db.query.agents.findFirst({ where: and(eq(schema.agents.orgId, s.orgId), eq(schema.agents.userId, assignTo), eq(schema.agents.viewer, false)) });
-    values.assignTo = member?.userId ?? null;
-  }
+  if (assignTo) values.assignTo = (await findAssignable(s.orgId, assignTo))?.userId ?? null;
   const id = str(form, "id");
   if (id) {
+    if (!isUuid(id)) throw new Error("That macro doesn't exist.");
     await db.update(schema.macros).set(values).where(and(eq(schema.macros.orgId, s.orgId), eq(schema.macros.id, id)));
   } else {
     await db.insert(schema.macros).values({ ...values, orgId: s.orgId });
@@ -134,7 +144,7 @@ export async function saveMacroAction(form: FormData) {
 
 export async function deleteMacroAction(form: FormData) {
   const s = await requireOpenSession();
-  await db.delete(schema.macros).where(and(eq(schema.macros.orgId, s.orgId), eq(schema.macros.id, str(form, "id"))));
+  await db.delete(schema.macros).where(and(eq(schema.macros.orgId, s.orgId), eq(schema.macros.id, idOf(form, "id"))));
   revalidatePath("/app/macros");
 }
 
@@ -144,6 +154,7 @@ export async function saveSuggestedMacroAction(form: FormData) {
   const s = await requireOpenSession();
   const values = { name: str(form, "name"), body: str(form, "body"), addTags: tagList(str(form, "addTags")), question: str(form, "question").slice(0, 300) || null };
   if (!values.name || !values.body) throw new Error("A macro needs a name and a reply.");
+  checkMacroSize(values.name, values.body);
   await saveSuggestedMacro(s.orgId, values, { answer: str(form, "answer"), userId: s.userId });
   revalidatePath("/app/macros");
   const number = str(form, "number");
@@ -160,18 +171,21 @@ export async function dismissSuggestionAction(form: FormData) {
 
 // Evolving macros: apply the edit the team keeps making, or keep
 // the macro as it is (that edit isn't proposed again).
+// Admins only, as the macros page says.
 export async function applyMacroUpdateAction(form: FormData) {
-  const s = await requireOpenSession();
-  const body = str(form, "body").slice(0, 4000);
+  const s = await requireOpenAdmin();
+  const id = idOf(form, "id");
+  const body = str(form, "body");
   if (!body) throw new Error("The updated macro is empty.");
-  await db.update(schema.macros).set({ body }).where(and(eq(schema.macros.orgId, s.orgId), eq(schema.macros.id, str(form, "id"))));
+  checkMacroSize("", body);
+  await db.update(schema.macros).set({ body }).where(and(eq(schema.macros.orgId, s.orgId), eq(schema.macros.id, id)));
   revalidatePath("/app/macros");
   revalidatePath("/app/overview");
 }
 
 export async function dismissMacroUpdateAction(form: FormData) {
-  const s = await requireOpenSession();
-  const macro = await db.query.macros.findFirst({ where: and(eq(schema.macros.orgId, s.orgId), eq(schema.macros.id, str(form, "id"))) });
+  const s = await requireOpenAdmin();
+  const macro = await db.query.macros.findFirst({ where: and(eq(schema.macros.orgId, s.orgId), eq(schema.macros.id, idOf(form, "id"))) });
   if (!macro) return;
   await db
     .insert(schema.macroUpdateDismissals)
@@ -182,28 +196,23 @@ export async function dismissMacroUpdateAction(form: FormData) {
 }
 
 export async function saveRuleAction(form: FormData) {
-  const s = await requireAdmin();
+  const s = await requireOpenAdmin();
   const [ifTag] = tagList(str(form, "ifTag"));
-  const assignTo = str(form, "assignTo");
-  const member = await db.query.agents.findFirst({
-    where: and(eq(schema.agents.orgId, s.orgId), eq(schema.agents.userId, assignTo), eq(schema.agents.viewer, false)),
-  });
-  if (!ifTag || !member) throw new Error("Pick a tag and an agent on this team.");
-  await db.insert(schema.rules).values({ orgId: s.orgId, ifTag, assignTo });
+  if (!(await addRule(s.orgId, ifTag ?? "", str(form, "assignTo")))) throw new Error("Pick a tag and an agent on this team.");
   revalidatePath("/app/macros");
 }
 
 export async function toggleRuleAction(form: FormData) {
-  const s = await requireAdmin();
-  const id = str(form, "id");
+  const s = await requireOpenAdmin();
+  const id = idOf(form, "id");
   const enabled = str(form, "enabled") === "true";
   await db.update(schema.rules).set({ enabled }).where(and(eq(schema.rules.orgId, s.orgId), eq(schema.rules.id, id)));
   revalidatePath("/app/macros");
 }
 
 export async function deleteRuleAction(form: FormData) {
-  const s = await requireAdmin();
-  await db.delete(schema.rules).where(and(eq(schema.rules.orgId, s.orgId), eq(schema.rules.id, str(form, "id"))));
+  const s = await requireOpenAdmin();
+  await db.delete(schema.rules).where(and(eq(schema.rules.orgId, s.orgId), eq(schema.rules.id, idOf(form, "id"))));
   revalidatePath("/app/macros");
 }
 
@@ -215,7 +224,7 @@ export async function setViewerAction(form: FormData) {
   const [changed] = await db
     .update(schema.agents)
     .set({ viewer })
-    .where(and(eq(schema.agents.orgId, s.orgId), eq(schema.agents.userId, userId), eq(schema.agents.role, "agent")))
+    .where(and(eq(schema.agents.orgId, s.orgId), eq(schema.agents.userId, userId), eq(schema.agents.role, "agent"), isNull(schema.agents.removedAt)))
     .returning({ userId: schema.agents.userId });
   if (!changed) throw new Error("Admins always have a full seat. Pick an agent.");
   await syncSeats(s.orgId).catch((err) => console.error("seat sync failed", err));
@@ -223,16 +232,14 @@ export async function setViewerAction(form: FormData) {
 }
 
 export async function saveAiSettingsAction(form: FormData) {
-  const s = await requireAdmin();
-  const limit = str(form, "aiOverageMonthlyLimit");
-  const n = Number(limit);
+  const s = await requireOpenAdmin();
   await db
     .update(schema.orgs)
     .set({
       aiEnabled: form.get("aiEnabled") === "on",
       aiInstructions: str(form, "aiInstructions").slice(0, 20000),
       aiOverageEnabled: form.get("aiOverageEnabled") === "on",
-      aiOverageMonthlyLimit: limit && Number.isInteger(n) && n >= 0 ? n : null,
+      aiOverageMonthlyLimit: parseOverageLimit(str(form, "aiOverageMonthlyLimit")),
     })
     .where(eq(schema.orgs.id, s.orgId));
   revalidatePath("/app/settings");
@@ -240,7 +247,7 @@ export async function saveAiSettingsAction(form: FormData) {
 
 // Where alerts go. A blank address turns them off.
 export async function saveAlertsAction(form: FormData) {
-  const s = await requireAdmin();
+  const s = await requireOpenAdmin();
   const raw = str(form, "alertWebhookUrl");
   const checked = raw ? checkWebhookUrl(raw) : { url: null };
   if ("error" in checked) redirect(`/app/settings?alerts=${encodeURIComponent(checked.error)}#alerts`);
@@ -258,9 +265,11 @@ export async function saveAlertsAction(form: FormData) {
 }
 
 export async function sendTestAlertAction() {
-  const s = await requireAdmin();
+  const s = await requireOpenAdmin();
   const org = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) });
   if (!org?.alertWebhookUrl) redirect(`/app/settings?alerts=${encodeURIComponent("Save a webhook address first.")}#alerts`);
+  // Each test is a request to an address the team chose, so they're limited.
+  if (!(await hit(LIMITS.testAlert(s.orgId))).ok) redirect(`/app/settings?alerts=${encodeURIComponent("That's a lot of test alerts. Try again in an hour.")}#alerts`);
   const error = await sendTestAlert(org);
   redirect(`/app/settings?alerts=${error ? encodeURIComponent(`The test alert didn't arrive: ${error}`) : "sent"}#alerts`);
 }
@@ -272,14 +281,14 @@ const hhmm = (v: string) => {
 
 // Satisfaction ratings and the first-reply target.
 export async function saveServiceSettingsAction(form: FormData) {
-  const s = await requireAdmin();
+  const s = await requireOpenAdmin();
   const target = Number(str(form, "firstResponseMinutes"));
   const firstResponseMinutes = TARGET_CHOICES.some((c) => c.minutes === target) ? target : null;
   let businessHours = null;
   if (form.get("useBusinessHours") === "on") {
     const end = str(form, "end") === "24:00" ? 1440 : hhmm(str(form, "end"));
     const hours = { tz: str(form, "tz"), days: form.getAll("days").map(Number), start: hhmm(str(form, "start")), end };
-    if (!validHours(hours)) redirect(`/app/settings?service=${encodeURIComponent("Pick a time zone, at least one day, and opening hours that end after they start.")}#service`);
+    if (!validHours(hours)) redirect(`/app/settings?service=${encodeURIComponent("Pick a time zone, at least one day, and opening hours at least an hour long.")}#service`);
     businessHours = hours;
   }
   await db
@@ -322,25 +331,26 @@ export async function openBillingPortalAction() {
 
 type CopilotResult<T> = { ok: true; value: T } | { ok: false; error: string };
 
-async function copilot<T>(run: (s: { orgId: string; userId: string }) => Promise<T>): Promise<CopilotResult<T>> {
+async function copilot<T>(ticketId: string, run: (s: { orgId: string; userId: string }) => Promise<T>): Promise<CopilotResult<T>> {
+  if (!isUuid(ticketId)) return { ok: false, error: "That ticket doesn't exist." };
   try {
     const s = await requireOpenSession();
     return { ok: true, value: await run(s) };
   } catch (err) {
-    if (err instanceof CopilotError) return { ok: false, error: err.message };
+    if (err instanceof CopilotError || (err instanceof Error && err.message === LOCKED_MESSAGE)) return { ok: false, error: err.message };
     console.error("copilot failed", err);
     return { ok: false, error: "The copilot couldn't do that just now. Try again in a moment." };
   }
 }
 
 export async function copilotSummaryAction(ticketId: string): Promise<CopilotResult<TicketSummary>> {
-  return copilot((s) => summarizeTicket(s.orgId, s.userId, ticketId));
+  return copilot(ticketId, (s) => summarizeTicket(s.orgId, s.userId, ticketId));
 }
 
 export async function copilotDraftAction(ticketId: string): Promise<CopilotResult<{ reply: string; gaps: string }>> {
-  return copilot((s) => draftReply(s.orgId, s.userId, ticketId));
+  return copilot(ticketId, (s) => draftReply(s.orgId, s.userId, ticketId));
 }
 
 export async function copilotRewriteAction(ticketId: string, text: string, style: RewriteStyle): Promise<CopilotResult<string>> {
-  return copilot((s) => rewriteText(s.orgId, s.userId, ticketId, text, style));
+  return copilot(ticketId, (s) => rewriteText(s.orgId, s.userId, ticketId, text, style));
 }

@@ -1,5 +1,5 @@
 import { clerkClient } from "@clerk/nextjs/server";
-import { and, count, eq, isNotNull, sql } from "drizzle-orm";
+import { and, count, eq, isNotNull, isNull, sql } from "drizzle-orm";
 import Stripe from "stripe";
 import { db, schema } from "@/db";
 import { clerkEnabled } from "@/lib/auth-config";
@@ -79,7 +79,7 @@ export async function seatCount(orgId: string): Promise<number> {
     const viewing = viewers.filter((v) => members.has(v.userId)).length;
     return Math.max(1, first.totalCount - viewing);
   }
-  const [{ n }] = await db.select({ n: count() }).from(agents).where(and(eq(agents.orgId, orgId), eq(agents.viewer, false)));
+  const [{ n }] = await db.select({ n: count() }).from(agents).where(and(eq(agents.orgId, orgId), eq(agents.viewer, false), isNull(agents.removedAt)));
   return Math.max(1, Number(n));
 }
 
@@ -91,6 +91,7 @@ async function getOrg(orgId: string) {
 
 async function ensureCustomer(orgId: string, email: string) {
   const org = await getOrg(orgId);
+  let previous = "first";
   if (org.stripeCustomerId) {
     try {
       const existing = await stripe().customers.retrieve(org.stripeCustomerId);
@@ -98,11 +99,32 @@ async function ensureCustomer(orgId: string, email: string) {
     } catch (err) {
       if (!isMissing(err)) throw err;
     }
+    previous = org.stripeCustomerId;
     await forgetStripe(orgId);
   }
-  const customer = await stripe().customers.create({ name: org.name, email: email || undefined, metadata: { orgId } });
-  await db.update(orgs).set({ stripeCustomerId: customer.id }).where(eq(orgs.id, orgId));
-  return customer.id;
+  // Two quick checkouts would otherwise create two customers. The key makes
+  // Stripe return the same one; it names the customer being replaced, so a
+  // deleted customer isn't handed back. Only the first save wins.
+  let customer: Stripe.Customer;
+  try {
+    customer = await stripe().customers.create(
+      { name: org.name, email: email || undefined, metadata: { orgId } },
+      { idempotencyKey: `customer-${orgId}-${previous}` },
+    );
+  } catch (err) {
+    // The other request is still creating it: use whatever it saved.
+    const now = await getOrg(orgId);
+    if (now.stripeCustomerId) return now.stripeCustomerId;
+    throw err;
+  }
+  const [saved] = await db
+    .update(orgs)
+    .set({ stripeCustomerId: customer.id })
+    .where(and(eq(orgs.id, orgId), isNull(orgs.stripeCustomerId)))
+    .returning({ id: orgs.stripeCustomerId });
+  if (saved?.id) return saved.id;
+  const now = await getOrg(orgId);
+  return now.stripeCustomerId ?? customer.id;
 }
 
 const seatPriceData = (interval: Interval) => ({
@@ -231,64 +253,130 @@ export async function syncSeats(orgId: string) {
 }
 
 const previousMonth = (d = new Date()) => new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() - 1, 1)).toISOString().slice(0, 7);
+const monthAfter = (month: string) => {
+  const [y, m] = month.split("-").map(Number);
+  return new Date(Date.UTC(y, m, 1));
+};
 
-// Adds last month's AI overage to the customer's next invoice, once.
+type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+// One lock per team and month, held by whatever changes that month's counts
+// or bills it: billing, refunds and hand-backs. It's a different lock space
+// from the per-team lock AI answers take (two keys, not one).
+export async function lockBillingMonth(tx: Pick<Tx, "execute">, orgId: string, month: string) {
+  await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${orgId}), hashtext(${`billing:${month}`}))`);
+}
+
+// Adds a month's AI overage (last month by default) to the customer's next
+// invoice, once. Runs under the month's lock, so a refund or hand-back can't
+// change the count between measuring it and recording it as billed.
 export async function billOverage(orgId: string, month = previousMonth()) {
   if (!billingConfigured()) return null;
-  const org = await getOrg(orgId);
-  if (!org.stripeCustomerId || (org.overageBilledMonth && org.overageBilledMonth >= month)) return null;
-  // The overage flag is set when an answer starts, but answers the customer
-  // replied to stop counting later, which can bring the month back under the
-  // allowance. So the bill is what the month ended over the allowance, never
-  // more than the answers that ran as overage.
-  const [{ resolutions, flagged }] = await db
+  return db.transaction(async (tx) => {
+    await lockBillingMonth(tx, orgId, month);
+    const [org] = await tx.select().from(orgs).where(eq(orgs.id, orgId));
+    if (!org) throw new Error("Unknown team.");
+    if (!org.stripeCustomerId || (org.overageBilledMonth && org.overageBilledMonth >= month)) return null;
+    const n = await overageFor(tx, orgId, month);
+    if (n > 0) await chargeOverage(org, month, n);
+    await tx.update(orgs).set({ overageBilledMonth: month }).where(eq(orgs.id, orgId));
+    return n;
+  });
+}
+
+// The overage flag is set when an answer starts, but answers the customer
+// replied to stop counting later, which can bring the month back under the
+// allowance. So the bill is what the month ended over the allowance, never
+// more than the answers that ran as overage.
+async function overageFor(tx: Tx, orgId: string, month: string) {
+  const [{ resolutions, flagged }] = await tx
     .select({ resolutions: count(), flagged: sql<number>`count(*) filter (where ${aiEvents.overage})` })
     .from(aiEvents)
     .where(and(eq(aiEvents.orgId, orgId), eq(aiEvents.month, month), eq(aiEvents.kind, "resolution")));
   const { aiUsage } = await import("@/lib/ai"); // ai.ts imports this file
-  const { included } = await aiUsage(orgId, month);
-  const n = Math.min(Number(flagged), Math.max(0, Number(resolutions) - included));
-  if (n > 0) {
-    const customer = org.stripeCustomerId;
-    // A run killed between this charge and the update below would charge
-    // again the next day, after Stripe's idempotency keys expire, so look for
-    // the item first.
-    const existing = await stripe().invoiceItems.list({ customer, limit: 100 });
-    const item = existing.data.find((i) => i.metadata?.overageMonth === month);
-    const already = Boolean(item);
-    if (!already) {
-      await stripe().invoiceItems.create(
-        {
-          customer,
-          currency: "usd",
-          amount: Math.round(n * PLAN.overageRate * 100),
-          description: `AI answers over the included allowance, ${month}: ${n} × $${PLAN.overageRate.toFixed(2)}`,
-          metadata: { orgId, overageMonth: month },
-        },
-        { idempotencyKey: `overage-${orgId}-${month}-${n}` },
-      );
-    }
-    // A yearly plan's next invoice can be months away, and a cancelled plan has
-    // none, so those get an invoice now. During a Stripe trial the item waits
-    // for the first invoice, as the trial promises.
-    const invoiceNow = (org.billingInterval === "year" && org.subscriptionStatus !== "trialing") || !isActive(org.subscriptionStatus);
-    // An item still waiting for an invoice means an earlier run stopped before
-    // creating it, so that invoice is still owed.
-    if (invoiceNow && (!item || !item.invoice)) {
-      await stripe().invoices.create(
-        { customer: org.stripeCustomerId, pending_invoice_items_behavior: "include", auto_advance: true, description: `AI overage, ${month}` },
-        { idempotencyKey: `overage-invoice-${orgId}-${month}` },
-      );
-    }
-  }
-  await db.update(orgs).set({ overageBilledMonth: month }).where(eq(orgs.id, orgId));
-  return n;
+  const { included } = await aiUsage(orgId, month, tx);
+  return Math.min(Number(flagged), Math.max(0, Number(resolutions) - included));
 }
 
-// Daily job: refresh every paying team, fix seat counts, bill last month's overage.
+// A run killed between this charge and recording it would charge again the
+// next day, after Stripe's idempotency keys expire, so look for the item
+// first. It can only have been created after the month ended, and every page
+// of items since then is read.
+async function findOverageItem(customer: string, month: string) {
+  const since = Math.floor(monthAfter(month).getTime() / 1000);
+  for await (const i of stripe().invoiceItems.list({ customer, limit: 100, created: { gte: since } })) {
+    if (i.metadata?.overageMonth === month) return i;
+  }
+  return undefined;
+}
+
+async function chargeOverage(org: typeof orgs.$inferSelect, month: string, n: number) {
+  const orgId = org.id;
+  const customer = org.stripeCustomerId!;
+  const item = await findOverageItem(customer, month);
+  const already = Boolean(item);
+  if (!already) {
+    await stripe().invoiceItems.create(
+      {
+        customer,
+        currency: "usd",
+        amount: Math.round(n * PLAN.overageRate * 100),
+        description: `AI answers over the included allowance, ${month}: ${n} × $${PLAN.overageRate.toFixed(2)}`,
+        metadata: { orgId, overageMonth: month },
+      },
+      { idempotencyKey: `overage-${orgId}-${month}` },
+    );
+  }
+  // A yearly plan's next invoice can be months away, and a cancelled plan has
+  // none, so those get an invoice now. During a Stripe trial the item waits
+  // for the first invoice, as the trial promises.
+  const invoiceNow = (org.billingInterval === "year" && org.subscriptionStatus !== "trialing") || !isActive(org.subscriptionStatus);
+  // An item still waiting for an invoice means an earlier run stopped before
+  // creating it, so that invoice is still owed.
+  if (invoiceNow && (!item || !item.invoice)) {
+    await stripe().invoices.create(
+      { customer, pending_invoice_items_behavior: "include", auto_advance: true, description: `AI overage, ${month}` },
+      { idempotencyKey: `overage-invoice-${orgId}-${month}` },
+    );
+  }
+}
+
+// Every finished month not billed yet, oldest first: normally just last
+// month, but a month the daily job missed entirely (an outage, a run that
+// kept hitting the time limit) is still billed later rather than skipped.
+// Looks back at most three months, so a team is never surprised by a charge
+// for usage from long ago.
+export async function billUnbilledMonths(orgId: string, now = new Date()) {
+  if (!billingConfigured()) return 0;
+  const org = await getOrg(orgId);
+  if (!org.stripeCustomerId) return 0;
+  const last = previousMonth(now);
+  const oldest = previousMonth(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 2, 1)));
+  const rows = await db
+    .selectDistinct({ month: aiEvents.month })
+    .from(aiEvents)
+    .where(
+      and(
+        eq(aiEvents.orgId, orgId),
+        eq(aiEvents.kind, "resolution"),
+        eq(aiEvents.overage, true),
+        sql`${aiEvents.month} <= ${last}`,
+        sql`${aiEvents.month} >= ${oldest}`,
+        org.overageBilledMonth ? sql`${aiEvents.month} > ${org.overageBilledMonth}` : undefined,
+      ),
+    );
+  const months = [...new Set([...rows.map((r) => r.month), last])].sort();
+  let billed = 0;
+  for (const month of months) billed += (await billOverage(orgId, month)) ?? 0;
+  return billed;
+}
+
+// Daily job: refresh every paying team, fix seat counts, bill unbilled overage.
 // Teams run a few at a time, and teams whose overage isn't billed yet go
 // first, so a run that hits the time limit still reaches everyone over a few days.
-export async function dailyBilling({ concurrency = 5, budgetMs = 240_000 } = {}) {
+// Billing a month holds a database connection while it talks to Stripe, so
+// fewer teams run at once than the pool has connections.
+export async function dailyBilling({ concurrency = 3, budgetMs = 240_000 } = {}) {
   const started = Date.now();
   const rows = await db
     .select({ id: orgs.id })
@@ -308,7 +396,7 @@ export async function dailyBilling({ concurrency = 5, budgetMs = 240_000 } = {})
         await refreshSubscription(id);
         // Overage first, so last month is measured against the seats it had,
         // not seats added today.
-        const billed = await billOverage(id);
+        const billed = await billUnbilledMonths(id);
         await syncSeats(id);
         results[id] = billed ? `billed ${billed} overage` : "ok";
       } catch (err) {

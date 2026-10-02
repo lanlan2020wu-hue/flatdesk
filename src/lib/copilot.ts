@@ -7,10 +7,10 @@
 // pooled across the team. It never counts toward the AI allowance (that's for
 // answers sent to customers) and never shows on receipts.
 
-import { and, asc, count, desc, eq } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNotNull, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema } from "@/db";
-import { aiConfigured, loadKnowledge, monthKey } from "@/lib/ai";
+import { MODEL, aiConfigured, loadKnowledge, monthKey } from "@/lib/ai";
 import { access } from "@/lib/billing";
 import { COPILOT, REWRITE_LABEL, REWRITE_STYLES, type RewriteStyle } from "@/lib/copilot-config";
 import { structuredCall, type Metered } from "@/lib/llm";
@@ -23,24 +23,40 @@ const { orgs, agents, tickets, messages, customers, copilotEvents: events } = sc
 
 export type CopilotUsage = { used: number; limit: number; month: string };
 
-export async function copilotUsage(orgId: string, month = monthKey()): Promise<CopilotUsage> {
-  const [org, [{ seats }], [{ used }]] = await Promise.all([
-    db.query.orgs.findFirst({ where: eq(orgs.id, orgId) }),
-    db.select({ seats: count() }).from(agents).where(and(eq(agents.orgId, orgId), eq(agents.viewer, false))),
-    db.select({ used: count() }).from(events).where(and(eq(events.orgId, orgId), eq(events.month, month))),
+export async function copilotUsage(orgId: string, month = monthKey(), q: Pick<typeof db, "select"> = db): Promise<CopilotUsage> {
+  const [[org], [{ seats }], [{ used }]] = await Promise.all([
+    q.select().from(orgs).where(eq(orgs.id, orgId)),
+    q.select({ seats: count() }).from(agents).where(and(eq(agents.orgId, orgId), eq(agents.viewer, false), sql`${agents.removedAt} is null`)),
+    q.select({ used: count() }).from(events).where(and(eq(events.orgId, orgId), eq(events.month, month))),
   ]);
   const trial = org ? access(org).state === "trial" : false;
   const people = trial ? Math.min(Number(seats), COPILOT.trialSeatCap) : (org?.billedSeats ?? Number(seats));
   return { used: Number(used), limit: Math.max(1, people) * COPILOT.perAgent, month };
 }
 
-async function checkRoom(orgId: string) {
+// What an action is assumed to cost until its call reports back. It stays on
+// an action whose call failed, since that call may still have been charged.
+const RESERVE_USD = "0.05000";
+
+type Kind = "summary" | "draft" | "rewrite";
+
+// Takes one action from the team's limit before the call is made: the count
+// and the new row happen under a per-team lock, so quick clicks in several
+// tabs can't all pass the limit at once. The row is filled in by settle().
+async function reserveAction(orgId: string, userId: string, ticketId: string | null, kind: Kind) {
   if (!aiConfigured()) throw new CopilotError("The copilot isn't set up on this workspace yet.");
-  const org = await db.query.orgs.findFirst({ where: eq(orgs.id, orgId) });
-  if (!org || access(org).state === "locked") throw new CopilotError("The free trial has ended. An admin can add a card in Settings.");
-  const u = await copilotUsage(orgId);
-  if (u.used >= u.limit) throw new CopilotError(`Your team has used this month's ${u.limit} copilot actions. They reset on the 1st.`);
-  return org;
+  return db.transaction(async (tx) => {
+    await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`copilot:${orgId}`}))`);
+    const [org] = await tx.select().from(orgs).where(eq(orgs.id, orgId));
+    if (!org || access(org).state === "locked") throw new CopilotError("The free trial has ended. An admin can add a card in Settings.");
+    const u = await copilotUsage(orgId, monthKey(), tx);
+    if (u.used >= u.limit) throw new CopilotError(`Your team has used this month's ${u.limit} copilot actions. They reset on the 1st.`);
+    const [row] = await tx
+      .insert(events)
+      .values({ orgId, userId, ticketId, kind, month: monthKey(), model: MODEL, costUsd: RESERVE_USD })
+      .returning({ id: events.id });
+    return { org, eventId: row.id };
+  });
 }
 
 type ThreadMessage = { id: string; authorType: string; internal: boolean; body: string; name: string };
@@ -97,8 +113,8 @@ async function loadThread(orgId: string, ticketId: string) {
   return { ticket, customerName, thread };
 }
 
-async function record(orgId: string, userId: string, ticketId: string | null, kind: "summary" | "draft" | "rewrite", metered: Metered, extra: { output?: string; lastMessageId?: string } = {}) {
-  await db.insert(events).values({ orgId, userId, ticketId, kind, month: monthKey(), ...metered, ...extra });
+async function settle(eventId: string, metered: Metered, extra: { output?: string; lastMessageId?: string } = {}) {
+  await db.update(events).set({ ...metered, ...extra }).where(eq(events.id, eventId));
 }
 
 // ---- Summary ------------------------------------------------------------------
@@ -127,7 +143,7 @@ export async function cachedSummary(orgId: string, ticketId: string, lastMessage
   const [row] = await db
     .select({ output: events.output, lastMessageId: events.lastMessageId })
     .from(events)
-    .where(and(eq(events.orgId, orgId), eq(events.ticketId, ticketId), eq(events.kind, "summary")))
+    .where(and(eq(events.orgId, orgId), eq(events.ticketId, ticketId), eq(events.kind, "summary"), isNotNull(events.output)))
     .orderBy(desc(events.createdAt))
     .limit(1);
   const summary = parseSummary(row?.output ?? null);
@@ -139,11 +155,14 @@ export async function summarizeTicket(orgId: string, userId: string, ticketId: s
   const last = thread.at(-1);
   const cached = await cachedSummary(orgId, ticketId, last?.id);
   if (cached && !cached.stale) return cached.summary; // free: nothing new to read
-  await checkRoom(orgId);
+  const { eventId } = await reserveAction(orgId, userId, ticketId, "summary");
   const { out, metered } = await structuredCall(Summary, SUMMARY_SYSTEM, `Subject: ${ticket.subject}\n\n${threadText(thread)}`);
-  if (!out) throw new CopilotError("The copilot couldn't summarize this ticket.");
+  if (!out) {
+    await settle(eventId, metered);
+    throw new CopilotError("The copilot couldn't summarize this ticket.");
+  }
   const summary: TicketSummary = { points: out.points.slice(0, 4).map((p) => p.trim()).filter(Boolean), mood: out.mood, next: out.next.trim(), at: new Date().toISOString() };
-  await record(orgId, userId, ticketId, "summary", metered, { output: JSON.stringify(summary), lastMessageId: last?.id });
+  await settle(eventId, metered, { output: JSON.stringify(summary), lastMessageId: last?.id });
   return summary;
 }
 
@@ -172,16 +191,17 @@ ${kb || "(none)"}
 }
 
 export async function draftReply(orgId: string, userId: string, ticketId: string): Promise<{ reply: string; gaps: string }> {
-  const org = await checkRoom(orgId);
-  const [{ ticket, thread }, knowledge, agent] = await Promise.all([
-    loadThread(orgId, ticketId),
+  // A ticket from another team throws before anything is counted.
+  const { ticket, thread } = await loadThread(orgId, ticketId);
+  const { org, eventId } = await reserveAction(orgId, userId, ticket.id, "draft");
+  const [knowledge, agent] = await Promise.all([
     loadKnowledge(orgId),
     db.query.agents.findFirst({ where: and(eq(agents.orgId, orgId), eq(agents.userId, userId)) }),
   ]);
   const firstName = agent?.name.split(/\s+/)[0] || "the team";
   const system = draftSystem(org.name, org.aiInstructions, knowledge).replace("{agent}", firstName);
   const { out, metered } = await structuredCall(Draft, system, `Subject: ${ticket.subject}\n\n${threadText(thread)}`);
-  await record(orgId, userId, ticketId, "draft", metered);
+  await settle(eventId, metered);
   if (!out?.reply.trim()) throw new CopilotError(out?.gaps?.trim() || "The copilot didn't have enough to draft this one. Your saved answers don't cover it yet.");
   return { reply: out.reply.trim(), gaps: out.gaps.trim() };
 }
@@ -195,12 +215,12 @@ export async function rewriteText(orgId: string, userId: string, ticketId: strin
   if (!input) throw new CopilotError("Write something first, then the copilot can rewrite it.");
   if (input.length > 8000) throw new CopilotError("That's too long to rewrite in one go. Try a shorter part.");
   if (!Object.hasOwn(REWRITE_STYLES, style)) throw new CopilotError("Unknown rewrite style.");
-  await checkRoom(orgId);
   // Only this team's tickets are linked to the event.
   const ticket = ticketId ? await db.query.tickets.findFirst({ where: and(eq(tickets.orgId, orgId), eq(tickets.id, ticketId)), columns: { id: true } }) : null;
+  const { eventId } = await reserveAction(orgId, userId, ticket?.id ?? null, "rewrite");
   const system = `You edit a support agent's reply before they send it. ${REWRITE_STYLES[style]} Keep square-bracket placeholders as they are. Keep the language it's written in. Plain text, no markdown. Return only the edited reply.`;
   const { out, metered } = await structuredCall(Rewrite, system, input);
-  await record(orgId, userId, ticket?.id ?? null, "rewrite", metered);
+  await settle(eventId, metered);
   if (!out?.text.trim()) throw new CopilotError("The copilot couldn't rewrite that.");
   return out.text.trim();
 }

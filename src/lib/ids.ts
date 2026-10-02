@@ -3,4 +3,8 @@
 // 500 instead of "not found".
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+// Postgres rejects text and jsonb holding a NUL byte; it throws instead of storing it.
+// Anything typed or sent in by the public goes through this before it's saved.
+export const noNul = (s: string) => s.replace(/\0/g, "");
+
 export const isUuid = (v: unknown): v is string => typeof v === "string" && UUID.test(v);

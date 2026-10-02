@@ -40,26 +40,54 @@ export function fromAddress(teamName: string, address: string) {
   return name ? `"${name}" <${address}>` : address;
 }
 
-// Pulls the bare address out of `"Name" <a@b.co>`.
+// Pulls the bare address out of `"Name" <a@b.co>`, `a@b.co (Name)` or a bare
+// address. Anything else gives an empty email rather than storing the whole
+// header as one, which would make a second customer for the same person.
 export function parseAddress(raw: string): { email: string; name: string | null } {
-  const m = raw.match(/^\s*"?([^"<]*?)"?\s*<([^>]+)>\s*$/);
-  if (m) return { email: m[2].trim().toLowerCase(), name: m[1].trim() || null };
-  return { email: raw.trim().toLowerCase(), name: null };
+  const ADDR = /[^\s<>"(),;:@]+@[^\s<>"(),;:@]+\.[^\s<>"(),;:@]+/;
+  const angle = /<([^<>]*)>\s*$/.exec(raw);
+  if (angle && ADDR.test(angle[1])) {
+    const name = raw.slice(0, angle.index).trim().replace(/^"|"$/g, "").trim();
+    return { email: ADDR.exec(angle[1])![0].toLowerCase(), name: name || null };
+  }
+  const bare = ADDR.exec(raw);
+  if (!bare) return { email: "", name: null };
+  const comment = /\(([^()]*)\)/.exec(raw.slice(bare.index + bare[0].length));
+  return { email: bare[0].toLowerCase(), name: comment?.[1].trim() || null };
+}
+
+// Whether the receiving server vouched for the From address. Only an explicit
+// DMARC failure counts against it: forwarding (how most teams connect) often
+// breaks SPF, and many senders publish no DMARC policy at all.
+export function senderCheck(headers: Record<string, string> | null): "fail" | "ok" {
+  if (!headers) return "ok";
+  const results = Object.entries(headers)
+    .filter(([k]) => k.toLowerCase() === "authentication-results" || k.toLowerCase() === "arc-authentication-results")
+    .map(([, v]) => String(v).toLowerCase());
+  return results.some((r) => /\bdmarc=fail\b/.test(r)) ? "fail" : "ok";
 }
 
 // Finds our org key (and ticket number, if the customer replied to one of our
 // emails) among the recipients.
 export function matchRecipient(addresses: string[]): { key: string; number: number | null } | null {
+  return matchRecipients(addresses)[0] ?? null;
+}
+
+// Every org the email is addressed to, once each, in the order given. Callers
+// list the envelope recipients first: a header To can name another team's
+// address (a reply-all) when this copy was really delivered for this team.
+export function matchRecipients(addresses: string[]): { key: string; number: number | null }[] {
   const domain = emailConfig.inboundDomain;
-  if (!domain) return null;
+  if (!domain) return [];
+  const out: { key: string; number: number | null }[] = [];
   for (const raw of addresses) {
     const { email } = parseAddress(raw);
     const [local, host] = email.split("@");
     if (host !== domain || !local) continue;
     const [key, num] = local.split("+");
-    return { key, number: parseTicketNumber(num) };
+    if (key && !out.some((t) => t.key === key)) out.push({ key, number: parseTicketNumber(num) });
   }
-  return null;
+  return out;
 }
 
 // Keeps only the new part of a reply: drops quoted lines and everything from
@@ -95,11 +123,15 @@ export function htmlToText(html: string): string {
     .trim();
 }
 
-export function isAutoReply(headers: Record<string, string> | null): boolean {
+export function isAutoReply(headers: Record<string, string> | null, mail?: { from?: string; subject?: string }): boolean {
+  // Bounces and out-of-office replies that don't say so in their headers.
+  if (mail?.from && /^(mailer-daemon|postmaster)@/i.test(parseAddress(mail.from).email)) return true;
+  if (mail?.subject && /^\s*(automatic reply|auto(matic)?[- ]?reply|out of (the )?office|undeliverable|delivery status notification)\b/i.test(mail.subject)) return true;
   if (!headers) return false;
   const h = Object.fromEntries(Object.entries(headers).map(([k, v]) => [k.toLowerCase(), String(v).toLowerCase()]));
   if (h["auto-submitted"] && h["auto-submitted"] !== "no") return true;
   if (["bulk", "junk", "list", "auto_reply"].includes(h["precedence"] ?? "")) return true;
+  if ((h["content-type"] ?? "").startsWith("multipart/report")) return true;
   return Boolean(h["x-autoreply"] || h["x-autorespond"] || h["list-id"]);
 }
 
@@ -128,7 +160,11 @@ export async function deliverReply(orgId: string, messageId: string): Promise<vo
 
   const fromDomain = emailConfig.from.split("@")[1];
   const ownId = `<${row.message.id}@${fromDomain}>`;
-  const headers: Record<string, string> = { "Message-ID": ownId };
+  // X-Flatdesk-Org lets another Flatdesk team's inbox tell our mail from its own.
+  // AI answers say they're automatic (RFC 3834), so a well-behaved autoresponder
+  // stays quiet and two help desks can't answer each other forever.
+  const headers: Record<string, string> = { "Message-ID": ownId, "X-Flatdesk-Org": orgId };
+  if (row.message.authorType === "ai") headers["Auto-Submitted"] = "auto-replied";
   if (refs.length) {
     headers["In-Reply-To"] = refs[refs.length - 1];
     headers["References"] = refs.slice(-10).join(" ");

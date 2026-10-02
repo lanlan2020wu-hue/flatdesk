@@ -2,7 +2,7 @@ import { and, eq, gte, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { RATINGS, type Rating } from "@/lib/csat-ratings";
 import { SITE } from "@/lib/site";
-import { isUuid } from "@/lib/ids";
+import { isUuid, noNul } from "@/lib/ids";
 
 // One-click satisfaction ratings. Every reply email (an agent's or the AI's)
 // ends with three links; a click rates that reply. The rating page records the
@@ -49,6 +49,7 @@ export async function ratableReply(messageId: string) {
     .innerJoin(schema.orgs, eq(schema.orgs.id, schema.messages.orgId))
     .where(eq(schema.messages.id, messageId));
   if (!row || row.message.internal || (row.message.authorType !== "agent" && row.message.authorType !== "ai")) return null;
+  if (!row.org.csatEnabled) return null; // the team turned ratings off
   return row;
 }
 
@@ -85,7 +86,7 @@ export async function recordRating(messageId: string, rating: Rating, opts: { ch
 }
 
 export async function saveComment(messageId: string, comment: string) {
-  const text = comment.trim().slice(0, 2000);
+  const text = noNul(comment).trim().slice(0, 2000);
   if (!text || !isUuid(messageId)) return;
   await db.update(schema.csatRatings).set({ comment: text }).where(eq(schema.csatRatings.messageId, messageId));
 }

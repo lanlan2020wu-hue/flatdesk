@@ -24,7 +24,7 @@ const TERMS = [
   { title: `${TRIAL_DAYS} days free`, body: `No card. Every feature, and ${PLAN.trialPerAgent} AI answers per agent.` },
   { title: "Month to month", body: "No contract on monthly plans. Cancel any time." },
   { title: "Bring your history", body: `Tickets, customers and macros from ${SOURCES.slice(0, 3).join(", ")} or Help Scout.` },
-  { title: "Export everything", body: "Download every ticket and macro as CSV or JSON." },
+  { title: "Export your data", body: "Tickets, messages, customers and macros as CSV or JSON." },
 ];
 
 const MACRO_STEPS = [
@@ -49,7 +49,7 @@ const TOUR: { id: string; title: string; body: string; points: string[]; shot: R
     id: "ai",
     title: "The AI answers the easy questions and stops at your limit.",
     body: `It answers from your macros and notes. When it isn't sure, or the customer is upset or asks about their account, it hands the ticket to your team. Each agent adds ${PLAN.includedPerAgent} AI answers a month to a shared pool.`,
-    points: ["Stops at the included amount unless an admin turns on overage", "Admins get an email at 80% and 100%", "Test it on 50 past tickets before you turn it on"],
+    points: ["Stops at the included amount unless an admin turns on overage", "Admins get an email at 80% and 100%", "Test it on 50 past tickets your team answered first"],
     shot: <AiShot />,
     href: "/features/ai-test-drive",
     more: "How the AI test drive works",
@@ -74,7 +74,7 @@ const TOUR: { id: string; title: string; body: string; points: string[]; shot: R
 const MORE = [
   { title: "Live chat widget", body: "One script tag. Chats become tickets.", href: "/features#all" },
   { title: "Help center", body: "Articles customers search and the AI links to.", href: "/features#all" },
-  { title: "AI test drive", body: "AI drafts for your last 50 tickets, beside your team's replies.", href: "/features/ai-test-drive" },
+  { title: "AI test drive", body: "AI drafts for the last 50 tickets your team answered, beside its replies.", href: "/features/ai-test-drive" },
   { title: "Slack alerts and ratings", body: "A ping when a ticket needs a person, reply time targets, and ratings.", href: "/features#all" },
 ];
 
@@ -82,7 +82,7 @@ const MORE = [
 const SWITCH_STEPS = [
   { title: "Import your history", body: `Paste an API key from ${SOURCES.join(", ").replace(/, ([^,]*)$/, " or $1")}. Tickets come over with full threads, plus customers, macros and tags. Simple rules like "if tagged X, assign to Y" keep working. Other rules are copied for reference.` },
   { title: "Connect email and chat", body: "Forward your support email and add one line of code to your site for chat. You can stop forwarding any time." },
-  { title: "Test drive the AI", body: "The AI drafts replies to your last 50 tickets so you can compare them with what your team sent. Customers see none of it." },
+  { title: "Test drive the AI", body: "The AI drafts replies to the last 50 tickets your team answered, next to what your team sent. Customers see none of it." },
   { title: "Turn it on", body: "Turn on AI answers, invite your team, and cancel your old help desk when you're ready." },
 ];
 
@@ -212,8 +212,8 @@ export default function Home() {
       <section id="ai-macros" className="mt-24 scroll-mt-20 border-y border-line bg-surface py-24 sm:mt-32 sm:py-32">
         <div className="mx-auto grid w-full max-w-6xl gap-14 px-4 sm:px-6">
           <ChapterHead id="ai-macros" tab="AI macros" title="Flatdesk turns the replies your team keeps retyping into macros.">
-            Flatdesk spots answers your team keeps typing and the AI writes each one up as a macro. When a price or policy changes, the macro follows your
-            team&apos;s edits. Macros come with every seat and don&apos;t use AI answers.
+            Flatdesk spots answers your team keeps typing and the AI writes each one up as a macro. When a price or policy changes, the AI suggests an update
+            from your team&apos;s edits. Macros come with every seat and don&apos;t use AI answers.
           </ChapterHead>
           <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] lg:gap-16">
             <div data-play="" suppressHydrationWarning className="relative">
@@ -233,10 +233,10 @@ export default function Home() {
           </div>
           <article className="grid items-center gap-10 border-t border-line pt-14 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-16">
             <div data-play="" suppressHydrationWarning className="grid content-start gap-4">
-              <h3 className="ink font-display text-3xl">If your team keeps making the same edit, the macro gets updated.</h3>
+              <h3 className="ink font-display text-3xl">If your team keeps making the same edit, the AI suggests an update.</h3>
               <p className="text-muted">
                 Say your shipping time changes. Agents fix it by hand each time they send the macro. Once most sends carry the same edit, the AI rewrites the
-                macro and an admin approves it with one click.
+                macro and you apply it in one click.
               </p>
               <ul className="grid gap-2 text-sm">
                 {["The count starts over after each update", "Your placeholders, greeting and sign-off stay as they are", "Included in every seat. Zendesk sells macro suggestions in its $50 Copilot add-on."].map((p) => (
@@ -389,7 +389,7 @@ export default function Home() {
           <div data-play="" suppressHydrationWarning className="grid content-start gap-6">
             <h2 className="ink font-display text-4xl sm:text-6xl">Try it on your own tickets first.</h2>
             <p className="max-w-[46ch] text-lg text-field-muted">
-              Import your old tickets and see how the AI would have answered 50 of them, next to what your team wrote. Free for {TRIAL_DAYS} days, no card
+              Import your old tickets and see AI drafts for the last 50 your team answered, next to your team&apos;s replies. Free for {TRIAL_DAYS} days, no card
               needed.
             </p>
             <div className="flex flex-wrap gap-3">

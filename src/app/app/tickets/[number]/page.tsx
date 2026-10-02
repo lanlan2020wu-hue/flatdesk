@@ -9,7 +9,7 @@ import SlaBadge from "@/components/SlaBadge";
 import { RepeatPrompt } from "@/components/MacroSuggestion";
 import { db, schema } from "@/db";
 import { attachmentsByMessage, formatBytes } from "@/lib/attachments";
-import { requireSession } from "@/lib/auth";
+import { requireOpenPage } from "@/lib/auth";
 import { RATING_LABEL, ratingsForTicket } from "@/lib/csat";
 import { timeAgo } from "@/lib/format";
 import { aiConfigured } from "@/lib/ai";
@@ -28,7 +28,7 @@ const field = "field field-sm";
 const heading = "eyebrow";
 
 export default async function TicketPage({ params }: PageProps<"/app/tickets/[number]">) {
-  const s = await requireSession();
+  const s = await requireOpenPage();
   const number = parseTicketNumber((await params).number);
   if (!number) notFound();
   const data = await getTicket(s.orgId, number);
@@ -218,6 +218,8 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
             <option value="">Unassigned</option>
             {/* Viewers can't reply, so they're only listed when one already holds the ticket. */}
             {agents.filter((a) => !a.viewer || a.userId === ticket.assigneeId).map((a) => <option key={a.userId} value={a.userId}>{a.userId === s.userId ? `${a.name} (me)` : a.name}</option>)}
+            {/* Someone who has left the team still shows as the holder until it's reassigned. */}
+            {ticket.assigneeId && !agents.some((a) => a.userId === ticket.assigneeId) && <option value={ticket.assigneeId} disabled>Removed agent</option>}
           </AutoSubmitSelect>
         </form>
         </div>

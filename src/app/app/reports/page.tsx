@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireSession } from "@/lib/auth";
+import { requireOpenPage } from "@/lib/auth";
 import { targetLabel } from "@/lib/sla";
 import { duration, REPORT_RANGES, type ReportRange, teamReport } from "@/lib/reports";
 
@@ -17,7 +17,7 @@ function Tile({ label, value, note }: { label: string; value: string; note?: str
 }
 
 export default async function ReportsPage({ searchParams }: PageProps<"/app/reports">) {
-  const s = await requireSession();
+  const s = await requireOpenPage();
   const { days: raw } = await searchParams;
   const days = (REPORT_RANGES.find((d) => String(d) === raw) ?? 30) as ReportRange;
   const r = await teamReport(s.orgId, days);

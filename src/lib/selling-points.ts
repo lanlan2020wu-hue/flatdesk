@@ -69,10 +69,10 @@ export const SELLING_POINTS: SellingPoint[] = [
   {
     slug: "ai-macros",
     name: "AI macros",
-    short: "The AI writes macros from the answers your team keeps retyping and updates them when things change. Each one can also assign, tag, set the status and send.",
+    short: "The AI writes macros from the answers your team keeps retyping and suggests updates when things change. Each one can also assign, tag, set the status and send.",
     headline: "Your best replies become macros, and stay up to date",
     answer:
-      "When your team has sent the same answer on 5 tickets, Flatdesk spots it and the AI writes it up as a macro. New tickets that ask the same thing get it offered. When agents keep making the same edit to a macro before sending, the AI drafts the update and an admin applies it in one click. Macros can also assign, tag, set the status and send right away. None of this uses your AI allowance.",
+      "When your team has sent the same answer on 5 tickets, Flatdesk spots it and the AI writes it up as a macro. New tickets that ask the same thing get it offered. When agents keep making the same edit to a macro before sending, the AI drafts the update and you apply it in one click. Macros can also assign, tag, set the status and send right away. None of this uses your AI allowance.",
     metaTitle: "AI macros: canned responses found and written for you",
     metaDescription:
       "Flatdesk finds the replies your team sends over and over, the AI writes them up as macros, and new tickets get the right one. Works on imported history too.",
@@ -88,7 +88,7 @@ export const SELLING_POINTS: SellingPoint[] = [
       "Suggests a macro once 5 tickets get the same answer",
       "The AI writes each one from your team's replies, with placeholders for customer details",
       "Offers the matching macro on new tickets, in the reply box",
-      "Updates a macro when your team keeps editing it the same way before sending",
+      "Suggests an update when your team keeps editing a macro the same way, applied in one click",
       "Each macro can assign the ticket, set the status, add tags and send right away",
       "Works on imported history, so suggestions can start on day one",
       "Never uses your AI allowance",
@@ -100,7 +100,7 @@ export const SELLING_POINTS: SellingPoint[] = [
       },
       {
         q: "How does a macro get updated?",
-        a: "Flatdesk compares each sent reply with the macro it started from. If agents made the same change on most of the last sends (at least 3), like a new time frame, an added sentence or a removed step, the AI rewrites the macro with that change. An admin applies it in one click or keeps the old one. Zendesk offers macro suggestions, including edits to existing macros, in its Copilot add-on at $50 per agent a month billed yearly. In Flatdesk they're part of every seat.",
+        a: "Flatdesk compares each sent reply with the macro it started from. If agents made the same change on most of the last sends (at least 3), like a new time frame, an added sentence or a removed step, the AI rewrites the macro with that change. You apply it in one click or keep the old one. Zendesk offers macro suggestions, including edits to existing macros, in its Copilot add-on at $50 per agent a month billed yearly. In Flatdesk they're part of every seat.",
       },
       {
         q: "What can a macro do besides reply?",
@@ -165,20 +165,20 @@ export const SELLING_POINTS: SellingPoint[] = [
   {
     slug: "ai-test-drive",
     name: "AI test drive",
-    short: `Import your help desk and the AI drafts answers to your ${TEST_DRIVE.tickets} most recent tickets, each beside the reply your team actually sent. Judge it on your own customers before you pay.`,
+    short: `Import your help desk and the AI drafts answers to the ${TEST_DRIVE.tickets} most recent tickets your team answered, each beside the reply your team actually sent. Judge it on your own customers before you pay.`,
     headline: "Test the AI on your own past tickets before you switch",
-    answer: `During the free trial, Flatdesk's AI drafts answers to your ${TEST_DRIVE.tickets} most recent imported tickets using your macros, and shows each draft beside the reply your team actually sent. Your team marks each one ready, needs edits, or wrong, and gets a scorecard. Nothing goes to customers and it doesn't use your AI allowance.`,
+    answer: `During the free trial, Flatdesk's AI drafts answers to the ${TEST_DRIVE.tickets} most recent tickets your team answered, using your macros, and shows each draft beside the reply your team actually sent. Your team marks each one ready, needs edits, or wrong, and gets a scorecard. Nothing goes to customers and it doesn't use your AI allowance.`,
     metaTitle: "AI test drive: see AI answers to your own past tickets",
-    metaDescription: `Flatdesk drafts AI answers to your ${TEST_DRIVE.tickets} most recent tickets and shows them beside your team's real replies, so you can judge the AI before you switch.`,
+    metaDescription: `Flatdesk drafts AI answers to the ${TEST_DRIVE.tickets} most recent tickets your team answered and shows them beside your team's real replies, so you can judge the AI before you switch.`,
     steps: [
       { title: "Import your history", body: "Connect Zendesk, Intercom, Freshdesk or Help Scout. The test drive starts from the tickets you bring." },
-      { title: "The AI drafts answers", body: `It answers your ${TEST_DRIVE.tickets} most recent customer questions with the same model and macros it would use live, or says it would hand the ticket to your team.` },
+      { title: "The AI drafts answers", body: `It answers the ${TEST_DRIVE.tickets} most recent customer questions your team answered, with the same model and macros it would use live, or says it would hand the ticket to your team.` },
       { title: "Compare side by side", body: "Each draft sits beside the first reply your team sent, so you can see where it matches and where it misses." },
       { title: "Score it", body: "Mark each draft send, edit or wrong. The scorecard shows how many tickets the AI would have handled well." },
     ],
     facts: [
-      `Drafts for your ${TEST_DRIVE.tickets} most recent imported tickets`,
-      "Same model, prompt and macros as live AI answers",
+      `Drafts for the ${TEST_DRIVE.tickets} most recent tickets your team answered`,
+      "Same model, prompt and macros as live AI answers, minus macros Flatdesk wrote from these replies",
       "Nothing is sent to customers",
       "Doesn't use your AI allowance or show up on receipts",
       `Free during the ${TRIAL_DAYS}-day trial`,
@@ -186,7 +186,7 @@ export const SELLING_POINTS: SellingPoint[] = [
     faq: [
       {
         q: "Does the test drive use our real tickets?",
-        a: `Yes. After you import your help desk, the AI drafts answers to your ${TEST_DRIVE.tickets} most recent tickets and shows each beside the reply your team sent.`,
+        a: `Yes. After you import your help desk, the AI drafts answers to the ${TEST_DRIVE.tickets} most recent tickets your team answered and shows each beside the reply your team sent.`,
       },
       {
         q: "Does the test drive send anything to customers?",
@@ -205,19 +205,19 @@ export const SELLING_POINTS: SellingPoint[] = [
     name: "Lossless import",
     short: `Bring tickets, customers, macros and rules from ${IMPORT_SOURCES.join(", ").replace(/, ([^,]*)$/, " or $1")}. Every original record is kept, and anything that didn't fit is listed.`,
     headline: `Move from ${IMPORT_SOURCES.slice(0, 3).join(", ")} or Help Scout without losing a ticket`,
-    answer: `Flatdesk imports tickets, messages, attachments, customers, tags, macros and rules from ${IMPORT_SOURCES.join(", ").replace(/, ([^,]*)$/, " and $1")}. Every original record is kept in an archive you can download, and a report lists anything that didn't fit instead of dropping it. Flatdesk runs one kind of rule today (if tagged X, assign to Y); the report lists the rest so you can rebuild them. Intercom's API doesn't share its rules at all. You can export tickets, messages, customers and macros as CSV or JSON any time.`,
+    answer: `Flatdesk imports tickets, messages, attachments, customers, tags, macros and rules from ${IMPORT_SOURCES.join(", ").replace(/, ([^,]*)$/, " and $1")}. Every original record is kept in an archive you can download, and a report lists anything that didn't fit instead of dropping it. Flatdesk runs one kind of rule today (if tagged X, assign to Y); the report lists the rest so you can rebuild them. Intercom's API doesn't share its rules at all, and Help Scout workflows come over by name only. You can export tickets, messages, customers and macros as CSV or JSON any time.`,
     metaTitle: "Lossless help desk import from Zendesk, Intercom, Freshdesk and Help Scout",
     metaDescription:
       "Import tickets, attachments, customers, macros and rules from Zendesk, Intercom, Freshdesk or Help Scout. Every original record is kept and nothing is dropped.",
     steps: [
       { title: "Connect your old help desk", body: "Paste an API token. It's stored encrypted while the import runs and deleted when it ends." },
-      { title: "Flatdesk copies everything", body: "Agents, tags, macros, rules, customers, then tickets with their messages and attachments. Big imports pick up where they left off." },
+      { title: "Flatdesk copies your data", body: "Agents, tags, macros, rules, customers, then tickets with their messages and attachments. Big imports pick up where they left off." },
       { title: "Check the report", body: "Anything that didn't fit, like a rule condition Flatdesk doesn't have, is listed with the original record. Download it as CSV." },
       { title: "Keep the originals", body: "Download every original record as JSONL. Running the import again updates records instead of duplicating them." },
     ],
     facts: [
       `Imports from ${IMPORT_SOURCES.join(", ").replace(/, ([^,]*)$/, " and $1")}`,
-      "Tickets, messages, attachments, customers, tags, macros and rules (rules from every source except Intercom, whose API doesn't share them)",
+      "Tickets, messages, attachments, customers, tags, macros and rules (not from Intercom, whose API doesn't share rules, and Help Scout workflows by name only)",
       "Every original record kept and downloadable",
       "Anything that didn't fit is listed in a report, never dropped",
       "Export tickets, messages, customers and macros as CSV or JSON any time, without asking us",
@@ -229,7 +229,7 @@ export const SELLING_POINTS: SellingPoint[] = [
       },
       {
         q: "What does the import bring over?",
-        a: "Agents, tags, macros, rules (not from Intercom, whose API doesn't share them), customers and tickets with their messages and attachments. A report lists anything that didn't fit, and every original record is kept.",
+        a: "Agents, tags, macros, rules, customers and tickets with their messages and attachments. Intercom's API doesn't share rules. Help Scout workflows come over by name only, since its API doesn't share their conditions. A report lists anything that didn't fit, and every original record is kept.",
       },
       {
         q: "Can we run the import again?",
@@ -237,7 +237,7 @@ export const SELLING_POINTS: SellingPoint[] = [
       },
       {
         q: "Can we get our data out of Flatdesk?",
-        a: "Yes. Settings exports tickets (with tags), messages, customers and macros as CSV or JSON in one click. Attachments aren't included; download them from each ticket.",
+        a: "Yes. Settings exports tickets (with tags), messages, customers and macros as CSV or JSON. Attachments aren't included; download them from each ticket.",
       },
     ],
     icon: "M12 4v11m0 0l-4-4m4 4l4-4M5 19h14",
