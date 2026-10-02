@@ -3,6 +3,7 @@ import Link from "next/link";
 import Avatar from "@/components/Avatar";
 import SlaBadge from "@/components/SlaBadge";
 import { db, schema } from "@/db";
+import { aiConfigured } from "@/lib/ai";
 import { requireOpenPage } from "@/lib/auth";
 import { STATUS_STYLE, timeAgo } from "@/lib/format";
 import { slaState } from "@/lib/sla";
@@ -49,6 +50,20 @@ export default async function InboxPage({ searchParams }: PageProps<"/app/inbox"
           ))}
         </nav>
         <p className="text-sm text-muted">{VIEWS.find((v) => v.id === view)?.hint}</p>
+        {/* Say plainly that the AI replies to customers by itself, so nobody wonders where tickets went. */}
+        {org?.aiEnabled && aiConfigured() ? (
+          <p className="rounded-lg bg-accent-soft px-4 py-3 text-sm">
+            <strong className="font-medium">The AI is answering customers on its own.</strong> When a new email or chat comes in, it replies if your facts,
+            macros or help articles cover the question. Those tickets move to Pending, marked AI answered. Anything else stays open here for your team, with
+            a note saying why.{" "}
+            <Link href="/app/settings#ai" className="link text-accent">AI settings</Link>
+          </p>
+        ) : (
+          <p className="rounded-lg bg-surface-2 px-4 py-3 text-sm text-muted">
+            The AI isn&apos;t answering customers right now, so every new ticket waits here for your team.{" "}
+            {aiConfigured() && <Link href="/app/settings#ai" className="link text-accent">Turn on AI answers</Link>}
+          </p>
+        )}
       </header>
       {rows.length === 0 ? (
         <div className="grid place-items-center gap-1 px-4 py-16 text-center">
@@ -80,6 +95,7 @@ export default async function InboxPage({ searchParams }: PageProps<"/app/inbox"
                         <span className="truncate font-semibold">{who}</span>
                         <span className="num shrink-0 text-xs text-muted">#{t.number}</span>
                         {t.test && <span className="chip shrink-0 border-warn/40 bg-warn-soft text-warn" title="Made from Test tickets. Left out of reports and the AI allowance.">Test</span>}
+                        {t.resolvedByAi && <span className="chip shrink-0 border-accent/30 bg-accent-soft text-accent" title="The AI replied to this customer on its own.">AI answered</span>}
                         {t.tags.map((tag) => <span key={tag} className="chip hidden shrink-0 sm:inline-flex">{tag}</span>)}
                       </p>
                       {/* A div, not a p: the global p rule's text-wrap would undo truncate. */}

@@ -1,12 +1,14 @@
+import { eq } from "drizzle-orm";
 import Link from "next/link";
 import HowItWorks from "@/components/HowItWorks";
 import { requireOpenPage } from "@/lib/auth";
-import { monthKey } from "@/lib/ai";
+import { db, schema } from "@/db";
+import { aiConfigured, monthKey } from "@/lib/ai";
 import { PLAN, usd } from "@/lib/pricing";
 import { monthReceipt, receiptMonths, refundOpen, STATUS_LABEL, type ReceiptStatus } from "@/lib/receipts";
 import { refundAction } from "./actions";
 
-export const metadata = { title: "AI receipts" };
+export const metadata = { title: "AI answers" };
 
 const TONE: Record<ReceiptStatus, string> = {
   included: "pill bg-accent-soft text-accent",
@@ -37,15 +39,17 @@ export default async function ReceiptsPage({ searchParams }: PageProps<"/app/rec
   const isAdmin = s.role === "admin";
   const error = typeof sp.error === "string" ? sp.error : null;
   const refunded = typeof sp.refunded === "string" ? sp.refunded : null;
+  const org = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) });
+  const aiOn = Boolean(org?.aiEnabled) && aiConfigured();
   const pct = Math.min(100, Math.round((r.counted / r.included) * 100));
 
   return (
     <div className="grid max-w-5xl gap-8 px-4 py-6 md:px-8 md:py-8">
       <header className="flex flex-wrap items-end justify-between gap-4">
         <div className="grid gap-1.5">
-          <h1 className="page-title">AI receipts</h1>
+          <h1 className="page-title">AI answers</h1>
           <p className="max-w-xl text-muted">
-            Every ticket the AI answered or handed to your team. Only counted lines use your allowance. If the AI got one wrong, refund it and it stops
+            The AI replies to customers by itself, by email and in the chat. This is its receipt: every ticket it answered or handed to your team. Only counted lines use your allowance. If the AI got one wrong, refund it and it stops
             counting{canRefund ? "" : " (refunds close once a month is billed)"}.
           </p>
         </div>
@@ -65,12 +69,24 @@ export default async function ReceiptsPage({ searchParams }: PageProps<"/app/rec
         </div>
       </header>
 
+      <p className={`rounded-lg px-4 py-3 text-sm ${aiOn ? "bg-accent-soft" : "bg-surface-2 text-muted"}`}>
+        {aiOn ? (
+          <>
+            <strong className="font-medium">AI answers are on.</strong> New email and chat tickets get a reply from the AI when your facts, macros or help articles
+            cover the question.
+          </>
+        ) : (
+          <>AI answers are off, so your team answers every ticket.</>
+        )}{" "}
+        {isAdmin ? <Link href="/app/settings#ai" className="link text-accent">{aiOn ? "Change what the AI knows" : "Turn them on in Settings"}</Link> : "An admin can change this in Settings."}
+      </p>
+
       <HowItWorks
-        title="How AI receipts work"
+        title="How AI answers and receipts work"
         open={r.lines.length === 0}
         summary={`Your plan includes ${PLAN.includedPerAgent} AI answers per agent each month, shared by the team. This page shows where each one went, like an itemized bill.`}
         steps={[
-          { title: "The AI picks up a new ticket", body: "It replies to new email and chat tickets when your macros, help articles or the facts you gave it in Settings cover the question." },
+          { title: "The AI replies on its own", body: "When a new email or chat comes in, it answers if your macros, help articles or the facts you gave it in Settings cover the question. Nobody has to click anything." },
           { title: "A line is added here", body: "Every ticket the AI touched gets a line, with the macros and articles it used." },
           { title: "Only finished answers count", body: "If the AI hands a ticket to your team, before or after replying, that line doesn't count. Only answers that settle the question without your team use the allowance." },
           { title: "Refund a wrong answer", body: "If the AI got one wrong, an admin clicks Refund and reopen. It stops counting and the ticket goes back to your team as open." },

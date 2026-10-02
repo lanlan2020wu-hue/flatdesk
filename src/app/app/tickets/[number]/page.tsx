@@ -102,7 +102,7 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
               m.authorType === "customer"
                 ? (m.authorId !== customer.id && m.authorName) || customer.name || customer.email
                 : m.authorType === "ai"
-                  ? "AI assistant"
+                  ? "AI, sent on its own"
                   : m.authorType === "system"
                     ? (m.authorName ?? "Flatdesk")
                     : (m.agentName ?? m.authorName ?? "Agent");

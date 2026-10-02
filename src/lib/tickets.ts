@@ -12,7 +12,7 @@ export const VIEWS: { id: View; label: string; hint: string }[] = [
   { id: "mine", label: "Assigned to me", hint: "Open and pending tickets assigned to you." },
   { id: "unassigned", label: "Unassigned", hint: "Open tickets nobody has taken yet. Open one and assign it to yourself or a teammate." },
   { id: "open", label: "All open", hint: "Tickets waiting on a reply from your team." },
-  { id: "pending", label: "Pending", hint: "You replied and are waiting on the customer. When they write back, the ticket moves to open." },
+  { id: "pending", label: "Pending", hint: "Someone replied, you or the AI, and you are waiting on the customer. When they write back, the ticket moves to open." },
   { id: "closed", label: "Closed", hint: "Finished tickets. A new message from the customer reopens one." },
 ];
 
@@ -50,6 +50,7 @@ export async function listTickets(orgId: string, userId: string, view: View) {
       firstResponseAt: tickets.firstResponseAt,
       source: tickets.source,
       test: tickets.test,
+      resolvedByAi: tickets.resolvedByAi,
       assigneeId: tickets.assigneeId,
       assigneeName: agents.name,
       customerName: customers.name,

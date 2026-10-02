@@ -1,12 +1,13 @@
 import { and, count, eq, isNull } from "drizzle-orm";
 import Link from "next/link";
 import { db, schema } from "@/db";
-import { aiUsage } from "@/lib/ai";
+import { aiConfigured, aiUsage } from "@/lib/ai";
 import { requireOpenPage } from "@/lib/auth";
 import { access } from "@/lib/billing";
 import { macroUpdates } from "@/lib/macro-drift";
 import { macroSuggestions } from "@/lib/macro-suggestions";
 import { withAiDrafts } from "@/lib/macro-writer";
+import { monthReceipt } from "@/lib/receipts";
 import { PLAN, seatPriceFor, usd, type Interval } from "@/lib/pricing";
 import { viewCounts } from "@/lib/tickets";
 
@@ -48,6 +49,8 @@ export default async function OverviewPage() {
     db.select({ seats: count() }).from(schema.agents).where(and(eq(schema.agents.orgId, s.orgId), eq(schema.agents.viewer, false), isNull(schema.agents.removedAt))),
     viewCounts(s.orgId, s.userId),
   ]);
+  const receipt = await monthReceipt(s.orgId, ai.month);
+  const aiOn = Boolean(org?.aiEnabled) && aiConfigured();
   const { suggestions } = await withAiDrafts(s.orgId, found);
   const plan = org ? access(org) : ({ state: "open" } as const);
   const interval: Interval = org?.billingInterval === "year" ? "year" : "month";
@@ -92,10 +95,23 @@ export default async function OverviewPage() {
         </div>
       </section>
 
+      <Section title="AI answers" href={aiOn ? "/app/receipts" : "/app/settings#ai"} cta={aiOn ? "See each answer" : "Turn on AI answers"}>
+        <p className="-mt-2 max-w-2xl text-sm text-muted">
+          {aiOn
+            ? "The AI replies to customers by itself. When a new email or chat comes in, it answers if your facts, macros or help articles cover the question. If not, it leaves the ticket for your team with a note saying why."
+            : "AI answers are off, so your team answers every ticket. When they're on, the AI replies to customers by itself whenever your facts, macros or help articles cover the question."}
+        </p>
+        <div className="grid sm:grid-cols-3">
+          <Figure label="Answered by the AI this month" value={receipt.counted} href="/app/receipts" strong />
+          <Figure label="Left for your team" value={receipt.notCounted} href="/app/receipts" />
+          <Figure label="Included answers left" value={Math.max(0, ai.included - ai.used)} href="/app/settings#ai" />
+        </div>
+      </Section>
+
       <Section title="AI macros" href="/app/macros" cta={suggestions.length || drifted.length ? "Review them" : "Open AI macros"}>
         <p className="-mt-2 max-w-2xl text-sm text-muted">
-          Macros are saved replies your team sends with one click. Flatdesk finds the answers your team keeps retyping, and the AI writes each one up for you to
-          check and save.
+          Macros are saved replies your team sends with one click, on the tickets the AI leaves to them. Flatdesk finds the answers your team keeps retyping,
+          and the AI writes each one up for you to check and save.
           {!suggestions.length && !drifted.length && " Nothing is waiting yet. A suggestion appears once the same reply has gone out on 5 tickets."}
         </p>
         <div className="grid sm:grid-cols-3">

@@ -47,8 +47,8 @@ const MACRO_ACTIONS = [
 const TOUR: { id: string; title: string; body: string; points: string[]; shot: React.ReactNode; href?: string; more?: string }[] = [
   {
     id: "ai",
-    title: "The AI answers the easy questions and stops at your limit.",
-    body: `It answers from your macros, help articles and the facts you give it. When it isn't sure, or the customer is upset or asks about their account, it hands the ticket to your team. Each agent adds ${PLAN.includedPerAgent} AI answers a month to a shared pool.`,
+    title: "The AI replies to customers on its own, and stops at your limit.",
+    body: `When an email or chat comes in, the AI answers from your macros, help articles and the facts you give it, and sends the reply itself. When it isn't sure, or the customer is upset or asks about their account, it hands the ticket to your team. Each agent adds ${PLAN.includedPerAgent} AI answers a month to a shared pool.`,
     points: ["Stops at the included amount unless an admin turns on overage", "Admins get an email at 80% and 100%", "Test it on 50 past tickets your team answered first"],
     shot: <AiShot />,
     href: "/features/ai-test-drive",
@@ -165,7 +165,8 @@ export default function Home() {
 
       <section id="flat-rate" className="mx-auto grid w-full max-w-6xl scroll-mt-20 gap-14 px-4 pt-24 sm:px-6 sm:pt-32">
         <ChapterHead id="flat-rate" tab="Flat rate" title="Many help desks charge for each AI answer. Flatdesk charges per agent.">
-          When you pay per answer, a launch or a holiday rush shows up on your invoice. Here the bill depends only on how many agents you have, and the AI
+          An AI answer is a reply the AI sends a customer by itself, by email or in your chat, with nobody on your team involved. When you pay per answer, a
+          launch or a holiday rush shows up on your invoice. Here the bill depends only on how many agents you have, and the AI
           stops at its limit unless an admin says otherwise.
         </ChapterHead>
         <div className="grid gap-10 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-16">
@@ -214,7 +215,8 @@ export default function Home() {
           <ChapterHead id="ai-macros" tab="AI macros" title="Flatdesk turns the replies your team keeps retyping into macros.">
             A macro is a saved reply. Your team sends it with one click instead of typing the same answer again. Flatdesk finds the answers your team keeps
             retyping and the AI writes each one up as a macro for you to check and save. When a price or policy changes, the AI suggests an update from your
-            team&apos;s edits. Macros come with every seat and don&apos;t use AI answers.
+            team&apos;s edits. AI answers reply to customers by themselves; macros are for the tickets your team still answers. They come with every seat and
+            don&apos;t use AI answers.
           </ChapterHead>
           <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] lg:gap-16">
             <div data-play="" suppressHydrationWarning className="relative">
