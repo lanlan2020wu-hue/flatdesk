@@ -157,8 +157,7 @@ export default function SwitchBill({ initialTool = "zendesk-team", initialAgents
           )}
           {ours.extra > 0 && (
             <p className="text-xs text-muted">
-              This counts overage at {usd(PLAN.overageRate, true)} an answer past the {ours.included.toLocaleString("en-US")} included. Overage is off unless an admin
-              turns it on: with the cap left on, the AI pauses there, your team answers the rest, and the bill stays {usd(ours.capped)}.
+              This counts overage at {usd(PLAN.overageRate, true)} an answer past the {ours.included.toLocaleString("en-US")} included. Overage is off unless an admin turns it on. With the cap on, the AI pauses there, your team answers the rest, and the bill stays {usd(ours.capped)}.
             </p>
           )}
         </div>

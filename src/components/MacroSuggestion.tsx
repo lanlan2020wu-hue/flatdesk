@@ -70,7 +70,7 @@ export function SuggestionsSection({ suggestions, aiOn }: { suggestions: Suggest
           <Spark />
           {suggestions.length === 1 ? "1 AI macro identified from your replies" : `${suggestions.length} AI macros identified from your replies`}
         </p>
-        <p className="text-sm text-muted">Your team keeps typing these answers.{aiOn && " The AI writes each one up from the versions you sent."} Save one and it&apos;s offered on every ticket that asks the same thing, and AI answers use it too. None of this uses your AI allowance.</p>
+        <p className="text-sm text-muted">Your team keeps typing these answers.{aiOn && " The AI writes each one up from the versions you sent."} Save one and it&apos;s offered on tickets that ask the same thing, and the AI uses it too. None of this uses your AI allowance.</p>
       </div>
       {suggestions.map((s) => (
         <SuggestionCard key={s.key} s={s} aiOn={aiOn} />

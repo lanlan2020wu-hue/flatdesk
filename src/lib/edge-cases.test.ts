@@ -111,3 +111,11 @@ test("a rewrite style must be one of the real styles", async () => {
   const { rewriteText, CopilotError } = await import("./copilot");
   await assert.rejects(rewriteText(ORG, "u1", null, "hello", "constructor" as never), (e) => e instanceof CopilotError && /Unknown rewrite style/.test(e.message));
 });
+
+test("team names in the From line stay one quoted sender", async () => {
+  const { fromAddress } = await import("./email");
+  assert.equal(fromAddress("Acme, Inc", "support@mail.flatdesk.test"), '"Acme, Inc" <support@mail.flatdesk.test>');
+  assert.equal(fromAddress('Bank <alerts@bank.com>', "s@m.test"), '"Bank alerts bank.com" <s@m.test>');
+  assert.equal(fromAddress('Say "hi"\r\nBcc: x@y.z', "s@m.test"), '"Say hi Bcc: x y.z" <s@m.test>');
+  assert.equal(fromAddress("<>", "s@m.test"), "s@m.test");
+});

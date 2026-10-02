@@ -56,8 +56,7 @@ export default async function HelpCenterAdmin({ searchParams }: PageProps<"/app/
           <div className="rounded-2xl border border-dashed border-line-strong px-5 py-4 text-sm text-muted">
             <p className="font-medium text-ink">Start with the questions you answer most.</p>
             <p className="mt-1">
-              Your macros are a good source: each one is an answer your team already sends. Shipping times, refunds, resetting a password and
-              changing a plan are common first articles.
+              Your macros are a good place to start, since each is an answer your team already sends. Shipping, refunds, password resets and plan changes are common first articles.
             </p>
           </div>
         )}
@@ -83,7 +82,7 @@ export default async function HelpCenterAdmin({ searchParams }: PageProps<"/app/
           {error && <p role="alert" className="text-warn">{String(error)}</p>}
           {saved === "address" && <p className="text-accent">Saved. Old links to the previous address no longer work.</p>}
           <p className="text-muted">
-            Link to it from your website and your email signature so customers find answers before they write in.
+            Link to it from your site and email signature so customers find answers before they write in.
             {s.role !== "admin" && " Only admins can change the address."}
           </p>
           {s.role === "admin" && <button className="btn btn-secondary w-max">Save address</button>}

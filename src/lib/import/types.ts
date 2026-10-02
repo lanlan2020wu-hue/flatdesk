@@ -113,7 +113,8 @@ export type Adapter = {
   // Base URL and auth headers for API calls.
   connect(creds: Record<string, string>, fetchImpl?: FetchLike): Promise<{ base: string; headers: Record<string, string> }>;
   // Cheap authenticated call proving the credentials work.
-  verify(ctx: Ctx): Promise<void>;
+  // May return a more exact account label than account() could tell from the credentials.
+  verify(ctx: Ctx): Promise<string | void>;
   phases: Phase[];
 };
 

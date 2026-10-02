@@ -10,7 +10,7 @@ import { PLAN } from "@/lib/pricing";
 export const WHY_CHEAPER = [
   {
     title: "Each AI answer costs us a few cents",
-    body: `Answers are written by Claude Opus from Anthropic. Each one costs us cents to run, so ${PLAN.includedPerAgent} per seat fit inside the seat price. That's also why the AI stops at the limit instead of charging you more. We don't have to raise everyone's price to pay for one team's busy month.`,
+    body: `Answers are written by Claude Opus from Anthropic. Each costs us cents, so ${PLAN.includedPerAgent} per seat fit in the seat price. That's also why the AI stops at the limit instead of billing you more, and nobody's price goes up to cover another team's busy month.`,
   },
   {
     title: "No sales team to pay for",
@@ -18,11 +18,11 @@ export const WHY_CHEAPER = [
   },
   {
     title: "One plan, so nothing is held back",
-    body: "Pricing tiers are there to get you onto a bigger plan. With only one plan, every seat gets everything.",
+    body: "Tiers exist to push you onto a bigger plan. With one plan, every seat gets everything.",
   },
   {
     title: "It does less, on purpose",
-    body: "Flatdesk only handles email and chat, for teams of 3 to 15. No phone, no social channels and no app marketplace means a lot less for us to build and run.",
+    body: "Flatdesk handles email and chat for teams of 3 to 15. No phone, social channels or app marketplace means much less to build and run.",
   },
 ];
 
@@ -37,8 +37,8 @@ export const LEFT_OUT = [
 
 // Ways to judge the quality before the first charge.
 export const CHECK_IT = [
-  { title: "AI test drive", body: "The AI drafts replies to your last 50 tickets, next to what your team actually sent. Customers don't see them.", href: "/features/ai-test-drive" },
-  { title: `${TRIAL_DAYS}-day trial, no card`, body: "Import from your old help desk and keep using it while your team tries Flatdesk on real tickets.", href: "/features/lossless-import" },
-  { title: "Refund a wrong AI answer", body: "Every AI answer you're charged for is on the monthly statement. An admin can refund a wrong one with one click.", href: "/features/ai-receipts" },
+  { title: "AI test drive", body: "The AI drafts replies to your last 50 tickets, next to what your team sent. Customers don't see them.", href: "/features/ai-test-drive" },
+  { title: `${TRIAL_DAYS}-day trial, no card`, body: "Import from your old help desk and keep it running while your team tries Flatdesk on real tickets.", href: "/features/lossless-import" },
+  { title: "Refund a wrong AI answer", body: "Every AI answer you pay for is on the monthly statement. An admin can refund a wrong one in one click.", href: "/features/ai-receipts" },
   { title: "Leave any time", body: "Monthly plans have no contract, and you can export every ticket, customer and macro in one click.", href: "/faq" },
 ];

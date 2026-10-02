@@ -143,6 +143,18 @@ describe("Zendesk", () => {
     assert.deepEqual(kept?.tags, ["done-here"]);
   });
 
+  test("a second Zendesk account can't be imported into the same team, since its ticket ids would collide", async () => {
+    const other = fakeApi("https://other.zendesk.com/api/v2/", { "users/me.json": { user: { id: 1, role: "admin" } } });
+    await assert.rejects(
+      startImport({ orgId: ORG, userId: "user_ana", source: "zendesk", creds: { subdomain: "other", email: "a@b.c", token: "t" }, fetchImpl: other }),
+      /already has an import from acme\.zendesk\.com/,
+    );
+    // Another team can import that account.
+    await newOrg(`${ORG}_other`);
+    const { id } = await startImport({ orgId: `${ORG}_other`, userId: "user_ana", source: "zendesk", creds: { subdomain: "other", email: "a@b.c", token: "t" }, fetchImpl: other });
+    await cancelImport(`${ORG}_other`, id);
+  });
+
   test("a rejected token fails with a clear message and creates nothing", async () => {
     const api: FetchLike = async () => new Response("", { status: 401 });
     await assert.rejects(startImport({ orgId: ORG, userId: "user_ana", source: "zendesk", creds: { subdomain: "acme", email: "a@b.c", token: "bad" }, fetchImpl: api }), /rejected/);

@@ -1,4 +1,4 @@
-import { and, asc, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, lt, ne, or, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { INBOUND_FILE_LIMIT, MAX_FILES, saveAttachments, type NewFile } from "@/lib/attachments";
 import { normalizeTags } from "@/lib/tickets";
@@ -83,7 +83,14 @@ export async function startImport(opts: {
   try {
     account = adapter.account(opts.creds);
     const ctx = await makeCtx(opts.orgId, adapter, opts.creds, notes, opts.fetchImpl);
-    await adapter.verify(ctx);
+    account = (await adapter.verify(ctx)) || account;
+    // Records are matched by their id in the old help desk, so two Zendesk (or
+    // Freshdesk...) accounts in one team would share ids and overwrite each other's tickets.
+    const other = await db.query.imports.findFirst({
+      columns: { account: true },
+      where: and(eq(imports.orgId, opts.orgId), eq(imports.source, opts.source), ne(imports.account, account)),
+    });
+    if (other) throw new ImportError(`This team already has an import from ${other.account}. To bring in ${account} too, create a separate team for it, so tickets from the two accounts don't get mixed up.`);
   } catch (e) {
     if (e instanceof ApiError || e instanceof RateLimited) throw new ImportError(e instanceof RateLimited ? `${adapter.name} is busy. Try again in a minute.` : e.message);
     if (e instanceof Error && !(e instanceof TypeError)) throw new ImportError(e.message);

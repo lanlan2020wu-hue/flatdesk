@@ -31,6 +31,15 @@ export function replyToAddress(inboundKey: string, ticketNumber: number) {
   return emailConfig.inboundDomain ? `${inboundKey}+${ticketNumber}@${emailConfig.inboundDomain}` : null;
 }
 
+// The team's name as the From display name. Team names are typed by anyone, so
+// they're quoted, and characters that could end the quote, start a second
+// address or a new header line are dropped: "Acme, Inc" stays one sender, and
+// a team can't name itself "Bank <alerts@bank.com>" to look like someone else.
+export function fromAddress(teamName: string, address: string) {
+  const name = teamName.replace(/[\x00-\x1f\x7f"\\<>@]/g, " ").replace(/\s+/g, " ").trim().slice(0, 60).trim();
+  return name ? `"${name}" <${address}>` : address;
+}
+
 // Pulls the bare address out of `"Name" <a@b.co>`.
 export function parseAddress(raw: string): { email: string; name: string | null } {
   const m = raw.match(/^\s*"?([^"<]*?)"?\s*<([^>]+)>\s*$/);
@@ -135,7 +144,7 @@ export async function deliverReply(orgId: string, messageId: string): Promise<vo
     : /^re:/i.test(row.ticket.subject) ? row.ticket.subject : `Re: ${row.ticket.subject}`;
   const chatNote = chat ? `\n\n--\nYou're getting this because someone started a chat with ${row.org.name} using this email address. If that wasn't you, you can ignore it.` : "";
   const { error } = await resend().emails.send({
-    from: `${row.org.name} <${emailConfig.from}>`,
+    from: fromAddress(row.org.name, emailConfig.from),
     to: row.customer.email,
     replyTo: replyToAddress(row.org.inboundKey, row.ticket.number) ?? undefined,
     subject,

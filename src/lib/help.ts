@@ -1,29 +1,19 @@
 import { and, desc, eq, ne, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { SITE } from "@/lib/site";
+import { slugify } from "@/lib/slug";
 
 // The public help center: articles a team writes once, that customers search
 // on their own at /help/<org>, and that the AI answers from and links to.
 
 const { articles, orgs } = schema;
 
+export { slugify };
+
 export const MAX_TITLE = 200;
 export const MAX_BODY = 50_000;
 // The AI reads at most this much of each article, so one long article can't crowd out the rest.
 const AI_BODY_CHARS = 6_000;
-
-export function slugify(text: string, fallback = "article") {
-  const s = text
-    .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase()
-    .replace(/&/g, " and ")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 60)
-    .replace(/-+$/g, "");
-  return s || fallback;
-}
 
 export const helpUrl = (helpSlug: string) => `${SITE.url}/help/${helpSlug}`;
 export const articleUrl = (helpSlug: string, slug: string) => `${helpUrl(helpSlug)}/${slug}`;
@@ -131,16 +121,17 @@ export async function orgByHelpSlug(helpSlug: string) {
   return db.query.orgs.findFirst({ where: eq(orgs.helpSlug, helpSlug.toLowerCase()) });
 }
 
-// Gives the org a help center address the first time it's needed: its name as a slug, made unique.
+// Gives the org a help center address the first time it's needed: its name
+// plus a short random tag, like acme-k3f9q2. Team names aren't unique (many
+// teams are called "Support" or "My Organization"), so the name alone would
+// hand same-named teams near-identical links that are easy to mix up or guess.
 export async function ensureHelpSlug(orgId: string): Promise<string> {
   const org = await db.query.orgs.findFirst({ where: eq(orgs.id, orgId), columns: { helpSlug: true, name: true } });
   if (!org) throw new Error("Unknown team");
   if (org.helpSlug) return org.helpSlug;
-  // Kept within the rule the settings form enforces (3 to 40 characters), with room for a "-49".
-  const named = slugify(org.name, "help").slice(0, 36).replace(/-+$/, "");
-  const base = named.length < 3 ? `${named}-help` : named;
-  for (let n = 1; n < 50; n++) {
-    const candidate = n === 1 ? base : `${base}-${n}`;
+  const base = helpSlugBase(org.name);
+  for (let n = 0; n < 10; n++) {
+    const candidate = `${base}-${randomTag()}`;
     const [row] = await db
       .update(orgs)
       .set({ helpSlug: candidate })
@@ -151,6 +142,17 @@ export async function ensureHelpSlug(orgId: string): Promise<string> {
     if (again?.helpSlug) return again.helpSlug; // set by a request running at the same time
   }
   throw new Error("Couldn't pick a help center address. Choose one in the help center settings.");
+}
+
+// The name part, kept short enough that "-" and the 6-character tag stay
+// within the 40 characters the settings form allows.
+export function helpSlugBase(name: string) {
+  return slugify(name, "help").slice(0, 30).replace(/-+$/, "");
+}
+
+const TAG_CHARS = "abcdefghijkmnpqrstuvwxyz23456789"; // no 0/o or 1/l, so it reads back clearly
+function randomTag() {
+  return Array.from(crypto.getRandomValues(new Uint8Array(6)), (b) => TAG_CHARS[b % TAG_CHARS.length]).join("");
 }
 
 export const HELP_SLUG_RULE = "3 to 40 lowercase letters, numbers and dashes";

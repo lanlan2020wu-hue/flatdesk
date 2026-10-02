@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { CreateOrganization, OrganizationList, useOrganizationList, useUser } from "@clerk/nextjs";
+import { slugify } from "@/lib/slug";
 import { teamNameFromEmail } from "@/lib/team-name";
 
 // Nearly everyone arriving here has just signed up and has no team to join, so
@@ -43,7 +44,13 @@ export default function TeamSetup() {
     if (!trimmed || !createOrganization || !setActive) return;
     setState("creating");
     try {
-      const org = await createOrganization({ name: trimmed });
+      const org = await createOrganization({ name: trimmed }).catch((err) => {
+        // Clerk makes a URL slug from the name, and another team may already have
+        // it. Team names don't have to be unique, so retry with a random tag.
+        const first = (err as { errors?: { code?: string; meta?: { paramName?: string } }[] }).errors?.[0];
+        if (first?.code !== "form_identifier_exists" || first.meta?.paramName !== "slug") throw err;
+        return createOrganization({ name: trimmed, slug: `${slugify(trimmed, "team")}-${crypto.randomUUID().slice(0, 6)}` });
+      });
       await setActive({ organization: org.id });
       router.push("/app/welcome");
     } catch (err) {

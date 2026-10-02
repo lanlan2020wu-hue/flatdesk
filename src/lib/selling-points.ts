@@ -34,32 +34,32 @@ export const SELLING_POINTS: SellingPoint[] = [
   {
     slug: "flat-pricing",
     name: "One flat price",
-    short: `Seats × ${usd(PLAN.annualSeatPrice)} billed yearly (${usd(PLAN.seatPrice)} monthly), with ${PLAN.includedPerAgent} AI answers per seat. The AI pauses at the cap unless an admin opts in. No meters, no add-on tiers.`,
+    short: `Seats × ${usd(PLAN.annualSeatPrice)} billed yearly (${usd(PLAN.seatPrice)} monthly), with ${PLAN.includedPerAgent} AI answers per seat. The AI pauses at the cap unless an admin turns on overage. No meters or add-ons.`,
     headline: "A help desk with AI included, and a bill that doesn't move",
-    answer: `Flatdesk costs ${PRICE_PHRASE}, and every seat includes ${PLAN.includedPerAgent} AI answers a month, pooled across the team. When the team reaches the included amount, the AI pauses and new conversations go to your agents. Nothing extra is charged unless an admin turns overage on (${usd(PLAN.overageRate, true)} per resolution).`,
+    answer: `Flatdesk costs ${PRICE_PHRASE}, and every seat includes ${PLAN.includedPerAgent} AI answers a month, pooled across the team. When the team uses them up, the AI pauses and new conversations go to your agents. You pay nothing extra unless an admin turns on overage (${usd(PLAN.overageRate, true)} per resolution).`,
     metaTitle: "Flat-price help desk with AI included",
     metaDescription: `${PRICE_PHRASE}, with ${PLAN.includedPerAgent} AI answers per agent included. The AI pauses at the cap, so the support bill is the same every month.`,
     steps: [
-      { title: "Pick your seats", body: `Every agent seat is ${usd(PLAN.seatPrice)} a month, or ${usd(PLAN.annualSeatPrice)} a month billed yearly, and gets every feature. There are no tiers or add-ons.` },
-      { title: "Share the AI allowance", body: `Each seat adds ${PLAN.includedPerAgent} AI answers a month to one team pool, however the tickets fall.` },
-      { title: "Hit the cap, not a surprise", body: "Admins get an email at 80% and at 100%. At 100% the AI pauses and your team answers as normal." },
-      { title: "Opt in to more if you want", body: `An admin can turn on overage at ${usd(PLAN.overageRate, true)} per resolution and turn it off again at any time.` },
+      { title: "Pick your seats", body: `Every agent seat is ${usd(PLAN.seatPrice)} a month, or ${usd(PLAN.annualSeatPrice)} a month billed yearly, with every feature. No tiers or add-ons.` },
+      { title: "Share the AI allowance", body: `Each seat adds ${PLAN.includedPerAgent} AI answers a month to one team pool.` },
+      { title: "Get warned before the cap", body: "Admins get an email at 80% and 100%. At 100% the AI pauses and your team answers as usual." },
+      { title: "Turn on more if you want", body: `An admin can turn on overage at ${usd(PLAN.overageRate, true)} per resolution, and turn it off any time.` },
     ],
     facts: [
-      `${usd(PLAN.seatPrice)} per agent per month billed monthly with no contract, or ${usd(PLAN.annualSeatPrice)} billed yearly`,
-      `${PLAN.includedPerAgent} AI answers per agent per month, pooled`,
+      `${usd(PLAN.seatPrice)} per agent a month with no contract, or ${usd(PLAN.annualSeatPrice)} billed yearly`,
+      `${PLAN.includedPerAgent} AI answers per agent a month, shared by the team`,
       "AI pauses at the included amount by default",
       "The AI answers up to 3 follow-ups in one conversation, counted once; conversations it hands to your team don't count",
-      `${TRIAL_DAYS}-day free trial without a card`,
+      `${TRIAL_DAYS} days free, no card`,
     ],
     faq: [
       {
         q: "What does Flatdesk cost?",
-        a: `${PRICE_PHRASE}. Either way that includes every feature and ${PLAN.includedPerAgent} AI answers per agent each month, shared by the team.`,
+        a: `${PRICE_PHRASE}. Both include every feature and ${PLAN.includedPerAgent} AI answers per agent a month, shared by the team.`,
       },
       {
         q: "Is Flatdesk the cheapest help desk?",
-        a: "No. Some help desks have cheaper entry seats. Flatdesk is built so the AI part of the bill can't grow on its own: it's usually cheaper once the AI answers a real share of tickets, compared with tools that charge for every AI answer.",
+        a: "No. Some help desks have cheaper starter seats. What Flatdesk does is keep the AI part of the bill from growing on its own. Once the AI answers a real share of your tickets, it usually costs less than tools that charge for every AI answer.",
       },
       // Same wording as the billing questions, so the FAQ page lists them once.
       ...BILLING_FAQ.filter((f) => f.q.startsWith("What happens when") || f.q.startsWith("What counts")),
@@ -69,42 +69,42 @@ export const SELLING_POINTS: SellingPoint[] = [
   {
     slug: "ai-macros",
     name: "AI macros",
-    short: "Evolving macros: the AI writes them from the answers your team keeps retyping and updates them as your business changes. Each one can also assign, tag, set the status and send.",
-    headline: "Your best replies become macros, and keep up when things change",
+    short: "The AI writes macros from the answers your team keeps retyping and updates them when things change. Each one can also assign, tag, set the status and send.",
+    headline: "Your best replies become macros, and stay up to date",
     answer:
-      "Once your team has sent essentially the same answer on 5 tickets, Flatdesk spots it and the AI writes it up as a macro, offered on new tickets that ask the same thing. When agents keep making the same edit to a macro before sending it, the AI drafts the update for an admin to apply in one click. Each macro can also assign, tag, set the status and send the reply right away, and none of this uses your AI allowance.",
-    metaTitle: "AI macros: canned responses identified and written automatically",
+      "When your team has sent the same answer on 5 tickets, Flatdesk spots it and the AI writes it up as a macro. New tickets that ask the same thing get it offered. When agents keep making the same edit to a macro before sending, the AI drafts the update and an admin applies it in one click. Macros can also assign, tag, set the status and send right away. None of this uses your AI allowance.",
+    metaTitle: "AI macros: canned responses found and written for you",
     metaDescription:
-      "Flatdesk identifies the replies your team sends over and over, has the AI write them up as macros, and offers the right macro on new tickets. Works from imported history too.",
+      "Flatdesk finds the replies your team sends over and over, the AI writes them up as macros, and new tickets get the right one. Works on imported history too.",
     steps: [
       { title: "Your team answers as usual", body: "Replies from the last 90 days count, including history you imported from your old help desk." },
-      { title: "Flatdesk identifies the repeats", body: "Replies that say essentially the same thing, on 5 different tickets, become one suggested macro." },
-      { title: "The AI writes the macro", body: "It reads the versions your team sent and writes one clean reply with placeholders, a name, and the question it answers." },
-      { title: "It's offered on the right tickets", body: "When a new ticket asks the same question, the reply box offers the macro. AI answers use it too." },
-      { title: "It does the work around the reply", body: "Using a macro can fill in the customer's first name, assign the ticket to a teammate, set the status, add tags, or send the reply right away." },
-      { title: "It evolves with your business", body: "When agents keep editing the macro the same way before sending, the AI rewrites it with that edit. Apply it in one click, or keep the macro as it is." },
+      { title: "Flatdesk finds the repeats", body: "The same reply on 5 different tickets becomes one suggested macro." },
+      { title: "The AI writes the macro", body: "It reads your team's versions and writes one reply with placeholders, a name, and the question it answers." },
+      { title: "It shows up on the right tickets", body: "When a new ticket asks the same question, the reply box offers the macro. AI answers use it too." },
+      { title: "It can do more than reply", body: "A macro can fill in the customer's first name, assign the ticket, set the status, add tags, or send right away." },
+      { title: "It keeps up with changes", body: "When agents keep editing the macro the same way before sending, the AI rewrites it with that edit. Apply it in one click, or keep the old one." },
     ],
     facts: [
-      "Identifies a macro once 5 distinct tickets get the same answer",
-      "The AI writes each one up from your team's own replies, with placeholders for customer details",
-      "Offers the matching macro on new tickets, right in the reply box",
+      "Suggests a macro once 5 tickets get the same answer",
+      "The AI writes each one from your team's replies, with placeholders for customer details",
+      "Offers the matching macro on new tickets, in the reply box",
       "Updates a macro when your team keeps editing it the same way before sending",
       "Each macro can assign the ticket, set the status, add tags and send right away",
-      "Works from imported history, so suggestions can start on day one",
+      "Works on imported history, so suggestions can start on day one",
       "Never uses your AI allowance",
     ],
     faq: [
       {
-        q: "How does Flatdesk identify which macros to suggest?",
+        q: "How does Flatdesk decide which macros to suggest?",
         a: "It groups agent replies from the last 90 days by how many words they share. When one answer has gone out on 5 different tickets and no existing macro covers it, it becomes a suggestion, and the AI writes it up.",
       },
       {
         q: "How does a macro get updated?",
-        a: "When an agent inserts a macro, Flatdesk remembers the macro's text. If on most of the last sends (at least 3) agents made the same change before sending, like a different time frame, an added sentence or a deleted step, the AI rewrites the macro with that change. An admin applies it in one click or keeps the macro as it is. Zendesk offers macro suggestions, including edits to existing macros, in its Copilot add-on at $50 per agent a month billed yearly. In Flatdesk they're part of every seat.",
+        a: "Flatdesk compares each sent reply with the macro it started from. If agents made the same change on most of the last sends (at least 3), like a new time frame, an added sentence or a removed step, the AI rewrites the macro with that change. An admin applies it in one click or keeps the old one. Zendesk offers macro suggestions, including edits to existing macros, in its Copilot add-on at $50 per agent a month billed yearly. In Flatdesk they're part of every seat.",
       },
       {
         q: "What can a macro do besides reply?",
-        a: "A macro can assign the ticket to a teammate, set it to open, pending or closed, add tags, and send the reply as soon as it's used. [customer name] is filled in with the customer's first name. A macro set to send right away waits if it still has blanks like [order number], so nothing goes out half filled in.",
+        a: "A macro can assign the ticket to a teammate, set it to open, pending or closed, add tags, and send the reply as soon as it's used. [customer name] is filled in with the customer's first name. A macro set to send right away waits if it still has blanks like [order number], so nothing goes out half done.",
       },
       {
         q: "Do AI macros use AI answers?",
@@ -125,13 +125,13 @@ export const SELLING_POINTS: SellingPoint[] = [
   {
     slug: "ai-receipts",
     name: "AI receipts",
-    short: "Every AI answer you're charged for, itemized with the saved answers it used. Refund a wrong one in a click and it stops counting.",
+    short: "Every AI answer you're charged for, with the macros and articles it used. Refund a wrong one in a click and it stops counting.",
     headline: "AI receipts: see every AI answer you pay for, and refund the wrong ones",
     answer:
-      "AI receipts are a monthly, line-by-line statement of every conversation Flatdesk's AI answered, with the saved answers it used and whether each one counted toward your allowance. If the AI got one wrong, an admin refunds it in one click: it stops counting, comes off any overage, and the ticket goes back to your team.",
-    metaTitle: "AI receipts: itemized, refundable AI answers",
+      "AI receipts are a monthly statement of every conversation Flatdesk's AI answered, with the macros and articles it used and whether each one counted toward your allowance. If the AI got one wrong, an admin refunds it in one click. It stops counting, comes off any overage, and the ticket goes back to your team.",
+    metaTitle: "AI receipts: every AI answer listed, wrong ones refunded",
     metaDescription:
-      "See every AI answer your help desk charged for, with the saved answers it cited. Refund a wrong answer in one click so it stops counting. Download as CSV.",
+      "See every AI answer your help desk charged for, with the macros and articles it used. Refund a wrong one in one click so it stops counting. Download as CSV.",
     steps: [
       { title: "The AI answers a ticket", body: "It answers from your macros and notes, and records which ones it used." },
       { title: "It lands on the month's receipt", body: "Each line shows the ticket, the answers cited and a status: included, overage, refunded, or handed to the team." },
@@ -139,16 +139,16 @@ export const SELLING_POINTS: SellingPoint[] = [
       { title: "Take it to finance", body: "Download any month as CSV to reconcile it with your invoice." },
     ],
     facts: [
-      "Every AI event itemized per month",
-      "Cites the saved answers the AI used",
-      "One-click refunds free up allowance and come off any overage",
-      "Refunds for a month stay open until it closes on the 1st of the next month",
-      "CSV export of any month",
+      "Every AI answer listed, month by month",
+      "Shows the macros and articles the AI used",
+      "Refunds free up allowance and come off any overage",
+      "You can refund until the month closes on the 1st",
+      "Download any month as CSV",
     ],
     faq: [
       {
         q: "What is an AI receipt?",
-        a: "A monthly statement of every conversation the AI answered, with the saved answers it cited and whether each one counted toward your allowance or overage.",
+        a: "A monthly statement of every conversation the AI answered, with the macros and articles it used and whether each one counted toward your allowance or overage.",
       },
       {
         q: "Can we get a refund for a wrong AI answer?",
@@ -156,7 +156,7 @@ export const SELLING_POINTS: SellingPoint[] = [
       },
       {
         q: "How long can we refund an AI answer?",
-        a: "Until the month closes: billing runs on the 1st of the next month, and after that the month's receipt is final.",
+        a: "Until the month closes. Billing runs on the 1st of the next month, and then the receipt is final.",
       },
     ],
     icon: "M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6zM9 12l2 2 4-4",
@@ -165,9 +165,9 @@ export const SELLING_POINTS: SellingPoint[] = [
   {
     slug: "ai-test-drive",
     name: "AI test drive",
-    short: `Import your help desk and the AI drafts answers to your ${TEST_DRIVE.tickets} most recent tickets, each beside the reply your team actually sent. Judge the AI on your own customers before you pay.`,
+    short: `Import your help desk and the AI drafts answers to your ${TEST_DRIVE.tickets} most recent tickets, each beside the reply your team actually sent. Judge it on your own customers before you pay.`,
     headline: "Test the AI on your own past tickets before you switch",
-    answer: `During the free trial, Flatdesk's AI drafts answers to your ${TEST_DRIVE.tickets} most recent imported tickets using your macros, and shows each draft beside the reply your team actually sent. Your team marks each one as ready to send, needs edits, or wrong, and gets a scorecard. Nothing is sent to customers and it doesn't use your AI allowance.`,
+    answer: `During the free trial, Flatdesk's AI drafts answers to your ${TEST_DRIVE.tickets} most recent imported tickets using your macros, and shows each draft beside the reply your team actually sent. Your team marks each one ready, needs edits, or wrong, and gets a scorecard. Nothing goes to customers and it doesn't use your AI allowance.`,
     metaTitle: "AI test drive: see AI answers to your own past tickets",
     metaDescription: `Flatdesk drafts AI answers to your ${TEST_DRIVE.tickets} most recent tickets and shows them beside your team's real replies, so you can judge the AI before you switch.`,
     steps: [
@@ -186,7 +186,7 @@ export const SELLING_POINTS: SellingPoint[] = [
     faq: [
       {
         q: "Does the test drive use our real tickets?",
-        a: `Run the AI test drive. After you import your help desk, the AI drafts answers to your ${TEST_DRIVE.tickets} most recent tickets and shows each beside the reply your team sent, so you judge it on your own customers.`,
+        a: `Yes. After you import your help desk, the AI drafts answers to your ${TEST_DRIVE.tickets} most recent tickets and shows each beside the reply your team sent.`,
       },
       {
         q: "Does the test drive send anything to customers?",
@@ -203,24 +203,24 @@ export const SELLING_POINTS: SellingPoint[] = [
   {
     slug: "lossless-import",
     name: "Lossless import",
-    short: `Bring tickets, customers, macros and rules from ${IMPORT_SOURCES.join(", ").replace(/, ([^,]*)$/, " or $1")}. Every original record is archived, and anything that didn't map is listed.`,
+    short: `Bring tickets, customers, macros and rules from ${IMPORT_SOURCES.join(", ").replace(/, ([^,]*)$/, " or $1")}. Every original record is kept, and anything that didn't fit is listed.`,
     headline: `Move from ${IMPORT_SOURCES.slice(0, 3).join(", ")} or Help Scout without losing a ticket`,
-    answer: `Flatdesk imports tickets, messages, attachments, customers, tags, macros and rules from ${IMPORT_SOURCES.join(", ").replace(/, ([^,]*)$/, " and $1")}. Every original record is kept in an archive you can download, and anything that couldn't be mapped is listed in a report instead of being dropped. Rules are kept for reference; Flatdesk runs one kind today (if tagged X, assign to Y), and the report lists the rest to rebuild. Intercom's API doesn't share workflows or assignment rules at all. You can export tickets, messages, customers and macros as CSV or JSON at any time.`,
+    answer: `Flatdesk imports tickets, messages, attachments, customers, tags, macros and rules from ${IMPORT_SOURCES.join(", ").replace(/, ([^,]*)$/, " and $1")}. Every original record is kept in an archive you can download, and a report lists anything that didn't fit instead of dropping it. Flatdesk runs one kind of rule today (if tagged X, assign to Y); the report lists the rest so you can rebuild them. Intercom's API doesn't share its rules at all. You can export tickets, messages, customers and macros as CSV or JSON any time.`,
     metaTitle: "Lossless help desk import from Zendesk, Intercom, Freshdesk and Help Scout",
     metaDescription:
-      "Import tickets, attachments, customers, macros and rules from Zendesk, Intercom, Freshdesk or Help Scout. Every raw record is archived and nothing is silently dropped.",
+      "Import tickets, attachments, customers, macros and rules from Zendesk, Intercom, Freshdesk or Help Scout. Every original record is kept and nothing is dropped.",
     steps: [
-      { title: "Connect your old help desk", body: "Paste an API token. It is stored encrypted while the import runs and erased when it ends." },
-      { title: "Flatdesk copies everything", body: "Agents, tags, macros, rules, customers, then tickets with their messages and attachments. Big imports resume where they left off." },
-      { title: "Check the report", body: "Anything that didn't map, like a rule condition Flatdesk doesn't have, is listed with the original record. Download it as CSV." },
-      { title: "Keep the originals", body: "Download the raw archive of every record as JSONL. Re-running an import updates instead of duplicating." },
+      { title: "Connect your old help desk", body: "Paste an API token. It's stored encrypted while the import runs and deleted when it ends." },
+      { title: "Flatdesk copies everything", body: "Agents, tags, macros, rules, customers, then tickets with their messages and attachments. Big imports pick up where they left off." },
+      { title: "Check the report", body: "Anything that didn't fit, like a rule condition Flatdesk doesn't have, is listed with the original record. Download it as CSV." },
+      { title: "Keep the originals", body: "Download every original record as JSONL. Running the import again updates records instead of duplicating them." },
     ],
     facts: [
       `Imports from ${IMPORT_SOURCES.join(", ").replace(/, ([^,]*)$/, " and $1")}`,
       "Tickets, messages, attachments, customers, tags, macros and rules (rules from every source except Intercom, whose API doesn't share them)",
-      "Every raw record archived and downloadable",
-      "Unmapped items listed in a report, never silently dropped",
-      "Export tickets, messages, customers and macros as CSV or JSON at any time, without asking us",
+      "Every original record kept and downloadable",
+      "Anything that didn't fit is listed in a report, never dropped",
+      "Export tickets, messages, customers and macros as CSV or JSON any time, without asking us",
     ],
     faq: [
       {
@@ -229,15 +229,15 @@ export const SELLING_POINTS: SellingPoint[] = [
       },
       {
         q: "What does the import bring over?",
-        a: "Agents, tags, macros, rules (not from Intercom, whose API doesn't share them), customers and tickets with their messages and attachments. Anything that can't be mapped is listed in a report, and every original record is archived.",
+        a: "Agents, tags, macros, rules (not from Intercom, whose API doesn't share them), customers and tickets with their messages and attachments. A report lists anything that didn't fit, and every original record is kept.",
       },
       {
         q: "Can we run the import again?",
-        a: "Yes. Records are matched by their original ID, so re-running updates what's there instead of creating duplicates.",
+        a: "Yes. Records are matched by their original ID, so running it again updates them instead of making duplicates.",
       },
       {
         q: "Can we get our data out of Flatdesk?",
-        a: "Yes. Settings has a one-click export of tickets (with their tags), messages, customers and macros as CSV or JSON. File attachments aren't in the export; download them from each ticket.",
+        a: "Yes. Settings exports tickets (with tags), messages, customers and macros as CSV or JSON in one click. Attachments aren't included; download them from each ticket.",
       },
     ],
     icon: "M12 4v11m0 0l-4-4m4 4l4-4M5 19h14",
