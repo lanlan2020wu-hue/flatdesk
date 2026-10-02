@@ -78,6 +78,9 @@ export const intercom: Adapter = {
     ctx.note(
       "Intercom's API doesn't share workflows or assignment rules, so none were imported. Recreate the tag assignments you need under Macros and rules.",
     );
+    // The token alone doesn't say which workspace it opens; its app id does.
+    const app = data.app as { id_code?: string; name?: string } | undefined;
+    if (app?.id_code) return `${app.name ? `${app.name} ` : ""}Intercom workspace (${app.id_code})`;
   },
   phases: [
     {

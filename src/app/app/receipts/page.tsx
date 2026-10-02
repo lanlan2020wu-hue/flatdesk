@@ -44,7 +44,7 @@ export default async function ReceiptsPage({ searchParams }: PageProps<"/app/rec
         <div className="grid gap-1.5">
           <h1 className="font-display text-3xl">AI receipts</h1>
           <p className="max-w-xl text-muted">
-            Every answer the AI sent, itemized. Only counted lines use your allowance. If the AI got one wrong, refund it and it stops
+            Every answer the AI sent. Only counted lines use your allowance. If the AI got one wrong, refund it and it stops
             counting{canRefund ? "" : " (refunds close once a month is billed)"}.
           </p>
         </div>

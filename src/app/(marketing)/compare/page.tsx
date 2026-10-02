@@ -7,7 +7,7 @@ import { breadcrumbs, pageMeta } from "@/lib/seo";
 export const metadata = pageMeta({
   title: "Flatdesk vs Zendesk, Fin, Help Scout and more",
   description:
-    "Honest, sourced comparisons of Flatdesk with Fin (formerly Intercom), Zendesk, Help Scout, Freshdesk, Front and Gorgias: monthly cost for real team sizes, how each bills AI, and when each is the better pick.",
+    "Sourced comparisons of Flatdesk with Fin (formerly Intercom), Zendesk, Help Scout, Freshdesk, Front and Gorgias: monthly cost for real team sizes, how each bills AI, and when each is the better pick.",
   path: "/compare",
 });
 
@@ -19,8 +19,7 @@ export default function ComparePage() {
       <div className="grid max-w-2xl gap-3">
         <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-[2.6rem] sm:text-6xl">How Flatdesk compares, including where it doesn&apos;t win.</h1>
         <p style={{ "--d": 2 } as React.CSSProperties} className="enter text-lg text-muted">
-          Flatdesk isn&apos;t the cheapest seat. It&apos;s the help desk whose AI bill can&apos;t surprise you: AI answers come with every seat and
-          the AI pauses at the cap. Here is what the same teams pay elsewhere.
+          Flatdesk isn&apos;t the cheapest seat. Its AI bill just can&apos;t jump: AI answers come with every seat and the AI pauses at the cap. Here&apos;s what the same teams pay elsewhere.
         </p>
       </div>
 

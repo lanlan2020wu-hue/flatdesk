@@ -55,7 +55,7 @@ export default async function MacrosPage() {
         <div className="grid gap-1">
           <h1 className="font-display text-3xl">AI macros</h1>
           <p className="text-sm text-muted">
-            Flatdesk identifies the answers your team keeps retyping and the AI writes them up as macros. On a new ticket, the macro that answers it is offered in the reply box. A macro can also assign the ticket, set its status, add tags and send the reply right away. When your team keeps editing a macro the same way before sending it, the AI drafts the update for an admin to apply.
+            Flatdesk finds the answers your team keeps retyping and the AI writes them up as macros. New tickets get the right macro offered in the reply box. A macro can also assign, set the status, add tags and send right away. When your team keeps editing a macro the same way, the AI drafts an update for an admin to apply.
           </p>
         </div>
 

@@ -130,8 +130,7 @@ export default async function OverviewPage() {
           </ul>
         ) : (
           <p className="max-w-[70ch] text-sm text-muted">
-            When your team sends the same answer on 5 tickets, it shows up here, written up by the AI. When they keep editing a macro the same way, the AI
-            updates it, so your macros keep up with the business. Saved macros are offered on new tickets and can assign, tag, close and send.
+            When your team sends the same answer on 5 tickets, the AI writes it up and it shows here. When they keep editing a macro the same way, the AI updates it. Saved macros are offered on new tickets and can assign, tag, close and send.
           </p>
         )}
       </Section>

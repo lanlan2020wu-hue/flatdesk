@@ -101,8 +101,7 @@ export default async function WelcomePage({ searchParams }: PageProps<"/app/welc
           <strong>{org.name}</strong> is ready and you&apos;re its admin.
         </p>
         <p className="text-muted">
-          Flatdesk is {usd(PLAN.seatPrice)} per agent a month ({usd(PLAN.annualSeatPrice)} billed yearly), with {PLAN.includedPerAgent} AI answers per agent included. When they run out
-          the AI pauses, so the bill never surprises you. You can change that in <Link href="/app/settings" className="link">Settings</Link>.
+          Flatdesk is {usd(PLAN.seatPrice)} per agent a month ({usd(PLAN.annualSeatPrice)} billed yearly), with {PLAN.includedPerAgent} AI answers per agent included. When they run out, the AI pauses and the bill stays the same. You can change that in <Link href="/app/settings" className="link">Settings</Link>.
         </p>
       </div>
     ),
@@ -110,8 +109,7 @@ export default async function WelcomePage({ searchParams }: PageProps<"/app/welc
     ai: ai ? (
       <div className="grid gap-4 text-sm">
         <p className="text-muted">
-          Write a few lines about your business, then ask a question a customer might ask. You&apos;ll see the reply the AI would send.
-          Nobody else sees it, and it doesn&apos;t count toward your AI answers.
+          Write a few lines about your business, then ask something a customer might. You&apos;ll see the reply the AI would send. Nobody else sees it and it doesn&apos;t count toward your AI answers.
         </p>
         <TryAi notes={org.aiInstructions} saved={knowledge.length} />
         {testable > 0 && (
@@ -166,8 +164,7 @@ export default async function WelcomePage({ searchParams }: PageProps<"/app/welc
     inbox: (
       <div className="grid gap-6 text-sm">
         <p className="text-muted">
-          Pick whichever is quicker to set up. Chat is one line of code on your site. Email needs a forwarding rule in your mail settings. You
-          can add the other one later in Settings.
+          Pick whichever is quicker. Chat is one line of code on your site. Email needs a forwarding rule in your mail settings. You can add the other later in Settings.
         </p>
 
         <section className="grid gap-3" aria-labelledby="chat-option">
@@ -257,8 +254,7 @@ export default async function WelcomePage({ searchParams }: PageProps<"/app/welc
               <details className="rounded-lg border border-line px-4 py-2.5">
                 <summary className="cursor-pointer font-medium">Anything else</summary>
                 <p className="mt-2 text-muted">
-                  Add a forwarding rule or alias that sends every email for your support address to the Flatdesk address. Keeping a copy in the
-                  old mailbox is fine; Flatdesk ignores duplicates.
+                  Add a forwarding rule or alias that sends your support email to the Flatdesk address. Keeping a copy in the old mailbox is fine. Flatdesk ignores duplicates.
                 </p>
               </details>
               <a href={itMail} className="link w-max text-accent">
@@ -297,8 +293,7 @@ export default async function WelcomePage({ searchParams }: PageProps<"/app/welc
           </p>
         ) : (
           <p className="text-muted">
-            Brings over your tickets with their full history, plus macros, tags, rules, contacts and agents. Anything that doesn&apos;t fit is
-            listed in a report and kept in an archive.
+            Brings over your tickets with their full history, plus macros, tags, rules, contacts and agents. Anything that doesn&apos;t fit is listed in a report and kept.
           </p>
         )}
         <ul className="grid gap-2 sm:grid-cols-2">

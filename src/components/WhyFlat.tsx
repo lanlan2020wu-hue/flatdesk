@@ -13,8 +13,7 @@ export default function WhyFlat({ headingLevel = "h3", leftOut = true }: { headi
       <div data-play="" suppressHydrationWarning className="grid max-w-3xl gap-4">
         <H className="ink font-display text-3xl leading-tight">Why it costs less, and what you give up.</H>
         <p className="max-w-[62ch] text-muted">
-          If the price looks low for what&apos;s included, here&apos;s why. Below is where the savings come from, what Flatdesk doesn&apos;t do, and how
-          to check the quality on your own tickets before you pay.
+          If the price looks low for what&apos;s included, here&apos;s why: where the savings come from, what Flatdesk doesn&apos;t do, and how to check the quality on your own tickets before you pay.
         </p>
       </div>
 

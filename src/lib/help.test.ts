@@ -73,11 +73,13 @@ test("help center addresses, search and AI knowledge", async () => {
     { id: OTHER, name: "Help Test Co", inboundKey: "helptest02", widgetKey: "helpwidget02" },
   ]);
 
-  // Same name, different address; and asking twice keeps the first.
+  // Same name, clearly different addresses that can't be guessed from the name; asking twice keeps the first.
   const a = await ensureHelpSlug(ORG);
   const b = await ensureHelpSlug(OTHER);
-  assert.equal(a, "help-test-co");
-  assert.equal(b, "help-test-co-2");
+  assert.match(a, /^help-test-co-[a-z2-9]{6}$/);
+  assert.match(b, /^help-test-co-[a-z2-9]{6}$/);
+  assert.notEqual(a, b);
+  assert.ok(validHelpSlug(a) && validHelpSlug(b));
   assert.equal(await ensureHelpSlug(ORG), a);
 
   await db.insert(schema.articles).values([
@@ -101,7 +103,7 @@ test("help center addresses, search and AI knowledge", async () => {
   const kb = await articleKnowledge(ORG);
   assert.equal(kb.length, 2);
   assert.ok(kb.every((k) => k.name !== "Refund exceptions"));
-  assert.match(kb.find((k) => k.name === "Shipping times")!.body, /Help center article: https?:\/\/.+\/help\/help-test-co\/shipping-times$/);
+  assert.match(kb.find((k) => k.name === "Shipping times")!.body, /Help center article: https?:\/\/.+\/help\/help-test-co-[a-z2-9]{6}\/shipping-times$/);
   const all = await loadKnowledge(ORG);
   assert.deepEqual(all.map((k) => k.name).sort(), ["Greeting", "Refunds and returns", "Shipping times"]);
 });

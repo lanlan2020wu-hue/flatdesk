@@ -24,8 +24,7 @@ export default async function ImportPage() {
         <p className="eyebrow">Workspace</p>
         <h1 className="font-display text-3xl">Bring your help desk with you</h1>
         <p className="text-muted">
-          Flatdesk copies everything it can read and keeps the original of every record, so nothing is dropped. Anything that doesn&apos;t
-          have a place in Flatdesk yet is listed in a report instead of disappearing. Your old help desk isn&apos;t changed.
+          Flatdesk copies everything it can read and keeps the original of every record. Anything without a place in Flatdesk yet is listed in a report. Your old help desk isn&apos;t changed.
         </p>
       </header>
 

@@ -52,7 +52,7 @@ export default function ImportRunner({ id, retryAt }: { id: string; retryAt: str
         ? "Having trouble reaching the server. Retrying…"
         : waitingUntil && new Date(waitingUntil) > new Date()
           ? "The old help desk asked us to slow down. Continuing in a moment…"
-          : "Importing. Keep this page open; if you close it, the import pauses and continues when you come back."}
+          : "Importing. Keep this page open. If you close it, the import pauses until you come back."}
     </p>
   );
 }

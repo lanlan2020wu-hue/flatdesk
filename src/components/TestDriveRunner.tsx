@@ -42,7 +42,7 @@ export default function TestDriveRunner() {
     <p aria-live="polite" className="rounded-lg bg-accent-soft px-4 py-3 text-sm">
       {problem
         ? "Having trouble reaching the server. Retrying…"
-        : "Drafting. Keep this page open; if you close it, the test drive pauses and continues when you come back."}
+        : "Drafting. Keep this page open. If you close it, the test drive pauses until you come back."}
     </p>
   );
 }

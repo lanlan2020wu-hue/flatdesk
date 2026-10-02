@@ -85,8 +85,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
         <section className="card grid gap-3 p-5 sm:p-6">
           <h2 className="font-medium">Website chat</h2>
           <p className="text-muted">
-            Paste this before the closing &lt;/body&gt; tag of your website. Visitors get a chat button; their messages become chat tickets
-            here, and your replies reach them in the chat and by email.
+            Paste this before the closing &lt;/body&gt; tag on your site. Visitors get a chat button. Their messages become tickets here, and your replies reach them in the chat and by email.
           </p>
           <pre className="num overflow-x-auto rounded-lg border border-dashed border-accent/40 bg-accent-soft px-3 py-2 text-sm select-all">
             {`<script src="${siteOrigin}/widget.js" data-key="${org.widgetKey}" async></script>`}
@@ -146,8 +145,8 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
               )}
               <p className="text-sm text-muted">
                 {yearly
-                  ? "Seats follow your team members. A new seat is invoiced now for the rest of the year; a freed seat stays paid until renewal, and the next person to join takes it at no charge."
-                  : "Seats follow your team members: adding or removing someone updates the next bill. Prices shown are before any design-partner discount, which your invoices show."}
+                  ? "Seats follow your team. A new seat is charged now for the rest of the year. If someone leaves, their seat stays paid until renewal and the next person to join takes it for free."
+                  : "Seats follow your team. Adding or removing someone changes the next bill. Prices here are before any design partner discount, which shows on your invoices."}
               </p>
             </div>
             {isAdmin && subscribed ? (
@@ -194,8 +193,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
             AI answers
           </h2>
           <p className="text-muted">
-            The AI answers new email and chat tickets when your notes or macros cover the question, and hands everything else to your team. It
-            answers up to 3 follow-ups on the same ticket. A ticket counts toward the allowance once, and not at all if the AI hands it to your team.
+            The AI answers new email and chat tickets when your notes or macros cover the question, and hands the rest to your team. It answers up to 3 follow-ups on a ticket. Each ticket counts once, and not at all if the AI hands it over.
           </p>
         </div>
 
@@ -273,8 +271,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
               Alerts in Slack or anywhere else
             </h2>
             <p className="text-muted">
-              Post to a Slack channel (or Discord, Google Chat, or any webhook) when a new ticket needs your team, and when a customer
-              writes back to an AI answer, so nobody has to sit watching the inbox.
+              Post to Slack, Discord, Google Chat or any webhook when a new ticket needs your team, or a customer writes back to an AI answer. Nobody has to watch the inbox.
             </p>
           </div>
           {alertsNotice === "sent" && <p className="rounded-lg border border-accent/30 bg-accent-soft px-3 py-2 text-sm" role="status">Test alert sent. Check your channel.</p>}
@@ -341,7 +338,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
               Response target and ratings
             </h2>
             <p className="text-muted">
-              New tickets show how long is left for a first reply, turn amber near the target, and are flagged once they&apos;re overdue. Reports show how often you hit it.
+              New tickets show how long is left for a first reply, turn amber near the target, and get flagged when late. Reports show how often you hit it.
             </p>
           </div>
           {serviceNotice && <p className="rounded-lg border border-warn/40 bg-warn-soft px-3 py-2 text-sm text-warn" role="alert">{serviceNotice}</p>}
@@ -390,8 +387,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
                 <span>
                   Ask customers to rate replies
                   <span className="block text-sm text-muted">
-                    Every reply email, from your team or the AI, ends with Great, Okay and Not good. One click rates it; the rating shows on the reply and in
-                    Reports. A Not good on an AI answer sends the ticket to your team and it stops counting toward the AI allowance.
+                    Every reply email ends with Great, Okay and Not good. One click rates it, and the rating shows on the reply and in Reports. A Not good on an AI answer sends the ticket to your team and it stops counting.
                   </span>
                 </span>
               </label>
@@ -409,8 +405,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
             Team
           </h2>
           <p className="text-muted">
-            Viewer seats are free. A viewer can read every ticket and report but can&apos;t reply, change tickets or edit macros. Good for managers,
-            founders and other teams who need to look in.
+            Viewer seats are free. Viewers can read every ticket and report but can&apos;t reply, change tickets or edit macros. Good for managers and founders who want to look in.
           </p>
         </div>
         <ul className="grid divide-y divide-line">

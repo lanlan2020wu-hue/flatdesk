@@ -44,9 +44,10 @@ export const orgs = pgTable("orgs", {
   nextTicketNumber: integer("next_ticket_number").notNull().default(1),
   // Customers' email reaches the org at <inboundKey>@INBOUND_DOMAIN. Teams
   // forward their own support address there.
-  inboundKey: text("inbound_key").notNull().unique().default(sql`substr(md5(random()::text), 1, 10)`),
+  // Drawn from gen_random_uuid(), which uses a secure random source (random() does not).
+  inboundKey: text("inbound_key").notNull().unique().default(sql`substr(md5(gen_random_uuid()::text), 1, 12)`),
   // Public id in the website chat widget's embed code.
-  widgetKey: text("widget_key").notNull().unique().default(sql`substr(md5(random()::text), 1, 12)`),
+  widgetKey: text("widget_key").notNull().unique().default(sql`substr(md5(gen_random_uuid()::text), 1, 16)`),
   // The team's public support address (support@theircompany.com), entered
   // during onboarding. Used for the end-to-end test email.
   supportEmail: text("support_email"),
