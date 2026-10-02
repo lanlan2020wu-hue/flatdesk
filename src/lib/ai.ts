@@ -209,6 +209,14 @@ export async function loadKnowledge(orgId: string, opts?: { skipSuggestedSince: 
   return [...saved, ...help];
 }
 
+// Who the AI is told it's answering. A chat visitor can type any email, so on
+// chat tickets the stored name (which may be a real customer's, or imported)
+// is left out: greeting a visitor by it would confirm who that address belongs to.
+function senderLine(channel: string, customer: { name: string | null; email: string } | undefined) {
+  if (!customer) return "";
+  return customer.name && channel !== "chat" ? `${customer.name} <${customer.email}>` : customer.email;
+}
+
 export type Draft = {
   decision: "answer" | "handoff";
   reply: string; // empty on a handoff
@@ -302,7 +310,7 @@ export async function answerNewTicket(orgId: string, ticketId: string) {
   try {
     const knowledge = await loadKnowledge(orgId);
     const d = await draftAnswer(org, knowledge, {
-      from: customer?.name ? `${customer.name} <${customer.email}>` : (customer?.email ?? ""),
+      from: senderLine(ticket.channel, customer),
       subject: ticket.subject,
       body: thread[0].body,
       attached: attached.map((f) => f.filename),
@@ -410,7 +418,7 @@ export async function answerFollowUp(orgId: string, ticketId: string) {
       org,
       await loadKnowledge(orgId),
       {
-        from: customer?.name ? `${customer.name} <${customer.email}>` : (customer?.email ?? ""),
+        from: senderLine(ticket.channel, customer),
         subject: ticket.subject,
         body: first.body,
         attached: (files.get(first.id) ?? []).map((f) => f.filename),

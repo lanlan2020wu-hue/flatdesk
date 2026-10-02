@@ -102,7 +102,8 @@ export function buildRequest(url: string, secret: string, p: AlertPayload): { bo
     return { body: JSON.stringify({ text, unfurl_links: false }), headers };
   }
   if (kind === "discord") return { body: JSON.stringify({ content: p.text.slice(0, 1900) + (p.ticket ? `\n${p.ticket.url}` : ""), allowed_mentions: { parse: [] } }), headers };
-  if (kind === "google-chat") return { body: JSON.stringify({ text: p.text + (p.ticket ? `\n${p.ticket.url}` : "") }), headers };
+  // Google Chat reads <users/all> as an @-mention, and the text carries what a customer typed.
+  if (kind === "google-chat") return { body: JSON.stringify({ text: p.text.replace(/</g, "‹").replace(/>/g, "›") + (p.ticket ? `\n${p.ticket.url}` : "") }), headers };
   const body = JSON.stringify(p);
   return { body, headers: { ...headers, "x-flatdesk-event": p.event, "x-flatdesk-signature": sign(secret, body) } };
 }

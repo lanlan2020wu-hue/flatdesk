@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { noNul } from "@/lib/ids";
 
 const { tickets, messages, customers, agents, rules, orgs } = schema;
 
@@ -111,6 +112,7 @@ export async function listAgents(orgId: string) {
 
 type NewTicket = {
   orgId: string;
+  visitorToken?: string; // chat: lets the visitor's browser read the conversation
   channel: "email" | "chat";
   customerEmail: string;
   customerName?: string | null;
@@ -122,7 +124,15 @@ type NewTicket = {
   emailMessageId?: string | null;
 };
 
-export async function createTicket(input: NewTicket) {
+export async function createTicket(raw: NewTicket) {
+  const input = {
+    ...raw,
+    customerEmail: noNul(raw.customerEmail),
+    customerName: raw.customerName ? noNul(raw.customerName) : raw.customerName,
+    subject: noNul(raw.subject),
+    body: noNul(raw.body),
+    emailMessageId: raw.emailMessageId ? noNul(raw.emailMessageId) : raw.emailMessageId,
+  };
   return db.transaction(async (tx) => {
     const [customer] = await tx
       .insert(customers)
@@ -153,6 +163,7 @@ export async function createTicket(input: NewTicket) {
         customerId: customer.id,
         tags,
         assigneeId,
+        visitorToken: input.visitorToken ?? null,
       })
       .returning();
 
@@ -254,8 +265,8 @@ export async function addCustomerMessage(opts: { orgId: string; ticketId: string
       ticketId: opts.ticketId,
       authorType: "customer",
       authorId: opts.customerId,
-      body: opts.body,
-      emailMessageId: opts.emailMessageId ?? null,
+      body: noNul(opts.body),
+      emailMessageId: opts.emailMessageId ? noNul(opts.emailMessageId) : null,
     }).returning({ id: messages.id });
     await tx
       .update(tickets)

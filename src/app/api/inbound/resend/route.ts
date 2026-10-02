@@ -3,7 +3,7 @@ import { answerNewTicket } from "@/lib/ai";
 import { alertNewTicket } from "@/lib/alerts";
 import { emailConfig, htmlToText, resend } from "@/lib/email";
 import { downloadInbound } from "@/lib/attachments";
-import { handleInboundEmail } from "@/lib/inbound";
+import { handleInboundEmailAll } from "@/lib/inbound";
 
 // Resend calls this for every email sent to INBOUND_DOMAIN (event
 // "email.received"). The webhook carries metadata only, so the body is
@@ -39,9 +39,10 @@ export async function POST(request: Request) {
     return Response.json({ error: error?.message ?? "Could not fetch email." }, { status: 502 });
   }
 
-  const result = await handleInboundEmail({
+  // Envelope recipients first: they say which team this copy was delivered for.
+  const results = await handleInboundEmailAll({
     from: email.from,
-    to: [...email.to, ...(email.cc ?? []), ...(email.received_for ?? [])],
+    to: [...(email.received_for ?? []), ...email.to, ...(email.cc ?? [])],
     subject: email.subject,
     text: email.text ?? (email.html ? htmlToText(email.html) : ""),
     headers: email.headers,
@@ -56,14 +57,17 @@ export async function POST(request: Request) {
       return downloadInbound(data.data);
     },
   });
-  const { orgId, ticketId } = result;
-  if (orgId && ticketId) {
-    const created = result.action === "created";
+  const done = results.filter((r) => r.orgId && r.ticketId);
+  if (done.length) {
     after(async () => {
-      await answerNewTicket(orgId, ticketId);
-      if (created) await alertNewTicket(orgId, ticketId);
+      for (const r of done) {
+        // Mail whose From failed the sender's own DMARC check is never answered by
+        // the AI: someone may be pretending to be a customer to get their details.
+        if (!r.unverified) await answerNewTicket(r.orgId!, r.ticketId!);
+        if (r.action === "created") await alertNewTicket(r.orgId!, r.ticketId!);
+      }
     });
-    return Response.json({ ticket: result.ticket, action: result.action });
+    return Response.json({ tickets: done.map((r) => ({ ticket: r.ticket, action: r.action })) });
   }
-  return Response.json(result);
+  return Response.json(results[0] ?? { ignored: true });
 }

@@ -93,9 +93,15 @@ export async function tryTheAi(orgId: string, question: string, draft: typeof dr
   const org = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, orgId) });
   if (!org) throw new TestDriveError("Team not found.");
   if (access(org).state === "locked") throw new TestDriveError("The free trial has ended. Add a card in Settings to keep going.");
-  if (Number(org.testDriveSpentUsd) + TEST_DRIVE.reserveUsd > TEST_DRIVE.budgetUsd) {
-    throw new TestDriveError("You've used up the free tries. Once your inbox is connected, the AI will answer real tickets.");
-  }
+  // Hold the most a call can cost before making it, in one statement, so quick
+  // repeated tries can't all pass the budget check at once.
+  const [held] = await db
+    .update(schema.orgs)
+    .set({ testDriveSpentUsd: sql`${schema.orgs.testDriveSpentUsd} + ${TEST_DRIVE.reserveUsd}` })
+    .where(and(eq(schema.orgs.id, orgId), sql`${schema.orgs.testDriveSpentUsd} + ${TEST_DRIVE.reserveUsd} <= ${TEST_DRIVE.budgetUsd}`))
+    .returning({ id: schema.orgs.id });
+  if (!held) throw new TestDriveError("You've used up the free tries. Once your inbox is connected, the AI will answer real tickets.");
+  // A call that fails may still have been charged, so the hold stays unless it finishes.
   const d = await draft(
     org,
     await loadKnowledge(orgId),
@@ -104,7 +110,7 @@ export async function tryTheAi(orgId: string, question: string, draft: typeof dr
   );
   await db
     .update(schema.orgs)
-    .set({ testDriveSpentUsd: sql`${schema.orgs.testDriveSpentUsd} + ${d.metered.costUsd}` })
+    .set({ testDriveSpentUsd: sql`${schema.orgs.testDriveSpentUsd} + ${d.metered.costUsd} - ${TEST_DRIVE.reserveUsd}` })
     .where(eq(schema.orgs.id, orgId));
   if (d.decision === "answer") await updateOnboarding(orgId, (ob) => ({ ...ob, aiAnswered: true }));
   return { decision: d.decision, reply: d.reply, reason: d.reason, sources: d.sources };

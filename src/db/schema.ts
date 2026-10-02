@@ -86,6 +86,7 @@ export type Onboarding = {
   gmailConfirmation?: { code: string | null; link: string | null; receivedAt: string };
   testToken?: string; // subject token of the end-to-end test email
   testSentAt?: string;
+  testReplyTo?: string; // the admin who sent the test, who gets replies to the test ticket
   source?: SignupSource; // where the person who created the team came from (lib/attribution.ts)
   milestones?: Partial<Record<Milestone, string>>; // when each funnel milestone first happened (lib/funnel.ts)
 };

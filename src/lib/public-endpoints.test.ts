@@ -71,7 +71,7 @@ test("new chats are limited per visitor, and a filled hidden field marks a bot",
   const { hit, ipKey, LIMITS, tooMany } = await import("./rate-limit");
   const { isBot } = await import("./chat");
   const req = (ip: string) => new Request("http://x", { headers: { "x-forwarded-for": `${ip}, 10.0.0.1` } });
-  const chat = (ip: string) => hit(LIMITS.chatStart(ipKey(req(ip)), ORG));
+  const chat = (ip: string) => hit(LIMITS.chatStart(ipKey(req(ip))));
   for (let i = 0; i < 5; i++) assert.equal((await chat("198.51.100.1")).ok, true);
   const blocked = await chat("198.51.100.1");
   assert.equal(blocked.ok, false);
