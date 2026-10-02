@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { dismissSuggestionAction, saveSuggestedMacroAction } from "@/app/app/actions";
+import TagInput from "@/components/TagInput";
 import type { Suggestion } from "@/lib/macro-suggestions";
 
 const field = "field";
@@ -11,7 +12,7 @@ const Spark = ({ className = "size-4" }: { className?: string }) => (
 );
 
 // One repeated answer, ready to save. Everything is editable before saving.
-export function SuggestionCard({ s, aiOn }: { s: Suggestion; aiOn: boolean }) {
+export function SuggestionCard({ s, aiOn, tags }: { s: Suggestion; aiOn: boolean; tags: string[] }) {
   return (
     <details className="card overflow-hidden border-accent/30">
       <summary className="flex cursor-pointer flex-wrap items-center justify-between gap-3 px-5 py-4 transition-colors hover:bg-surface-2/60">
@@ -34,7 +35,7 @@ export function SuggestionCard({ s, aiOn }: { s: Suggestion; aiOn: boolean }) {
         <input type="hidden" name="question" value={s.question ?? ""} />
         <label className="grid gap-1.5 font-medium" htmlFor={`sname-${s.key}`}>Name<input id={`sname-${s.key}`} name="name" required defaultValue={s.name} className={`${field} font-normal`} /></label>
         <label className="grid gap-1.5 font-medium" htmlFor={`sbody-${s.key}`}>Reply<textarea id={`sbody-${s.key}`} name="body" required rows={5} defaultValue={s.body} className={`${field} font-normal`} /></label>
-        <label className="grid gap-1.5 font-medium" htmlFor={`stags-${s.key}`}>Add tags<input id={`stags-${s.key}`} name="addTags" defaultValue={s.addTags.join(", ")} placeholder="refund" className={`${field} font-normal`} /></label>
+        <label className="grid gap-1.5 font-medium" htmlFor={`stags-${s.key}`}>Add tags<TagInput tags={tags} id={`stags-${s.key}`} name="addTags" defaultValue={s.addTags.join(", ")} placeholder="refund" className={`${field} font-normal`} /></label>
         <p className="text-muted">
           Seen on{" "}
           {s.examples.map((n, i) => (
@@ -54,7 +55,7 @@ export function SuggestionCard({ s, aiOn }: { s: Suggestion; aiOn: boolean }) {
   );
 }
 
-export function SuggestionsSection({ suggestions, aiOn }: { suggestions: Suggestion[]; aiOn: boolean }) {
+export function SuggestionsSection({ suggestions, aiOn, tags }: { suggestions: Suggestion[]; aiOn: boolean; tags: string[] }) {
   // Nothing found yet: the page intro already says how macros get found.
   if (!suggestions.length) return null;
   return (
@@ -67,7 +68,7 @@ export function SuggestionsSection({ suggestions, aiOn }: { suggestions: Suggest
         <p className="text-sm text-muted">Your team keeps typing these answers.{aiOn && " The AI writes each one up from the versions you sent."} Save one and it&apos;s offered on tickets that ask the same thing, and the AI uses it too. None of this uses your AI allowance.</p>
       </div>
       {suggestions.map((s) => (
-        <SuggestionCard key={s.key} s={s} aiOn={aiOn} />
+        <SuggestionCard key={s.key} s={s} aiOn={aiOn} tags={tags} />
       ))}
     </div>
   );

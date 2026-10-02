@@ -3,6 +3,7 @@ import Link from "next/link";
 import { after } from "next/server";
 import { db, schema } from "@/db";
 import HowItWorks from "@/components/HowItWorks";
+import TagInput from "@/components/TagInput";
 import { SuggestionsSection } from "@/components/MacroSuggestion";
 import MacroUpdates from "@/components/MacroUpdates";
 import { requireOpenPage } from "@/lib/auth";
@@ -11,7 +12,7 @@ import { access } from "@/lib/billing";
 import { macroUpdates } from "@/lib/macro-drift";
 import { macroSuggestions } from "@/lib/macro-suggestions";
 import { withAiDrafts, withUpdateDrafts, writeMacroUpdates, writeMissingDrafts } from "@/lib/macro-writer";
-import { listAgents } from "@/lib/tickets";
+import { listAgents, orgTags } from "@/lib/tickets";
 import { deleteMacroAction, deleteRuleAction, saveMacroAction, saveRuleAction, toggleRuleAction } from "../actions";
 
 export const metadata = { title: "AI macros and rules" };
@@ -21,13 +22,14 @@ const SOURCE_NAME: Record<string, string> = { zendesk: "Zendesk", intercom: "Int
 
 export default async function MacrosPage() {
   const s = await requireOpenPage();
-  const [macros, rules, agents, imported, found, drifted] = await Promise.all([
+  const [macros, rules, agents, imported, found, drifted, tags] = await Promise.all([
     db.select().from(schema.macros).where(eq(schema.macros.orgId, s.orgId)).orderBy(asc(schema.macros.name)),
     db.select().from(schema.rules).where(eq(schema.rules.orgId, s.orgId)).orderBy(asc(schema.rules.createdAt)),
     listAgents(s.orgId),
     db.select().from(schema.importedRules).where(eq(schema.importedRules.orgId, s.orgId)).orderBy(asc(schema.importedRules.name)),
     macroSuggestions(s.orgId),
     macroUpdates(s.orgId),
+    orgTags(s.orgId),
   ]);
   // Behind the paywall the page still renders, so it must not start paid AI calls.
   const org = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) });
@@ -84,7 +86,7 @@ export default async function MacrosPage() {
 
         <MacroUpdates updates={updates} aiOn={aiConfigured()} canApply={s.role === "admin"} />
 
-        <SuggestionsSection suggestions={suggestions} aiOn={aiConfigured()} />
+        <SuggestionsSection suggestions={suggestions} aiOn={aiConfigured()} tags={tags} />
 
         {/* Saved macros as one ruled list; each row opens to edit. */}
         {macros.length > 0 && (
@@ -115,7 +117,7 @@ export default async function MacrosPage() {
               </div>
             )}
             {m.question && <p className="mx-5 mt-1 text-sm text-muted">Offered on tickets that ask: <span className="text-ink">{m.question}</span></p>}
-            <MacroForm macro={m} agents={team} />
+            <MacroForm macro={m} agents={team} tags={tags} />
             <form action={deleteMacroAction} className="px-5 pb-5">
               <input type="hidden" name="id" value={m.id} />
               <button className="link text-sm text-warn">Delete macro</button>
@@ -139,7 +141,7 @@ export default async function MacrosPage() {
         <details className="grid gap-3">
           <summary className="btn btn-secondary w-max cursor-pointer list-none">Write a macro yourself</summary>
           <div className="card mt-3">
-            <MacroForm agents={team} />
+            <MacroForm agents={team} tags={tags} />
           </div>
         </details>
       </section>
@@ -177,7 +179,7 @@ export default async function MacrosPage() {
 
         {s.role === "admin" && (
           <form action={saveRuleAction} className="flex flex-wrap items-end gap-3 text-sm">
-            <label className="grid gap-1.5 font-medium" htmlFor="ifTag">If tagged<input id="ifTag" name="ifTag" required placeholder="billing" className={`${field} font-normal`} /></label>
+            <label className="grid gap-1.5 font-medium" htmlFor="ifTag">If tagged<TagInput tags={tags} multiple={false} id="ifTag" name="ifTag" required placeholder="billing" className={`${field} font-normal`} /></label>
             <label className="grid gap-1.5 font-medium" htmlFor="assignTo">assign to
               <select id="assignTo" name="assignTo" required className={`${field} font-normal`}>
                 {team.map((a) => <option key={a.userId} value={a.userId}>{a.name}</option>)}
@@ -223,7 +225,7 @@ export default async function MacrosPage() {
   );
 }
 
-function MacroForm({ macro, agents }: { macro?: typeof schema.macros.$inferSelect; agents: { userId: string; name: string }[] }) {
+function MacroForm({ macro, agents, tags }: { macro?: typeof schema.macros.$inferSelect; agents: { userId: string; name: string }[]; tags: string[] }) {
   const key = macro?.id ?? "new";
   return (
     <form action={saveMacroAction} className="grid gap-4 p-5 text-sm">
@@ -231,7 +233,7 @@ function MacroForm({ macro, agents }: { macro?: typeof schema.macros.$inferSelec
       <label className="grid gap-1.5 font-medium" htmlFor={`name-${key}`}>Name<input id={`name-${key}`} name="name" required defaultValue={macro?.name} className={`${field} font-normal`} /></label>
       <label className="grid gap-1.5 font-medium" htmlFor={`body-${key}`}>Reply<textarea id={`body-${key}`} name="body" required rows={4} defaultValue={macro?.body} className={`${field} font-normal`} /></label>
       <div className="grid gap-3 sm:grid-cols-2">
-        <label className="grid gap-1.5 font-medium" htmlFor={`tags-${key}`}>Add tags<input id={`tags-${key}`} name="addTags" defaultValue={macro?.addTags.join(", ")} placeholder="refund" className={`${field} font-normal`} /></label>
+        <label className="grid gap-1.5 font-medium" htmlFor={`tags-${key}`}>Add tags<TagInput tags={tags} id={`tags-${key}`} name="addTags" defaultValue={macro?.addTags.join(", ")} placeholder="refund" className={`${field} font-normal`} /></label>
         <label className="grid gap-1.5 font-medium" htmlFor={`status-${key}`}>Set status
           <select id={`status-${key}`} name="setStatus" defaultValue={macro?.setStatus ?? ""} className={`${field} font-normal`}>
             <option value="">Leave as is</option>
