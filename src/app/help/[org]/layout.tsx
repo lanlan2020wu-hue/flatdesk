@@ -29,11 +29,11 @@ export default async function HelpLayout({ children, params }: LayoutProps<"/hel
               Help center by <Link href="/" className="link">Flatdesk</Link>
             </span>
           </span>
-          {org.supportEmail && (
-            <span>
-              Still stuck? Email <a href={`mailto:${org.supportEmail}`} className="link text-accent">{org.supportEmail}</a>
-            </span>
-          )}
+          {/* The chat window asks for the visitor's email each time, and the AI answers there. */}
+          <span>
+            Still stuck?{" "}
+            <a href={`/chat/${org.widgetKey}`} target="_blank" rel="noreferrer" className="link text-accent">Chat with us</a>
+          </span>
         </div>
       </footer>
     </div>

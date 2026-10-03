@@ -40,13 +40,8 @@ export default async function HelpHome({ params, searchParams }: PageProps<"/hel
         ) : (
           <p className="card px-5 py-4 text-sm text-muted">
             {q ? "Nothing matched. Try fewer or different words" : "No articles yet"}
-            {org.supportEmail ? (
-              <>
-                , or email <a href={`mailto:${org.supportEmail}`} className="link text-accent">{org.supportEmail}</a> and we&apos;ll help.
-              </>
-            ) : (
-              "."
-            )}
+            , or{" "}
+            <a href={`/chat/${org.widgetKey}`} target="_blank" rel="noreferrer" className="link text-accent">chat with us</a> and we&apos;ll help.
           </p>
         )}
         {q && (

@@ -40,7 +40,7 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
             <Logo href="/app/inbox" onField />
           </div>
           {/* Tickets come in the way customers send them: the chat window asks for their email every time, and the AI answers. */}
-          <a href={`/chat/${org?.widgetKey}`} target="_blank" rel="noreferrer" className="btn btn-on-field btn-sm w-full" title="Opens your chat window, where the customer gives their email">
+          <a href={`/chat/${org?.widgetKey}?new`} target="_blank" rel="noreferrer" className="btn btn-on-field btn-sm w-full" title="Opens your chat window, where the customer gives their email">
             <svg viewBox="0 0 20 20" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M10 4v12M4 10h12" /></svg>
             New ticket
           </a>

@@ -15,7 +15,7 @@ import { milestone } from "@/lib/funnel";
 import { hit, LIMITS } from "@/lib/rate-limit";
 import { TEST_TAG, tryTheAi, updateOnboarding, type TryResult } from "@/lib/onboarding";
 import { TestDriveError } from "@/lib/test-drive";
-import { createTicket } from "@/lib/tickets";
+import { addSystemNote, createTicket, NO_AI_SETUP_NOTE } from "@/lib/tickets";
 
 const EMAIL = /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/;
 const STEPS: OnboardingStep[] = ["ai", "invite", "inbox", "import", "test"];
@@ -152,7 +152,7 @@ export async function sendTestEmailAction(): Promise<TestState> {
 
 export async function createSampleTicketAction() {
   const s = await requireAdmin();
-  await createTicket({
+  const ticket = await createTicket({
     orgId: s.orgId,
     channel: "email",
     customerEmail: "sam.sample@example.com",
@@ -162,6 +162,7 @@ export async function createSampleTicketAction() {
     authorType: "customer",
     tags: [TEST_TAG],
   });
+  await addSystemNote(s.orgId, ticket.id, NO_AI_SETUP_NOTE);
   await milestone(s.orgId, "sample_ticket_created");
   revalidatePath("/app/welcome");
   revalidatePath("/app", "layout");

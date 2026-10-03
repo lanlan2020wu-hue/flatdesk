@@ -4,7 +4,7 @@ import { emailConfig, isAutoReply, matchRecipients, parseAddress, senderCheck, s
 import { milestone } from "@/lib/funnel";
 import { TEST_TAG, updateOnboarding } from "@/lib/onboarding";
 import { saveAttachments, type NewFile } from "@/lib/attachments";
-import { addCustomerMessage, createTicket } from "@/lib/tickets";
+import { addCustomerMessage, addSystemNote, createTicket, NO_AI_SETUP_NOTE } from "@/lib/tickets";
 
 // The same email delivered twice at once gets past the check above; the unique
 // index on (org, Message-ID) stops the second copy, which is then ignored.
@@ -109,6 +109,7 @@ async function handleFor(mail: Inbound, target: { key: string; number: number | 
       emailMessageId: mail.messageId,
     });
     await storeFiles(mail, org.id, ticket.id, ticket.messageId);
+    await addSystemNote(org.id, ticket.id, NO_AI_SETUP_NOTE);
     await updateOnboarding(org.id, (ob) => ({ ...ob, testToken: undefined }));
     await milestone(org.id, "channel_connected", { channel: "email" });
     return { ticket: ticket.number, action: "created" };
