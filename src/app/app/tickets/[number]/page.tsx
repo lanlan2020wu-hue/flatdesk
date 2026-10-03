@@ -7,6 +7,7 @@ import Composer from "@/components/Composer";
 import CopilotSummary from "@/components/CopilotSummary";
 import SlaBadge from "@/components/SlaBadge";
 import TagInput from "@/components/TagInput";
+import TeachAi from "@/components/TeachAi";
 import { RepeatPrompt } from "@/components/MacroSuggestion";
 import { db, schema } from "@/db";
 import { attachmentsByMessage, formatBytes } from "@/lib/attachments";
@@ -17,6 +18,7 @@ import { aiConfigured } from "@/lib/ai";
 import { cachedSummary } from "@/lib/copilot";
 import { identifyMacro, repeatPrompt } from "@/lib/macro-suggestions";
 import { STATUS_LABEL } from "@/lib/receipts";
+import { teachSpot } from "@/lib/teach";
 import { formatDue, shortDuration, slaState, targetLabel } from "@/lib/sla";
 import { getTicket, listAgents, orgTags, parseTicketNumber } from "@/lib/tickets";
 import { replyAction, updateTicketAction } from "../../actions";
@@ -62,6 +64,8 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
   const lastVisible = thread.filter((m) => !m.internal && m.authorType !== "system").at(-1);
   const suggestedMacro = ticket.status !== "closed" && lastVisible?.authorType === "customer" ? identifyMacro(lastVisible.body, macros) : null;
   const sla = org ? slaState(ticket, org) : null;
+  // Under the AI's latest handoff note, a box to write the answer it was missing.
+  const teachAt = s.viewer ? -1 : teachSpot(thread);
   // The receipt line for this ticket's AI answer, shown under that answer.
   const receipt =
     aiEvent && aiEvent.kind !== "draft"
@@ -155,6 +159,7 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
                     </p>
                   )}
                 </div>
+                {i === teachAt && <TeachAi ticketId={ticket.id} subject={ticket.subject} customer={customer.name?.split(" ")[0] || "the customer"} />}
               </li>
             );
           })}
