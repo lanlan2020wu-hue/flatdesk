@@ -115,7 +115,7 @@ function ChapterHead({ tab, title, children, id }: { tab: string; title: string;
 
 export const metadata: Metadata = pageMeta({
   title: "Flatdesk: flat-price help desk with AI answers included",
-  description: `A help desk for teams of 3 to 15 agents. ${PRICE_PHRASE}, with ${PLAN.includedPerAgent} AI answers per agent included and capped, so the bill doesn't move. Imports from Zendesk, Intercom, Freshdesk and Help Scout.`,
+  description: `Flatdesk is a help desk for teams of 3 to 15 agents: ${PRICE_PHRASE}, with ${PLAN.includedPerAgent} AI answers per agent included and capped. A Zendesk alternative that imports your tickets, customers and macros.`,
   path: "/",
 });
 
@@ -168,7 +168,7 @@ export default function Home() {
       </div>
 
       <section id="flat-rate" className="mx-auto grid w-full max-w-6xl scroll-mt-20 gap-14 px-4 pt-24 sm:px-6 sm:pt-32">
-        <ChapterHead id="flat-rate" tab="Flat rate" title="Many help desks charge for each AI answer. Flatdesk charges per agent.">
+        <ChapterHead id="flat-rate" tab="Flat rate" title="Many help desks charge for AI answers one by one. Flatdesk charges per agent.">
           An AI answer is a reply the AI sends a customer by itself, by email or in your chat, with nobody on your team involved. When you pay per answer, a
           launch or a holiday rush shows up on your invoice. Here the bill depends only on how many agents you have, and the AI
           stops at its limit unless an admin says otherwise.
@@ -359,7 +359,7 @@ export default function Home() {
 
       <section id="switch" className="mx-auto grid w-full max-w-6xl scroll-mt-20 gap-12 px-4 pt-24 sm:px-6 sm:pt-32">
         <div data-play="" suppressHydrationWarning className="grid gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-16">
-          <h2 className="ink font-display text-[2.6rem] sm:text-6xl">How to switch.</h2>
+          <h2 className="ink font-display text-[2.6rem] sm:text-6xl">How to switch from Zendesk or Intercom.</h2>
           <p className="max-w-[52ch] self-end text-lg text-muted">One admin can do all four steps. The AI doesn&apos;t reply to any customer until you turn it on.</p>
         </div>
         <ol data-play="" suppressHydrationWarning className="relative grid gap-8 md:grid-cols-4 md:gap-6">
