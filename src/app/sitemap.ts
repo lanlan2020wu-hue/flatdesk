@@ -11,6 +11,7 @@ const PAGES = [
   ...SELLING_POINTS.map((p) => `/features/${p.slug}`),
   "/compare",
   ...RIVALS.map((r) => `/compare/${r.slug}`),
+  "/help-desk-for-small-teams",
   "/faq",
   "/ai-billing-changes-2026",
   "/terms",

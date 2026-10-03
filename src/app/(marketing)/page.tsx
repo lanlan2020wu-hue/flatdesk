@@ -8,8 +8,8 @@ import WhyFlat from "@/components/WhyFlat";
 import YearChart from "@/components/YearChart";
 import { AiShot, ImportShot, InboxShot, MacroShot, MacroUpdateShot, ReceiptShot, ReportShot } from "@/components/ProductShots";
 import { TRIAL_DAYS } from "@/lib/billing";
-import { organization, software, website } from "@/lib/seo";
-import { PLAN, usd } from "@/lib/pricing";
+import { organization, pageMeta, software, website } from "@/lib/seo";
+import { PLAN, PRICE_PHRASE, usd } from "@/lib/pricing";
 import { LEFT_OUT } from "@/lib/why-flat";
 
 // The page answers a visitor's reasons not to switch, in the order they come
@@ -113,7 +113,11 @@ function ChapterHead({ tab, title, children, id }: { tab: string; title: string;
   );
 }
 
-export const metadata: Metadata = { alternates: { canonical: "/" } };
+export const metadata: Metadata = pageMeta({
+  title: "Flatdesk: flat-price help desk with AI answers included",
+  description: `A help desk for teams of 3 to 15 agents. ${PRICE_PHRASE}, with ${PLAN.includedPerAgent} AI answers per agent included and capped, so the bill doesn't move. Imports from Zendesk, Intercom, Freshdesk and Help Scout.`,
+  path: "/",
+});
 
 export default function Home() {
   return (

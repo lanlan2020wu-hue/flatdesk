@@ -5,9 +5,9 @@ import { COMPARED_ON, RIVALS, costRows } from "@/lib/compare";
 import { breadcrumbs, pageMeta } from "@/lib/seo";
 
 export const metadata = pageMeta({
-  title: "Flatdesk vs Zendesk, Fin, Help Scout and more",
+  title: "Zendesk, Intercom, Help Scout and Freshdesk alternatives compared",
   description:
-    "Sourced comparisons of Flatdesk with Fin (formerly Intercom), Zendesk, Help Scout, Freshdesk, Front and Gorgias: monthly cost for real team sizes, how each bills AI, and when each is the better pick.",
+    "Looking for a Zendesk or Intercom alternative? Sourced comparisons of Flatdesk with Fin (formerly Intercom), Zendesk, Help Scout, Freshdesk, Front and Gorgias: monthly cost for real team sizes, how each bills AI, and when each is the better pick.",
   path: "/compare",
 });
 

@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import Link from "next/link";
 import AddOnTable from "@/components/AddOnTable";
 import WhyFlat from "@/components/WhyFlat";
 import { BILLING_FAQ } from "@/lib/faq";
 import { PLAN, PRICE_PHRASE, annualSavingsPct, usd } from "@/lib/pricing";
 
-export const metadata: Metadata = {
-  alternates: { canonical: "/pricing" },
-  title: "Pricing",
-  description: `${PRICE_PHRASE}, with ${PLAN.includedPerAgent} AI answers per agent included and capped by default.`,
-};
+export const metadata: Metadata = pageMeta({
+  title: `Help desk pricing: ${usd(PLAN.seatPrice)} per agent, AI included`,
+  description: `${PRICE_PHRASE}, with ${PLAN.includedPerAgent} AI answers per agent included and capped by default. One plan, every feature, no add-ons.`,
+  path: "/pricing",
+});
 
 const FAQ = BILLING_FAQ.map((f) => [f.q, f.a] as const);
 

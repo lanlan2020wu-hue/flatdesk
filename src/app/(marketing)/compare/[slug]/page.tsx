@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import CostTable from "@/components/CostTable";
 import Faq from "@/components/Faq";
 import JsonLd from "@/components/JsonLd";
-import { COMPARED_ON, RIVALS, cheaperAnswer, costRows, rival } from "@/lib/compare";
+import { COMPARED_ON, RIVALS, alternativeAnswer, cheaperAnswer, costRows, rival } from "@/lib/compare";
 import { breadcrumbs, faqPage, pageMeta } from "@/lib/seo";
 
 export function generateStaticParams() {
@@ -15,7 +15,8 @@ export async function generateMetadata({ params }: PageProps<"/compare/[slug]">)
   const r = rival((await params).slug);
   if (!r) return {};
   return pageMeta({
-    title: `Flatdesk vs ${r.title}: pricing and AI billing`,
+    // People search for "<rival> alternative" far more than "Flatdesk vs <rival>".
+    title: `${r.name} alternative: Flatdesk vs ${r.title} pricing`,
     description: r.answer.split(". ")[0].replace(/\.*$/, "."),
     path: `/compare/${r.slug}`,
     image: `/og/compare/${r.slug}`,
@@ -45,6 +46,7 @@ export default async function RivalPage({ params }: PageProps<"/compare/[slug]">
   if (!r) notFound();
   const faq = [
     { q: `Is Flatdesk cheaper than ${r.name}?`, a: cheaperAnswer(r) },
+    { q: `What's a good ${r.name} alternative for a small team?`, a: alternativeAnswer(r) },
     ...r.faq,
   ];
 

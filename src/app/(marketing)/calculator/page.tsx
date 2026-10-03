@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import { Suspense } from "react";
 import Calculator, { CALCULATOR_DEFAULTS, CalculatorFromQuery } from "@/components/Calculator";
 
-export const metadata: Metadata = {
-  alternates: { canonical: "/calculator" },
-  title: "Support bill calculator",
+export const metadata: Metadata = pageMeta({
+  title: "Help desk cost calculator: Zendesk, Intercom, Freshdesk, Help Scout",
   description:
     "Enter your agent count and AI resolutions to compare your Zendesk, Fin (formerly Intercom), Freshdesk or Help Scout bill with one flat price.",
-};
+  path: "/calculator",
+});
 
 export default function CalculatorPage() {
   return (
