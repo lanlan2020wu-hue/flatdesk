@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { eq } from "drizzle-orm";
 import AccountMenu from "@/components/AccountMenu";
 import AuthProvider from "@/components/AuthProvider";
 import Logo from "@/components/Logo";
 import MobileNav from "@/components/MobileNav";
 import Paywall from "@/components/Paywall";
+import { db, schema } from "@/db";
 import NavLink from "@/components/NavLink";
 import { requireSession, teamPlan } from "@/lib/auth";
 import { getOnboarding } from "@/lib/onboarding";
@@ -20,10 +22,11 @@ const Icon = ({ d }: { d: string }) => (
 
 export default async function AppLayout({ children }: LayoutProps<"/app">) {
   const s = await requireSession();
-  const [counts, { plan }, onboarding] = await Promise.all([
+  const [counts, { plan }, onboarding, org] = await Promise.all([
     viewCounts(s.orgId, s.userId),
     teamPlan(s.orgId),
     s.role === "admin" ? getOnboarding(s.orgId) : null,
+    db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId), columns: { widgetKey: true } }),
   ]);
   // teamPlan asks Stripe first when the row looks unpaid (it's stale right after Checkout).
 
@@ -36,10 +39,11 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
           <div className="hidden px-2 md:block">
             <Logo href="/app/inbox" onField />
           </div>
-          <Link href="/app/tickets/new" className="btn btn-on-field btn-sm w-full">
+          {/* Tickets come in the way customers send them: the chat window asks for their email every time, and the AI answers. */}
+          <a href={`/chat/${org?.widgetKey}`} target="_blank" rel="noreferrer" className="btn btn-on-field btn-sm w-full" title="Opens your chat window, where the customer gives their email">
             <svg viewBox="0 0 20 20" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M10 4v12M4 10h12" /></svg>
             New ticket
-          </Link>
+          </a>
           {/* Daily work first; the rest sits below as a quieter list. Inbox views are tabs on the inbox page. */}
           <nav className="grid gap-0.5" aria-label="Main">
             <NavLink href="/app/inbox" alsoActive="/app/tickets/">

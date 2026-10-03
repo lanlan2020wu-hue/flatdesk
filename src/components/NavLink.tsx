@@ -12,7 +12,7 @@ export default function NavLink({ href, alsoActive, children }: { href: string; 
   const view = new URLSearchParams(query).get("view");
   const active =
     (pathname === path && (view === null || (params.get("view") ?? "open") === view)) ||
-    (alsoActive !== undefined && pathname.startsWith(alsoActive) && pathname !== "/app/tickets/new");
+    (alsoActive !== undefined && pathname.startsWith(alsoActive));
   return (
     <Link href={href} className="nav-link" aria-current={active ? "page" : undefined}>
       {children}

@@ -6,7 +6,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { db, schema } from "@/db";
 import { findAssignable } from "@/lib/agents";
-import { INPUT, parseOverageLimit, validEmail } from "@/lib/app-input";
+import { INPUT, parseOverageLimit } from "@/lib/app-input";
 import { LOCKED_MESSAGE, requireAdmin, requireEditor, requireOpen } from "@/lib/auth";
 import { filesFromForm, saveAttachments } from "@/lib/attachments";
 import { checkWebhookUrl, sendTestAlert } from "@/lib/alerts";
@@ -21,7 +21,7 @@ import { dismissSuggestion, saveSuggestedMacro } from "@/lib/macro-suggestions";
 import { hit, LIMITS } from "@/lib/rate-limit";
 import { addRule } from "@/lib/rules";
 import { TARGET_CHOICES, validHours } from "@/lib/sla";
-import { addReply, createTicket, normalizeTags, updateTicket, type TicketStatus } from "@/lib/tickets";
+import { addReply, normalizeTags, updateTicket, type TicketStatus } from "@/lib/tickets";
 
 // The paywall hides the app once a trial ends without a card; this keeps
 // direct requests from doing work behind it. Billing stays open.
@@ -38,26 +38,6 @@ const idOf = (f: FormData, k: string) => {
   if (!isUuid(v)) throw new Error("That item doesn't exist.");
   return v;
 };
-
-export async function createTicketAction(form: FormData) {
-  const s = await requireOpenSession();
-  const email = str(form, "email").toLowerCase();
-  const subject = str(form, "subject").slice(0, INPUT.subject);
-  const body = str(form, "body");
-  if (!email || !subject || !body) throw new Error("Email, subject and message are required.");
-  if (!validEmail(email)) throw new Error("Enter the customer's email address, like sam@example.com.");
-  const ticket = await createTicket({
-    orgId: s.orgId,
-    channel: "email",
-    customerEmail: email,
-    customerName: str(form, "name").slice(0, INPUT.name) || null,
-    subject,
-    body,
-    authorType: "customer",
-    tags: tagList(str(form, "tags")),
-  });
-  redirect(`/app/tickets/${ticket.number}`);
-}
 
 export async function replyAction(form: FormData) {
   const s = await requireOpenSession();
