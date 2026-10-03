@@ -7,5 +7,5 @@ import { orgByHelpSlug } from "@/lib/help";
 export const helpCenter = cache(async (slug: string) => {
   const org = await orgByHelpSlug(slug);
   if (!org?.helpSlug || access(org).state === "locked") return null;
-  return { id: org.id, name: org.name, helpSlug: org.helpSlug, supportEmail: org.supportEmail };
+  return { id: org.id, name: org.name, helpSlug: org.helpSlug, supportEmail: org.supportEmail, widgetKey: org.widgetKey };
 });

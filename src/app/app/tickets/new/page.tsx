@@ -8,5 +8,5 @@ import { requireOpenPage } from "@/lib/auth";
 export default async function NewTicketPage() {
   const s = await requireOpenPage();
   const org = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId), columns: { widgetKey: true } });
-  redirect(org ? `/chat/${org.widgetKey}` : "/app/inbox");
+  redirect(org ? `/chat/${org.widgetKey}?new` : "/app/inbox");
 }

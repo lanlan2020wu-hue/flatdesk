@@ -281,6 +281,14 @@ export async function addReply(opts: {
   });
 }
 
+// Setup tickets the AI deliberately skips say so, so an unanswered one doesn't look broken.
+export const NO_AI_SETUP_NOTE =
+  "The AI doesn't answer setup tickets like this one. To see it answer, use New ticket (it opens your chat window) or Test tickets.";
+
+export async function addSystemNote(orgId: string, ticketId: string, body: string) {
+  await db.insert(messages).values({ orgId, ticketId, authorType: "system", body, internal: true });
+}
+
 // A customer wrote again (usually an email reply): add it and reopen the ticket.
 export async function addCustomerMessage(opts: { orgId: string; ticketId: string; customerId: string; body: string; emailMessageId?: string | null }) {
   return db.transaction(async (tx) => {

@@ -38,7 +38,8 @@ function Picked({ files, onRemove }: { files: File[]; onRemove: (i: number) => v
   );
 }
 
-export default function ChatPanel({ widgetKey, teamName }: { widgetKey: string; teamName: string }) {
+// fresh: start a new conversation (the form) instead of picking up the saved one.
+export default function ChatPanel({ widgetKey, teamName, fresh = false }: { widgetKey: string; teamName: string; fresh?: boolean }) {
   const storageKey = `flatdesk-chat-${widgetKey}`;
   const [saved, setSaved] = useState<Saved | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -71,6 +72,7 @@ export default function ChatPanel({ widgetKey, teamName }: { widgetKey: string; 
   useEffect(() => {
     const t = setTimeout(() => {
       try {
+        if (fresh) return localStorage.removeItem(storageKey);
         const raw = localStorage.getItem(storageKey);
         if (raw) setSaved(JSON.parse(raw) as Saved);
       } catch {
@@ -78,7 +80,18 @@ export default function ChatPanel({ widgetKey, teamName }: { widgetKey: string; 
       }
     }, 0);
     return () => clearTimeout(t);
-  }, [storageKey]);
+  }, [storageKey, fresh]);
+
+  // Back to the form, so the next message is a new ticket with its own name and email.
+  function startOver() {
+    try {
+      localStorage.removeItem(storageKey);
+    } catch {}
+    setSaved(null);
+    setMessages([]);
+    setFiles([]);
+    setError(null);
+  }
 
   const refresh = useCallback(async () => {
     if (!saved) return;
@@ -172,9 +185,16 @@ export default function ChatPanel({ widgetKey, teamName }: { widgetKey: string; 
           <p className="font-medium">{teamName}</p>
           <p className="text-sm text-muted">We reply here and by email.</p>
         </div>
-        <button type="button" aria-label="Close chat" onClick={() => window.parent.postMessage("flatdesk:close", "*")} className="rounded-md px-2 text-xl leading-none text-muted hover:bg-bg">
-          ×
-        </button>
+        <div className="flex items-center gap-1">
+          {saved && (
+            <button type="button" onClick={startOver} className="rounded-md px-2 py-1 text-sm text-muted hover:bg-bg">
+              New conversation
+            </button>
+          )}
+          <button type="button" aria-label="Close chat" onClick={() => window.parent.postMessage("flatdesk:close", "*")} className="rounded-md px-2 text-xl leading-none text-muted hover:bg-bg">
+            ×
+          </button>
+        </div>
       </header>
 
       {!saved ? (
