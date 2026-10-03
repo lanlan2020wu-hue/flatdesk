@@ -10,6 +10,7 @@ import { deliverReply, emailConfig, resend } from "@/lib/email";
 import { milestone } from "@/lib/funnel";
 import { articleKnowledge } from "@/lib/help";
 import { PLAN } from "@/lib/pricing";
+import { HANDOFF_PREFIX } from "@/lib/teach";
 
 // The AI answers the first message of new email and chat tickets, and up to
 // MAX_FOLLOW_UPS more messages from the customer on the same ticket. The ticket
@@ -381,7 +382,7 @@ export async function answerNewTicket(orgId: string, ticketId: string) {
     const { sources, reason, metered } = d;
     if (d.decision === "handoff") {
       await db.update(aiEvents).set({ kind: "handoff", reason, ...metered }).where(eq(aiEvents.id, slot.eventId));
-      await note(orgId, ticketId, `AI handed this to the team: ${reason || "it couldn't produce an answer."}`);
+      await note(orgId, ticketId, `${HANDOFF_PREFIX} ${reason || "it couldn't produce an answer."}`);
       return;
     }
 
@@ -495,7 +496,7 @@ export async function answerFollowUp(orgId: string, ticketId: string) {
       later.map((m) => (m.authorType === "ai" ? { from: "ai" as const, body: stripFooter(m.body) } : { from: "customer" as const, body: withFiles(m) })),
     );
     await db.update(aiEvents).set({ reason: d.reason, sources: d.sources, ...d.metered }).where(eq(aiEvents.id, slot.eventId));
-    if (d.decision === "handoff") return handBackToTeam(orgId, ticketId, `AI handed this to the team: ${d.reason || "it couldn't answer the follow-up."}`);
+    if (d.decision === "handoff") return handBackToTeam(orgId, ticketId, `${HANDOFF_PREFIX} ${d.reason || "it couldn't answer the follow-up."}`);
 
     const now = new Date();
     const messageId = await db.transaction(async (tx) => {

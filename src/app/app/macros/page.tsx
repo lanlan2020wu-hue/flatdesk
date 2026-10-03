@@ -98,6 +98,8 @@ export default async function MacrosPage() {
                 <span className="truncate">{m.name}</span>
                 {m.source === "suggested" ? (
                   <span className="chip shrink-0">Written by Flatdesk AI</span>
+                ) : m.source === "taught" ? (
+                  <span className="chip shrink-0">Taught from a ticket</span>
                 ) : (
                   m.source && <span className="chip shrink-0">From {SOURCE_NAME[m.source] ?? m.source}</span>
                 )}

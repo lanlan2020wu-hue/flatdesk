@@ -19,6 +19,7 @@ import { isUuid } from "@/lib/ids";
 import { recordMacroUses } from "@/lib/macro-drift";
 import { dismissSuggestion, saveSuggestedMacro } from "@/lib/macro-suggestions";
 import { hit, LIMITS } from "@/lib/rate-limit";
+import { teachAi } from "@/lib/teach";
 import { addRule } from "@/lib/rules";
 import { TARGET_CHOICES, validHours } from "@/lib/sla";
 import { addReply, normalizeTags, updateTicket, type TicketStatus } from "@/lib/tickets";
@@ -69,6 +70,23 @@ export async function replyAction(form: FormData) {
   if (messageId && form.get("internal") !== "on") await recordMacroUses(s.orgId, messageId, str(form, "macroIds").split(",").filter(isUuid).slice(0, 20));
   revalidatePath(`/app/tickets/${number}`);
   revalidatePath("/app/inbox");
+}
+
+// The answer the AI was missing, written under its handoff note. It becomes a
+// saved answer the AI reads; "Save and send" also replies to this customer.
+export async function teachAiAction(form: FormData) {
+  const s = await requireOpenSession();
+  const ticketId = idOf(form, "ticketId");
+  const { ticket, macro } = await teachAi({ orgId: s.orgId, ticketId, agentName: s.name, question: str(form, "question"), answer: str(form, "answer") });
+  if (form.get("send") === "on") {
+    const { messageId } = await addReply({ orgId: s.orgId, ticketId, userId: s.userId, body: macro.body, internal: false, status: "pending" });
+    if (messageId) await deliverReply(s.orgId, messageId);
+    if (messageId && ticket.resolvedByAi) await handBackToTeam(s.orgId, ticketId, "A person on the team replied.", false);
+    if (messageId) await recordMacroUses(s.orgId, messageId, [macro.id]);
+  }
+  revalidatePath(`/app/tickets/${ticket.number}`);
+  revalidatePath("/app/inbox");
+  revalidatePath("/app/macros");
 }
 
 export async function updateTicketAction(form: FormData) {
