@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import Link from "next/link";
 import LegalPage, { Section } from "@/components/LegalPage";
 import { LEGAL_UPDATED, SITE } from "@/lib/site";
 
-export const metadata: Metadata = {
-  alternates: { canonical: "/privacy" },
+export const metadata: Metadata = pageMeta({
   title: "Privacy policy",
   description: "What Flatdesk collects, why, who processes it, and how to get it deleted.",
-};
+  path: "/privacy",
+});
 
 // Every company that touches customer data, and for what. Keep this in step
 // with the services in the README's environment table.

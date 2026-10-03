@@ -32,6 +32,7 @@ export function llmsTxt() {
     "## Pricing and tools",
     `- [Pricing](${u("/pricing")}): the one plan and billing questions.`,
     `- [Bill calculator](${u("/calculator")}): compare a Zendesk, Fin, Freshdesk or Help Scout bill with Flatdesk.`,
+    `- [Help desk for small teams](${u("/help-desk-for-small-teams")}): who Flatdesk is for, what 3 to 15 agents pay, and what it leaves out.`,
     `- [FAQ](${u("/faq")}): every question on the site in one place.`,
     `- [2026 AI billing changes](${u("/ai-billing-changes-2026")}): a dated, sourced timeline of Zendesk and Fin changes.`,
     "",

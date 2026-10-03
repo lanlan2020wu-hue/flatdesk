@@ -12,7 +12,7 @@ const NAV = [
   { href: "/compare", label: "Compare" },
   { href: "/calculator", label: "Bill calculator" },
 ];
-const FOOTER = [...NAV, { href: "/ai-billing-changes-2026", label: "2026 AI billing changes" }, { href: "/faq", label: "FAQ" }];
+const FOOTER = [...NAV, { href: "/help-desk-for-small-teams", label: "For small teams" }, { href: "/ai-billing-changes-2026", label: "2026 AI billing changes" }, { href: "/faq", label: "FAQ" }];
 
 // The same observer MotionObserver sets up, but inline, so [data-play] blocks
 // (the calculator, the hero receipt) show before React hydrates, or if a

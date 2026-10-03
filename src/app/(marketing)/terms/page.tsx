@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
+import { pageMeta } from "@/lib/seo";
 import Link from "next/link";
 import LegalPage, { Section } from "@/components/LegalPage";
 import { PLAN, usd } from "@/lib/pricing";
 import { LEGAL_UPDATED, SITE } from "@/lib/site";
 import { TRIAL_DAYS } from "@/lib/billing";
 
-export const metadata: Metadata = {
-  alternates: { canonical: "/terms" },
+export const metadata: Metadata = pageMeta({
   title: "Terms of service",
   description: "The agreement between Flatdesk and the teams that use it.",
-};
+  path: "/terms",
+});
 
 export default function TermsPage() {
   const mail = <a href={`mailto:${SITE.contactEmail}`} className="link text-accent">{SITE.contactEmail}</a>;

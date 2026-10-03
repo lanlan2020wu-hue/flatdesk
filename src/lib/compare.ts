@@ -257,3 +257,9 @@ export function cheaperAnswer(r: Rival) {
   const s = parts.join("; ");
   return `At list prices checked ${COMPARED_ON}: ${s}.`;
 }
+
+// For "<rival> alternative" searches: who Flatdesk fits, and who should stay.
+export function alternativeAnswer(r: Rival) {
+  const stay = r.pickThem.charAt(0).toLowerCase() + r.pickThem.slice(1).replace(/\.$/, "");
+  return `If you're an email and chat team of about 3 to 15 agents and want AI in the seat price, Flatdesk is built for that: ${usd(PLAN.annualSeatPrice)} per agent billed yearly or ${usd(PLAN.seatPrice)} monthly, with ${PLAN.includedPerAgent} AI answers per agent included and a cap on by default.${r.canImport ? ` It imports your ${r.name} history, so you don't start from zero.` : ""} Stay with ${r.name}, or look at a bigger suite, if ${stay}.`;
+}

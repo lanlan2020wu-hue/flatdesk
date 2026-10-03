@@ -23,11 +23,17 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE.url),
   openGraph: { siteName: "Flatdesk", type: "website" },
   title: {
-    default: "Flatdesk: the help desk with one flat price",
+    default: "Flatdesk: flat-price help desk with AI answers included",
     template: "%s · Flatdesk",
   },
   description:
     `${usd(PLAN.seatPrice)} per agent per month, or ${usd(PLAN.annualSeatPrice)} billed yearly. AI answers included and capped, so your support bill is the same every month.`,
+  // Google Search Console and Bing Webmaster Tools ownership checks: paste the
+  // token from their "HTML tag" option into these environment variables.
+  verification: {
+    google: process.env.GOOGLE_SITE_VERIFICATION || undefined,
+    other: process.env.BING_SITE_VERIFICATION ? { "msvalidate.01": process.env.BING_SITE_VERIFICATION } : undefined,
+  },
 };
 
 // Clerk is provided only by the routes that sign people in (AuthProvider), so
