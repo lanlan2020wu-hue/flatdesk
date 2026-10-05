@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { RIVALS } from "@/lib/compare";
+import { FREE_TOOLS, freeToolPath } from "@/lib/free-tools";
 import { SELLING_POINTS } from "@/lib/selling-points";
 import { SITE } from "@/lib/site";
 
@@ -14,6 +15,8 @@ const PAGES = [
   "/help-desk-for-small-teams",
   "/faq",
   "/ai-billing-changes-2026",
+  "/free-tools",
+  ...FREE_TOOLS.map((t) => freeToolPath(t.slug)),
   "/terms",
   "/privacy",
 ];
