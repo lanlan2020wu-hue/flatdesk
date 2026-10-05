@@ -3,6 +3,7 @@
 
 import { COMPARED_ON, RIVALS, TEAMS, cheaperAnswer, costRows } from "@/lib/compare";
 import { BILLING_FAQ, GENERAL_FAQ } from "@/lib/faq";
+import { FREE_TOOLS, freeToolPath } from "@/lib/free-tools";
 import { PLAN, usd } from "@/lib/pricing";
 import { DESCRIPTION } from "@/lib/seo";
 import { SELLING_POINTS } from "@/lib/selling-points";
@@ -35,6 +36,10 @@ export function llmsTxt() {
     `- [Help desk for small teams](${u("/help-desk-for-small-teams")}): who Flatdesk is for, what 3 to 15 agents pay, and what it leaves out.`,
     `- [FAQ](${u("/faq")}): every question on the site in one place.`,
     `- [2026 AI billing changes](${u("/ai-billing-changes-2026")}): a dated, sourced timeline of Zendesk and Fin changes.`,
+    "",
+    "## Free tools for support teams",
+    `- [All free tools](${u("/free-tools")}): no signup.`,
+    ...FREE_TOOLS.map((t) => `- [${t.name}](${u(freeToolPath(t.slug))}): ${t.description}`),
     "",
     "## Optional",
     `- [Full text for language models](${u("/llms-full.txt")})`,

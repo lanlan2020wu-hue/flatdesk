@@ -4,7 +4,7 @@ import { PLAN, usd } from "@/lib/pricing";
 // The social card every shared link shows: a title and a small receipt.
 export const OG_SIZE = { width: 1200, height: 630 };
 
-export function ogImage({ eyebrow, title }: { eyebrow: string; title: string }) {
+export function ogImage({ eyebrow, title, footer }: { eyebrow: string; title: string; footer?: string }) {
   return new ImageResponse(
     (
       <div style={{ width: "100%", height: "100%", display: "flex", background: "#f6f4ef", color: "#14201b", padding: 72, gap: 56 }}>
@@ -17,7 +17,7 @@ export function ogImage({ eyebrow, title }: { eyebrow: string; title: string }) 
             <div style={{ fontSize: 24, letterSpacing: 3, textTransform: "uppercase", color: "#17624b" }}>{eyebrow}</div>
             <div style={{ fontSize: title.length > 60 ? 52 : 64, lineHeight: 1.08, fontWeight: 600 }}>{title}</div>
           </div>
-          <div style={{ fontSize: 26, color: "#5b6660" }}>{`From ${usd(PLAN.annualSeatPrice)} per agent · ${PLAN.includedPerAgent} AI answers included · capped`}</div>
+          <div style={{ fontSize: 26, color: "#5b6660" }}>{footer ?? `From ${usd(PLAN.annualSeatPrice)} per agent · ${PLAN.includedPerAgent} AI answers included · capped`}</div>
         </div>
         <div
           style={{

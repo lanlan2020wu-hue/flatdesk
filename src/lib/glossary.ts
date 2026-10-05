@@ -1,0 +1,47 @@
+// Customer support glossary (/free-tools/customer-support-glossary). Plain
+// definitions, each with an anchor so other sites can link to one term.
+// `tool` points at the free calculator that works the term out, if any.
+
+export type Term = { id: string; term: string; aka?: string; definition: string; tool?: string };
+
+export const GLOSSARY: Term[] = [
+  { id: "agent", term: "Agent", aka: "Support rep, advisor", definition: "A person on the support team who answers customers. Most help desks price per agent, also called per seat." },
+  { id: "average-handle-time", term: "Average handle time (AHT)", definition: "The average time an agent spends on one conversation, including any work after it such as notes or follow-up tasks. AHT is one of the two main inputs to a staffing plan, with contact volume.", tool: "support-staffing-calculator" },
+  { id: "backlog", term: "Backlog", definition: "Tickets that are open and waiting for the team. A backlog that grows week after week means work is arriving faster than the team can close it." },
+  { id: "business-hours", term: "Business hours", definition: "The hours your team is working. Most SLAs only count time inside business hours, so a ticket that arrives at 6pm on a Friday is not late on Saturday.", tool: "sla-calculator" },
+  { id: "canned-response", term: "Canned response", aka: "Saved reply, macro, snippet", definition: "A reply written once and reused for a common question. Good ones are edited for each customer before sending." },
+  { id: "chat-concurrency", term: "Chat concurrency", definition: "How many live chats one agent handles at the same time. Higher concurrency means fewer agents, but each chat waits longer between replies.", tool: "support-staffing-calculator" },
+  { id: "csat", term: "Customer satisfaction score (CSAT)", definition: "The share of survey answers that are positive, usually 4 or 5 on a 1 to 5 scale, sent after a ticket is solved. A CSAT of 90% means 9 in 10 people who answered were satisfied; it says nothing about the people who didn't answer.", tool: "csat-nps-calculator" },
+  { id: "customer-effort-score", term: "Customer effort score (CES)", definition: "A survey that asks how easy it was to get the problem solved, usually on a 1 to 5 or 1 to 7 scale. It measures the work the customer had to do rather than how they felt." },
+  { id: "deflection", term: "Deflection", aka: "Self-service rate", definition: "A question answered without reaching an agent, for example by a help center article or an AI answer. Deflection only counts if the customer actually got their answer and didn't write in anyway." },
+  { id: "erlang-c", term: "Erlang C", definition: "A formula from telephone engineering that works out how many agents you need so a chosen share of contacts is answered within a target time. It assumes contacts arrive at random and wait in a queue rather than hang up.", tool: "support-staffing-calculator" },
+  { id: "escalation", term: "Escalation", definition: "Moving a ticket to someone with more skill, access or authority, such as a specialist, an engineer or a manager." },
+  { id: "first-contact-resolution", term: "First contact resolution (FCR)", definition: "The share of tickets solved in the first reply, with no back and forth. A high FCR usually means agents have the knowledge and permissions they need." },
+  { id: "first-response-time", term: "First response time (FRT)", definition: "The time between a customer writing in and a person (or AI) replying for the first time. Automatic \"we got your message\" emails usually don't count.", tool: "sla-calculator" },
+  { id: "full-resolution-time", term: "Full resolution time", aka: "Time to resolution", definition: "The time from a ticket arriving to it being solved. It includes time spent waiting on the customer unless your help desk pauses the clock for that." },
+  { id: "help-center", term: "Help center", aka: "Knowledge base", definition: "A public site of how-to articles customers can search. It answers repeat questions and gives AI tools something reliable to quote." },
+  { id: "help-desk", term: "Help desk", definition: "Software that collects customer messages from email, chat and other channels into one shared inbox, so a team can assign, answer and track them." },
+  { id: "internal-note", term: "Internal note", definition: "A comment on a ticket only the team can see. Used to hand over context without the customer reading it." },
+  { id: "macro", term: "Macro", definition: "A saved reply that can also do things, such as tag, assign or close the ticket, in one click." },
+  { id: "net-promoter-score", term: "Net Promoter Score (NPS)", definition: "A score from asking how likely someone is to recommend you, from 0 to 10. People who answer 9 or 10 are promoters, 0 to 6 are detractors. NPS is the percentage of promoters minus the percentage of detractors, so it runs from -100 to 100.", tool: "csat-nps-calculator" },
+  { id: "occupancy", term: "Occupancy", definition: "The share of time agents spend actually handling contacts while they're available to. Running close to 100% looks efficient but leaves no slack, so queues spike and people burn out.", tool: "support-staffing-calculator" },
+  { id: "omnichannel", term: "Omnichannel", definition: "Handling every channel (email, chat, phone, social) in one place, with the customer's history following them between channels." },
+  { id: "one-touch-resolution", term: "One-touch resolution", definition: "A ticket solved with a single agent reply. Similar to first contact resolution, but counted per reply rather than per contact." },
+  { id: "pending", term: "Pending", aka: "Waiting on customer", definition: "A ticket status meaning the team has replied and is waiting for the customer. Many help desks pause SLA clocks while a ticket is pending." },
+  { id: "priority", term: "Priority", definition: "How urgent a ticket is, often low, normal, high or urgent. Priority usually decides which SLA target applies." },
+  { id: "queue", term: "Queue", aka: "View", definition: "A list of tickets that match a rule, such as \"unassigned\" or \"billing, high priority\", so each agent knows what to work on next." },
+  { id: "reopen-rate", term: "Reopen rate", definition: "The share of solved tickets the customer replies to again because the problem wasn't actually fixed." },
+  { id: "resolution", term: "Resolution", definition: "A ticket solved. Several help desks now bill AI per resolution, so check what your tool counts as one: some count any conversation the customer didn't follow up on." },
+  { id: "response-rate", term: "Survey response rate", definition: "The share of customers who answer a satisfaction survey. With a low response rate, scores lean toward people who felt strongly either way.", tool: "csat-nps-calculator" },
+  { id: "routing", term: "Routing", definition: "Sending each new ticket to the right person or team automatically, by topic, language, customer or workload." },
+  { id: "service-level", term: "Service level", definition: "The share of contacts answered within a target time, written as \"80/20\": 80% answered within 20 seconds. Common for live chat and phone, where customers wait in real time.", tool: "support-staffing-calculator" },
+  { id: "shrinkage", term: "Shrinkage", definition: "The share of paid time agents are not available to customers: breaks, meetings, training, holidays and sick days. A staffing plan has to add it back on top of the agents a queue needs.", tool: "support-staffing-calculator" },
+  { id: "sla", term: "Service level agreement (SLA)", definition: "A promise about response or resolution times, such as \"first reply within 4 business hours for high priority tickets\". It can be a contract with customers or an internal target.", tool: "sla-calculator" },
+  { id: "sla-breach", term: "SLA breach", definition: "A ticket that missed its SLA target. SLA attainment is the share of tickets that didn't breach.", tool: "sla-calculator" },
+  { id: "tag", term: "Tag", definition: "A label on a ticket, such as \"refund\" or \"bug\", used for routing, reports and finding similar tickets later." },
+  { id: "ticket", term: "Ticket", aka: "Case, conversation", definition: "One customer request and every message about it, tracked from arrival to solved." },
+  { id: "tier-1-support", term: "Tier 1 support", definition: "The first line that handles common questions. Harder problems escalate to tier 2 (specialists) and tier 3 (engineers)." },
+  { id: "business-hours-response-time", term: "Business-hours response time", definition: "Response time counted only during business hours. With 9-to-5 hours, a ticket that arrives Friday at 4:55pm and is answered Monday at 9:30am took 35 business minutes, not about 64 hours.", tool: "sla-calculator" },
+  { id: "volume", term: "Contact volume", definition: "How many tickets, chats or calls arrive in a period. Staffing plans need volume by hour, not just by month, because most queues peak at predictable times.", tool: "support-staffing-calculator" },
+  { id: "wrap-up-time", term: "Wrap-up time", aka: "After-contact work", definition: "Work an agent does after a conversation ends: notes, tags, follow-up tasks. It's part of handle time." },
+];
