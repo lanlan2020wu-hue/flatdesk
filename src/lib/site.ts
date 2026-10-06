@@ -15,3 +15,8 @@ export const SITE = {
 };
 
 export const LEGAL_UPDATED = "September 30, 2026";
+
+// The security, DPA and about pages. Change it whenever one of them changes.
+export const TRUST_UPDATED = "October 6, 2026";
+// When Flatdesk opened to paying teams.
+export const LAUNCHED = "October 2026";

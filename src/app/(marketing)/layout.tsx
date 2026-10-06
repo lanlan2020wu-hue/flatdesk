@@ -66,9 +66,12 @@ export default function MarketingLayout({ children }: LayoutProps<"/">) {
         <div className="border-t border-field-line">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-4 text-xs text-field-muted sm:px-6">
             <p className="num">Competitor prices last checked {CHECKED_ON}.</p>
-            <p className="flex gap-4">
+            <p className="flex flex-wrap gap-x-4 gap-y-1">
               <Link href="/sign-in" className="transition-colors hover:text-field-ink">Sign in</Link>
+              <Link href="/about" className="transition-colors hover:text-field-ink">About</Link>
+              <Link href="/security" className="transition-colors hover:text-field-ink">Security</Link>
               <Link href="/terms" className="transition-colors hover:text-field-ink">Terms</Link>
+              <Link href="/dpa" className="transition-colors hover:text-field-ink">DPA</Link>
               <Link href="/privacy" className="transition-colors hover:text-field-ink">Privacy</Link>
               <a href={`mailto:${SITE.contactEmail}`} className="transition-colors hover:text-field-ink">{SITE.contactEmail}</a>
             </p>

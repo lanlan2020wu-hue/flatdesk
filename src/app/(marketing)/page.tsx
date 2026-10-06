@@ -249,7 +249,7 @@ export default function Home() {
       <section id="switch" className="mx-auto grid w-full max-w-6xl scroll-mt-20 gap-12 px-4 pt-24 sm:px-6 sm:pt-32">
         <div data-play="" suppressHydrationWarning className="grid gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-16">
           <h2 className="ink font-display text-[2.6rem] sm:text-6xl">How to switch from Zendesk or Intercom.</h2>
-          <p className="max-w-[52ch] self-end text-lg text-muted">One admin can do all four steps. The AI doesn&apos;t reply to any customer until you turn it on.</p>
+          <p className="max-w-[52ch] self-end text-lg text-muted">One admin can do all four steps. The AI can&apos;t reply to a customer until you forward your email or add the chat widget, and you can switch it off before that.</p>
         </div>
         <ol data-play="" suppressHydrationWarning className="relative grid gap-8 md:grid-cols-4 md:gap-6">
           <span aria-hidden="true" className="absolute top-[11px] right-[calc(25%-0.75rem)] left-3 hidden h-[2px] bg-ink md:block" />
