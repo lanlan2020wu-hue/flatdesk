@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db, schema } from "@/db";
 import { requireAdmin, requireEditor, requireOpen } from "@/lib/auth";
-import { MAX_BODY, MAX_TITLE, uniqueArticleSlug, validHelpSlug } from "@/lib/help";
+import { MAX_BODY, MAX_SECTION, MAX_TITLE, uniqueArticleSlug, validHelpSlug } from "@/lib/help";
 import { isUuid } from "@/lib/ids";
 
 const { articles, orgs } = schema;
@@ -29,6 +29,7 @@ export async function saveArticleAction(form: FormData) {
   const id = str(form, "id");
   const title = str(form, "title").slice(0, MAX_TITLE);
   const body = String(form.get("body") ?? "").replace(/\r\n?/g, "\n").trim();
+  const section = str(form, "section").replace(/\s+/g, " ").slice(0, MAX_SECTION) || null;
   const intent = str(form, "intent"); // "publish", "draft" or "save" (keep as is)
   if (!title || !body) throw new Error("An article needs a title and some text.");
   if (body.length > MAX_BODY) throw new Error(`Articles can be up to ${MAX_BODY.toLocaleString("en-US")} characters.`);
@@ -36,7 +37,7 @@ export async function saveArticleAction(form: FormData) {
   let articleId = id;
   if (id) {
     if (!isId(id)) return;
-    const patch: Partial<typeof articles.$inferInsert> = { title, body, updatedAt: new Date() };
+    const patch: Partial<typeof articles.$inferInsert> = { title, body, section, updatedAt: new Date() };
     if (intent === "publish") patch.published = true;
     if (intent === "draft") patch.published = false;
     await db.update(articles).set(patch).where(and(eq(articles.orgId, s.orgId), eq(articles.id, id)));
@@ -47,7 +48,7 @@ export async function saveArticleAction(form: FormData) {
         const slug = await uniqueArticleSlug(s.orgId, title);
         const [row] = await db
           .insert(articles)
-          .values({ orgId: s.orgId, title, body, slug, published: intent === "publish" })
+          .values({ orgId: s.orgId, title, body, section, slug, published: intent === "publish" })
           .returning({ id: articles.id });
         articleId = row.id;
         break;

@@ -223,3 +223,102 @@ export async function articleKnowledge(orgId: string): Promise<{ name: string; b
     return { name: a.title, body: org?.helpSlug ? `${body}\n\nHelp center article: ${articleUrl(org.helpSlug, a.slug)}` : body };
   });
 }
+
+// ---- Imported articles ------------------------------------------------------
+
+const ENTITIES: Record<string, string> = { amp: "&", lt: "<", gt: ">", quot: '"', apos: "'", nbsp: " ", mdash: "—", ndash: "–", hellip: "…", rsquo: "’", lsquo: "‘", rdquo: "”", ldquo: "“", copy: "©", reg: "®", trade: "™" };
+const decode = (s: string) =>
+  s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e: string) => {
+    if (e[0] === "#") {
+      const n = e[1].toLowerCase() === "x" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
+      return Number.isFinite(n) && n > 0 && n <= 0x10ffff ? String.fromCodePoint(n) : m;
+    }
+    return ENTITIES[e.toLowerCase()] ?? m;
+  });
+
+const safeHref = (href: string) => (/^(https?:\/\/|mailto:)\S+$/i.test(href) ? href.replace(/\)/g, "%29") : null);
+
+// Turns another help desk's article HTML into the help center's text format:
+// headings, lists, bold and links survive; images become links to the
+// original file; tables and other markup become plain text.
+export function htmlToArticle(html: string): string {
+  const src = html.replace(/<(script|style)[\s\S]*?<\/\1>/gi, "").replace(/<!--[\s\S]*?-->/g, "");
+  let out = "";
+  const lists: { ordered: boolean; n: number }[] = [];
+  let link: { href: string | null; text: string } | null = null;
+  const emit = (s: string) => {
+    if (link) link.text += s;
+    else out += s;
+  };
+  const block = (prefix = "") => {
+    if (link) return;
+    out = out.replace(/[ \t]+$/, "");
+    out += `\n\n${prefix}`;
+  };
+  const tag = /<(\/?)([a-z0-9]+)([^>]*)>/gi;
+  let last = 0;
+  for (const m of src.matchAll(tag)) {
+    emit(decode(src.slice(last, m.index).replace(/\s+/g, " ")));
+    last = m.index + m[0].length;
+    const closing = m[1] === "/";
+    const name = m[2].toLowerCase();
+    const attr = (k: string) => new RegExp(`${k}\\s*=\\s*("([^"]*)"|'([^']*)'|([^\\s>]+))`, "i").exec(m[3])?.slice(2).find((v) => v !== undefined) ?? "";
+    if (/^h[1-6]$/.test(name)) block(closing ? "" : name === "h1" || name === "h2" ? "## " : "### ");
+    else if (name === "p" || name === "div" || name === "tr" || name === "table" || name === "blockquote" || name === "pre") block();
+    else if (name === "br") emit("\n");
+    else if (name === "ul" || name === "ol") {
+      if (closing) lists.pop();
+      else lists.push({ ordered: name === "ol", n: 0 });
+      block();
+    } else if (name === "li" && !closing) {
+      const l = lists[lists.length - 1];
+      out = out.replace(/[ \t]+$/, "");
+      out += `\n${l?.ordered ? `${++l.n}. ` : "- "}`;
+    } else if ((name === "strong" || name === "b") && !link) emit("**");
+    else if (name === "td" || name === "th") emit(closing ? " " : "");
+    else if (name === "a") {
+      if (!closing) link = { href: safeHref(decode(attr("href"))), text: "" };
+      else if (link) {
+        const text = link.text.replace(/\s+/g, " ").replace(/\*\*/g, "").trim();
+        const href = link.href;
+        link = null;
+        emit(href && text ? `[${text.replace(/[[\]]/g, "")}](${href})` : text);
+      }
+    } else if (name === "img") {
+      const href = safeHref(decode(attr("src")));
+      if (href) emit(`[${decode(attr("alt")).replace(/[[\]]/g, "").trim() || "Image"}](${href})`);
+    }
+  }
+  emit(decode(src.slice(last).replace(/\s+/g, " ")));
+  return out
+    .split("\n")
+    .map((l) => l.replace(/[ \t]+/g, " ").trim())
+    .join("\n")
+    .replace(/\*\*\s*\*\*/g, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+// Articles grouped by section, sections in name order, unsectioned ones last.
+export function bySection<T extends { section: string | null }>(list: T[]): { section: string | null; articles: T[] }[] {
+  const groups = new Map<string | null, T[]>();
+  for (const a of list) {
+    const key = a.section?.trim() || null;
+    groups.set(key, [...(groups.get(key) ?? []), a]);
+  }
+  return [...groups.entries()]
+    .sort(([a], [b]) => (a === null ? 1 : b === null ? -1 : a.localeCompare(b)))
+    .map(([section, articles]) => ({ section, articles }));
+}
+
+export const MAX_SECTION = 80;
+
+// Section names the team already uses, for the article form's suggestions.
+export async function articleSections(orgId: string): Promise<string[]> {
+  const rows = await db
+    .selectDistinct({ section: articles.section })
+    .from(articles)
+    .where(and(eq(articles.orgId, orgId), sql`${articles.section} is not null`))
+    .orderBy(articles.section);
+  return rows.map((r) => r.section!).filter(Boolean);
+}

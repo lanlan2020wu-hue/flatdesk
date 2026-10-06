@@ -66,6 +66,18 @@ describe("Zendesk", () => {
     assert.equal(t.createdAt.toISOString(), "2024-01-02T10:00:00.000Z");
     assert.equal(t.firstResponseAt?.toISOString(), "2024-01-02T12:00:00.000Z", "first public agent reply, not the internal note");
 
+    // Guide articles land in the help center, with their section; drafts and restricted ones stay drafts.
+    const arts = await db.select().from(schema.articles).where(eq(schema.articles.orgId, ORG)).orderBy(schema.articles.title);
+    assert.deepEqual(arts.map((x) => [x.title, x.section, x.published]), [
+      ["How refunds work", "Billing", true],
+      ["Internal: escalation", "Billing", false],
+      ["Work in progress", null, false],
+    ]);
+    assert.equal(
+      arts[0].body,
+      "## Refunds\n\nWe refund within **5 days**. See [our policy](https://acme.com/policy).\n\n1. Open Billing\n2. Click Refund\n\n[Screenshot](https://acme.zendesk.com/hc/article_attachments/1/shot.png)",
+    );
+
     const msgs = await messagesOf(t.id);
     assert.equal(msgs.length, 3);
     // statement.png is copied; gone.pdf (404) and huge.mov (over the limit) stay as links.
@@ -138,6 +150,7 @@ describe("Zendesk", () => {
     assert.equal(await db.$count(schema.messages, eq(schema.messages.orgId, ORG)), before);
     assert.equal(await db.$count(schema.tickets, eq(schema.tickets.orgId, ORG)), 3);
     assert.equal(await db.$count(schema.macros, eq(schema.macros.orgId, ORG)), 1);
+    assert.equal(await db.$count(schema.articles, eq(schema.articles.orgId, ORG)), 3, "articles aren't duplicated");
     const kept = await db.query.tickets.findFirst({ where: eq(schema.tickets.id, worked.id) });
     assert.equal(kept?.status, "closed");
     assert.deepEqual(kept?.tags, ["done-here"]);
