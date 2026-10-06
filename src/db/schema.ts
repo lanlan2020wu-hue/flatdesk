@@ -72,6 +72,11 @@ export const orgs = pgTable("orgs", {
   escalateTo: text("escalate_to"),
   // Resolution target in minutes (null = off): from arrival to closed, on the same clock as the first-reply target.
   resolveMinutes: integer("resolve_minutes"),
+  // Next-reply target in minutes (null = off): once the team has answered,
+  // each time the customer writes back the team should reply within this.
+  nextReplyMinutes: integer("next_reply_minutes"),
+  // Time a ticket spends pending (waiting on the customer) doesn't count toward the resolution target.
+  pauseWhilePending: boolean("pause_while_pending").notNull().default(false),
   // New tickets nobody routed go to the team in turn once they need a person
   // (lib/routing.ts). Groups can share their own tickets in turn too.
   shareInTurn: boolean("share_in_turn").notNull().default(false),
@@ -245,6 +250,14 @@ export const tickets = pgTable(
     // When it missed its resolution target and was escalated.
     resolveEscalatedAt: timestamp("resolve_escalated_at", { withTimezone: true }),
     closedAt: timestamp("closed_at", { withTimezone: true }),
+    // Kept by database triggers (migration 0035), so every way a ticket
+    // changes is counted. awaitingSince: when the customer wrote back after the
+    // team's last reply (null once someone replies). pendingSince and
+    // pausedSeconds: time spent pending, for pausing the resolution clock.
+    awaitingSince: timestamp("awaiting_since", { withTimezone: true }),
+    nextEscalatedAt: timestamp("next_escalated_at", { withTimezone: true }),
+    pendingSince: timestamp("pending_since", { withTimezone: true }),
+    pausedSeconds: integer("paused_seconds").notNull().default(0),
     // Timed triggers (lib/triggers.ts): the ones that ran since the customer or
     // team last wrote, and the ones that didn't match it as of timedSkippedAt.
     timedRan: uuid("timed_ran").array().notNull().default(sql`'{}'::uuid[]`),

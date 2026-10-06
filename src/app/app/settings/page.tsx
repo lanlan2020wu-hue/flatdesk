@@ -477,7 +477,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
               Response target and ratings
             </h2>
             <p className="text-muted">
-              New tickets show how long is left for a first reply, turn amber near the target, and are escalated when late. A resolution target does the same for closing the ticket. Reports show how often you hit both.
+              New tickets show how long is left for a first reply, turn amber near the target, and are escalated when late. A next-reply target does the same each time a customer writes back, and a resolution target does it for closing the ticket. Reports show how often you hit both.
             </p>
           </div>
           {serviceNotice && <p className="rounded-lg border border-warn/40 bg-warn-soft px-3 py-2 text-sm text-warn" role="alert">{serviceNotice}</p>}
@@ -491,12 +491,27 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
                 </select>
               </label>
               <label className="grid w-max gap-1">
+                <span className="label">Next reply within</span>
+                <select name="nextReplyMinutes" defaultValue={String(org.nextReplyMinutes ?? "")} className="field">
+                  <option value="">No target</option>
+                  {TARGET_CHOICES.map((c) => <option key={c.minutes} value={c.minutes}>{c.label}</option>)}
+                </select>
+                <span className="text-sm text-muted">After your first reply, each time the customer writes back, counted from their message.</span>
+              </label>
+              <label className="grid w-max gap-1">
                 <span className="label">Resolved (closed) within</span>
                 <select name="resolveMinutes" defaultValue={String(org.resolveMinutes ?? "")} className="field">
                   <option value="">No target</option>
                   {RESOLVE_CHOICES.map((c) => <option key={c.minutes} value={c.minutes}>{c.label}</option>)}
                 </select>
-                <span className="text-sm text-muted">Counted from arrival to closed, pending time included. A reopened ticket counts again until it&apos;s closed.</span>
+                <span className="text-sm text-muted">Counted from arrival to closed. A reopened ticket counts again until it&apos;s closed.</span>
+              </label>
+              <label className="flex items-start gap-2">
+                <input type="checkbox" name="pauseWhilePending" defaultChecked={org.pauseWhilePending} className="mt-1 size-4 accent-[var(--accent)]" />
+                <span className="grid gap-0.5">
+                  <span>Pause the resolution clock while a ticket is pending</span>
+                  <span className="text-sm text-muted">Time spent waiting on the customer doesn&apos;t count against the resolution target.</span>
+                </span>
               </label>
               <fieldset className="grid gap-2">
                 <legend className="label mb-1">Different targets by tag</legend>
