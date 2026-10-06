@@ -68,6 +68,8 @@ export const orgs = pgTable("orgs", {
   csatEnabled: boolean("csat_enabled").notNull().default(true),
   // First-reply target in minutes (null = off), counted in business hours when set. See lib/sla.ts.
   firstResponseMinutes: integer("first_response_minutes").default(240),
+  // Who gets a ticket that misses its first-reply target (null = leave it with whoever has it). See lib/escalation.ts.
+  escalateTo: text("escalate_to"),
   businessHours: jsonb("business_hours").$type<BusinessHours>(),
   // Public help center at /help/<helpSlug>. Set the first time an admin opens it.
   helpSlug: text("help_slug").unique(),
@@ -119,6 +121,18 @@ export type Milestone =
   | "card_added";
 // "team": only tickets that need a person. "all": every new ticket, saying whether the AI answered it.
 export type AlertOn = "team" | "all";
+// Trigger conditions and actions (lib/triggers.ts). Text values are a list of
+// words or phrases separated by commas; "includes" means any of them appears.
+export type TriggerCondition =
+  | { field: "subject" | "body" | "subject_or_body" | "from"; op: "includes" | "excludes"; value: string }
+  | { field: "tags"; op: "includes" | "excludes"; value: string }
+  | { field: "channel"; op: "is" | "is_not"; value: "email" | "chat" };
+export type TriggerAction =
+  | { type: "assign"; to: string } // agents.user_id
+  | { type: "add_tags"; tags: string[] }
+  | { type: "set_status"; status: "open" | "pending" | "closed" }
+  | { type: "note"; body: string };
+
 export type BusinessHours = {
   tz: string; // IANA time zone, e.g. "America/New_York"
   days: number[]; // 0 = Sunday ... 6 = Saturday
@@ -188,6 +202,8 @@ export const tickets = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
     firstResponseAt: timestamp("first_response_at", { withTimezone: true }),
+    // When it missed its first-reply target and was escalated (lib/escalation.ts).
+    escalatedAt: timestamp("escalated_at", { withTimezone: true }),
     closedAt: timestamp("closed_at", { withTimezone: true }),
     resolvedByAi: boolean("resolved_by_ai").notNull().default(false),
     // Chat tickets: the visitor's browser holds this to read and continue the thread.
@@ -352,6 +368,21 @@ export const rules = pgTable("rules", {
   enabled: boolean("enabled").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [uniqueIndex("rules_org_tag_assignee").on(t.orgId, t.ifTag, t.assignTo)]);
+
+// Triggers: "when a new ticket matches these conditions, do these things".
+// Run in order of position on every new ticket, before the tag rules above.
+// See lib/triggers.ts for the condition and action shapes.
+export const triggers = pgTable("triggers", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  enabled: boolean("enabled").notNull().default(true),
+  matchAll: boolean("match_all").notNull().default(true),
+  conditions: jsonb("conditions").$type<TriggerCondition[]>().notNull().default([]),
+  actions: jsonb("actions").$type<TriggerAction[]>().notNull().default([]),
+  position: integer("position").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+}, (t) => [index("triggers_org_position").on(t.orgId, t.position)]);
 
 // "refunded": an admin marked a resolution as wrong on the receipts page, so it no longer counts.
 // "followup": a call answering the customer again on a ticket that already counts; never counted itself.
@@ -619,6 +650,8 @@ export const importedRules = pgTable("imported_rules", {
   activeInSource: boolean("active_in_source").notNull().default(true),
   summary: text("summary").array().notNull().default(sql`'{}'::text[]`),
   flatdeskRuleId: uuid("flatdesk_rule_id").references(() => rules.id, { onDelete: "set null" }),
+  // Or, for richer rules, the Flatdesk trigger made from it.
+  flatdeskTriggerId: uuid("flatdesk_trigger_id").references(() => triggers.id, { onDelete: "set null" }),
   // Tag rule waiting for its agent to join: created when they do.
   pendingTag: text("pending_tag"),
   pendingAssigneeEmail: text("pending_assignee_email"),

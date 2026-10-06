@@ -169,6 +169,13 @@
       "when": 1791261413750,
       "tag": "0023_article_import",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1791279385483,
+      "tag": "0024_triggers_escalation",
+      "breakpoints": true
     }
   ]
 }
