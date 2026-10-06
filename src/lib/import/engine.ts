@@ -847,7 +847,7 @@ async function importTrigger(
   const [{ last }] = await db.select({ last: max(schema.triggers.position) }).from(schema.triggers).where(eq(schema.triggers.orgId, orgId));
   const [made] = await db
     .insert(schema.triggers)
-    .values({ orgId, name: cut(name, 120) || "Imported trigger", enabled, matchAll: draft.matchAll, conditions: draft.conditions, actions, position: (last ?? -1) + 1 })
+    .values({ orgId, name: cut(name, 120) || "Imported trigger", enabled, event: draft.event ?? "created", hours: draft.hours ?? null, matchAll: draft.matchAll, conditions: draft.conditions, actions, position: (last ?? -1) + 1 })
     .returning({ id: schema.triggers.id });
   await db.update(importedRules).set({ flatdeskTriggerId: made.id }).where(eq(importedRules.id, kept.id));
   return { mappedId: kept.id, imported: true, issues };

@@ -10,7 +10,7 @@
 // Issue sentences are grouped by exact text in the report, so keep them stable
 // (no ids or counts inside); the report lists which records each applies to.
 
-import type { TriggerAction, TriggerCondition } from "@/db/schema";
+import type { TriggerAction, TriggerCondition, TriggerEvent } from "@/db/schema";
 import { noNul } from "@/lib/ids";
 import type { FetchLike } from "./http";
 
@@ -92,7 +92,7 @@ export type Mapped = { label: string; issues: string[] } & (
       tagAssign: { tag: string; agentExternalId: string } | null;
       // Otherwise, set when it can run as a Flatdesk trigger (lib/triggers.ts).
       // An assignee is the old help desk's agent id, matched to a Flatdesk member on import.
-      trigger?: { matchAll: boolean; conditions: TriggerCondition[]; actions: (TriggerAction | { type: "assign_external"; agentExternalId: string })[] } | null;
+      trigger?: { event?: TriggerEvent; hours?: number | null; matchAll: boolean; conditions: TriggerCondition[]; actions: (TriggerAction | { type: "assign_external"; agentExternalId: string })[] } | null;
     }
   | { kind: "contact"; email: string | null; name: string | null; fields: Record<string, string> }
   | {

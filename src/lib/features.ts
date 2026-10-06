@@ -51,7 +51,7 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
     features: [
       { id: "suggested-macros", title: "AI macros", body: "When your team sends the same answer on 5 tickets, the AI writes it up as a macro and suggests it on new tickets. If your team keeps editing a macro the same way, the AI suggests an update you apply in one click.", icon: I.spark, isNew: true },
       { id: "macros", title: "Macros that take action", body: "One click replies with the customer's name filled in, assigns the ticket, sets the status, adds tags, and can send right away.", icon: I.macro },
-      { id: "rules", title: "Triggers", body: "When a new ticket's subject, message, sender, tags or channel match, tag it, assign it, set its status or leave a note. Imported Zendesk triggers that fit keep running.", icon: I.rule },
+      { id: "rules", title: "Triggers and timed rules", body: "Run on a new ticket, when the customer writes back, or after a ticket sits for a set number of hours. Match subject, message, sender, tags, channel or status, then tag, assign, set the status or leave a note. Timed ones can also email the customer (\"pending 3 days: check in, then close\"). Imported Zendesk triggers and automations that fit keep running.", icon: I.rule, isNew: true },
       { id: "tags", title: "Tags", body: "Tag tickets by hand, from a macro, or from your old help desk's data.", icon: I.tag },
     ],
   },

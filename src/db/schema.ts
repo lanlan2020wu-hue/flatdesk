@@ -132,12 +132,17 @@ export type AlertOn = "team" | "all";
 export type TriggerCondition =
   | { field: "subject" | "body" | "subject_or_body" | "from"; op: "includes" | "excludes"; value: string }
   | { field: "tags"; op: "includes" | "excludes"; value: string }
-  | { field: "channel"; op: "is" | "is_not"; value: "email" | "chat" };
+  | { field: "channel"; op: "is" | "is_not"; value: "email" | "chat" }
+  | { field: "status"; op: "is" | "is_not"; value: "open" | "pending" | "closed" };
+// When a trigger runs: on a new ticket, when the customer writes back, or
+// after a ticket has had no update for `hours` (once per ticket until it changes).
+export type TriggerEvent = "created" | "updated" | "timed";
 export type TriggerAction =
   | { type: "assign"; to: string } // agents.user_id
   | { type: "add_tags"; tags: string[] }
   | { type: "set_status"; status: "open" | "pending" | "closed" }
-  | { type: "note"; body: string };
+  | { type: "note"; body: string }
+  | { type: "reply"; body: string }; // emails the customer; timed triggers only
 
 // A faster (or slower) first-reply target for tickets with a tag. See lib/sla.ts.
 export type SlaPolicy = { tag: string; minutes: number };
@@ -214,6 +219,11 @@ export const tickets = pgTable(
     // When it missed its first-reply target and was escalated (lib/escalation.ts).
     escalatedAt: timestamp("escalated_at", { withTimezone: true }),
     closedAt: timestamp("closed_at", { withTimezone: true }),
+    // Timed triggers (lib/triggers.ts): the ones that ran since the customer or
+    // team last wrote, and the ones that didn't match it as of timedSkippedAt.
+    timedRan: uuid("timed_ran").array().notNull().default(sql`'{}'::uuid[]`),
+    timedSkipped: uuid("timed_skipped").array().notNull().default(sql`'{}'::uuid[]`),
+    timedSkippedAt: timestamp("timed_skipped_at", { withTimezone: true }),
     resolvedByAi: boolean("resolved_by_ai").notNull().default(false),
     // Chat tickets: the visitor's browser holds this to read and continue the thread.
     visitorToken: text("visitor_token"),
@@ -378,15 +388,17 @@ export const rules = pgTable("rules", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [uniqueIndex("rules_org_tag_assignee").on(t.orgId, t.ifTag, t.assignTo)]);
 
-// Triggers: "when a new ticket matches these conditions, do these things".
-// Run in order of position on every new ticket, before the tag rules above.
-// See lib/triggers.ts for the condition and action shapes.
+// Triggers: "when a ticket matches these conditions, do these things". Run in
+// order of position on every new ticket (before the tag rules above), when the
+// customer writes back, or on a timer. See lib/triggers.ts.
 export const triggers = pgTable("triggers", {
   id: uuid("id").primaryKey().defaultRandom(),
   orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
   enabled: boolean("enabled").notNull().default(true),
   matchAll: boolean("match_all").notNull().default(true),
+  event: text("event").$type<TriggerEvent>().notNull().default("created"),
+  hours: integer("hours"), // timed triggers: hours since the ticket's last update
   conditions: jsonb("conditions").$type<TriggerCondition[]>().notNull().default([]),
   actions: jsonb("actions").$type<TriggerAction[]>().notNull().default([]),
   position: integer("position").notNull().default(0),

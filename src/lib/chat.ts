@@ -105,7 +105,8 @@ export async function visitorThread(ticketId: string, link?: { orgId: string; ke
   // Customer messages that came in by email stay out of the widget. The chat
   // email is unverified, so a visitor who typed someone else's address must
   // not read that person's emailed replies (they'd write "this wasn't me...").
-  const visible = rows.filter((m) => m.authorType !== "system" && !(m.authorType === "customer" && m.emailMessageId));
+  // Notes are already left out; a public system message is a timed trigger's email.
+  const visible = rows.filter((m) => !(m.authorType === "customer" && m.emailMessageId));
   const files = link ? await attachmentsByMessage(link.orgId, visible.map((m) => m.id)) : new Map<string, AttachmentInfo[]>();
   return visible
     .map((m) => ({
