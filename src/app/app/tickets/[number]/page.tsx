@@ -1,10 +1,12 @@
 import { and, asc, desc, eq } from "drizzle-orm";
 import Link from "next/link";
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import AutoSubmitSelect from "@/components/AutoSubmitSelect";
 import Avatar from "@/components/Avatar";
 import Composer from "@/components/Composer";
 import CopilotSummary from "@/components/CopilotSummary";
+import { HubSpotPanel, JiraPanel, OtherTickets, ShopifyOrders, StripeCustomer } from "@/components/CustomerContext";
 import SlaBadge from "@/components/SlaBadge";
 import TagInput from "@/components/TagInput";
 import TeachAi from "@/components/TeachAi";
@@ -59,7 +61,7 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
     cachedSummary(s.orgId, ticket.id, last?.id),
     orgTags(s.orgId),
   ]);
-  const copilotOn = aiConfigured();
+  const copilotOn = aiConfigured() && Boolean(org?.aiProcessing);
   // AI macros: when the customer is waiting on us, the macro that answers what they asked.
   const lastVisible = thread.filter((m) => !m.internal && m.authorType !== "system").at(-1);
   const suggestedMacro = ticket.status !== "closed" && lastVisible?.authorType === "customer" ? identifyMacro(lastVisible.body, macros) : null;
@@ -263,6 +265,22 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
             </dl>
           </details>
         )}
+
+        <Suspense fallback={null}>
+          <JiraPanel orgId={s.orgId} ticketId={ticket.id} subject={ticket.subject} canEdit={!s.viewer} />
+        </Suspense>
+        <Suspense fallback={null}>
+          <OtherTickets orgId={s.orgId} customerId={customer.id} ticketId={ticket.id} />
+        </Suspense>
+        <Suspense fallback={null}>
+          <ShopifyOrders orgId={s.orgId} email={customer.email} unverified={ticket.channel === "chat"} />
+        </Suspense>
+        <Suspense fallback={null}>
+          <StripeCustomer orgId={s.orgId} email={customer.email} unverified={ticket.channel === "chat"} />
+        </Suspense>
+        <Suspense fallback={null}>
+          <HubSpotPanel orgId={s.orgId} email={customer.email} />
+        </Suspense>
 
         <section className="grid gap-1 border-t border-line pt-4 text-muted">
           <p>Opened {timeAgo(ticket.createdAt)}</p>

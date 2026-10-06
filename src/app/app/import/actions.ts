@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { milestone } from "@/lib/funnel";
+import { audit } from "@/lib/security";
 import { ADAPTERS, cancelImport, ImportError, isSource, startImport } from "@/lib/import/engine";
 
 export type StartState = { error: string | null; values: Record<string, string> };
@@ -26,6 +27,7 @@ export async function startImportAction(_prev: StartState, form: FormData): Prom
     throw e;
   }
   await milestone(s.orgId, "import_started", { source });
+  await audit(s.orgId, { userId: s.userId, name: s.name }, "import.start", `From ${adapter.name}`);
   redirect(`/app/import/${id}`);
 }
 

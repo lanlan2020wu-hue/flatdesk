@@ -11,10 +11,13 @@ import { PLAN, annualSavingsPct, usd } from "@/lib/pricing";
 import { webhookKind, webhookLabel } from "@/lib/alerts";
 import { DEFAULT_HOURS, TARGET_CHOICES } from "@/lib/sla";
 import { timeAgo } from "@/lib/format";
+import { currentUser } from "@clerk/nextjs/server";
+import { clerkEnabled } from "@/lib/auth-config";
 import {
   openBillingPortalAction,
   saveAiSettingsAction,
   saveAlertsAction,
+  saveSecurityAction,
   saveServiceSettingsAction,
   sendTestAlertAction,
   setViewerAction,
@@ -37,7 +40,7 @@ const STATUS_TEXT: Record<string, string> = {
 
 export default async function SettingsPage({ searchParams }: PageProps<"/app/settings">) {
   const s = await requireSession();
-  const { billing, alerts: alertsNotice, service: serviceNotice } = await searchParams;
+  const { billing, alerts: alertsNotice, service: serviceNotice, security: securityNotice } = await searchParams;
   let org = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) });
   if (org?.stripeCustomerId && billingConfigured()) {
     org = await refreshSubscription(s.orgId).catch(() => org);
@@ -56,6 +59,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
   const hours = org?.businessHours ?? DEFAULT_HOURS;
   const clock = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
   const zones = Intl.supportedValuesOf("timeZone");
+  const myTwoFactor = clerkEnabled ? Boolean((await currentUser())?.twoFactorEnabled) : false;
   const team = await db.select().from(schema.agents).where(and(eq(schema.agents.orgId, s.orgId), isNull(schema.agents.removedAt))).orderBy(asc(schema.agents.name));
 
   return (
@@ -102,6 +106,10 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
           Your data is yours. Download it any time, no need to ask us. Moving from another help desk?{" "}
           <Link href="/app/import" className="link text-accent">Import everything</Link>.
         </p>
+        <p className="text-sm">
+          <a href="/app/export/archive" className="btn btn-sm w-max">Download everything (.zip)</a>
+          <span className="mt-1 block text-muted">Every table, the help center, the audit log and every attachment as its original file.</span>
+        </p>
         <ul className="grid gap-1.5 text-sm">
           {(["tickets", "messages", "customers", "macros"] as const).map((t) => (
             <li key={t} className="flex gap-3">
@@ -112,6 +120,52 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
           ))}
         </ul>
       </section>
+
+      {org && (
+        <section id="security" className="grid scroll-mt-6 gap-4 border-t border-line pt-6">
+          <div className="grid gap-1">
+            <h2 className="text-lg font-semibold">Security</h2>
+            <p className="text-muted">
+              For companies that review vendors. What each control does, and what Flatdesk does and doesn&apos;t have, is on the{" "}
+              <a href="/security" className="link text-accent" target="_blank">security page</a>.
+            </p>
+          </div>
+          {securityNotice === "saved" && <p className="rounded-lg border border-accent/30 bg-accent-soft px-3 py-2 text-sm" role="status">Saved.</p>}
+          {typeof securityNotice === "string" && securityNotice !== "saved" && <p className="rounded-lg border border-warn/40 bg-surface-2/60 px-3 py-2 text-sm" role="alert">{securityNotice}</p>}
+          <form action={saveSecurityAction} className="grid gap-4">
+            <fieldset disabled={!isAdmin} className="grid gap-4">
+              <label className="flex items-start gap-2.5">
+                <input type="checkbox" name="aiProcessing" defaultChecked={org.aiProcessing} className="mt-1 size-4 accent-[var(--accent)]" />
+                <span>
+                  Allow AI features
+                  <span className="block text-sm text-muted">
+                    Off: nothing from your team is sent to the AI provider. No AI answers, reply drafts, summaries, AI macros or test drive. Flatdesk
+                    works as a plain help desk.
+                  </span>
+                </span>
+              </label>
+              <label className="flex items-start gap-2.5">
+                <input type="checkbox" name="requireTwoFactor" defaultChecked={org.requireTwoFactor} className="mt-1 size-4 accent-[var(--accent)]" />
+                <span>
+                  Require two-step verification for everyone
+                  <span className="block text-sm text-muted">
+                    Anyone without it is asked to add an authenticator app before they can open the help desk.
+                    {clerkEnabled && !myTwoFactor && " Turn it on for your own account first, from your profile menu."}
+                  </span>
+                </span>
+              </label>
+              {isAdmin && <button className="btn btn-primary w-max">Save security settings</button>}
+            </fieldset>
+            {!isAdmin && <p className="text-sm text-muted">Only admins can change these.</p>}
+          </form>
+          {isAdmin && (
+            <p className="text-sm">
+              <Link href="/app/settings/audit" className="link text-accent">Audit log</Link>
+              <span className="text-muted">: who changed settings and seats, exported data, imported or refunded.</span>
+            </p>
+          )}
+        </section>
+      )}
 
       <section id="billing" className="grid scroll-mt-6 gap-3 border-t border-line pt-6">
         <h2 className="text-lg font-semibold">Plan and billing</h2>

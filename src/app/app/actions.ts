@@ -4,10 +4,12 @@ import { and, eq, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { currentUser } from "@clerk/nextjs/server";
+import { clerkEnabled } from "@/lib/auth-config";
 import { db, schema } from "@/db";
 import { findAssignable } from "@/lib/agents";
 import { INPUT, parseOverageLimit } from "@/lib/app-input";
-import { LOCKED_MESSAGE, requireAdmin, requireEditor, requireOpen } from "@/lib/auth";
+import { LOCKED_MESSAGE, requireAdmin, requireEditor, requireOpen, type Session } from "@/lib/auth";
 import { filesFromForm, saveAttachments } from "@/lib/attachments";
 import { checkWebhookUrl, sendTestAlert } from "@/lib/alerts";
 import { handBackToTeam } from "@/lib/ai";
@@ -21,6 +23,7 @@ import { dismissSuggestion, saveSuggestedMacro } from "@/lib/macro-suggestions";
 import { hit, LIMITS } from "@/lib/rate-limit";
 import { teachAi } from "@/lib/teach";
 import { addRule } from "@/lib/rules";
+import { audit, changes } from "@/lib/security";
 import { TARGET_CHOICES, validHours } from "@/lib/sla";
 import { addReply, normalizeTags, updateTicket, type TicketStatus } from "@/lib/tickets";
 
@@ -28,6 +31,8 @@ import { addReply, normalizeTags, updateTicket, type TicketStatus } from "@/lib/
 // direct requests from doing work behind it. Billing stays open.
 const requireOpenSession = async () => requireOpen(await requireEditor());
 const requireOpenAdmin = async () => requireOpen(await requireAdmin());
+
+const actor = (s: Session) => ({ userId: s.userId, name: s.name });
 
 const STATUSES: TicketStatus[] = ["open", "pending", "closed"];
 const str = (f: FormData, k: string) => String(f.get(k) ?? "").trim();
@@ -142,7 +147,11 @@ export async function saveMacroAction(form: FormData) {
 
 export async function deleteMacroAction(form: FormData) {
   const s = await requireOpenSession();
-  await db.delete(schema.macros).where(and(eq(schema.macros.orgId, s.orgId), eq(schema.macros.id, idOf(form, "id"))));
+  const [gone] = await db
+    .delete(schema.macros)
+    .where(and(eq(schema.macros.orgId, s.orgId), eq(schema.macros.id, idOf(form, "id"))))
+    .returning({ name: schema.macros.name });
+  if (gone) await audit(s.orgId, actor(s), "macro.delete", gone.name);
   revalidatePath("/app/macros");
 }
 
@@ -225,21 +234,24 @@ export async function setViewerAction(form: FormData) {
     .where(and(eq(schema.agents.orgId, s.orgId), eq(schema.agents.userId, userId), eq(schema.agents.role, "agent"), isNull(schema.agents.removedAt)))
     .returning({ userId: schema.agents.userId });
   if (!changed) throw new Error("Admins always have a full seat. Pick an agent.");
+  const who = await db.query.agents.findFirst({ where: and(eq(schema.agents.orgId, s.orgId), eq(schema.agents.userId, userId)), columns: { name: true } });
+  await audit(s.orgId, actor(s), "seat.viewer", `${who?.name ?? userId}: ${viewer ? "viewer (read only)" : "agent"}`);
   await syncSeats(s.orgId).catch((err) => console.error("seat sync failed", err));
   revalidatePath("/app/settings");
 }
 
 export async function saveAiSettingsAction(form: FormData) {
   const s = await requireOpenAdmin();
-  await db
-    .update(schema.orgs)
-    .set({
-      aiEnabled: form.get("aiEnabled") === "on",
-      aiInstructions: str(form, "aiInstructions").slice(0, 20000),
-      aiOverageEnabled: form.get("aiOverageEnabled") === "on",
-      aiOverageMonthlyLimit: parseOverageLimit(str(form, "aiOverageMonthlyLimit")),
-    })
-    .where(eq(schema.orgs.id, s.orgId));
+  const before = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) });
+  const next = {
+    aiEnabled: form.get("aiEnabled") === "on",
+    aiInstructions: str(form, "aiInstructions").slice(0, 20000),
+    aiOverageEnabled: form.get("aiOverageEnabled") === "on",
+    aiOverageMonthlyLimit: parseOverageLimit(str(form, "aiOverageMonthlyLimit")),
+  };
+  await db.update(schema.orgs).set(next).where(eq(schema.orgs.id, s.orgId));
+  const detail = changes(before ?? {}, next, { aiEnabled: "AI answers", aiInstructions: "What the AI should know", aiOverageEnabled: "Overage", aiOverageMonthlyLimit: "Overage limit" });
+  if (detail) await audit(s.orgId, actor(s), "settings.ai", detail);
   revalidatePath("/app/settings");
 }
 
@@ -251,11 +263,14 @@ export async function saveAlertsAction(form: FormData) {
   if ("error" in checked) redirect(`/app/settings?alerts=${encodeURIComponent(checked.error)}#alerts`);
   const org = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) });
   const changed = checked.url !== org?.alertWebhookUrl;
+  const alertOn = form.get("alertOn") === "all" ? "all" : "team";
+  const detail = changes(org ?? {}, { alertWebhookUrl: checked.url, alertOn }, { alertWebhookUrl: "Webhook", alertOn: "Post" });
+  if (detail) await audit(s.orgId, actor(s), "settings.alerts", detail);
   await db
     .update(schema.orgs)
     .set({
       alertWebhookUrl: checked.url,
-      alertOn: form.get("alertOn") === "all" ? "all" : "team",
+      alertOn,
       ...(changed ? { alertLastAt: null, alertLastError: null } : {}),
     })
     .where(eq(schema.orgs.id, s.orgId));
@@ -289,12 +304,32 @@ export async function saveServiceSettingsAction(form: FormData) {
     if (!validHours(hours)) redirect(`/app/settings?service=${encodeURIComponent("Pick a time zone, at least one day, and opening hours at least an hour long.")}#service`);
     businessHours = hours;
   }
-  await db
-    .update(schema.orgs)
-    .set({ csatEnabled: form.get("csatEnabled") === "on", firstResponseMinutes, businessHours })
-    .where(eq(schema.orgs.id, s.orgId));
+  const before = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) });
+  const next = { csatEnabled: form.get("csatEnabled") === "on", firstResponseMinutes, businessHours };
+  await db.update(schema.orgs).set(next).where(eq(schema.orgs.id, s.orgId));
+  const detail = changes(before ?? {}, next, { csatEnabled: "Ratings", firstResponseMinutes: "First-reply target (minutes)", businessHours: "Business hours" });
+  if (detail) await audit(s.orgId, actor(s), "settings.service", detail);
   revalidatePath("/app/settings");
   revalidatePath("/app/inbox");
+}
+
+// Settings, Security: AI processing and required two-step verification.
+export async function saveSecurityAction(form: FormData) {
+  const s = await requireAdmin();
+  const before = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) });
+  if (!before) throw new Error("Team not found.");
+  const aiProcessing = form.get("aiProcessing") === "on";
+  const requireTwoFactor = form.get("requireTwoFactor") === "on";
+  // An admin can only require it once they have it, so nobody locks the whole team out.
+  if (requireTwoFactor && !before.requireTwoFactor && clerkEnabled) {
+    const user = await currentUser();
+    if (!user?.twoFactorEnabled) redirect(`/app/settings?security=${encodeURIComponent("Turn on two-step verification for your own account first (your profile menu, Security), then require it for the team.")}#security`);
+  }
+  await db.update(schema.orgs).set({ aiProcessing, requireTwoFactor }).where(eq(schema.orgs.id, s.orgId));
+  if (aiProcessing !== before.aiProcessing) await audit(s.orgId, actor(s), "settings.ai_processing", aiProcessing ? "AI processing on" : "AI processing off: nothing is sent to the AI provider");
+  if (requireTwoFactor !== before.requireTwoFactor) await audit(s.orgId, actor(s), "settings.two_factor", requireTwoFactor ? "Required for everyone" : "No longer required");
+  revalidatePath("/app", "layout");
+  redirect("/app/settings?security=saved#security");
 }
 
 async function origin() {
@@ -310,12 +345,14 @@ export async function startCheckoutAction(form: FormData) {
     where: and(eq(schema.agents.orgId, s.orgId), eq(schema.agents.userId, s.userId)),
   });
   const interval = form.get("interval") === "year" ? "year" : "month";
+  await audit(s.orgId, actor(s), "billing.checkout", interval === "year" ? "Yearly" : "Monthly");
   redirect(await checkoutUrl(s.orgId, admin?.email ?? "", await origin(), interval));
 }
 
 export async function switchToAnnualAction() {
   const s = await requireAdmin();
   await switchToAnnual(s.orgId);
+  await audit(s.orgId, actor(s), "billing.annual");
   redirect("/app/settings?billing=annual#billing");
 }
 

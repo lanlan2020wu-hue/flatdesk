@@ -71,6 +71,11 @@ export const orgs = pgTable("orgs", {
   businessHours: jsonb("business_hours").$type<BusinessHours>(),
   // Public help center at /help/<helpSlug>. Set the first time an admin opens it.
   helpSlug: text("help_slug").unique(),
+  // Security controls for teams that go through vendor review. See lib/security.ts.
+  // Off: nothing is sent to the AI provider for this team (answers, drafts, macros, test drive).
+  aiProcessing: boolean("ai_processing").notNull().default(true),
+  // Everyone must have two-step verification on their Clerk account to open the app.
+  requireTwoFactor: boolean("require_two_factor").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -476,6 +481,22 @@ export const testDriveDrafts = pgTable(
   (t) => [uniqueIndex("test_drive_drafts_org_ticket").on(t.orgId, t.ticketId), index("test_drive_drafts_org_status").on(t.orgId, t.status)],
 );
 
+// Who changed what, for admins: settings, seats, exports, imports, refunds.
+// Kept as long as the team's account; shown at /app/settings/audit.
+export const auditEvents = pgTable(
+  "audit_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
+    actorId: text("actor_id"), // Clerk user id; null for the system
+    actorName: text("actor_name").notNull(),
+    action: text("action").notNull(), // e.g. "settings.ai", "export.archive"
+    detail: text("detail").notNull().default(""),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("audit_events_org_time").on(t.orgId, t.createdAt)],
+);
+
 export const waitlist = pgTable("waitlist", {
   email: text("email").primaryKey(),
   currentTool: text("current_tool"),
@@ -594,3 +615,62 @@ export const importedRules = pgTable("imported_rules", {
   pendingAssigneeEmail: text("pending_assignee_email"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 }, (t) => [uniqueIndex("imported_rules_org_source_ext").on(t.orgId, t.source, t.externalId)]);
+
+// ---- Integrations ----------------------------------------------------------
+
+// Keys for the REST API at /api/v1 (lib/api-keys.ts). Only a SHA-256 hash of
+// the key is stored; the key itself is shown once, when it's made.
+export const apiKeys = pgTable(
+  "api_keys",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    prefix: text("prefix").notNull(), // the first characters, so people can tell keys apart
+    hash: text("hash").notNull().unique(),
+    // Replies sent with this key are signed by this person unless the request names another agent.
+    createdBy: text("created_by").notNull(),
+    lastUsedAt: timestamp("last_used_at", { withTimezone: true }),
+    revokedAt: timestamp("revoked_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("api_keys_org").on(t.orgId)],
+);
+
+export const integrationKind = pgEnum("integration_kind", ["shopify", "stripe", "hubspot", "jira"]);
+
+// Accounts connected to the team's tickets: Shopify orders, Stripe payments
+// and HubSpot contacts shown beside a ticket, and the Jira project tickets are
+// escalated to (lib/integrations/). Credentials are encrypted.
+export const integrations = pgTable(
+  "integrations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
+    kind: integrationKind("kind").notNull(),
+    account: text("account").notNull(), // "acme.myshopify.com", or the Stripe account's name
+    credentials: text("credentials").notNull(), // sealed with lib/import/crypto.ts
+    connectedBy: text("connected_by").notNull(),
+    lastError: text("last_error"),
+    lastErrorAt: timestamp("last_error_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("integrations_org_kind").on(t.orgId, t.kind)],
+);
+
+// Things a ticket was escalated to, like a Jira issue. The issue's status is
+// read live when the ticket is opened.
+export const ticketLinks = pgTable(
+  "ticket_links",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
+    ticketId: uuid("ticket_id").notNull().references(() => tickets.id, { onDelete: "cascade" }),
+    kind: integrationKind("kind").notNull(),
+    externalKey: text("external_key").notNull(), // "SUP-123"
+    url: text("url").notNull(),
+    createdBy: text("created_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("ticket_links_ticket").on(t.ticketId), uniqueIndex("ticket_links_org_kind_key").on(t.orgId, t.kind, t.externalKey)],
+);

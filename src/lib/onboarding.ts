@@ -93,6 +93,7 @@ export async function tryTheAi(orgId: string, question: string, draft: typeof dr
   const org = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, orgId) });
   if (!org) throw new TestDriveError("Team not found.");
   if (access(org).state === "locked") throw new TestDriveError("The free trial has ended. Add a card in Settings to keep going.");
+  if (!org.aiProcessing) throw new TestDriveError("AI processing is turned off for your team. An admin can turn it back on in Settings.");
   // Hold the most a call can cost before making it, in one statement, so quick
   // repeated tries can't all pass the budget check at once.
   const [held] = await db

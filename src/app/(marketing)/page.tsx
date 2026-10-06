@@ -6,7 +6,7 @@ import SwitchBill from "@/components/SwitchBill";
 import WaitlistForm from "@/components/WaitlistForm";
 import HeroDemo from "@/components/HeroDemo";
 import ProductTour from "@/components/ProductTour";
-import YearChart from "@/components/YearChart";
+import LoopVideo from "@/components/LoopVideo";
 import { ImportShot } from "@/components/ProductShots";
 import { TRIAL_DAYS } from "@/lib/billing";
 import { organization, pageMeta, software, website } from "@/lib/seo";
@@ -135,9 +135,21 @@ export default function Home() {
           stops at its limit unless an admin says otherwise.
         </ChapterHead>
         <div className="grid gap-10 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-16">
-          <div data-play="" suppressHydrationWarning>
-            <YearChart />
-          </div>
+          <figure className="grid content-start gap-3">
+            <div className="app-frame app-frame-light">
+              <LoopVideo
+                name="busy-month"
+                width={1280}
+                height={720}
+                label="A month with a launch week, day by day. Tickets and AI answers climb. Paying per AI answer, the bill grows to about $511; on Flatdesk it stays at $156 for 4 seats."
+              />
+            </div>
+            <figcaption className="text-xs text-muted">
+              An example month for 4 agents with a launch week. Fin Essential at list price, {usd(29)} a seat plus {usd(0.99, true)} per AI answer,
+              against Flatdesk&apos;s {usd(PLAN.annualSeatPrice)} a seat; both billed yearly.{" "}
+              <Link href="/calculator" className="link text-accent">Try your own numbers</Link>
+            </figcaption>
+          </figure>
           <div data-play="" suppressHydrationWarning className="grid content-start gap-4">
             <dl className="border-t border-ink/70">
               <Rate label="Per agent, billed yearly"><span className="num">{usd(PLAN.annualSeatPrice)}</span> a month</Rate>
