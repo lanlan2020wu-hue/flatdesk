@@ -71,6 +71,9 @@ export const orgs = pgTable("orgs", {
   // Who gets a ticket that misses its first-reply target (null = leave it with whoever has it). See lib/escalation.ts.
   escalateTo: text("escalate_to"),
   businessHours: jsonb("business_hours").$type<BusinessHours>(),
+  slaPolicies: jsonb("sla_policies").$type<SlaPolicy[]>().notNull().default([]),
+  // Signs who is signed in on the team's own site, so chat can trust the visitor's email (lib/chat-identity.ts).
+  chatSecret: text("chat_secret").notNull().default(sql`replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', '')`),
   // Public help center at /help/<helpSlug>. Set the first time an admin opens it.
   helpSlug: text("help_slug").unique(),
   // Security controls for teams that go through vendor review. See lib/security.ts.
@@ -135,6 +138,9 @@ export type TriggerAction =
   | { type: "add_tags"; tags: string[] }
   | { type: "set_status"; status: "open" | "pending" | "closed" }
   | { type: "note"; body: string };
+
+// A faster (or slower) first-reply target for tickets with a tag. See lib/sla.ts.
+export type SlaPolicy = { tag: string; minutes: number };
 
 export type BusinessHours = {
   tz: string; // IANA time zone, e.g. "America/New_York"

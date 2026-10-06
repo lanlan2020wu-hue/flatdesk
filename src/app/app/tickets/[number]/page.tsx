@@ -304,11 +304,11 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
         <section className="grid gap-1 border-t border-line pt-4 text-muted">
           <p>Opened {timeAgo(ticket.createdAt)}</p>
           {ticket.firstResponseAt && <p>First reply {timeAgo(ticket.firstResponseAt)}</p>}
-          {sla && org?.firstResponseMinutes && (
+          {sla && org && (
             <p className={sla.kind === "overdue" || sla.kind === "missed" ? "text-warn" : undefined}>
-              {sla.kind === "met" && `First reply in ${shortDuration(sla.took)}, within the target of ${targetLabel(org.firstResponseMinutes)}`}
-              {sla.kind === "missed" && `First reply in ${shortDuration(sla.took)}, past the target of ${targetLabel(org.firstResponseMinutes)}`}
-              {sla.kind === "waiting" && `First reply due ${formatDue(sla.due, org.businessHours)}`}
+              {sla.kind === "met" && `First reply in ${shortDuration(sla.took)}, within the target of ${targetLabel(sla.minutes)}${sla.tag ? ` for ${sla.tag}` : ""}`}
+              {sla.kind === "missed" && `First reply in ${shortDuration(sla.took)}, past the target of ${targetLabel(sla.minutes)}${sla.tag ? ` for ${sla.tag}` : ""}`}
+              {sla.kind === "waiting" && `First reply due ${formatDue(sla.due, org.businessHours)}${sla.tag ? ` (${targetLabel(sla.minutes)} for ${sla.tag})` : ""}`}
               {sla.kind === "overdue" && `First reply overdue by ${shortDuration(sla.minutesLate)}`}
             </p>
           )}

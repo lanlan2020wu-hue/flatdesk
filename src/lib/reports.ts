@@ -85,9 +85,9 @@ export async function teamReport(orgId: string, days: ReportRange) {
 // waiting count only once they're past it.
 async function targetReport(orgId: string, since: Date) {
   const org = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, orgId) });
-  if (!org?.firstResponseMinutes) return null;
+  if (!org?.firstResponseMinutes && !org?.slaPolicies.length) return null;
   const tickets = await db
-    .select({ status: schema.tickets.status, createdAt: schema.tickets.createdAt, firstResponseAt: schema.tickets.firstResponseAt, source: schema.tickets.source })
+    .select({ status: schema.tickets.status, createdAt: schema.tickets.createdAt, firstResponseAt: schema.tickets.firstResponseAt, source: schema.tickets.source, tags: schema.tickets.tags })
     .from(schema.tickets)
     .where(and(eq(schema.tickets.orgId, orgId), gte(schema.tickets.createdAt, since), isNull(schema.tickets.source), eq(schema.tickets.test, false)))
     .limit(20000);
@@ -99,7 +99,7 @@ async function targetReport(orgId: string, since: Date) {
     if (st?.kind === "met") met++;
     else if (st?.kind === "missed" || st?.kind === "overdue") missed++;
   }
-  return { minutes: org.firstResponseMinutes, met, missed, share: met + missed > 0 ? met / (met + missed) : null };
+  return { minutes: org.firstResponseMinutes, policies: org.slaPolicies.length, met, missed, share: met + missed > 0 ? met / (met + missed) : null };
 }
 
 export function duration(seconds: number | null): string {

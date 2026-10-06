@@ -97,6 +97,30 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
           <p className="text-sm text-muted">
             <a href={`/chat/${org.widgetKey}`} target="_blank" className="link text-accent">Open the chat window</a> to try it.
           </p>
+          <details className="grid gap-2 text-sm">
+            <summary className="link w-max cursor-pointer list-none text-accent">Chat inside your app, for signed-in users</summary>
+            <div className="mt-2 grid gap-2">
+              <p className="text-muted">
+                Your server signs the user&apos;s email with this team&apos;s chat secret, and the page sets it before the script above. The chat skips the name and email form, and the ticket says the visitor was signed in, with any attributes you add (plan, account id). Keep the secret on your server. If the signature doesn&apos;t match, the ticket says so and the email counts as unconfirmed.
+              </p>
+              {isAdmin ? (
+                <p>
+                  Chat secret: <code className="num break-all rounded bg-surface-2 px-1.5 py-0.5 select-all">{org.chatSecret}</code>
+                </p>
+              ) : (
+                <p className="text-muted">Admins can see the chat secret here.</p>
+              )}
+              <pre className="num overflow-x-auto rounded-lg border border-line bg-surface-2/60 px-3 py-2 text-xs">{`<script>
+  window.FlatdeskSettings = {
+    email: user.email,
+    name: user.name,
+    // On your server: HMAC-SHA256 of the lowercased email, with the chat secret, as hex
+    userHash: "<%= hmac_sha256(CHAT_SECRET, user.email.toLowerCase()) %>",
+    attributes: { Plan: user.plan, "Account ID": user.accountId },
+  };
+</script>`}</pre>
+            </div>
+          </details>
         </section>
       )}
 
@@ -434,6 +458,18 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
                   {TARGET_CHOICES.map((c) => <option key={c.minutes} value={c.minutes}>{c.label}</option>)}
                 </select>
               </label>
+              <fieldset className="grid gap-2">
+                <legend className="label mb-1">Different targets by tag</legend>
+                <p className="text-sm text-muted">For example vip in 1 hour, or bug-report in 24 hours. A ticket with one of these tags gets that target instead; if it has several, the shortest wins. Tags can come from a trigger.</p>
+                {Array.from({ length: 4 }, (_, i) => org.slaPolicies[i]).map((p, i) => (
+                  <div key={i} className="flex flex-wrap gap-2">
+                    <input name={`policyTag${i}`} defaultValue={p?.tag ?? ""} placeholder={i === 0 ? "vip" : ""} aria-label={`Tag ${i + 1}`} className="field field-sm w-40" />
+                    <select name={`policyMinutes${i}`} defaultValue={String(p?.minutes ?? 60)} aria-label={`Target ${i + 1}`} className="field field-sm">
+                      {TARGET_CHOICES.map((c) => <option key={c.minutes} value={c.minutes}>first reply within {c.label}</option>)}
+                    </select>
+                  </div>
+                ))}
+              </fieldset>
               <label className="grid w-max gap-1">
                 <span className="label">When a ticket misses it</span>
                 <select name="escalateTo" defaultValue={org.escalateTo ?? ""} className="field">

@@ -35,7 +35,7 @@ export default function DpaPage() {
         <p>
           <strong className="font-medium">People:</strong> your customers and website visitors who contact you, and the members of your team.{" "}
           <strong className="font-medium">Data:</strong> names, email addresses, message content, files, and anything else they choose to send you.
-          You agree not to send special categories of data (such as health data) or card numbers through Flatdesk.
+          You agree not to send special categories of data (such as health data) or card numbers through Flatdesk. Card numbers that arrive anyway are masked before they&apos;re stored, as the security page describes.
         </p>
         <p><strong className="font-medium">Duration:</strong> as long as your account exists, then until deletion under section 8.</p>
       </Section>

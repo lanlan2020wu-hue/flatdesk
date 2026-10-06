@@ -1,6 +1,6 @@
 {
-  "id": "c5956afd-b061-450c-a653-e6df47d92600",
-  "prevId": "7f18618e-7901-41ed-80c4-db2d30ff7d6d",
+  "id": "8112669a-3c28-4406-9b9d-8204c127b3d8",
+  "prevId": "c5956afd-b061-450c-a653-e6df47d92600",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3219,6 +3219,13 @@
           "type": "jsonb",
           "primaryKey": false,
           "notNull": false
+        },
+        "sla_policies": {
+          "name": "sla_policies",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
         },
         "chat_secret": {
           "name": "chat_secret",

@@ -3,6 +3,7 @@ import { and, asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { attachmentsByMessage, filesFromForm, saveAttachments, type AttachmentInfo, type NewFile } from "@/lib/attachments";
 import { milestone } from "@/lib/funnel";
+import { identityFields } from "@/lib/chat-identity";
 import { noNul } from "@/lib/ids";
 import { addCustomerMessage, createTicket, parseTicketNumber } from "@/lib/tickets";
 
@@ -17,7 +18,7 @@ const EMAIL = /^[^\s@<>"(),;:]+@[^\s@<>"(),;:]+\.[^\s@<>"(),;:]+$/;
 
 export async function orgByWidgetKey(key: string) {
   if (!/^[0-9a-z]{6,64}$/i.test(key)) return undefined;
-  return db.query.orgs.findFirst({ where: eq(schema.orgs.widgetKey, key), columns: { id: true, name: true } });
+  return db.query.orgs.findFirst({ where: eq(schema.orgs.widgetKey, key), columns: { id: true, name: true, chatSecret: true } });
 }
 
 // The widget posts JSON, or multipart form data when the visitor attaches
@@ -48,10 +49,15 @@ export function validStart(body: unknown) {
   const message = typeof b.message === "string" ? noNul(b.message).trim().slice(0, MAX_MESSAGE) : "";
   if (!EMAIL.test(email) || email.length > 254) return { error: "Enter a valid email so we can reply." } as const;
   if (!message) return { error: "Write a message first." } as const;
-  return { email, name, message } as const;
+  return { email, name, message, userHash: b.userHash, attributes: b.attributes } as const;
 }
 
-export async function startConversation(orgId: string, v: { email: string; name: string; message: string }, files: NewFile[] = []) {
+export async function startConversation(
+  orgId: string,
+  v: { email: string; name: string; message: string; userHash?: unknown; attributes?: unknown },
+  files: NewFile[] = [],
+  chatSecret?: string,
+) {
   const token = randomBytes(24).toString("base64url");
   const firstLine = v.message.split("\n")[0].slice(0, 80);
   const ticket = await createTicket({
@@ -63,6 +69,7 @@ export async function startConversation(orgId: string, v: { email: string; name:
     body: v.message,
     authorType: "customer",
     visitorToken: token,
+    fields: chatSecret ? identityFields(chatSecret, v.email, v.userHash, v.attributes) : {},
   });
   await saveAttachments(orgId, ticket.id, ticket.messageId, files);
   await milestone(orgId, "channel_connected", { channel: "chat" });

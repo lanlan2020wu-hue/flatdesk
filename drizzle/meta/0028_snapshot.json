@@ -1,6 +1,6 @@
 {
-  "id": "c5956afd-b061-450c-a653-e6df47d92600",
-  "prevId": "7f18618e-7901-41ed-80c4-db2d30ff7d6d",
+  "id": "9aa7b08e-6b5a-4b21-8656-f1e102bbc1af",
+  "prevId": "8112669a-3c28-4406-9b9d-8204c127b3d8",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -2980,6 +2980,21 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "messages_body_search": {
+          "name": "messages_body_search",
+          "columns": [
+            {
+              "expression": "to_tsvector('simple', \"body\")",
+              "asc": true,
+              "isExpression": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "gin",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -3219,6 +3234,13 @@
           "type": "jsonb",
           "primaryKey": false,
           "notNull": false
+        },
+        "sla_policies": {
+          "name": "sla_policies",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'[]'::jsonb"
         },
         "chat_secret": {
           "name": "chat_secret",
@@ -3738,6 +3760,106 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
+    "public.ticket_presence": {
+      "name": "ticket_presence",
+      "schema": "",
+      "columns": {
+        "org_id": {
+          "name": "org_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "ticket_id": {
+          "name": "ticket_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "typing": {
+          "name": "typing",
+          "type": "boolean",
+          "primaryKey": false,
+          "notNull": true,
+          "default": false
+        },
+        "seen_at": {
+          "name": "seen_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "ticket_presence_ticket_user": {
+          "name": "ticket_presence_ticket_user",
+          "columns": [
+            {
+              "expression": "ticket_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "ticket_presence_org_id_orgs_id_fk": {
+          "name": "ticket_presence_org_id_orgs_id_fk",
+          "tableFrom": "ticket_presence",
+          "tableTo": "orgs",
+          "columnsFrom": [
+            "org_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "ticket_presence_ticket_id_tickets_id_fk": {
+          "name": "ticket_presence_ticket_id_tickets_id_fk",
+          "tableFrom": "ticket_presence",
+          "tableTo": "tickets",
+          "columnsFrom": [
+            "ticket_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
     "public.tickets": {
       "name": "tickets",
       "schema": "",
@@ -3774,6 +3896,14 @@
           "primaryKey": false,
           "notNull": true,
           "default": "'open'"
+        },
+        "priority": {
+          "name": "priority",
+          "type": "ticket_priority",
+          "typeSchema": "public",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'normal'"
         },
         "channel": {
           "name": "channel",
@@ -4299,6 +4429,16 @@
         "send",
         "edit",
         "wrong"
+      ]
+    },
+    "public.ticket_priority": {
+      "name": "ticket_priority",
+      "schema": "public",
+      "values": [
+        "low",
+        "normal",
+        "high",
+        "urgent"
       ]
     },
     "public.ticket_status": {

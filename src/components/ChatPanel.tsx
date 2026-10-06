@@ -46,6 +46,8 @@ export default function ChatPanel({ widgetKey, teamName, fresh = false }: { widg
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
+  // Set when the site the widget is on says who is signed in (widget.js puts it in the URL fragment).
+  const [who, setWho] = useState<{ email: string; name: string; userHash: string; attributes?: Record<string, unknown> } | null>(null);
   const listRef = useRef<HTMLOListElement>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -81,6 +83,19 @@ export default function ChatPanel({ widgetKey, teamName, fresh = false }: { widg
     }, 0);
     return () => clearTimeout(t);
   }, [storageKey, fresh]);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      try {
+        const m = /identity=([^&]+)/.exec(window.location.hash);
+        const id = m ? JSON.parse(decodeURIComponent(m[1])) : null;
+        if (id && typeof id.email === "string" && id.email) setWho({ email: id.email, name: String(id.name ?? ""), userHash: String(id.userHash ?? ""), attributes: id.attributes });
+      } catch {
+        // a malformed fragment just means the visitor fills in the form
+      }
+    }, 0);
+    return () => clearTimeout(t);
+  }, []);
 
   // Back to the form, so the next message is a new ticket with its own name and email.
   function startOver() {
@@ -124,7 +139,7 @@ export default function ChatPanel({ widgetKey, teamName, fresh = false }: { widg
   useEffect(() => {
     function onMessage(e: MessageEvent) {
       if (e.source !== window.parent || e.data !== "flatdesk:focus") return;
-      document.querySelector<HTMLElement>('input[name="name"], #chat-message')?.focus();
+      document.querySelector<HTMLElement>('input[name="name"], textarea[name="message"], #chat-message')?.focus();
     }
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
@@ -136,7 +151,13 @@ export default function ChatPanel({ widgetKey, teamName, fresh = false }: { widg
     const text = (k: string) => String(form.get(k) ?? "");
     const r = await fetch(`/api/chat/${widgetKey}`, {
       method: "POST",
-      ...payload({ name: text("name"), email: text("email"), message: text("message"), website: text("website") }),
+      ...payload({
+        name: who ? who.name : text("name"),
+        email: who ? who.email : text("email"),
+        message: text("message"),
+        website: text("website"),
+        ...(who ? { userHash: who.userHash, attributes: JSON.stringify(who.attributes ?? {}) } : {}),
+      }),
     }).catch(() => null);
     const data = r ? await r.json().catch(() => ({})) : {};
     setSending(false);
@@ -205,14 +226,20 @@ export default function ChatPanel({ widgetKey, teamName, fresh = false }: { widg
             start(new FormData(e.currentTarget));
           }}
         >
-          <label className="grid gap-1 text-sm">
-            Name
-            <input name="name" autoComplete="name" className={field} />
-          </label>
-          <label className="grid gap-1 text-sm">
-            Email
-            <input name="email" type="email" required autoComplete="email" className={field} />
-          </label>
+          {who ? (
+            <p className="text-sm text-muted">Chatting as {who.name || who.email}. Replies also go to {who.email}.</p>
+          ) : (
+            <>
+              <label className="grid gap-1 text-sm">
+                Name
+                <input name="name" autoComplete="name" className={field} />
+              </label>
+              <label className="grid gap-1 text-sm">
+                Email
+                <input name="email" type="email" required autoComplete="email" className={field} />
+              </label>
+            </>
+          )}
           <label className="grid gap-1 text-sm">
             How can we help?
             <textarea name="message" required rows={5} className={field} />

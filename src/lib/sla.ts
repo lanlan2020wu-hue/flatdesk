@@ -1,4 +1,4 @@
-import type { BusinessHours } from "@/db/schema";
+import type { BusinessHours, SlaPolicy } from "@/db/schema";
 
 // First-reply targets. A new ticket should get its first reply (from an agent
 // or the AI) within the team's target, counted around the clock or only in
@@ -88,27 +88,42 @@ export function dueAt(from: Date, minutes: number, hours: BusinessHours | null):
   return new Date(t + left * MIN); // unreachable with valid hours
 }
 
-export type SlaTicket = { status: string; createdAt: Date; firstResponseAt: Date | null; source: string | null };
-export type SlaOrg = { firstResponseMinutes: number | null; businessHours: BusinessHours | null };
+export type SlaTicket = { status: string; createdAt: Date; firstResponseAt: Date | null; source: string | null; tags?: string[] };
+export type SlaOrg = { firstResponseMinutes: number | null; businessHours: BusinessHours | null; slaPolicies?: SlaPolicy[] };
 
-export type SlaState =
+export const MAX_POLICIES = 8;
+
+// SLA policies: a ticket with one of these tags gets that target instead of
+// the team's default (the shortest one wins when several match). Tags can come
+// from a trigger, so "from @bigfirm.com, tag vip; vip gets 1 hour" works.
+export function targetFor(t: SlaTicket, org: SlaOrg): { minutes: number; tag: string | null } | null {
+  let best: { minutes: number; tag: string | null } | null = null;
+  for (const p of org.slaPolicies ?? []) {
+    if (t.tags?.includes(p.tag) && p.minutes > 0 && (!best || p.minutes < best.minutes)) best = { minutes: p.minutes, tag: p.tag };
+  }
+  return best ?? (org.firstResponseMinutes ? { minutes: org.firstResponseMinutes, tag: null } : null);
+}
+
+export type SlaState = { minutes: number; tag: string | null } & (
   | { kind: "waiting"; due: Date; minutesLeft: number; soon: boolean } // no first reply yet
   | { kind: "overdue"; due: Date; minutesLate: number }
-  | { kind: "met" | "missed"; due: Date; took: number }; // replied; took = minutes from arrival
+  | { kind: "met" | "missed"; due: Date; took: number } // replied; took = minutes from arrival
+);
 
-// Where a ticket stands against the first-reply target, or null when no target applies.
+// Where a ticket stands against its first-reply target, or null when no target applies.
 export function slaState(t: SlaTicket, org: SlaOrg, now = new Date()): SlaState | null {
-  if (!org.firstResponseMinutes || t.source) return null;
-  const due = dueAt(t.createdAt, org.firstResponseMinutes, org.businessHours);
+  const target = t.source ? null : targetFor(t, org);
+  if (!target) return null;
+  const due = dueAt(t.createdAt, target.minutes, org.businessHours);
   if (t.firstResponseAt) {
     const took = Math.round((t.firstResponseAt.getTime() - t.createdAt.getTime()) / MIN);
-    return { kind: t.firstResponseAt <= due ? "met" : "missed", due, took };
+    return { ...target, kind: t.firstResponseAt <= due ? "met" : "missed", due, took };
   }
   if (t.status !== "open") return null;
   const left = (due.getTime() - now.getTime()) / MIN;
-  if (left < 0) return { kind: "overdue", due, minutesLate: Math.ceil(-left) };
+  if (left < 0) return { ...target, kind: "overdue", due, minutesLate: Math.ceil(-left) };
   // "Soon" is the last quarter of the target, at most the last hour.
-  return { kind: "waiting", due, minutesLeft: Math.floor(left), soon: left <= Math.min(60, org.firstResponseMinutes / 4) };
+  return { ...target, kind: "waiting", due, minutesLeft: Math.floor(left), soon: left <= Math.min(60, target.minutes / 4) };
 }
 
 export function shortDuration(minutes: number): string {
