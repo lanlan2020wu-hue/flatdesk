@@ -41,7 +41,7 @@ const MORE = [
   { title: "What customers ask about", body: "The AI groups recent tickets into topics, shows where it handed off and why, and suggests one fix for each.", href: "/features#all" },
   { title: "Groups and routing", body: "Billing, Tier 2, your call. Tickets go round in turn, skipping anyone away. Ones the AI answers never land in a queue.", href: "/features#all" },
   { title: "Triggers and auto-close", body: "Run on a new ticket, a customer reply, or hours with no update. One click closes quiet pending tickets.", href: "/features#all" },
-  { title: "Resolution targets", body: "Resolved within 4 hours to 7 days, per tag. Late tickets are tagged, escalated and posted to Slack.", href: "/features#all" },
+  { title: "Reply and resolve targets", body: "Next reply within 15 minutes to 24 hours, resolved within 4 hours to 7 days. The clock can pause while you wait on the customer. Late tickets are escalated.", href: "/features#all" },
 ];
 
 // The route from an old help desk to Flatdesk, in the order an admin does it.
