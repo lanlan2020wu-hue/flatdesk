@@ -19,7 +19,7 @@ export default async function AuditPage({ searchParams }: PageProps<"/app/settin
         <Link href="/app/settings#security" className="link w-max text-sm text-accent">Settings</Link>
         <h1 className="page-title">Audit log</h1>
         <p className="text-muted">
-          Changes to settings and seats, exports, imports, AI answer refunds, deleted macros, and people joining. Kept as long as your account. It&apos;s also in the full archive download.
+          Changes to settings, seats, integrations and API keys, exports, imports, AI answer refunds, deleted macros, and people joining. Kept as long as your account. It&apos;s also in the full archive download.
         </p>
       </div>
       {rows.length === 0 ? (

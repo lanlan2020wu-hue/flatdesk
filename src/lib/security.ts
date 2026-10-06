@@ -20,7 +20,11 @@ export type AuditAction =
   | "macro.delete"
   | "billing.checkout"
   | "billing.annual"
-  | "member.joined";
+  | "member.joined"
+  | "integration.connect"
+  | "integration.disconnect"
+  | "apikey.create"
+  | "apikey.revoke";
 
 export const AUDIT_LABELS: Record<AuditAction, string> = {
   "settings.ai": "Changed AI answer settings",
@@ -37,6 +41,10 @@ export const AUDIT_LABELS: Record<AuditAction, string> = {
   "billing.checkout": "Opened checkout",
   "billing.annual": "Switched to yearly billing",
   "member.joined": "Joined the team",
+  "integration.connect": "Connected an integration",
+  "integration.disconnect": "Disconnected an integration",
+  "apikey.create": "Created an API key",
+  "apikey.revoke": "Revoked an API key",
 };
 
 type Actor = { userId: string | null; name: string };
