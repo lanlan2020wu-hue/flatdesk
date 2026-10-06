@@ -1,4 +1,4 @@
-import { and, desc, eq, ne, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { SITE } from "@/lib/site";
 import { slugify } from "@/lib/slug";
@@ -6,7 +6,7 @@ import { slugify } from "@/lib/slug";
 // The public help center: articles a team writes once, that customers search
 // on their own at /help/<org>, and that the AI answers from and links to.
 
-const { articles, orgs } = schema;
+const { articles, articleTranslations, orgs } = schema;
 
 export { slugify };
 
@@ -15,8 +15,10 @@ export const MAX_BODY = 50_000;
 // The AI reads at most this much of each article, so one long article can't crowd out the rest.
 const AI_BODY_CHARS = 6_000;
 
-export const helpUrl = (helpSlug: string) => `${SITE.url}/help/${helpSlug}`;
-export const articleUrl = (helpSlug: string, slug: string) => `${helpUrl(helpSlug)}/${slug}`;
+// The public address: the team's own domain once it's verified, else ours.
+export const helpUrl = (helpSlug: string, domain?: string | null) => (domain ? `https://${domain}` : `${SITE.url}/help/${helpSlug}`);
+export const articleUrl = (helpSlug: string, slug: string, domain?: string | null) => `${helpUrl(helpSlug, domain)}/${slug}`;
+export const verifiedDomain = (org: { helpDomain: string | null; helpDomainVerifiedAt: Date | null }) => (org.helpDomain && org.helpDomainVerifiedAt ? org.helpDomain : null);
 
 // ---- Article text -----------------------------------------------------------
 // Articles are plain text with a little markdown: "## Heading", "- item",
@@ -116,9 +118,12 @@ export function excerpt(body: string, max = 160) {
 // finding nothing. Help center addresses and searches come from anyone.
 const hasNul = (s: string) => s.includes("\0");
 
+// By its /help/<slug> address, or by its own domain (the proxy passes the host
+// as the slug; slugs never contain a dot).
 export async function orgByHelpSlug(helpSlug: string) {
   if (hasNul(helpSlug)) return undefined;
-  return db.query.orgs.findFirst({ where: eq(orgs.helpSlug, helpSlug.toLowerCase()) });
+  const key = helpSlug.toLowerCase();
+  return db.query.orgs.findFirst({ where: key.includes(".") ? eq(orgs.helpDomain, key) : eq(orgs.helpSlug, key) });
 }
 
 // Gives the org a help center address the first time it's needed: its name
@@ -207,10 +212,56 @@ export async function searchArticles(orgId: string, query: string, limit = 20) {
     .limit(limit);
 }
 
+// ---- Translations ----------------------------------------------------------
+
+export type Translation = typeof articleTranslations.$inferSelect;
+
+export async function translationsFor(orgId: string, language: string, articleIds: string[]): Promise<Map<string, Translation>> {
+  if (!articleIds.length) return new Map();
+  const rows = await db
+    .select()
+    .from(articleTranslations)
+    .where(and(eq(articleTranslations.orgId, orgId), eq(articleTranslations.language, language), inArray(articleTranslations.articleId, articleIds)));
+  return new Map(rows.map((r) => [r.articleId, r]));
+}
+
+// Articles with their title and text in the visitor's language where a translation exists.
+export function localize<T extends { id: string; title: string; body: string; section: string | null }>(list: T[], translations: Map<string, Translation>): (T & { translated: boolean })[] {
+  return list.map((a) => {
+    const t = translations.get(a.id);
+    return t ? { ...a, title: t.title, body: t.body, section: a.section ? (t.section ?? a.section) : null, translated: true } : { ...a, translated: false };
+  });
+}
+
+// Published articles whose translation in this language matches a search.
+export async function searchTranslations(orgId: string, language: string, query: string, limit = 20) {
+  const q = query.replace(/\0/g, "").trim().slice(0, 200);
+  if (!q) return [];
+  const like = `%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`;
+  const rows = await db
+    .select({ article: articles })
+    .from(articleTranslations)
+    .innerJoin(articles, eq(articles.id, articleTranslations.articleId))
+    .where(
+      and(
+        eq(articleTranslations.orgId, orgId),
+        eq(articleTranslations.language, language),
+        eq(articles.published, true),
+        sql`(${articleTranslations.title} ilike ${like} or ${articleTranslations.body} ilike ${like} or to_tsvector('simple', ${articleTranslations.title} || ' ' || ${articleTranslations.body}) @@ websearch_to_tsquery('simple', ${q}))`,
+      ),
+    )
+    .orderBy(desc(sql`(${articleTranslations.title} ilike ${like})`), articleTranslations.title)
+    .limit(limit);
+  return rows.map((r) => r.article);
+}
+
+// A translation is stale when the article was edited after it was made.
+export const isStale = (t: { sourceUpdatedAt: Date }, article: { updatedAt: Date }) => article.updatedAt.getTime() > t.sourceUpdatedAt.getTime();
+
 // Published articles as the AI sees them: the text plus the public link, so a
 // reply can point the customer at the article.
 export async function articleKnowledge(orgId: string): Promise<{ name: string; body: string }[]> {
-  const org = await db.query.orgs.findFirst({ where: eq(orgs.id, orgId), columns: { helpSlug: true } });
+  const org = await db.query.orgs.findFirst({ where: eq(orgs.id, orgId), columns: { helpSlug: true, helpDomain: true, helpDomainVerifiedAt: true } });
   const rows = await db
     .select({ title: articles.title, slug: articles.slug, body: articles.body })
     .from(articles)
@@ -220,7 +271,7 @@ export async function articleKnowledge(orgId: string): Promise<{ name: string; b
   return rows.map((a) => {
     const text = plainText(a.body);
     const body = text.length > AI_BODY_CHARS ? `${text.slice(0, AI_BODY_CHARS)}…` : text;
-    return { name: a.title, body: org?.helpSlug ? `${body}\n\nHelp center article: ${articleUrl(org.helpSlug, a.slug)}` : body };
+    return { name: a.title, body: org?.helpSlug ? `${body}\n\nHelp center article: ${articleUrl(org.helpSlug, a.slug, verifiedDomain(org))}` : body };
   });
 }
 
@@ -312,6 +363,7 @@ export function bySection<T extends { section: string | null }>(list: T[]): { se
 }
 
 export const MAX_SECTION = 80;
+export const MAX_HELP_LANGUAGES = 10;
 
 // Section names the team already uses, for the article form's suggestions.
 export async function articleSections(orgId: string): Promise<string[]> {

@@ -89,6 +89,12 @@ export const orgs = pgTable("orgs", {
   chatSecret: text("chat_secret").notNull().default(sql`replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', '')`),
   // Public help center at /help/<helpSlug>. Set the first time an admin opens it.
   helpSlug: text("help_slug").unique(),
+  // The team's own address for it, like help.acme.com (lowercase host), and
+  // when Flatdesk last saw it pointed here and serving. Links use it once verified.
+  helpDomain: text("help_domain").unique(),
+  helpDomainVerifiedAt: timestamp("help_domain_verified_at", { withTimezone: true }),
+  // Languages the help center offers besides the team's own (orgs.language).
+  helpLanguages: text("help_languages").array().notNull().default(sql`'{}'::text[]`),
   // Security controls for teams that go through vendor review. See lib/security.ts.
   // Off: nothing is sent to the AI provider for this team (answers, drafts, macros, test drive).
   aiProcessing: boolean("ai_processing").notNull().default(true),
@@ -423,6 +429,26 @@ export const articles = pgTable(
     index("articles_org_published").on(t.orgId, t.published),
     uniqueIndex("articles_org_source_external").on(t.orgId, t.source, t.externalId).where(sql`${t.externalId} is not null`),
   ],
+);
+
+// An article in one of the help center's other languages (orgs.helpLanguages).
+// auto: written by the AI and not edited since. Out of date when the article
+// changed after sourceUpdatedAt.
+export const articleTranslations = pgTable(
+  "article_translations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
+    articleId: uuid("article_id").notNull().references(() => articles.id, { onDelete: "cascade" }),
+    language: text("language").notNull(),
+    title: text("title").notNull(),
+    body: text("body").notNull(),
+    section: text("section"),
+    auto: boolean("auto").notNull().default(false),
+    sourceUpdatedAt: timestamp("source_updated_at", { withTimezone: true }).notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("article_translations_article_language").on(t.articleId, t.language), index("article_translations_org_language").on(t.orgId, t.language)],
 );
 
 // v1 rules are deliberately narrow: "when a ticket has tag X, assign it to Y".
