@@ -7,6 +7,16 @@ import { applyToTicket, loadTriggers, runTriggers, ticketForTriggers, TRIGGER_NO
 const { tickets, messages, customers, agents, rules, orgs } = schema;
 
 export type TicketStatus = (typeof schema.ticketStatus.enumValues)[number];
+export type TicketPriority = (typeof schema.ticketPriority.enumValues)[number];
+export const PRIORITIES: { id: TicketPriority; label: string }[] = [
+  { id: "urgent", label: "Urgent" },
+  { id: "high", label: "High" },
+  { id: "normal", label: "Normal" },
+  { id: "low", label: "Low" },
+];
+export const isPriority = (v: unknown): v is TicketPriority => PRIORITIES.some((p) => p.id === v);
+// Urgent first, then high; the rest by when they changed.
+const priorityRank = sql`case ${tickets.priority} when 'urgent' then 0 when 'high' then 1 else 2 end`;
 export type View = "mine" | "unassigned" | "open" | "pending" | "closed";
 
 // Each view with one line on what's in it, shown under the tabs.
@@ -45,11 +55,13 @@ export async function listTickets(orgId: string, userId: string, view: View) {
       number: tickets.number,
       subject: tickets.subject,
       status: tickets.status,
+      priority: tickets.priority,
       channel: tickets.channel,
       tags: tickets.tags,
       updatedAt: tickets.updatedAt,
       createdAt: tickets.createdAt,
       firstResponseAt: tickets.firstResponseAt,
+      closedAt: tickets.closedAt,
       source: tickets.source,
       test: tickets.test,
       resolvedByAi: tickets.resolvedByAi,
@@ -64,7 +76,7 @@ export async function listTickets(orgId: string, userId: string, view: View) {
     .innerJoin(customers, eq(customers.id, tickets.customerId))
     .leftJoin(agents, and(eq(agents.orgId, tickets.orgId), eq(agents.userId, tickets.assigneeId)))
     .where(and(...where))
-    .orderBy(view === "closed" ? desc(tickets.updatedAt) : asc(tickets.updatedAt))
+    .orderBy(...(view === "closed" ? [desc(tickets.updatedAt)] : [priorityRank, asc(tickets.updatedAt)]))
     .limit(200);
 }
 
@@ -339,7 +351,7 @@ export async function addCustomerMessage(opts: { orgId: string; ticketId: string
 export async function updateTicket(
   orgId: string,
   ticketId: string,
-  patch: { status?: TicketStatus; assigneeId?: string | null; tags?: string[] },
+  patch: { status?: TicketStatus; assigneeId?: string | null; tags?: string[]; priority?: TicketPriority },
 ) {
   const set: Partial<typeof tickets.$inferInsert> = { updatedAt: new Date() };
   if (patch.status) {
@@ -348,6 +360,7 @@ export async function updateTicket(
     set.timedRan = [];
   }
   if (patch.assigneeId !== undefined) set.assigneeId = patch.assigneeId;
+  if (patch.priority) set.priority = patch.priority;
   if (patch.tags) {
     set.tags = normalizeTags(patch.tags);
     const [current] = await db.select({ assigneeId: tickets.assigneeId }).from(tickets).where(and(eq(tickets.orgId, orgId), eq(tickets.id, ticketId)));

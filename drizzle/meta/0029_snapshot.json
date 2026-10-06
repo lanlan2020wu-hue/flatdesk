@@ -1,6 +1,6 @@
 {
-  "id": "9aa7b08e-6b5a-4b21-8656-f1e102bbc1af",
-  "prevId": "8112669a-3c28-4406-9b9d-8204c127b3d8",
+  "id": "45fa945a-71ec-4326-965a-1e789987394a",
+  "prevId": "9aa7b08e-6b5a-4b21-8656-f1e102bbc1af",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3229,6 +3229,12 @@
           "primaryKey": false,
           "notNull": false
         },
+        "resolve_minutes": {
+          "name": "resolve_minutes",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false
+        },
         "business_hours": {
           "name": "business_hours",
           "type": "jsonb",
@@ -3978,6 +3984,12 @@
         },
         "escalated_at": {
           "name": "escalated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "resolve_escalated_at": {
+          "name": "resolve_escalated_at",
           "type": "timestamp with time zone",
           "primaryKey": false,
           "notNull": false

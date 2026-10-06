@@ -220,11 +220,11 @@ export function buildRequest(url: string, secret: string, p: AlertPayload): { bo
   return { body, headers: { ...headers, "x-flatdesk-event": p.event, "x-flatdesk-signature": sign(secret, body) } };
 }
 
-export function alertText(event: AlertEvent, t: NonNullable<AlertPayload["ticket"]>, needsTeam: boolean, reason: string | null): string {
+export function alertText(event: AlertEvent, t: NonNullable<AlertPayload["ticket"]>, needsTeam: boolean, reason: string | null, target: "reply" | "resolve" = "reply"): string {
   const who = t.customer.name ? `${t.customer.name} (${t.customer.email})` : t.customer.email;
   const ref = `${t.test ? "test ticket " : ""}#${t.number} ${t.subject}`;
   if (event === "ticket.handed_back") return `Back with the team: ${ref} from ${who}.${reason ? ` ${reason}` : ""}`;
-  if (event === "ticket.overdue") return `Missed the first-reply target: ${ref} from ${who}.${reason ? ` ${reason}` : ""}`;
+  if (event === "ticket.overdue") return `Missed the ${target === "resolve" ? "resolution" : "first-reply"} target: ${ref} from ${who}.${reason ? ` ${reason}` : ""}`;
   const head = needsTeam ? `New ticket for the team: ${ref} from ${who} by ${t.channel}.` : `New ticket answered by the AI: ${ref} from ${who} by ${t.channel}.`;
   return reason && needsTeam ? `${head} ${reason}` : head;
 }
@@ -333,7 +333,7 @@ export async function alertHandedBack(orgId: string, ticketId: string, reason: s
 }
 
 // A ticket that went past its first-reply target with no reply (lib/escalation.ts).
-export async function alertOverdue(orgId: string, ticketId: string, reason: string | null) {
+export async function alertOverdue(orgId: string, ticketId: string, reason: string | null, target: "reply" | "resolve" = "reply") {
   try {
     const org = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, orgId) });
     if (!org?.alertWebhookUrl) return;
@@ -341,7 +341,7 @@ export async function alertOverdue(orgId: string, ticketId: string, reason: stri
     if (!found) return;
     await deliver(org, {
       event: "ticket.overdue",
-      text: alertText("ticket.overdue", found.payload, true, reason),
+      text: alertText("ticket.overdue", found.payload, true, reason, target),
       needsTeam: true,
       reason,
       ticket: found.payload,

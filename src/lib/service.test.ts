@@ -92,6 +92,23 @@ test("SLA policies: a tagged ticket gets its tag's target, the shortest when sev
   assert.equal(slaState({ ...t, tags: [] }, { ...org, firstResponseMinutes: null }, at(70)), null);
 });
 
+test("resolution targets: from arrival to closed, by tag, reopened tickets count again", async () => {
+  const { resolveState } = await import("./sla");
+  const created = new Date("2026-09-29T12:00:00Z");
+  const at = (m: number) => new Date(created.getTime() + m * 60_000);
+  const org = { firstResponseMinutes: 240, resolveMinutes: 4320, businessHours: null, slaPolicies: [{ tag: "vip", minutes: 60, resolveMinutes: 1440 }, { tag: "bug", minutes: 1440 }] };
+  const t = { status: "pending", createdAt: created, firstResponseAt: at(10), closedAt: null, source: null, tags: [] as string[] };
+  assert.equal(resolveState(t, org, at(60))?.kind, "waiting");
+  assert.equal(resolveState(t, org, at(4321))?.kind, "overdue", "pending time counts");
+  assert.equal(resolveState({ ...t, tags: ["vip"] }, org, at(1500))?.tag, "vip");
+  assert.equal(resolveState({ ...t, tags: ["bug"] }, org, at(1500))?.minutes, 4320, "a policy without a resolution target uses the team's");
+  assert.deepEqual(resolveState({ ...t, status: "closed", closedAt: at(100) }, org, at(9000)), { minutes: 4320, tag: null, kind: "met", due: at(4320), took: 100 });
+  assert.equal(resolveState({ ...t, status: "closed", closedAt: at(5000) }, org)?.kind, "missed");
+  assert.equal(resolveState({ ...t, status: "closed" }, org), null);
+  assert.equal(resolveState({ ...t, source: "zendesk" }, org, at(9000)), null);
+  assert.equal(resolveState(t, { ...org, resolveMinutes: null }, at(9000)), null);
+});
+
 test("webhook addresses must be public https; each tool gets its own format", async () => {
   const { checkWebhookUrl, buildRequest, sign, isPrivateAddress } = await import("./alerts");
   // A public name that resolves to one of these is refused at send time.

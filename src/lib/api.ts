@@ -112,6 +112,7 @@ export function ticketJson({ ticket: t, customer: c, assigneeName, assigneeEmail
     number: t.number,
     subject: t.subject,
     status: t.status,
+    priority: t.priority,
     channel: t.channel,
     tags: t.tags,
     customer: { email: c.email, name: c.name },

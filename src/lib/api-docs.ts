@@ -47,9 +47,10 @@ export const ENDPOINTS: Endpoint[] = [
   {
     method: "PATCH",
     path: "/api/v1/tickets/:number",
-    summary: "Change the status, assignee or tags.",
+    summary: "Change the status, priority, assignee or tags.",
     params: [
       { name: "status", about: "open, pending or closed" },
+      { name: "priority", about: "low, normal, high or urgent" },
       { name: "assignee_email", about: "someone on the team, or null to unassign" },
       { name: "tags", about: "replaces the tags" },
       { name: "add_tags", about: "adds to the tags" },

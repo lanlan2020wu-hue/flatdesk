@@ -70,6 +70,8 @@ export const orgs = pgTable("orgs", {
   firstResponseMinutes: integer("first_response_minutes").default(240),
   // Who gets a ticket that misses its first-reply target (null = leave it with whoever has it). See lib/escalation.ts.
   escalateTo: text("escalate_to"),
+  // Resolution target in minutes (null = off): from arrival to closed, on the same clock as the first-reply target.
+  resolveMinutes: integer("resolve_minutes"),
   businessHours: jsonb("business_hours").$type<BusinessHours>(),
   slaPolicies: jsonb("sla_policies").$type<SlaPolicy[]>().notNull().default([]),
   // Signs who is signed in on the team's own site, so chat can trust the visitor's email (lib/chat-identity.ts).
@@ -145,7 +147,7 @@ export type TriggerAction =
   | { type: "reply"; body: string }; // emails the customer; timed triggers only
 
 // A faster (or slower) first-reply target for tickets with a tag. See lib/sla.ts.
-export type SlaPolicy = { tag: string; minutes: number };
+export type SlaPolicy = { tag: string; minutes: number; resolveMinutes?: number | null };
 
 export type BusinessHours = {
   tz: string; // IANA time zone, e.g. "America/New_York"
@@ -192,6 +194,7 @@ export const customers = pgTable(
 
 export const ticketStatus = pgEnum("ticket_status", ["open", "pending", "closed"]);
 export const channel = pgEnum("channel", ["email", "chat"]);
+export const ticketPriority = pgEnum("ticket_priority", ["low", "normal", "high", "urgent"]);
 
 export const tickets = pgTable(
   "tickets",
@@ -201,6 +204,7 @@ export const tickets = pgTable(
     number: integer("number").notNull(), // shown to people as #1042, unique per org
     subject: text("subject").notNull(),
     status: ticketStatus("status").notNull().default("open"),
+    priority: ticketPriority("priority").notNull().default("normal"),
     channel: channel("channel").notNull(),
     customerId: uuid("customer_id").notNull().references(() => customers.id),
     assigneeId: text("assignee_id"), // agents.user_id within the same org
@@ -218,6 +222,8 @@ export const tickets = pgTable(
     firstResponseAt: timestamp("first_response_at", { withTimezone: true }),
     // When it missed its first-reply target and was escalated (lib/escalation.ts).
     escalatedAt: timestamp("escalated_at", { withTimezone: true }),
+    // When it missed its resolution target and was escalated.
+    resolveEscalatedAt: timestamp("resolve_escalated_at", { withTimezone: true }),
     closedAt: timestamp("closed_at", { withTimezone: true }),
     // Timed triggers (lib/triggers.ts): the ones that ran since the customer or
     // team last wrote, and the ones that didn't match it as of timedSkippedAt.
@@ -265,6 +271,8 @@ export const messages = pgTable(
     // One copy of each inbound email, even when the provider delivers it twice at once.
     uniqueIndex("messages_org_email_message_id").on(t.orgId, t.emailMessageId).where(sql`${t.emailMessageId} is not null`),
     index("messages_ticket_external").on(t.ticketId, t.externalId),
+    // Ticket search (lib/search.ts) matches words in any message.
+    index("messages_body_search").using("gin", sql`to_tsvector('simple', ${t.body})`),
   ],
 );
 
@@ -802,4 +810,20 @@ export const aiActionRuns = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("ai_action_runs_ticket").on(t.ticketId), index("ai_action_runs_org_status").on(t.orgId, t.status)],
+);
+
+// Who has a ticket open right now, and whether they're writing a reply, so
+// two people don't answer the same customer. Rows older than a minute are
+// stale and ignored (lib/presence.ts).
+export const ticketPresence = pgTable(
+  "ticket_presence",
+  {
+    orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
+    ticketId: uuid("ticket_id").notNull().references(() => tickets.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    name: text("name").notNull(),
+    typing: boolean("typing").notNull().default(false),
+    seenAt: timestamp("seen_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("ticket_presence_ticket_user").on(t.ticketId, t.userId)],
 );
