@@ -11,6 +11,7 @@ import { PLAN, annualSavingsPct, usd } from "@/lib/pricing";
 import { webhookKind, webhookLabel } from "@/lib/alerts";
 import { DEFAULT_HOURS, RESOLVE_CHOICES, TARGET_CHOICES } from "@/lib/sla";
 import { timeAgo } from "@/lib/format";
+import { LANGUAGES } from "@/lib/language";
 import { currentUser } from "@clerk/nextjs/server";
 import { clerkEnabled } from "@/lib/auth-config";
 import {
@@ -18,6 +19,7 @@ import {
   saveAiSettingsAction,
   saveAlertsAction,
   saveSecurityAction,
+  saveLanguageAction,
   saveSignatureAction,
   saveServiceSettingsAction,
   sendTestAlertAction,
@@ -73,6 +75,25 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
           <form action={saveSignatureAction} className="grid gap-2">
             <textarea name="signature" rows={3} maxLength={1000} defaultValue={team.find((a) => a.userId === s.userId)?.signature ?? ""} placeholder={"Sam\nAcme support"} className="field text-sm" aria-label="Your signature" />
             <button className="btn btn-secondary btn-sm w-max">Save signature</button>
+          </form>
+        </section>
+      )}
+      {org && (
+        <section id="language" className="grid scroll-mt-6 gap-3 border-t border-line pt-6">
+          <h2 className="text-lg font-semibold">Language</h2>
+          <p className="text-muted">
+            The language your team works in. When a customer writes in another one, their messages are translated for you when you open the ticket, and
+            you can translate your reply into theirs before sending. The AI answers customers in their own language either way. Each translation is one
+            copilot action.
+          </p>
+          <form action={saveLanguageAction} className="flex flex-wrap items-end gap-2">
+            <label className="grid gap-1">
+              <span className="label">Team language</span>
+              <select name="language" defaultValue={org.language} disabled={!isAdmin} className="field">
+                {LANGUAGES.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
+              </select>
+            </label>
+            {isAdmin && <button className="btn btn-secondary">Save</button>}
           </form>
         </section>
       )}

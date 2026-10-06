@@ -69,7 +69,7 @@ test("database: the fair-use limit follows seats, and a summary is reused until 
     if (key) process.env.ANTHROPIC_API_KEY = key;
   }
 
-  assert.deepEqual(await copilotBreakdown(ORG), { summary: 1, draft: 0, rewrite: 0 });
+  assert.deepEqual(await copilotBreakdown(ORG), { summary: 1, draft: 0, rewrite: 0, translate: 0 });
   // Copilot actions never touch the AI allowance.
   assert.equal((await db.select().from(schema.aiEvents).where(eq(schema.aiEvents.orgId, ORG))).length, 0);
   await db.delete(schema.orgs).where(eq(schema.orgs.id, ORG));

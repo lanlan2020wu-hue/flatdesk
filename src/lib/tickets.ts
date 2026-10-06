@@ -125,6 +125,9 @@ export async function getTicket(orgId: string, number: number) {
       body: messages.body,
       internal: messages.internal,
       deliveryError: messages.deliveryError,
+      translation: messages.translation,
+      translatedFrom: messages.translatedFrom,
+      original: messages.original,
       createdAt: messages.createdAt,
       agentName: agents.name,
     })
@@ -278,6 +281,7 @@ export async function addReply(opts: {
   addTags?: string[];
   assignTo?: string | null; // from a macro; wins over assignment rules
   hasFiles?: boolean; // a reply can be only attachments
+  original?: string | null; // the agent's own words, when `body` is their reply translated for the customer
 }) {
   return db.transaction(async (tx) => {
     const [ticket] = await tx
@@ -304,6 +308,7 @@ export async function addReply(opts: {
         authorId: opts.userId,
         body: maskCards(body),
         internal: opts.internal,
+        original: opts.original && !opts.internal ? maskCards(opts.original.trim()) : null,
       }).returning({ id: messages.id });
       messageId = inserted.id;
     }

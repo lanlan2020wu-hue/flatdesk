@@ -26,6 +26,8 @@ import { STATUS_LABEL } from "@/lib/receipts";
 import { teachSpot } from "@/lib/teach";
 import { formatDue, resolveState, shortDuration, slaState, targetLabel } from "@/lib/sla";
 import { listGroups } from "@/lib/routing";
+import { guessLanguage, isForeign, languageLabel } from "@/lib/language";
+import AutoTranslate from "@/components/AutoTranslate";
 import { getTicket, listAgents, orgTags, parseTicketNumber, PRIORITIES } from "@/lib/tickets";
 import { mergeTicketAction, replyAction, saveCcAction, updateTicketAction } from "../../actions";
 
@@ -73,6 +75,11 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
     ticketRuns(s.orgId, ticket.id),
   ]);
   const copilotOn = aiConfigured() && Boolean(org?.aiProcessing);
+  // The customer's language, from their latest message that says clearly, when it isn't the team's.
+  const team = org?.language ?? "en";
+  const customerLanguage = [...thread].reverse().filter((m) => m.authorType === "customer").map((m) => guessLanguage(m.body)).find(Boolean) ?? null;
+  const foreignCustomer = customerLanguage && customerLanguage !== team ? customerLanguage : null;
+  const needsTranslation = copilotOn && !s.viewer && thread.some((m) => m.authorType === "customer" && !m.translation && isForeign(m.body, team));
   // AI macros: when the customer is waiting on us, the macro that answers what they asked.
   const lastVisible = thread.filter((m) => !m.internal && m.authorType !== "system").at(-1);
   const suggestedMacro = ticket.status !== "closed" && lastVisible?.authorType === "customer" ? identifyMacro(lastVisible.body, macros) : null;
@@ -125,6 +132,7 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
 
         <ActionPanel runs={runs} number={ticket.number} canDecide={!s.viewer} message={actionMessage} />
 
+        {needsTranslation && <AutoTranslate ticketId={ticket.id} label={languageLabel(team)} />}
         {copilotOn && thread.length > 0 && <CopilotSummary ticketId={ticket.id} initial={summary?.summary ?? null} stale={summary?.stale ?? false} disabled={s.viewer} />}
 
         <ol className="grid gap-4">
@@ -156,6 +164,18 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
                     <time className="text-xs text-muted" dateTime={m.createdAt.toISOString()} title={m.createdAt.toLocaleString("en-US")}>{timeAgo(m.createdAt)}</time>
                   </p>
                   {m.body && <p className="whitespace-pre-wrap break-words">{m.body}</p>}
+                  {m.translation && (
+                    <div className="grid gap-1 rounded-lg bg-surface-2 px-3 py-2 text-sm">
+                      <span className="text-xs font-medium text-muted">Translated from {languageLabel(m.translatedFrom)}</span>
+                      <p className="whitespace-pre-wrap break-words">{m.translation}</p>
+                    </div>
+                  )}
+                  {m.original && (
+                    <details className="text-sm">
+                      <summary className="w-max cursor-pointer text-muted">Sent translated. What {m.agentName ?? "the agent"} wrote</summary>
+                      <p className="mt-1 whitespace-pre-wrap break-words rounded-lg bg-surface-2 px-3 py-2">{m.original}</p>
+                    </details>
+                  )}
                   {files.get(m.id) && (
                     <ul className="flex flex-wrap gap-2 pt-1" aria-label="Attachments">
                       {files.get(m.id)!.map((f) => (
@@ -207,6 +227,7 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
           agents={agents.filter((a) => !a.viewer).map((a) => ({ userId: a.userId, name: a.name }))}
           suggestedMacroId={suggestedMacro?.id ?? null}
           copilot={copilotOn}
+          customerLanguage={foreignCustomer ? { code: foreignCustomer, label: languageLabel(foreignCustomer) } : null}
         />
         )}
       </div>

@@ -75,6 +75,9 @@ export const orgs = pgTable("orgs", {
   // New tickets nobody routed go to the team in turn once they need a person
   // (lib/routing.ts). Groups can share their own tickets in turn too.
   shareInTurn: boolean("share_in_turn").notNull().default(false),
+  // The language the team works in. Customer messages in another language are
+  // translated into it, and replies can go out in the customer's (lib/translate.ts).
+  language: text("language").notNull().default("en"),
   businessHours: jsonb("business_hours").$type<BusinessHours>(),
   slaPolicies: jsonb("sla_policies").$type<SlaPolicy[]>().notNull().default([]),
   // Signs who is signed in on the team's own site, so chat can trust the visitor's email (lib/chat-identity.ts).
@@ -281,6 +284,12 @@ export const messages = pgTable(
     internal: boolean("internal").notNull().default(false), // internal notes never reach the customer
     emailMessageId: text("email_message_id"), // Message-ID header, for threading replies
     deliveryError: text("delivery_error"), // set when an outbound email failed to send
+    // Auto-translate: a customer message in the team's language, and the
+    // language it came in.
+    translation: text("translation"),
+    translatedFrom: text("translated_from"),
+    // A reply sent in the customer's language: what the agent wrote.
+    original: text("original"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [
@@ -516,7 +525,7 @@ export const macroUpdateDismissals = pgTable(
 // for on a ticket. Included in the seat under a fair-use limit (lib/copilot.ts),
 // never counted toward the AI allowance. A summary row doubles as its cache,
 // keyed by the last message it read.
-export const copilotKind = pgEnum("copilot_kind", ["summary", "draft", "rewrite"]);
+export const copilotKind = pgEnum("copilot_kind", ["summary", "draft", "rewrite", "translate"]);
 export const copilotEvents = pgTable(
   "copilot_events",
   {

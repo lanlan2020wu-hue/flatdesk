@@ -13,6 +13,7 @@ import { db, schema } from "@/db";
 import { CACHE_MIN_WEEKLY_CALLS, MODEL, aiConfigured, loadKnowledge, monthKey } from "@/lib/ai";
 import { access } from "@/lib/billing";
 import { COPILOT, REWRITE_LABEL, REWRITE_STYLES, type RewriteStyle } from "@/lib/copilot-config";
+import { isForeign, isLanguage, languageLabel } from "@/lib/language";
 import { structuredCall, type Metered } from "@/lib/llm";
 
 export { COPILOT, REWRITE_LABEL, REWRITE_STYLES, type RewriteStyle };
@@ -38,7 +39,7 @@ export async function copilotUsage(orgId: string, month = monthKey(), q: Pick<ty
 // an action whose call failed, since that call may still have been charged.
 const RESERVE_USD = "0.05000";
 
-type Kind = "summary" | "draft" | "rewrite";
+type Kind = "summary" | "draft" | "rewrite" | "translate";
 
 // Takes one action from the team's limit before the call is made: the count
 // and the new row happen under a per-team lock, so quick clicks in several
@@ -245,6 +246,65 @@ export async function copilotBreakdown(orgId: string, month = monthKey()) {
     .from(events)
     .where(and(eq(events.orgId, orgId), eq(events.month, month)))
     .groupBy(events.kind);
-  const by = Object.fromEntries(rows.map((r) => [r.kind, Number(r.n)])) as Partial<Record<"summary" | "draft" | "rewrite", number>>;
-  return { summary: by.summary ?? 0, draft: by.draft ?? 0, rewrite: by.rewrite ?? 0 };
+  const by = Object.fromEntries(rows.map((r) => [r.kind, Number(r.n)])) as Partial<Record<"summary" | "draft" | "rewrite" | "translate", number>>;
+  return { summary: by.summary ?? 0, draft: by.draft ?? 0, rewrite: by.rewrite ?? 0, translate: by.translate ?? 0 };
+}
+
+// ---- Translate ------------------------------------------------------------------
+// Customer messages in another language are translated into the team's when
+// someone opens the ticket, and replies can go out in the customer's language.
+// Each is one copilot action. Tickets nobody opens (the AI answered them)
+// never cost a translation.
+
+const Translations = z.object({
+  items: z.array(z.object({ n: z.number().int().describe("The message's number."), text: z.string().describe("The translation.") })),
+});
+
+const KEEP = "Keep names, numbers, order numbers, links, email addresses and square-bracket placeholders exactly as they are. Keep line breaks. Plain text, no markdown.";
+
+// Translates the ticket's customer messages that are in another language and
+// not translated yet (the latest 10). Returns how many it translated.
+export async function translateTicket(orgId: string, userId: string, ticketId: string): Promise<number> {
+  const org = await db.query.orgs.findFirst({ where: eq(orgs.id, orgId), columns: { language: true } });
+  if (!org) return 0;
+  const rows = await db
+    .select({ id: messages.id, body: messages.body })
+    .from(messages)
+    .where(and(eq(messages.orgId, orgId), eq(messages.ticketId, ticketId), eq(messages.authorType, "customer"), sql`${messages.translation} is null`))
+    .orderBy(desc(messages.createdAt))
+    .limit(10);
+  const todo = rows.flatMap((m) => {
+    const from = isForeign(m.body, org.language);
+    return from ? [{ ...m, from, n: 0 }] : [];
+  });
+  if (!todo.length) return 0;
+  todo.forEach((m, i) => (m.n = i + 1));
+  const { eventId } = await reserveAction(orgId, userId, ticketId, "translate");
+  const target = languageLabel(org.language);
+  const system = `You translate messages that customers sent to a support team into ${target}, so the team can read them. ${KEEP} Translate every message; return one item per message with its number.`;
+  const user = todo.map((m) => `[${m.n}]\n${m.body.slice(0, 6000)}`).join("\n\n");
+  const { out, metered } = await structuredCall(orgId, Translations, system, user);
+  await settle(eventId, metered);
+  let done = 0;
+  for (const item of out?.items ?? []) {
+    const m = todo.find((t) => t.n === item.n);
+    if (!m || !item.text.trim()) continue;
+    await db.update(messages).set({ translation: item.text.trim(), translatedFrom: m.from }).where(and(eq(messages.orgId, orgId), eq(messages.id, m.id)));
+    done++;
+  }
+  return done;
+}
+
+// An agent's reply in the customer's language, before it's sent.
+export async function translateReply(orgId: string, userId: string, ticketId: string, text: string, to: string): Promise<string> {
+  const input = text.trim();
+  if (!input) throw new CopilotError("Write the reply first.");
+  if (input.length > 8000) throw new CopilotError("That's too long to translate in one go.");
+  if (!isLanguage(to)) throw new CopilotError("Unknown language.");
+  const { eventId } = await reserveAction(orgId, userId, ticketId, "translate");
+  const system = `You translate a support agent's reply into ${languageLabel(to)} before it goes to the customer. ${KEEP} Keep the tone. Return only the translation.`;
+  const { out, metered } = await structuredCall(orgId, Rewrite, system, input);
+  await settle(eventId, metered);
+  if (!out?.text.trim()) throw new CopilotError("The reply couldn't be translated. Send it as written, or try again.");
+  return out.text.trim();
 }
