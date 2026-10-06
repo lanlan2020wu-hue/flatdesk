@@ -165,6 +165,7 @@ export async function deliverReply(orgId: string, messageId: string): Promise<vo
   // stays quiet and two help desks can't answer each other forever.
   const headers: Record<string, string> = { "Message-ID": ownId, "X-Flatdesk-Org": orgId };
   if (row.message.authorType === "ai") headers["Auto-Submitted"] = "auto-replied";
+  if (row.message.authorType === "system") headers["Auto-Submitted"] = "auto-generated"; // a timed trigger
   if (refs.length) {
     headers["In-Reply-To"] = refs[refs.length - 1];
     headers["References"] = refs.slice(-10).join(" ");

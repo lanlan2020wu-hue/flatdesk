@@ -1,6 +1,6 @@
 import { htmlToText } from "@/lib/email";
 import { htmlToArticle, MAX_SECTION } from "@/lib/help";
-import { MAX_CONDITIONS } from "@/lib/triggers";
+import { MAX_CONDITIONS, MAX_HOURS } from "@/lib/triggers";
 import { ApiError, CredentialError } from "../http";
 import { date, fieldMap, str, type Adapter, type Ctx, type Mapped, type Msg, type Raw, type Status } from "../types";
 
@@ -108,9 +108,10 @@ async function mapRule(ctx: Ctx, raw: Raw, ruleKind: string): Promise<Mapped> {
       ? { tag: str(tagConds[0].value).trim(), agentExternalId: str(assign[0].value) }
       : null;
 
-  const asTrigger = tagAssign || ruleKind !== "trigger" ? null : toTrigger(all, any, actions);
+  // Zendesk automations are Flatdesk's timed triggers.
+  const asTrigger = tagAssign || (ruleKind !== "trigger" && ruleKind !== "automation") ? null : toTrigger(all, any, actions, ruleKind === "automation" ? "timed" : "created");
   const trigger = asTrigger && "trigger" in asTrigger ? asTrigger.trigger : null;
-  const why = ruleKind !== "trigger" ? `Kept for reference, not running: Flatdesk has no ${ruleKind}s (time-based rules)` : asTrigger && "blocker" in asTrigger ? `Kept for reference, not running: ${asTrigger.blocker}` : null;
+  const why = !asTrigger && !tagAssign ? `Kept for reference, not running: Flatdesk has no ${ruleKind}s` : asTrigger && "blocker" in asTrigger ? `Kept for reference, not running: ${asTrigger.blocker}` : null;
 
   return {
     kind: "rule",
@@ -136,12 +137,25 @@ const VIA_CHAT = new Set(["29"]);
 // A Zendesk trigger as a Flatdesk trigger, when every condition and action has
 // an equivalent. One that would only half work is kept for reference instead,
 // with the first thing that stopped it.
-export function toTrigger(all: Raw[], any: Raw[], actions: Raw[]): { trigger: TriggerDraft } | { blocker: string } {
+export function toTrigger(all: Raw[], any: Raw[], actions: Raw[], event: "created" | "timed" = "created"): { trigger: TriggerDraft } | { blocker: string } {
   const conditions: TriggerDraft["conditions"] = [];
+  const timed = event === "timed";
+  let hours: number | null = null;
   const convert = (c: Raw): TriggerDraft["conditions"][number] | "scope" | string => {
     const field = str(c.field);
     const op = str(c.operator) || "is";
-    if (field === "update_type") return str(c.value).toLowerCase() === "create" ? "scope" : "it runs when tickets are updated, and Flatdesk triggers run on new tickets";
+    if (timed && /^hours_since_/.test(field)) {
+      // Flatdesk counts from the last update. Zendesk's "since update" is the same; the others are close when the status change was the last update.
+      if (!["hours_since_update", "hours_since_pending", "hours_since_open", "hours_since_solved", "hours_since_hold", "hours_since_created"].includes(field)) return `Flatdesk can't count ${field.replace(/_/g, " ")}`;
+      if (op !== "is" && op !== "greater_than") return "it counts business hours or a range, and Flatdesk timed triggers count whole hours since the last update";
+      const h = Math.round(Number(c.value)) + (op === "greater_than" ? 1 : 0);
+      if (!(h >= 1 && h <= MAX_HOURS)) return `it waits ${str(c.value)} hours, and Flatdesk allows 1 to ${MAX_HOURS}`;
+      if (hours !== null) return "it has more than one hours condition";
+      hours = h;
+      return "scope";
+    }
+    if (timed && field === "status" && (op === "is" || op === "is_not") && STATUS[str(c.value)]) return { field: "status", op, value: STATUS[str(c.value)] };
+    if (field === "update_type") return str(c.value).toLowerCase() === "create" ? "scope" : "it runs on every kind of ticket update; rebuild it as a Flatdesk trigger that runs when the customer writes back, or a timed one";
     if (field === "status" && op === "is" && str(c.value) === "new") return "scope";
     if (field === "current_tags" && (op === "includes" || op === "not_includes")) return { field: "tags", op: op === "includes" ? "includes" : "excludes", value: words(c.value) };
     if (field === "comment_includes_word" || field === "subject_includes_word") {
@@ -175,13 +189,19 @@ export function toTrigger(all: Raw[], any: Raw[], actions: Raw[]): { trigger: Tr
     if (field === "current_tags" || field === "set_tags") tags.push(...words(v).split(", ").filter(Boolean));
     else if (field === "status" && STATUS[str(v)]) out.push({ type: "set_status", status: STATUS[str(v)] });
     else if (field === "assignee_id" && /^\d+$/.test(str(v))) out.push({ type: "assign_external", agentExternalId: str(v) });
-    else if (field.startsWith("notification_")) return { blocker: "it sends an email or notification, which Flatdesk triggers don't" };
+    else if (timed && field === "notification_user" && Array.isArray(v) && ["requester_id", "requester_and_ccs"].includes(str(v[0]))) {
+      const body = str(v[2]).trim();
+      if (!body) return { blocker: "its email is empty" };
+      if (/\{\{|\{%/.test(body)) return { blocker: "its email uses Zendesk placeholders like {{ticket.requester.name}}, which Flatdesk emails don't fill in" };
+      out.push({ type: "reply", body });
+    } else if (field.startsWith("notification_")) return { blocker: timed ? "it emails someone other than the customer, which Flatdesk timed triggers don't" : "it sends an email or notification, which only Flatdesk timed triggers do" };
     else return { blocker: `Flatdesk triggers can't ${field === "assignee_id" ? "assign to the current user" : `set ${field.replace(/_/g, " ")}`}` };
   }
   if (tags.length) out.unshift({ type: "add_tags", tags: [...new Set(tags.map((t) => t.toLowerCase()))] });
   if (!out.length) return { blocker: "it has no actions Flatdesk can run" };
-  if (!conditions.length) return { blocker: "it runs on every new ticket, and Flatdesk triggers need a condition" };
-  return { trigger: { matchAll: anyConds.length === 0, conditions, actions: out } };
+  if (timed && hours === null) return { blocker: "it has no hours condition" };
+  if (!conditions.length) return { blocker: timed ? "it has only an hours condition, and Flatdesk triggers need one more (like status is pending)" : "it runs on every new ticket, and Flatdesk triggers need a condition" };
+  return { trigger: { ...(timed ? { event, hours } : {}), matchAll: anyConds.length === 0, conditions, actions: out } };
 }
 
 export const zendesk: Adapter = {

@@ -42,7 +42,7 @@ const MORE = [
 
 // The route from an old help desk to Flatdesk, in the order an admin does it.
 const SWITCH_STEPS = [
-  { title: "Import your history", body: `Paste an API key from ${SOURCES.join(", ").replace(/, ([^,]*)$/, " or $1")}. Tickets come over with full threads, plus customers, macros and tags. From Zendesk, help center articles come too. Triggers that tag, assign or set status keep working. Other rules are copied for reference.` },
+  { title: "Import your history", body: `Paste an API key from ${SOURCES.join(", ").replace(/, ([^,]*)$/, " or $1")}. Tickets come over with full threads, plus customers, macros and tags. From Zendesk, help center articles come too. Triggers and automations that tag, assign, set status or email the customer keep working. Other rules are copied for reference.` },
   { title: "Connect email and chat", body: "Forward your support email and add one line of code to your site for chat. You can stop forwarding any time." },
   { title: "Test drive the AI", body: "The AI drafts replies to the last 50 tickets your team answered, next to what your team sent. Customers see none of it." },
   { title: "Turn it on", body: "Turn on AI answers, invite your team, and cancel your old help desk when you're ready." },

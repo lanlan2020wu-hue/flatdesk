@@ -59,6 +59,13 @@ export default async function ReportsPage({ searchParams }: PageProps<"/app/repo
               : "No first-reply target set. Add one in Settings."
           }
         />
+        {r.target?.resolve && (
+          <Tile
+            label="Resolved on target"
+            value={pct(r.target.resolve.share)}
+            note={`${r.target.resolve.met} closed in time, ${r.target.resolve.missed} late${r.target.resolve.minutes ? ` against ${targetLabel(r.target.resolve.minutes)}` : ""}. Pending time counts.`}
+          />
+        )}
         <Tile
           label="Rated Great"
           value={pct(r.csat.score)}

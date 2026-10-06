@@ -36,7 +36,7 @@ export const GENERAL_FAQ: QA[] = [
   },
   {
     q: "How is this much included in one flat price? Is it a worse help desk?",
-    a: `It costs less because of what Flatdesk leaves out, not because the parts you use are worse. AI answers are written by Claude Opus from Anthropic. One answer costs cents to run, so ${PLAN.includedPerAgent} per seat fit in the seat price, and the cap keeps it that way. There's no sales team and only one plan. The product is narrower too: email and chat only, with no phone, SMS, social channels, app marketplace or SLA escalations. Before you pay, the AI test drive shows drafts for the last 50 tickets your team answered, beside its real replies, and the ${TRIAL_DAYS}-day trial has every feature.`,
+    a: `It costs less because of what Flatdesk leaves out, not because the parts you use are worse. AI answers are written by Claude Opus from Anthropic. One answer costs cents to run, so ${PLAN.includedPerAgent} per seat fit in the seat price, and the cap keeps it that way. There's no sales team and only one plan. The product is narrower too: email and chat only, with no phone, SMS, social channels or app marketplace. Before you pay, the AI test drive shows drafts for the last 50 tickets your team answered, beside its real replies, and the ${TRIAL_DAYS}-day trial has every feature.`,
   },
   {
     q: "Who is Flatdesk a good fit for?",

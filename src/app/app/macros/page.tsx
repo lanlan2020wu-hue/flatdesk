@@ -13,7 +13,7 @@ import { macroUpdates } from "@/lib/macro-drift";
 import { macroSuggestions } from "@/lib/macro-suggestions";
 import { withAiDrafts, withUpdateDrafts, writeMacroUpdates, writeMissingDrafts } from "@/lib/macro-writer";
 import { listAgents, orgTags } from "@/lib/tickets";
-import { CONDITION_FIELDS, describeAction, describeCondition, FORM_ROWS } from "@/lib/triggers";
+import { CONDITION_FIELDS, describeAction, describeCondition, EVENTS, FORM_ROWS, MAX_HOURS } from "@/lib/triggers";
 import { deleteMacroAction, deleteRuleAction, saveMacroAction, saveRuleAction, toggleRuleAction } from "../actions";
 import { deleteTriggerAction, moveTriggerUpAction, saveTriggerAction, toggleTriggerAction } from "./trigger-actions";
 
@@ -156,7 +156,7 @@ export default async function MacrosPage({ searchParams }: { searchParams: Promi
         <div className="grid gap-1">
           <h2 className="text-lg font-semibold">Triggers</h2>
           <p className="text-sm text-muted">
-            When a new ticket matches, a trigger can tag it, assign it, set its status and leave a note for the team. They run top to bottom, so tags one adds can match the next. The ticket gets a note saying which ran. Imported Zendesk triggers that fit show up here.{s.role !== "admin" && " Only admins can change triggers."}
+            A trigger runs when a new ticket arrives, when the customer writes back, or once a ticket has gone a number of hours without an update (like Zendesk automations: &quot;pending for 3 days, email the customer, then close it&quot;). It can tag, assign, set the status and leave a note; timed ones can also email the customer. They run top to bottom, so tags one adds can match the next, and the ticket gets a note saying which ran. Imported Zendesk triggers and automations that fit show up here.{s.role !== "admin" && " Only admins can change triggers."}
           </p>
         </div>
         {triggerError && <p className="rounded-lg border border-warn/40 bg-warn-soft px-3 py-2 text-sm text-warn" role="alert">{triggerError}</p>}
@@ -188,7 +188,7 @@ export default async function MacrosPage({ searchParams }: { searchParams: Promi
                   )}
                 </div>
                 <p className="text-muted">
-                  When {t.matchAll ? "all" : "any"} of: {t.conditions.map(describeCondition).join("; ")}. Then {t.actions.map((a) => describeAction(a, agentName)).join(", ")}.
+                  When {t.event === "timed" ? `a ticket has had no update for ${t.hours} hours` : EVENTS.find((e) => e.id === t.event)?.label} and {t.matchAll ? "all" : "any"} of: {t.conditions.map(describeCondition).join("; ")}. Then {t.actions.map((a) => describeAction(a, agentName)).join(", ")}.
                 </p>
                 {s.role === "admin" && (
                   <details>
@@ -333,14 +333,23 @@ function TriggerForm({ trigger, agents, tags }: { trigger?: typeof schema.trigge
   const assignAct = act("assign");
   const statusAct = act("set_status");
   const noteAct = act("note");
+  const replyAct = act("reply");
   const rows = Array.from({ length: FORM_ROWS }, (_, i) => trigger?.conditions[i]);
   return (
     <form action={saveTriggerAction} className="grid gap-4 p-5 text-sm">
       {trigger && <input type="hidden" name="id" value={trigger.id} />}
       <label className="grid gap-1.5 font-medium" htmlFor={`tname-${key}`}>Name<input id={`tname-${key}`} name="name" required maxLength={120} defaultValue={trigger?.name} placeholder="Refunds to billing" className={`${field} font-normal`} /></label>
+      <div className="flex flex-wrap items-center gap-2 font-medium">
+        Run when
+        <select name="event" defaultValue={trigger?.event ?? "created"} className={`${field} field-sm font-normal`} aria-label="When it runs">
+          {EVENTS.map((e) => <option key={e.id} value={e.id}>{e.label}</option>)}
+        </select>
+        <input name="hours" type="number" min={1} max={MAX_HOURS} defaultValue={trigger?.hours ?? 72} className={`${field} field-sm w-20 font-normal`} aria-label="Hours without an update (timed triggers)" />
+        <span className="font-normal text-muted">hours (timed only)</span>
+      </div>
       <fieldset className="grid gap-2">
         <legend className="mb-1 flex flex-wrap items-center gap-2 font-medium">
-          When a new ticket matches
+          and the ticket matches
           <select name="match" defaultValue={trigger && !trigger.matchAll ? "any" : "all"} className={`${field} field-sm font-normal`} aria-label="All or any">
             <option value="all">all</option>
             <option value="any">any</option>
@@ -359,7 +368,7 @@ function TriggerForm({ trigger, agents, tags }: { trigger?: typeof schema.trigge
             <input name={`c${i}_value`} defaultValue={c?.value} placeholder={i === 0 ? "refund, money back" : ""} className={`${field} field-sm min-w-48 flex-1`} aria-label={`Condition ${i + 1} words`} />
           </div>
         ))}
-        <p className="text-xs text-muted">Separate words or phrases with commas. Case doesn&apos;t matter. For Channel, type email or chat. Leave a row empty to skip it.</p>
+        <p className="text-xs text-muted">Separate words or phrases with commas. Case doesn&apos;t matter. For Channel, type email or chat; for Status, open, pending or closed. Leave a row empty to skip it.</p>
       </fieldset>
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="grid gap-1.5 font-medium" htmlFor={`ttags-${key}`}>Add tags<TagInput tags={tags} id={`ttags-${key}`} name="addTags" defaultValue={tagAct?.type === "add_tags" ? tagAct.tags.join(", ") : ""} placeholder="billing" className={`${field} font-normal`} /></label>
@@ -371,14 +380,18 @@ function TriggerForm({ trigger, agents, tags }: { trigger?: typeof schema.trigge
         </label>
         <label className="grid gap-1.5 font-medium" htmlFor={`tstatus-${key}`}>Set status
           <select id={`tstatus-${key}`} name="setStatus" defaultValue={statusAct?.type === "set_status" ? statusAct.status : ""} className={`${field} font-normal`}>
-            <option value="">Leave open</option>
+            <option value="">Leave as is</option>
+            <option value="open">Open</option>
             <option value="pending">Pending</option>
             <option value="closed">Closed</option>
           </select>
         </label>
         <label className="grid gap-1.5 font-medium" htmlFor={`tnote-${key}`}>Note for the team<input id={`tnote-${key}`} name="note" maxLength={2000} defaultValue={noteAct?.type === "note" ? noteAct.body : ""} placeholder="Check the order in Shopify first" className={`${field} font-normal`} /></label>
       </div>
-      <p className="text-xs text-muted">The AI only answers tickets that are still open, so a trigger that sets pending or closed keeps the AI off them.</p>
+      <label className="grid gap-1.5 font-medium" htmlFor={`treply-${key}`}>Email the customer (timed triggers only)
+        <textarea id={`treply-${key}`} name="reply" rows={3} maxLength={5000} defaultValue={replyAct?.type === "reply" ? replyAct.body : ""} placeholder="Just checking in: did that sort it out? Reply to this email if you still need help, or we'll close this in a few days." className={`${field} font-normal`} />
+      </label>
+      <p className="text-xs text-muted">The AI only answers tickets that are still open, so a trigger that sets pending or closed keeps the AI off them. A timed trigger runs once on a ticket until the customer or your team writes again, so a nudge isn&apos;t sent twice. The email goes out from your team&apos;s address, marked as automatic.</p>
       <button className="btn btn-primary w-max">{trigger ? "Save trigger" : "Add trigger"}</button>
     </form>
   );

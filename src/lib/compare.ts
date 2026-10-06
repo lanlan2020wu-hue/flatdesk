@@ -107,7 +107,7 @@ export const RIVALS: Rival[] = [
     theyWin: [
       "A full help center with community forums, and many more channels",
       "A large marketplace of integrations",
-      "Full SLA policies (per priority, resolution times, escalations) and advanced workflows",
+      "Deeper SLA policies (next-reply and periodic-update timers, pausing the clock while pending) and advanced workflows",
       "Built for large and enterprise teams",
     ],
     pickThem: "You need community forums, many channels or deep integrations today, or you run a large team with enterprise requirements.",
@@ -161,10 +161,10 @@ export const RIVALS: Rival[] = [
     ],
     theyWin: [
       "Cheaper seat when you barely use AI ($19 on Growth)",
-      "A fuller help center, full SLA policies with escalations, and more channels",
+      "A fuller help center, deeper SLA timers (next reply, pausing while pending), and more channels",
       "A large marketplace of apps",
     ],
-    pickThem: "Your AI answers fewer than about 41 tickets per agent a month, or you need SLA escalations and a marketplace today.",
+    pickThem: "Your AI answers fewer than about 41 tickets per agent a month, or you need next-reply SLA timers and a marketplace today.",
     canImport: true,
     plans: ["freshdesk-growth", "freshdesk-pro"],
     faq: [

@@ -9,7 +9,7 @@ import { access, billingConfigured, isActive, refreshSubscription, seatCount, tr
 import { emailConfig, inboundAddress } from "@/lib/email";
 import { PLAN, annualSavingsPct, usd } from "@/lib/pricing";
 import { webhookKind, webhookLabel } from "@/lib/alerts";
-import { DEFAULT_HOURS, TARGET_CHOICES } from "@/lib/sla";
+import { DEFAULT_HOURS, RESOLVE_CHOICES, TARGET_CHOICES } from "@/lib/sla";
 import { timeAgo } from "@/lib/format";
 import { currentUser } from "@clerk/nextjs/server";
 import { clerkEnabled } from "@/lib/auth-config";
@@ -456,7 +456,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
               Response target and ratings
             </h2>
             <p className="text-muted">
-              New tickets show how long is left for a first reply, turn amber near the target, and are escalated when late. Reports show how often you hit it.
+              New tickets show how long is left for a first reply, turn amber near the target, and are escalated when late. A resolution target does the same for closing the ticket. Reports show how often you hit both.
             </p>
           </div>
           {serviceNotice && <p className="rounded-lg border border-warn/40 bg-warn-soft px-3 py-2 text-sm text-warn" role="alert">{serviceNotice}</p>}
@@ -469,6 +469,14 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
                   {TARGET_CHOICES.map((c) => <option key={c.minutes} value={c.minutes}>{c.label}</option>)}
                 </select>
               </label>
+              <label className="grid w-max gap-1">
+                <span className="label">Resolved (closed) within</span>
+                <select name="resolveMinutes" defaultValue={String(org.resolveMinutes ?? "")} className="field">
+                  <option value="">No target</option>
+                  {RESOLVE_CHOICES.map((c) => <option key={c.minutes} value={c.minutes}>{c.label}</option>)}
+                </select>
+                <span className="text-sm text-muted">Counted from arrival to closed, pending time included. A reopened ticket counts again until it&apos;s closed.</span>
+              </label>
               <fieldset className="grid gap-2">
                 <legend className="label mb-1">Different targets by tag</legend>
                 <p className="text-sm text-muted">For example vip in 1 hour, or bug-report in 24 hours. A ticket with one of these tags gets that target instead; if it has several, the shortest wins. Tags can come from a trigger.</p>
@@ -477,6 +485,10 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
                     <input name={`policyTag${i}`} defaultValue={p?.tag ?? ""} placeholder={i === 0 ? "vip" : ""} aria-label={`Tag ${i + 1}`} className="field field-sm w-40" />
                     <select name={`policyMinutes${i}`} defaultValue={String(p?.minutes ?? 60)} aria-label={`Target ${i + 1}`} className="field field-sm">
                       {TARGET_CHOICES.map((c) => <option key={c.minutes} value={c.minutes}>first reply within {c.label}</option>)}
+                    </select>
+                    <select name={`policyResolve${i}`} defaultValue={String(p?.resolveMinutes ?? "")} aria-label={`Resolution target ${i + 1}`} className="field field-sm">
+                      <option value="">team resolution target</option>
+                      {RESOLVE_CHOICES.map((c) => <option key={c.minutes} value={c.minutes}>resolved within {c.label}</option>)}
                     </select>
                   </div>
                 ))}

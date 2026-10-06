@@ -115,6 +115,51 @@ export default function SecurityPage() {
         </p>
       </Section>
 
+      <Section title="Answers to common vendor questions">
+        <ul className="grid list-disc gap-2 pl-5">
+          <li>
+            <strong className="font-medium">Backups.</strong> Tickets, settings and attachments live in a Neon Postgres database, which keeps a restore
+            history so it can be rolled back to a point in time inside that window. We haven&apos;t yet run and written up a timed restore drill, so
+            there&apos;s no tested recovery time, and no committed RPO or RTO, to quote.
+          </li>
+          <li>
+            <strong className="font-medium">Who can reach production data.</strong> Only Flatdesk&apos;s operator, through the hosting, database and
+            email providers&apos; own consoles. There&apos;s no support staff or contractor with access. We look at a team&apos;s tickets only when that
+            team asks us to, for support.
+          </li>
+          <li>
+            <strong className="font-medium">Changes.</strong> Every code change goes through a pull request and a preview deployment before it reaches
+            production, and the test suite (including the checks that teams can&apos;t see each other&apos;s data) is run before it&apos;s merged.
+          </li>
+          <li>
+            <strong className="font-medium">Logs.</strong> Your admins see the audit log in Settings. Request logs are kept by the hosting provider.
+            Message text isn&apos;t written to logs on purpose.
+          </li>
+          <li>
+            <strong className="font-medium">Your questionnaire.</strong> Send it to {mail} and we&apos;ll fill it in. Where the answer is no, it says no.
+          </li>
+        </ul>
+      </Section>
+
+      <Section title="Trying Flatdesk without handing over your data">
+        <p>You don&apos;t need to import anything real to see whether Flatdesk works for you.</p>
+        <ol className="grid list-decimal gap-2 pl-5">
+          <li>Read this page and the <Link href="/dpa" className="link text-accent">DPA</Link>, and send us your questionnaire first if you have one.</li>
+          <li>
+            Sign up and turn off &ldquo;Allow AI features&rdquo; in Settings, Security, before anything else (the import form has the same switch). With it
+            off, nothing goes to the AI provider.
+          </li>
+          <li>
+            Use Test tickets: an admin plays the customer by email or chat and watches how triggers, targets, macros and (if you turn it on) the AI handle
+            it. Test tickets stay out of reports and billing and clear in one click.
+          </li>
+          <li>
+            When you&apos;re ready, import. Card numbers in old tickets are masked as they arrive. If you decide against Flatdesk, deleting the account
+            removes your data within 30 days.
+          </li>
+        </ol>
+      </Section>
+
       <Section title="If something goes wrong">
         <p>
           If we learn of a breach affecting your data, we&apos;ll tell your team&apos;s admins without undue delay and within 72 hours, with what we know and

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ImportForm from "@/components/ImportForm";
+import { eq } from "drizzle-orm";
+import { db, schema } from "@/db";
 import { requireAdmin } from "@/lib/auth";
 import { ADAPTERS, isSource } from "@/lib/import/engine";
 
@@ -10,10 +12,11 @@ export async function generateMetadata({ params }: PageProps<"/app/import/new/[s
 }
 
 export default async function NewImportPage({ params }: PageProps<"/app/import/new/[source]">) {
-  await requireAdmin();
+  const s = await requireAdmin();
   const { source } = await params;
   if (!isSource(source)) notFound();
   const a = ADAPTERS[source];
+  const org = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId), columns: { aiProcessing: true } });
 
   return (
     <div className="grid max-w-4xl gap-6 px-4 py-6 md:px-8 md:py-8">
@@ -29,6 +32,7 @@ export default async function NewImportPage({ params }: PageProps<"/app/import/n
           source={a.id}
           name={a.name}
           fields={a.credentialFields.map((f) => ({ name: f.name, label: f.label, placeholder: f.placeholder, secret: Boolean(f.secret) }))}
+          aiOn={org?.aiProcessing ?? true}
         />
         <aside className="grid gap-4 text-sm">
           <section className="grid gap-2">
@@ -46,6 +50,7 @@ export default async function NewImportPage({ params }: PageProps<"/app/import/n
               <li>Ticket numbers stay the same where they&apos;re free, and every original field is kept on the ticket.</li>
               <li>Agents are matched by email. Tickets assigned to someone who hasn&apos;t joined yet go to them when they do.</li>
               <li>The key is encrypted while the import runs and erased when it ends.</li>
+              <li>Card numbers in old tickets are masked as they arrive (the original-record archive keeps what {a.name} had).</li>
               <li>You can run it again later to pick up new tickets. Nothing is added twice.</li>
             </ul>
           </section>

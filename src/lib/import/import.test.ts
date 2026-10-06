@@ -129,7 +129,7 @@ describe("Zendesk", () => {
     const texts = report.issues.map((i) => i.issue);
     assert.ok(texts.includes("Deleted in the old help desk, so it wasn't imported"));
     assert.ok(texts.some((x) => x.startsWith("Has no email address; kept with a placeholder")));
-    assert.ok(texts.includes("Kept for reference, not running: it sends an email or notification, which Flatdesk triggers don't"));
+    assert.ok(texts.includes("Kept for reference, not running: it sends an email or notification, which only Flatdesk timed triggers do"));
     assert.ok(texts.includes("Will start running when its agent joins Flatdesk"));
     assert.ok(texts.includes("Its original number was already used in Flatdesk, so it has a new number"));
     assert.equal(report.counts.ticket.found, 3);
