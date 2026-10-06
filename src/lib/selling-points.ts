@@ -225,7 +225,7 @@ export const SELLING_POINTS: SellingPoint[] = [
     metaDescription:
       "Import tickets, attachments, customers, macros and rules from Zendesk, Intercom, Freshdesk or Help Scout. Every original record is kept and nothing is dropped.",
     example:
-      "Say your team has three years of tickets in Zendesk. You paste an API token and Flatdesk copies the tickets, customers, macros and tags. A rule like \"if tagged billing, assign to Ana\" keeps working. A Zendesk trigger that checks the subject or message and tags or assigns the ticket keeps running too. A rule Flatdesk can't run, like one that sends an email or runs on a timer, is listed in the report so you can rebuild it or drop it.",
+      "Say your team has three years of tickets in Zendesk. You paste an API token and Flatdesk copies the tickets, customers, macros and tags. A rule like \"if tagged billing, assign to Ana\" keeps working. A Zendesk trigger that checks the subject or message and tags or assigns the ticket keeps running too. So does an automation like \"pending for 3 days: email the customer, then close\", as a timed trigger. A rule Flatdesk can't run, like one that emails someone other than the customer or uses Zendesk placeholders, is listed in the report so you can rebuild it or drop it.",
     steps: [
       { title: "Connect your old help desk", body: "Paste an API token. It's stored encrypted while the import runs and deleted when it ends." },
       { title: "Flatdesk copies your data", body: "Agents, tags, macros, rules, customers, then tickets with their messages and attachments. Big imports pick up where they left off." },
