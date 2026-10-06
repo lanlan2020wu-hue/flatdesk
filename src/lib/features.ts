@@ -26,6 +26,10 @@ const I = {
   clock: "M12 21a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM12 9v4l2.5 2M9 2h6",
   book: "M5 4h9a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM5 17a3 3 0 0 1 3-3h9M9 8h5",
   smile: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM8.5 14.5a4.5 4.5 0 0 0 7 0M9 9.5h.01M15 9.5h.01",
+  bag: "M5 8h14l-1 12H6zM9 8V6a3 3 0 0 1 6 0v2",
+  plug: "M9 7V3M15 7V3M7 7h10v4a5 5 0 0 1-10 0zM12 16v5",
+  code: "M8 8l-4 4 4 4M16 8l4 4-4 4M13.5 5l-3 14",
+  history: "M4 12a8 8 0 1 0 2.3-5.7M4 4v3h3M12 8v4l3 2",
   spark: "M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8zM18 15l.9 2.1L21 18l-2.1.9L18 21l-.9-2.1L15 18l2.1-.9z",
 };
 
@@ -66,6 +70,7 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
       { id: "email", title: "Email in and out", body: "Forward your support address. Replies thread back onto the same ticket.", icon: I.mail },
       { id: "chat", title: "Website chat widget", body: "One script tag adds a chat bubble to your site. Chats become tickets.", icon: I.chat },
       { id: "notes", title: "Internal notes", body: "Talk it over on the ticket without the customer seeing it.", icon: I.note },
+      { id: "customer-history", title: "Customer history", body: "Each ticket lists the customer's other tickets, so you see what they asked before.", icon: I.history, isNew: true },
       { id: "alerts", title: "Slack and webhook alerts", body: "A post in Slack, Discord, Google Chat or any webhook when a ticket needs a person. Not for ones the AI already answered.", icon: I.bell, isNew: true },
       { id: "first-reply-target", title: "Reply time targets", body: "Set a first reply target like 4 business hours. New tickets count down in the inbox, turn amber near it, and get flagged when late.", icon: I.clock, isNew: true },
       { id: "ratings", title: "Ratings", body: "Every reply email ends with Great, Okay or Not good. A Not good on an AI answer sends the ticket to your team.", icon: I.smile, isNew: true },
@@ -79,6 +84,17 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
       { id: "import", title: "Lossless import", body: "Tickets, customers, macros and rules from Zendesk, Intercom, Freshdesk or Help Scout. Every original record is kept.", icon: I.import },
       { id: "export", title: "Export your data", body: "Tickets, messages, customers and macros as CSV or JSON, any time, without asking us.", icon: I.export },
       { id: "reports", title: "Reports", body: "Volume, reply and close times, targets met, ratings, the AI's share, and each agent's load.", icon: I.report },
+    ],
+  },
+  {
+    id: "integrations",
+    title: "Integrations",
+    features: [
+      { id: "shopify", title: "Shopify orders on the ticket", body: "The customer's latest orders beside their ticket: items, total, payment and delivery status, and tracking links. Read only.", icon: I.bag, isNew: true },
+      { id: "stripe", title: "Stripe on the ticket", body: "The customer's plan, renewal date, and latest payments and refunds beside their ticket, from a read-only key.", icon: I.card, isNew: true },
+      { id: "hubspot", title: "HubSpot on the ticket", body: "The customer's HubSpot contact beside their ticket: company, title, lifecycle stage and owner.", icon: I.users, isNew: true },
+      { id: "jira", title: "Send to Jira", body: "Turn a bug report into a Jira issue from the ticket, with the customer's words and a link back. The ticket shows the issue's status.", icon: I.plug, isNew: true },
+      { id: "api", title: "API, Zapier and Make", body: "A REST API and signed webhooks. Make tickets from other apps, start workflows when one comes in, reply and close from a script.", icon: I.code, isNew: true },
     ],
   },
   {
