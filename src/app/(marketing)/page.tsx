@@ -4,18 +4,20 @@ import AddOnTable from "@/components/AddOnTable";
 import JsonLd from "@/components/JsonLd";
 import SwitchBill from "@/components/SwitchBill";
 import WaitlistForm from "@/components/WaitlistForm";
-import WhyFlat from "@/components/WhyFlat";
+import HeroDemo from "@/components/HeroDemo";
+import ProductTour from "@/components/ProductTour";
 import YearChart from "@/components/YearChart";
-import { AiShot, ImportShot, InboxShot, MacroShot, MacroUpdateShot, ReceiptShot, ReportShot } from "@/components/ProductShots";
+import { ImportShot } from "@/components/ProductShots";
 import { TRIAL_DAYS } from "@/lib/billing";
 import { organization, pageMeta, software, website } from "@/lib/seo";
 import { PLAN, PRICE_PHRASE, usd } from "@/lib/pricing";
 import { LEFT_OUT } from "@/lib/why-flat";
 
-// The page answers a visitor's reasons not to switch, in the order they come
-// up: will my bill be lower (the hero shows their own), why is it flat and is
-// it worse (flat rate), what is better (AI macros), is everything else there,
-// is it for us, how do we move, and what do we risk.
+// One story, told top to bottom: the month gets busier and the bill doesn't.
+// The hero shows it happening in the real inbox, the flat-rate chapter shows
+// it over a year and against the visitor's own bill, the tour shows what the
+// seat includes screen by screen, and the rest answers who it's for, how to
+// move and what trying it costs.
 
 const SOURCES = ["Zendesk", "Intercom", "Freshdesk", "Help Scout"];
 
@@ -25,49 +27,6 @@ const TERMS = [
   { title: "Month to month", body: "No contract on monthly plans. Cancel any time." },
   { title: "Bring your history", body: `Tickets, customers and macros from ${SOURCES.slice(0, 3).join(", ")} or Help Scout.` },
   { title: "Export your data", body: "Tickets, messages, customers and macros as CSV or JSON." },
-];
-
-const MACRO_STEPS = [
-  { title: "Flatdesk notices repeated replies", body: "Your team answers customers as usual. When roughly the same answer has gone out on 5 tickets and no macro covers it, Flatdesk flags it. Imported tickets count, so this works on day one." },
-  { title: "The AI drafts a macro", body: "It reads those replies and writes one macro, with blanks for things like the customer's name or order number." },
-  { title: "It shows up on new tickets", body: "You check it and save it. When a new ticket asks the same thing, the reply box offers it and one click fills it in. The AI answers from your macros too." },
-];
-
-// What one macro does when an agent uses it. Zendesk macros also run actions,
-// so this is shown as what's included, not as something only Flatdesk has.
-const MACRO_ACTIONS = [
-  { title: "Writes the reply", body: "With the customer's first name already filled in." },
-  { title: "Assigns the ticket", body: "Refunds to Ana, bugs to your developer, whoever owns it." },
-  { title: "Sets the status", body: "Closed, pending or open, once the reply goes out." },
-  { title: "Adds tags", body: "So reports and assignment rules pick it up." },
-  { title: "Sends right away", body: "One click, for answers that need no checking." },
-];
-
-// Chapter three: the rest of the seat, in the order teams ask about it.
-const TOUR: { id: string; title: string; body: string; points: string[]; shot: React.ReactNode; href?: string; more?: string }[] = [
-  {
-    id: "ai",
-    title: "The AI replies to customers on its own, and stops at your limit.",
-    body: `When an email or chat comes in, the AI answers from your macros, help articles and the facts you give it, and sends the reply itself. When it isn't sure, or the customer is upset or asks about their account, it hands the ticket to your team. Each agent adds ${PLAN.includedPerAgent} AI answers a month to a shared pool.`,
-    points: ["Stops at the included amount unless an admin turns on overage", "Admins get an email at 80% and 100%", "Test it on 50 past tickets your team answered first"],
-    shot: <AiShot />,
-    href: "/features/ai-test-drive",
-    more: "How the AI test drive works",
-  },
-  {
-    id: "inbox",
-    title: "Email and chat in one inbox.",
-    body: "Forward your support email and add one line of code to your site for chat. Every conversation becomes a ticket anyone on the team can pick up.",
-    points: ["Views for mine, unassigned, open, pending and closed", "Internal notes the customer never sees", 'Rules like "if tagged billing, assign to Sam"'],
-    shot: <InboxShot />,
-  },
-  {
-    id: "reports",
-    title: "See how fast you reply and how much the AI took on.",
-    body: "Tickets by channel, how long first replies and resolutions take, how many tickets the AI answered, and how many each agent handled.",
-    points: ["Last 7, 30 or 90 days", "Replies, closed and open tickets for each agent", "AI answered versus handed off"],
-    shot: <ReportShot />,
-  },
 ];
 
 // Smaller things in the seat, one line each, after the tour.
@@ -124,39 +83,41 @@ export default function Home() {
     <div className="grid">
       <JsonLd data={[organization(), website(), software()]} />
 
-      {/* The first screen: the headline on the bank-note green field, and the visitor's own two bills. */}
-      <section className="bg-field text-field-ink">
-        <div className="mx-auto grid max-w-6xl gap-12 px-4 pt-14 pb-16 sm:px-6 sm:pt-20 sm:pb-24 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] lg:items-center lg:gap-14">
-          <div className="grid content-center gap-7">
+      {/* The first screen: the headline on the bank-note green field, and the real
+          inbox under it, filling up while the bill beside it stays put. The
+          field ends partway down the screenshot so it sits across the edge. */}
+      <section className="hero-split text-field-ink">
+        <div className="mx-auto grid max-w-6xl gap-12 px-4 pt-14 sm:px-6 sm:pt-20 lg:gap-16">
+          <div className="grid gap-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:items-end lg:gap-14">
             <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-[3.4rem] leading-[0.95] sm:text-[5.2rem]">
               Busy months
               <br />
               <span className="text-lime">don&apos;t cost extra.</span>
             </h1>
-            <p style={{ "--d": 2 } as React.CSSProperties} className="enter max-w-[48ch] text-lg text-field-muted">
-              Flatdesk is an email and chat help desk for teams of 3 to 15. It&apos;s {usd(PLAN.annualSeatPrice)} per agent a month billed yearly, or{" "}
-              {usd(PLAN.seatPrice)} month to month. Each agent gets {PLAN.includedPerAgent} AI answers a month. When the team runs out, the AI stops. It
-              doesn&apos;t bill you more.
-            </p>
-            <div style={{ "--d": 3 } as React.CSSProperties} className="enter flex flex-wrap gap-3">
-              <Link href="/sign-up" className="btn btn-on-field">
-                Start your free trial
-              </Link>
-              <a href="#switch" className="btn btn-ghost-field">
-                How switching works
-              </a>
+            <div className="grid content-end gap-6">
+              <p style={{ "--d": 2 } as React.CSSProperties} className="enter max-w-[48ch] text-lg text-field-muted">
+                Flatdesk is an email and chat help desk for teams of 3 to 15. It&apos;s {usd(PLAN.annualSeatPrice)} per agent a month billed yearly, or{" "}
+                {usd(PLAN.seatPrice)} month to month. Each agent gets {PLAN.includedPerAgent} AI answers a month. When the team runs out, the AI stops. It
+                doesn&apos;t bill you more.
+              </p>
+              <div style={{ "--d": 3 } as React.CSSProperties} className="enter flex flex-wrap items-center gap-x-5 gap-y-3">
+                <Link href="/sign-up" className="btn btn-on-field">
+                  Start your free trial
+                </Link>
+                <a href="#switch" className="btn btn-ghost-field">
+                  How switching works
+                </a>
+                <span className="text-sm text-field-muted">Free for {TRIAL_DAYS} days. No card needed.</span>
+              </div>
             </div>
-            <p style={{ "--d": 3 } as React.CSSProperties} className="enter text-sm text-field-muted">
-              Free for {TRIAL_DAYS} days. No card needed.
-            </p>
           </div>
           <div className="enter-fade">
-            <SwitchBill />
+            <HeroDemo />
           </div>
         </div>
       </section>
 
-      <div className="border-b border-line bg-surface">
+      <div className="mt-6 border-b border-line sm:mt-20">
         <ul className="mx-auto grid max-w-6xl sm:grid-cols-2 lg:grid-cols-4">
           {TERMS.map((t, i) => (
             <li key={t.title} className={`grid content-start gap-0.5 px-4 py-5 sm:px-6 ${i ? "border-t border-line sm:border-t-0" : ""} ${i % 2 ? "sm:border-l" : ""} ${i === 2 ? "lg:border-l" : ""} ${i > 1 ? "sm:border-t lg:border-t-0" : ""}`}>
@@ -188,94 +149,49 @@ export default function Home() {
             </dl>
             <p className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
               <Link href="/pricing" className="link font-medium text-accent">See pricing</Link>
-              <Link href="/calculator" className="link font-medium text-accent">Try it with your numbers</Link>
+              <Link href="/pricing#why-less" className="link font-medium text-accent">How this much fits in one seat</Link>
             </p>
           </div>
         </div>
-        <article className="grid items-center gap-8 lg:grid-cols-2 lg:gap-16">
+        {/* The same story with the visitor's own numbers. */}
+        <article className="grid items-center gap-10 rounded-[10px] bg-field px-5 py-10 text-field-ink sm:px-10 sm:py-14 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-16">
           <div data-play="" suppressHydrationWarning className="grid content-start gap-4">
-            <h3 className="ink font-display text-3xl">Every AI answer is on your statement, and you can refund the bad ones.</h3>
-            <p className="max-w-[60ch] text-muted">
-              Each month lists every ticket the AI answered, the macros and articles it used, and whether the answer counted. If one was wrong, an admin refunds it with one
-              click. It stops counting and the ticket goes back to your team.
+            <h3 className="ink font-display text-3xl sm:text-4xl">Put in your own team and see both bills.</h3>
+            <p className="max-w-[48ch] text-field-muted">
+              Pick the help desk you use now, your number of agents and how many AI answers you&apos;d expect a month. It uses each vendor&apos;s list
+              prices, and it says so when the other tool comes out cheaper.
             </p>
-            <ul className="grid gap-2 text-sm">
-              {["One plan, and every seat gets every feature", "Refunded answers go back into your allowance, or come off any overage", "Download the month as a CSV"].map((p) => (
-                <li key={p} className="flex gap-2.5">{mark}{p}</li>
-              ))}
-            </ul>
+            <Link href="/calculator" className="link w-max text-sm font-medium text-lime">Open the full calculator</Link>
           </div>
-          <div data-play="" suppressHydrationWarning>
-            <ReceiptShot />
-          </div>
+          <SwitchBill />
         </article>
-        <div id="why-less" className="scroll-mt-24 rounded-[8px] bg-surface-2 px-5 py-10 sm:px-10 sm:py-12">
-          <WhyFlat leftOut={false} />
-        </div>
       </section>
 
-      <section id="ai-macros" className="mt-24 scroll-mt-20 border-y border-line bg-surface py-24 sm:mt-32 sm:py-32">
+      <section id="everything-else" className="mt-24 scroll-mt-20 border-y border-line bg-surface py-24 sm:mt-32 sm:py-32">
         <div className="mx-auto grid w-full max-w-6xl gap-14 px-4 sm:px-6">
-          <ChapterHead id="ai-macros" tab="AI macros" title="Flatdesk turns the replies your team keeps retyping into macros.">
-            A macro is a saved reply. Your team sends it with one click instead of typing the same answer again. Flatdesk finds the answers your team keeps
-            retyping and the AI writes each one up as a macro for you to check and save. When a price or policy changes, the AI suggests an update from your
-            team&apos;s edits. AI answers reply to customers by themselves; macros are for the tickets your team still answers. They come with every seat and
-            don&apos;t use AI answers.
+          <ChapterHead id="everything-else" tab="In every seat" title="AI answers, AI macros and the whole help desk, in one seat.">
+            There&apos;s one plan, and every agent gets every feature. These are real screens from the app, with sample data.
           </ChapterHead>
-          <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] lg:gap-16">
-            <div data-play="" suppressHydrationWarning className="relative">
-              <MacroShot />
-            </div>
-            <ol data-play="" suppressHydrationWarning className="grid gap-7">
-              {MACRO_STEPS.map((step, i) => (
-                <li key={step.title} style={{ "--i": i } as React.CSSProperties} className="ln grid grid-cols-[2.5rem_minmax(0,1fr)] gap-x-3 border-t border-line pt-4">
-                  <span className="num text-sm font-semibold text-accent">{String(i + 1).padStart(2, "0")}</span>
-                  <span className="grid gap-1">
-                    <span className="text-lg font-semibold">{step.title}</span>
-                    <span className="text-muted">{step.body}</span>
-                  </span>
-                </li>
-              ))}
-            </ol>
-          </div>
-          <article className="grid items-center gap-10 border-t border-line pt-14 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:gap-16">
-            <div data-play="" suppressHydrationWarning className="grid content-start gap-4">
-              <h3 className="ink font-display text-3xl">If your team keeps making the same edit, the AI suggests an update.</h3>
-              <p className="text-muted">
-                Say your shipping time changes. Agents fix it by hand each time they send the macro. Once most sends carry the same edit, the AI rewrites the
-                macro and you apply it in one click.
-              </p>
-              <ul className="grid gap-2 text-sm">
-                {["The count starts over after each update", "Your placeholders, greeting and sign-off stay as they are", "Included in every seat. Zendesk sells macro suggestions in its $50 Copilot add-on."].map((p) => (
-                  <li key={p} className="flex gap-2.5">{mark}{p}</li>
-                ))}
-              </ul>
-              <Link href="/features/ai-macros" className="link w-max text-sm font-medium text-accent">How AI macros work</Link>
-            </div>
-            <div data-play="" suppressHydrationWarning>
-              <MacroUpdateShot />
-            </div>
-          </article>
-          <div data-play="" suppressHydrationWarning className="grid gap-6 border-t border-line pt-14">
-            <h3 className="ink font-display text-3xl">One click on a macro can also assign, tag and close the ticket.</h3>
-            <ul className="grid sm:grid-cols-2 lg:grid-cols-5">
-              {MACRO_ACTIONS.map((a, i) => (
-                <li
-                  key={a.title}
-                  style={{ "--i": i } as React.CSSProperties}
-                  className="ln grid content-start gap-1 border-t-2 border-ink py-4 sm:mr-5"
-                >
-                  <span className="font-semibold">{a.title}</span>
-                  <span className="text-sm text-muted">{a.body}</span>
+          <ProductTour />
+          <div data-play="" suppressHydrationWarning className="grid gap-4 pt-6">
+            <h3 className="text-lg font-semibold">Also in every seat</h3>
+            <ul className="grid border-t border-line sm:grid-cols-2 lg:grid-cols-4">
+              {MORE.map((m, i) => (
+                <li key={m.title} style={{ "--i": i } as React.CSSProperties} className="border-b border-line">
+                  <Link href={m.href} className="group flex h-full flex-col gap-0.5 py-4 text-sm sm:pr-6">
+                    <span className="font-medium group-hover:text-accent">{m.title}</span>
+                    <span className="text-muted">{m.body}</span>
+                  </Link>
                 </li>
               ))}
             </ul>
+            <Link href="/features#all" className="link w-max text-sm font-medium text-accent">See every feature</Link>
           </div>
           <div data-play="" suppressHydrationWarning className="grid gap-6 border-t border-line pt-14">
             <h3 className="ink font-display text-3xl">Elsewhere, AI help with macros costs extra or needs a higher plan. Flatdesk includes it.</h3>
             <AddOnTable />
           </div>
-          {/* The first ask after the strongest chapter, so nobody has to scroll to the close to act on it. */}
+          {/* The first ask after the product, so nobody has to scroll to the close to act on it. */}
           <div data-play="" suppressHydrationWarning className="flex flex-wrap items-center justify-between gap-4 rounded-[8px] bg-surface-2 px-5 py-6 sm:px-8">
             <p className="max-w-[52ch] text-lg">
               <span className="font-semibold">Watch it turn your team&apos;s replies into macros.</span>{" "}
@@ -283,45 +199,6 @@ export default function Home() {
             </p>
             <Link href="/sign-up" className="btn btn-primary">Start your free trial</Link>
           </div>
-        </div>
-      </section>
-
-      <section id="everything-else" className="mx-auto grid w-full max-w-6xl scroll-mt-20 gap-14 px-4 pt-24 sm:px-6 sm:pt-32">
-        <ChapterHead id="everything-else" tab="Everything else" title="Everything else a help desk needs, for the same price.">
-          There&apos;s one plan, and every agent gets every feature.
-        </ChapterHead>
-        {TOUR.map((f, i) => (
-          <article
-            key={f.id}
-            id={f.id}
-            className={`grid scroll-mt-24 items-center gap-8 lg:gap-16 ${i === 0 ? "lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]" : "lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)]"}`}
-          >
-            <div data-play="" suppressHydrationWarning className={`grid content-start gap-3 ${i === 1 ? "lg:order-2" : ""}`}>
-              <h3 className="ink font-display text-3xl">{f.title}</h3>
-              <p className="max-w-[60ch] text-muted">{f.body}</p>
-              <ul className="grid gap-1.5 text-sm">
-                {f.points.map((p) => (
-                  <li key={p} className="flex gap-2.5">{mark}{p}</li>
-                ))}
-              </ul>
-              {f.href && <Link href={f.href} className="link w-max text-sm font-medium text-accent">{f.more}</Link>}
-            </div>
-            <div data-play="" suppressHydrationWarning>{f.shot}</div>
-          </article>
-        ))}
-        <div data-play="" suppressHydrationWarning className="grid gap-4">
-          <h3 className="text-lg font-semibold">Also in every seat</h3>
-          <ul className="grid border-t border-line sm:grid-cols-2 lg:grid-cols-4">
-            {MORE.map((m, i) => (
-              <li key={m.title} style={{ "--i": i } as React.CSSProperties} className="border-b border-line">
-                <Link href={m.href} className="group flex h-full flex-col gap-0.5 py-4 text-sm sm:pr-6">
-                  <span className="font-medium group-hover:text-accent">{m.title}</span>
-                  <span className="text-muted">{m.body}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
-          <Link href="/features#all" className="link w-max text-sm font-medium text-accent">See every feature</Link>
         </div>
       </section>
 
