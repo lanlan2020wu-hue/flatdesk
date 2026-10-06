@@ -24,7 +24,8 @@ import { hit, LIMITS } from "@/lib/rate-limit";
 import { teachAi } from "@/lib/teach";
 import { addRule } from "@/lib/rules";
 import { audit, changes } from "@/lib/security";
-import { TARGET_CHOICES, validHours } from "@/lib/sla";
+import type { SlaPolicy } from "@/db/schema";
+import { RESOLVE_CHOICES, TARGET_CHOICES, validHours } from "@/lib/sla";
 import { addReply, isPriority, normalizeTags, updateTicket, type TicketPriority, type TicketStatus } from "@/lib/tickets";
 
 // The paywall hides the app once a trial ends without a card; this keeps
@@ -339,15 +340,18 @@ export async function saveServiceSettingsAction(form: FormData) {
   }
   const before = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) });
   const escalateTo = str(form, "escalateTo") ? ((await findAssignable(s.orgId, str(form, "escalateTo")))?.userId ?? null) : null;
-  const slaPolicies: { tag: string; minutes: number }[] = [];
+  const resolve = (v: string) => (RESOLVE_CHOICES.some((c) => c.minutes === Number(v)) ? Number(v) : null);
+  const resolveMinutes = resolve(str(form, "resolveMinutes"));
+  const slaPolicies: SlaPolicy[] = [];
   for (let i = 0; i < 4; i++) {
     const [tag] = tagList(str(form, `policyTag${i}`));
     const minutes = Number(str(form, `policyMinutes${i}`));
-    if (tag && TARGET_CHOICES.some((c) => c.minutes === minutes) && !slaPolicies.some((p) => p.tag === tag)) slaPolicies.push({ tag, minutes });
+    const resolveFor = resolve(str(form, `policyResolve${i}`));
+    if (tag && TARGET_CHOICES.some((c) => c.minutes === minutes) && !slaPolicies.some((p) => p.tag === tag)) slaPolicies.push({ tag, minutes, ...(resolveFor ? { resolveMinutes: resolveFor } : {}) });
   }
-  const next = { csatEnabled: form.get("csatEnabled") === "on", firstResponseMinutes, businessHours, escalateTo, slaPolicies };
+  const next = { csatEnabled: form.get("csatEnabled") === "on", firstResponseMinutes, resolveMinutes, businessHours, escalateTo, slaPolicies };
   await db.update(schema.orgs).set(next).where(eq(schema.orgs.id, s.orgId));
-  const detail = changes(before ?? {}, next, { csatEnabled: "Ratings", firstResponseMinutes: "First-reply target (minutes)", businessHours: "Business hours", escalateTo: "Escalate to", slaPolicies: "Targets by tag" });
+  const detail = changes(before ?? {}, next, { csatEnabled: "Ratings", firstResponseMinutes: "First-reply target (minutes)", resolveMinutes: "Resolution target (minutes)", businessHours: "Business hours", escalateTo: "Escalate to", slaPolicies: "Targets by tag" });
   if (detail) await audit(s.orgId, actor(s), "settings.service", detail);
   revalidatePath("/app/settings");
   revalidatePath("/app/inbox");

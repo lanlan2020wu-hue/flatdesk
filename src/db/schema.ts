@@ -70,6 +70,8 @@ export const orgs = pgTable("orgs", {
   firstResponseMinutes: integer("first_response_minutes").default(240),
   // Who gets a ticket that misses its first-reply target (null = leave it with whoever has it). See lib/escalation.ts.
   escalateTo: text("escalate_to"),
+  // Resolution target in minutes (null = off): from arrival to closed, on the same clock as the first-reply target.
+  resolveMinutes: integer("resolve_minutes"),
   businessHours: jsonb("business_hours").$type<BusinessHours>(),
   slaPolicies: jsonb("sla_policies").$type<SlaPolicy[]>().notNull().default([]),
   // Signs who is signed in on the team's own site, so chat can trust the visitor's email (lib/chat-identity.ts).
@@ -140,7 +142,7 @@ export type TriggerAction =
   | { type: "note"; body: string };
 
 // A faster (or slower) first-reply target for tickets with a tag. See lib/sla.ts.
-export type SlaPolicy = { tag: string; minutes: number };
+export type SlaPolicy = { tag: string; minutes: number; resolveMinutes?: number | null };
 
 export type BusinessHours = {
   tz: string; // IANA time zone, e.g. "America/New_York"
@@ -215,6 +217,8 @@ export const tickets = pgTable(
     firstResponseAt: timestamp("first_response_at", { withTimezone: true }),
     // When it missed its first-reply target and was escalated (lib/escalation.ts).
     escalatedAt: timestamp("escalated_at", { withTimezone: true }),
+    // When it missed its resolution target and was escalated.
+    resolveEscalatedAt: timestamp("resolve_escalated_at", { withTimezone: true }),
     closedAt: timestamp("closed_at", { withTimezone: true }),
     resolvedByAi: boolean("resolved_by_ai").notNull().default(false),
     // Chat tickets: the visitor's browser holds this to read and continue the thread.

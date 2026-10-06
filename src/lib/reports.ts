@@ -1,7 +1,7 @@
 import { and, eq, gte, isNull, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { csatReport, csatScore } from "@/lib/csat";
-import { slaState } from "@/lib/sla";
+import { resolveState, slaState } from "@/lib/sla";
 
 // Numbers for the reports page, over a rolling window of days.
 
@@ -85,21 +85,27 @@ export async function teamReport(orgId: string, days: ReportRange) {
 // waiting count only once they're past it.
 async function targetReport(orgId: string, since: Date) {
   const org = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, orgId) });
-  if (!org?.firstResponseMinutes && !org?.slaPolicies.length) return null;
+  if (!org?.firstResponseMinutes && !org?.resolveMinutes && !org?.slaPolicies.length) return null;
   const tickets = await db
-    .select({ status: schema.tickets.status, createdAt: schema.tickets.createdAt, firstResponseAt: schema.tickets.firstResponseAt, source: schema.tickets.source, tags: schema.tickets.tags })
+    .select({ status: schema.tickets.status, createdAt: schema.tickets.createdAt, firstResponseAt: schema.tickets.firstResponseAt, closedAt: schema.tickets.closedAt, source: schema.tickets.source, tags: schema.tickets.tags })
     .from(schema.tickets)
     .where(and(eq(schema.tickets.orgId, orgId), gte(schema.tickets.createdAt, since), isNull(schema.tickets.source), eq(schema.tickets.test, false)))
     .limit(20000);
   const now = new Date();
   let met = 0;
   let missed = 0;
+  let resolvedOnTime = 0;
+  let resolvedLate = 0;
   for (const t of tickets) {
     const st = slaState(t, org, now);
     if (st?.kind === "met") met++;
     else if (st?.kind === "missed" || st?.kind === "overdue") missed++;
+    const rs = resolveState(t, org, now);
+    if (rs?.kind === "met") resolvedOnTime++;
+    else if (rs?.kind === "missed" || rs?.kind === "overdue") resolvedLate++;
   }
-  return { minutes: org.firstResponseMinutes, policies: org.slaPolicies.length, met, missed, share: met + missed > 0 ? met / (met + missed) : null };
+  const resolve = resolvedOnTime + resolvedLate > 0 ? { met: resolvedOnTime, missed: resolvedLate, share: resolvedOnTime / (resolvedOnTime + resolvedLate), minutes: org.resolveMinutes } : null;
+  return { minutes: org.firstResponseMinutes, policies: org.slaPolicies.length, met, missed, share: met + missed > 0 ? met / (met + missed) : null, resolve };
 }
 
 export function duration(seconds: number | null): string {

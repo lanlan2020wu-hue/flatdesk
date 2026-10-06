@@ -61,6 +61,7 @@ export async function listTickets(orgId: string, userId: string, view: View) {
       updatedAt: tickets.updatedAt,
       createdAt: tickets.createdAt,
       firstResponseAt: tickets.firstResponseAt,
+      closedAt: tickets.closedAt,
       source: tickets.source,
       test: tickets.test,
       resolvedByAi: tickets.resolvedByAi,
