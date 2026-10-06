@@ -13,14 +13,17 @@ process.env.ANTHROPIC_API_KEY = "test-key";
 const ORG = "org_test_followups";
 type Turn = { role: string; content: string };
 const requests: Turn[][] = [];
+// Whether each call asked for its prompt to be cached.
+const cached: boolean[] = [];
 
 // Answers unless the latest customer message asks for a person.
 const fake = createServer((req, res) => {
   let body = "";
   req.on("data", (c) => (body += c));
   req.on("end", () => {
-    const { messages } = JSON.parse(body) as { messages: Turn[] };
+    const { messages, system } = JSON.parse(body) as { messages: Turn[]; system: unknown };
     requests.push(messages);
+    cached.push(Array.isArray(system) && system.some((b: { cache_control?: unknown }) => b.cache_control));
     const last = messages[messages.length - 1].content;
     const out = /person/i.test(last)
       ? { decision: "handoff", reply: "", reason: "Asked for a person.", sources: [] }
@@ -71,6 +74,7 @@ test("the AI answers follow-ups on its own ticket, counted once, and hands off w
   const t = await createTicket({ orgId: ORG, channel: "email", customerEmail: "c@x.com", subject: "Reset", body: "How do I reset my password?", authorType: "customer" });
   await answerNewTicket(ORG, t.id);
   assert.equal((await ticketOf(t.id))?.resolvedByAi, true);
+  assert.equal(cached.at(-1), false, "a quiet team's first call in an hour isn't cached: nothing would read it");
 
   for (let i = 1; i <= MAX_FOLLOW_UPS; i++) {
     await addCustomerMessage({ orgId: ORG, ticketId: t.id, customerId: t.customerId, body: `Still stuck ${i}` });
@@ -78,6 +82,7 @@ test("the AI answers follow-ups on its own ticket, counted once, and hands off w
     const now = await ticketOf(t.id);
     assert.equal(now?.status, "pending", `follow-up ${i} answered`);
     assert.equal(now?.resolvedByAi, true);
+    assert.equal(cached.at(-1), true, "a call within the hour of another is cached");
   }
   // The model saw the whole conversation, with its own replies as assistant turns and no footer.
   const turns = requests[requests.length - 1];
@@ -124,4 +129,23 @@ test("the same email delivered twice at once makes one message", async () => {
   const results = await Promise.all([handleInboundEmail(mail), handleInboundEmail(mail)]);
   assert.equal(await db.$count(schema.messages, eq(schema.messages.orgId, ORG)), 1);
   assert.ok(results.some((r) => "ignored" in r && r.ignored === "duplicate"));
+});
+
+test("a busy team's prompt is cached even after a quiet hour; a quiet team's isn't", async () => {
+  const { db, schema } = await import("@/db");
+  const { worthCaching, monthKey, CACHE_MIN_WEEKLY_CALLS } = await import("./ai");
+  const T = "org_test_cache_rule";
+  await db.delete(schema.orgs).where(eq(schema.orgs.id, T));
+  await db.insert(schema.orgs).values({ id: T, name: "Cache rule team" });
+  const at = (hoursAgo: number) => ({ orgId: T, kind: "handoff" as const, month: monthKey(), model: "test", createdAt: new Date(Date.now() - hoursAgo * 3_600_000) });
+  const [current] = await db.insert(schema.aiEvents).values(at(0)).returning({ id: schema.aiEvents.id });
+  assert.equal(await worthCaching(T, current.id), false, "no other call: nothing would read the cache");
+  await db.insert(schema.aiEvents).values(Array.from({ length: CACHE_MIN_WEEKLY_CALLS - 1 }, (_, i) => at(2 + i)));
+  assert.equal(await worthCaching(T, current.id), false, "a few calls a day, none this hour");
+  await db.insert(schema.aiEvents).values(at(30));
+  assert.equal(await worthCaching(T, current.id), true, "busy enough that the next call likely reads it");
+  await db.delete(schema.aiEvents).where(eq(schema.aiEvents.orgId, T));
+  const [again] = await db.insert(schema.aiEvents).values([at(0), at(0.5)]).returning({ id: schema.aiEvents.id });
+  assert.equal(await worthCaching(T, again.id), true, "another call this hour: the cache is warm");
+  await db.delete(schema.orgs).where(eq(schema.orgs.id, T));
 });

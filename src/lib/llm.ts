@@ -13,7 +13,8 @@ export type Metered = { model: string; inputTokens: number; outputTokens: number
 export async function structuredCall<T extends z.ZodType>(
   orgId: string,
   schema: T,
-  system: string,
+  // A list of blocks lets a caller cache a long, stable part of the prompt.
+  system: string | Anthropic.Beta.BetaTextBlockParam[],
   user: string,
   options: { timeout?: number; maxRetries?: number } = { timeout: 60_000, maxRetries: 1 },
 ): Promise<{ out: z.infer<T> | null; metered: Metered }> {
