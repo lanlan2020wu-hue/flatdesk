@@ -1,11 +1,12 @@
 import { and, asc, eq, gt, isNotNull, isNull, lte, ne, or, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { alertOverdue } from "@/lib/alerts";
-import { RESOLVE_CHOICES, resolveState, slaState, TARGET_CHOICES } from "@/lib/sla";
+import { nextReplyState, RESOLVE_CHOICES, resolveState, slaState, TARGET_CHOICES } from "@/lib/sla";
 
 // Escalation: when a new ticket goes past the team's first-reply target with
 // no reply, or past its resolution target without being closed, Flatdesk tags
-// it "overdue", leaves a note, hands it to the team's escalation person if they
+// it "overdue" (likewise when a customer's follow-up waits past the next-reply
+// target), leaves a note, hands it to the team's escalation person if they
 // picked one, and posts to their alert webhook. Each ticket is escalated once
 // for each target. Runs every few minutes from /api/cron/sla.
 
@@ -18,7 +19,7 @@ const RESOLVE_LOOKBACK_DAYS = 30;
 
 const { tickets, orgs, agents } = schema;
 
-export async function escalateOverdue(now = new Date()): Promise<{ escalated: number; resolveEscalated: number }> {
+export async function escalateOverdue(now = new Date()): Promise<{ escalated: number; resolveEscalated: number; nextEscalated: number }> {
   // Candidates: unanswered tickets old enough to be late on the shortest target. Their own target is checked below.
   const rows = await db
     .select({ ticket: tickets, org: orgFields })
@@ -75,7 +76,37 @@ export async function escalateOverdue(now = new Date()): Promise<{ escalated: nu
       console.error("resolution escalation failed", ticket.id, err);
     }
   }
-  return { escalated, resolveEscalated };
+
+  // Next-reply targets: the customer wrote again after a reply and is still
+  // waiting. Escalated once per wait (nextEscalatedAt is older than the wait otherwise).
+  const waiting = await db
+    .select({ ticket: tickets, org: orgFields })
+    .from(tickets)
+    .innerJoin(orgs, eq(orgs.id, tickets.orgId))
+    .where(
+      and(
+        eq(tickets.status, "open"),
+        isNotNull(tickets.awaitingSince),
+        isNotNull(tickets.firstResponseAt),
+        isNull(tickets.source),
+        isNotNull(orgs.nextReplyMinutes),
+        or(isNull(tickets.nextEscalatedAt), sql`${tickets.nextEscalatedAt} < ${tickets.awaitingSince}`),
+        gt(tickets.awaitingSince, new Date(now.getTime() - LOOKBACK_DAYS * 86_400_000)),
+        lte(tickets.awaitingSince, new Date(now.getTime() - MIN_TARGET * 60_000)),
+      ),
+    )
+    .orderBy(asc(tickets.awaitingSince))
+    .limit(BATCH);
+  let nextEscalated = 0;
+  for (const { ticket, org } of waiting) {
+    if (nextReplyState(ticket, org, now)?.kind !== "overdue") continue;
+    try {
+      if (await escalate(ticket, org.escalateTo, now, "next")) nextEscalated++;
+    } catch (err) {
+      console.error("next-reply escalation failed", ticket.id, err);
+    }
+  }
+  return { escalated, resolveEscalated, nextEscalated };
 }
 
 const orgFields = {
@@ -85,15 +116,21 @@ const orgFields = {
   businessHours: orgs.businessHours,
   slaPolicies: orgs.slaPolicies,
   escalateTo: orgs.escalateTo,
+  nextReplyMinutes: orgs.nextReplyMinutes,
+  pauseWhilePending: orgs.pauseWhilePending,
 };
 
-async function escalate(ticket: typeof tickets.$inferSelect, escalateTo: string | null, now: Date, target: "reply" | "resolve"): Promise<boolean> {
+export type EscalationTarget = "reply" | "resolve" | "next";
+const TARGET_WORDS: Record<EscalationTarget, string> = { reply: "first-reply", resolve: "resolution", next: "next-reply" };
+
+async function escalate(ticket: typeof tickets.$inferSelect, escalateTo: string | null, now: Date, target: EscalationTarget): Promise<boolean> {
   const result = await db.transaction(async (tx) => {
     const [current] = await tx.select().from(tickets).where(eq(tickets.id, ticket.id)).for("update");
     // Someone may have replied or closed it since the list was read.
     if (!current) return null;
     if (target === "reply" && (current.escalatedAt || current.firstResponseAt || current.status !== "open")) return null;
     if (target === "resolve" && (current.resolveEscalatedAt || current.status === "closed")) return null;
+    if (target === "next" && (!current.awaitingSince || current.status !== "open" || (current.nextEscalatedAt && current.nextEscalatedAt >= current.awaitingSince))) return null;
     const lead = escalateTo
       ? await tx.query.agents.findFirst({ where: and(eq(agents.orgId, current.orgId), eq(agents.userId, escalateTo), eq(agents.viewer, false), isNull(agents.removedAt)) })
       : undefined;
@@ -102,7 +139,7 @@ async function escalate(ticket: typeof tickets.$inferSelect, escalateTo: string 
     await tx
       .update(tickets)
       .set({
-        ...(target === "reply" ? { escalatedAt: now } : { resolveEscalatedAt: now }),
+        ...(target === "reply" ? { escalatedAt: now } : target === "resolve" ? { resolveEscalatedAt: now } : { nextEscalatedAt: now }),
         tags: current.tags.includes(OVERDUE_TAG) ? current.tags : [...current.tags, OVERDUE_TAG],
         ...(reassign ? { assigneeId: lead.userId } : {}),
       })
@@ -113,7 +150,7 @@ async function escalate(ticket: typeof tickets.$inferSelect, escalateTo: string 
       ticketId: current.id,
       authorType: "system",
       internal: true,
-      body: `Missed the ${target === "reply" ? "first-reply" : "resolution"} target, so it was tagged ${OVERDUE_TAG}. ${reason}`,
+      body: `Missed the ${TARGET_WORDS[target]} target, so it was tagged ${OVERDUE_TAG}. ${reason}`,
       createdAt: now,
     });
     return reason;

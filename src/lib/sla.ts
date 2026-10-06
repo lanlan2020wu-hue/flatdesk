@@ -88,8 +88,25 @@ export function dueAt(from: Date, minutes: number, hours: BusinessHours | null):
   return new Date(t + left * MIN); // unreachable with valid hours
 }
 
-export type SlaTicket = { status: string; createdAt: Date; firstResponseAt: Date | null; source: string | null; tags?: string[]; closedAt?: Date | null };
-export type SlaOrg = { firstResponseMinutes: number | null; businessHours: BusinessHours | null; slaPolicies?: SlaPolicy[]; resolveMinutes?: number | null };
+export type SlaTicket = {
+  status: string;
+  createdAt: Date;
+  firstResponseAt: Date | null;
+  source: string | null;
+  tags?: string[];
+  closedAt?: Date | null;
+  awaitingSince?: Date | null;
+  pendingSince?: Date | null;
+  pausedSeconds?: number;
+};
+export type SlaOrg = {
+  firstResponseMinutes: number | null;
+  businessHours: BusinessHours | null;
+  slaPolicies?: SlaPolicy[];
+  resolveMinutes?: number | null;
+  nextReplyMinutes?: number | null;
+  pauseWhilePending?: boolean;
+};
 
 // Resolution targets: from arrival to closed, pending time included.
 export const RESOLVE_CHOICES = [
@@ -125,14 +142,20 @@ export function resolveTargetFor(t: SlaTicket, org: SlaOrg): { minutes: number; 
 }
 
 // Where a ticket stands against its resolution target, or null when none applies.
-// A reopened ticket counts again until it's closed.
+// A reopened ticket counts again until it's closed. With pauseWhilePending,
+// time spent pending moves the due time later, and a pending ticket's clock
+// is "paused".
 export function resolveState(t: SlaTicket, org: SlaOrg, now = new Date()): SlaState | null {
   const target = t.source ? null : resolveTargetFor(t, org);
   if (!target) return null;
-  const due = dueAt(t.createdAt, target.minutes, org.businessHours);
+  const pausing = Boolean(org.pauseWhilePending);
+  const pendingNow = pausing && t.status === "pending" && t.pendingSince ? Math.max(0, now.getTime() - t.pendingSince.getTime()) : 0;
+  const pausedMs = pausing ? (t.pausedSeconds ?? 0) * 1000 + pendingNow : 0;
+  const due = dueAt(new Date(t.createdAt.getTime() + pausedMs), target.minutes, org.businessHours);
+  if (pausing && t.status === "pending") return { ...target, kind: "paused", due };
   if (t.status === "closed") {
     if (!t.closedAt) return null;
-    const took = Math.round((t.closedAt.getTime() - t.createdAt.getTime()) / MIN);
+    const took = Math.round((t.closedAt.getTime() - t.createdAt.getTime() - pausedMs) / MIN);
     return { ...target, kind: t.closedAt <= due ? "met" : "missed", due, took };
   }
   const left = (due.getTime() - now.getTime()) / MIN;
@@ -140,10 +163,23 @@ export function resolveState(t: SlaTicket, org: SlaOrg, now = new Date()): SlaSt
   return { ...target, kind: "waiting", due, minutesLeft: Math.floor(left), soon: left <= Math.min(240, target.minutes / 4) };
 }
 
+// Next-reply target: after the team's first reply, each time the customer
+// writes back, the next reply is due within nextReplyMinutes (business hours
+// apply). Only while the ticket is open and the customer is waiting.
+export function nextReplyState(t: SlaTicket, org: SlaOrg, now = new Date()): SlaState | null {
+  if (t.source || !org.nextReplyMinutes || !t.firstResponseAt || !t.awaitingSince || t.status !== "open") return null;
+  const target = { minutes: org.nextReplyMinutes, tag: null };
+  const due = dueAt(t.awaitingSince, target.minutes, org.businessHours);
+  const left = (due.getTime() - now.getTime()) / MIN;
+  if (left < 0) return { ...target, kind: "overdue", due, minutesLate: Math.ceil(-left) };
+  return { ...target, kind: "waiting", due, minutesLeft: Math.floor(left), soon: left <= Math.min(60, target.minutes / 4) };
+}
+
 export type SlaState = { minutes: number; tag: string | null } & (
   | { kind: "waiting"; due: Date; minutesLeft: number; soon: boolean } // no first reply yet
   | { kind: "overdue"; due: Date; minutesLate: number }
   | { kind: "met" | "missed"; due: Date; took: number } // replied; took = minutes from arrival
+  | { kind: "paused"; due: Date } // resolution clock stopped while pending
 );
 
 // Where a ticket stands against its first-reply target, or null when no target applies.

@@ -406,6 +406,9 @@ export async function saveServiceSettingsAction(form: FormData) {
   const escalateTo = str(form, "escalateTo") ? ((await findAssignable(s.orgId, str(form, "escalateTo")))?.userId ?? null) : null;
   const resolve = (v: string) => (RESOLVE_CHOICES.some((c) => c.minutes === Number(v)) ? Number(v) : null);
   const resolveMinutes = resolve(str(form, "resolveMinutes"));
+  const nextTarget = Number(str(form, "nextReplyMinutes"));
+  const nextReplyMinutes = TARGET_CHOICES.some((c) => c.minutes === nextTarget) ? nextTarget : null;
+  const pauseWhilePending = form.get("pauseWhilePending") === "on";
   const slaPolicies: SlaPolicy[] = [];
   for (let i = 0; i < 4; i++) {
     const [tag] = tagList(str(form, `policyTag${i}`));
@@ -413,9 +416,9 @@ export async function saveServiceSettingsAction(form: FormData) {
     const resolveFor = resolve(str(form, `policyResolve${i}`));
     if (tag && TARGET_CHOICES.some((c) => c.minutes === minutes) && !slaPolicies.some((p) => p.tag === tag)) slaPolicies.push({ tag, minutes, ...(resolveFor ? { resolveMinutes: resolveFor } : {}) });
   }
-  const next = { csatEnabled: form.get("csatEnabled") === "on", firstResponseMinutes, resolveMinutes, businessHours, escalateTo, slaPolicies };
+  const next = { csatEnabled: form.get("csatEnabled") === "on", firstResponseMinutes, nextReplyMinutes, resolveMinutes, pauseWhilePending, businessHours, escalateTo, slaPolicies };
   await db.update(schema.orgs).set(next).where(eq(schema.orgs.id, s.orgId));
-  const detail = changes(before ?? {}, next, { csatEnabled: "Ratings", firstResponseMinutes: "First-reply target (minutes)", resolveMinutes: "Resolution target (minutes)", businessHours: "Business hours", escalateTo: "Escalate to", slaPolicies: "Targets by tag" });
+  const detail = changes(before ?? {}, next, { csatEnabled: "Ratings", firstResponseMinutes: "First-reply target (minutes)", nextReplyMinutes: "Next-reply target (minutes)", pauseWhilePending: "Pause resolution clock while pending", resolveMinutes: "Resolution target (minutes)", businessHours: "Business hours", escalateTo: "Escalate to", slaPolicies: "Targets by tag" });
   if (detail) await audit(s.orgId, actor(s), "settings.service", detail);
   revalidatePath("/app/settings");
   revalidatePath("/app/inbox");
