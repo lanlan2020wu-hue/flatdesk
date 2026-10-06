@@ -107,3 +107,17 @@ test("help center addresses, search and AI knowledge", async () => {
   const all = await loadKnowledge(ORG);
   assert.deepEqual(all.map((k) => k.name).sort(), ["Greeting", "Refunds and returns", "Shipping times"]);
 });
+
+test("imported article HTML keeps headings, lists, bold and safe links", async () => {
+  const { htmlToArticle, parseArticle } = await import("./help");
+  const out = htmlToArticle('<h3>Steps</h3><ul><li>One &amp; two</li></ul><p><a href="javascript:alert(1)">bad</a> <a href="https://ok.com">good</a><br>next&nbsp;line</p><script>x()</script>');
+  assert.equal(out, "### Steps\n\n- One & two\n\nbad [good](https://ok.com)\nnext line");
+  // What it produces reads back as the same blocks the help center renders.
+  assert.deepEqual(parseArticle(out).map((b) => b.type), ["heading", "list", "paragraph"]);
+});
+
+test("articles are grouped by section, unsectioned ones last", async () => {
+  const { bySection } = await import("./help");
+  const groups = bySection([{ section: "Billing", t: 1 }, { section: null, t: 2 }, { section: "Account", t: 3 }, { section: "Billing ", t: 4 }]);
+  assert.deepEqual(groups.map((g) => [g.section, g.articles.map((a) => a.t)]), [["Account", [3]], ["Billing", [1, 4]], [null, [2]]]);
+});

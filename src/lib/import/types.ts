@@ -18,7 +18,7 @@ import type { FetchLike } from "./http";
 export type Raw = Record<string, any>;
 
 export type SourceId = "zendesk" | "intercom" | "freshdesk" | "helpscout";
-export type Kind = "agent" | "group" | "field" | "tag" | "macro" | "rule" | "contact" | "company" | "ticket";
+export type Kind = "agent" | "group" | "field" | "tag" | "macro" | "rule" | "contact" | "company" | "ticket" | "section" | "article";
 export type Status = "open" | "pending" | "closed";
 
 export type Ctx = {
@@ -61,7 +61,14 @@ export type Msg = {
 
 export type Mapped = { label: string; issues: string[] } & (
   | { kind: "agent"; name: string; email: string | null; role: string; active: boolean }
-  | { kind: "group" | "field" | "company" }
+  | { kind: "group" | "field" | "company" | "section" }
+  | {
+      kind: "article";
+      title: string;
+      body: string; // the help center's text format (lib/help.ts), already converted from HTML
+      published: boolean;
+      section: string | null;
+    }
   | { kind: "tag"; name: string }
   | {
       kind: "macro";

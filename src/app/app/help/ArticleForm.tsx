@@ -1,4 +1,4 @@
-import { MAX_BODY, MAX_TITLE } from "@/lib/help";
+import { MAX_BODY, MAX_SECTION, MAX_TITLE } from "@/lib/help";
 import { saveArticleAction } from "./actions";
 
 const TEMPLATE = `One or two sentences that answer the question.
@@ -11,13 +11,21 @@ const TEMPLATE = `One or two sentences that answer the question.
 - Something to check
 - Another thing to check`;
 
-export default function ArticleForm({ article }: { article?: { id: string; title: string; body: string; published: boolean } }) {
+export default function ArticleForm({ article, sections = [] }: { article?: { id: string; title: string; body: string; published: boolean; section: string | null }; sections?: string[] }) {
   return (
     <form action={saveArticleAction} className="grid gap-4 text-sm">
       {article && <input type="hidden" name="id" value={article.id} />}
       <label className="grid gap-1.5 font-medium" htmlFor="title">
         Title
         <input id="title" name="title" required maxLength={MAX_TITLE} defaultValue={article?.title} placeholder="How do I reset my password?" className="field font-normal" />
+      </label>
+      <label className="grid gap-1.5 font-medium" htmlFor="section">
+        Section <span className="font-normal text-muted">(optional)</span>
+        <input id="section" name="section" maxLength={MAX_SECTION} list="help-sections" defaultValue={article?.section ?? ""} placeholder="Billing" className="field font-normal" />
+        <datalist id="help-sections">
+          {sections.map((s) => <option key={s} value={s} />)}
+        </datalist>
+        <span className="text-xs font-normal text-muted">Articles with the same section are listed together on your help center.</span>
       </label>
       <label className="grid gap-1.5 font-medium" htmlFor="body">
         Article

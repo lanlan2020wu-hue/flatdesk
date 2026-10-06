@@ -16,6 +16,8 @@ export const KIND_LABEL: Record<Kind, string> = {
   company: "Companies",
   contact: "Contacts",
   ticket: "Tickets",
+  section: "Help center sections",
+  article: "Help center articles",
 };
 
 export const IMPORT_STATUS: Record<string, { label: string; tone: string }> = {

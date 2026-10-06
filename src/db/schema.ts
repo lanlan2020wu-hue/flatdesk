@@ -328,10 +328,19 @@ export const articles = pgTable(
     title: text("title").notNull(),
     body: text("body").notNull(), // plain text with a little markdown, see renderArticle()
     published: boolean("published").notNull().default(false),
+    // Groups articles on the help center ("Billing", "Getting started"). Null: shown under "More articles".
+    section: text("section"),
+    // Set for articles imported from another help desk, so a re-import updates instead of duplicating.
+    source: text("source"),
+    externalId: text("external_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex("articles_org_slug").on(t.orgId, t.slug), index("articles_org_published").on(t.orgId, t.published)],
+  (t) => [
+    uniqueIndex("articles_org_slug").on(t.orgId, t.slug),
+    index("articles_org_published").on(t.orgId, t.published),
+    uniqueIndex("articles_org_source_external").on(t.orgId, t.source, t.externalId).where(sql`${t.externalId} is not null`),
+  ],
 );
 
 // v1 rules are deliberately narrow: "when a ticket has tag X, assign it to Y".
