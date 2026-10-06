@@ -11,6 +11,7 @@ import { HubSpotPanel, JiraPanel, OtherTickets, ShopifyOrders, StripeCustomer } 
 import SlaBadge from "@/components/SlaBadge";
 import TagInput from "@/components/TagInput";
 import TeachAi from "@/components/TeachAi";
+import TicketPresence from "@/components/TicketPresence";
 import { RepeatPrompt } from "@/components/MacroSuggestion";
 import { db, schema } from "@/db";
 import { attachmentsByMessage, formatBytes } from "@/lib/attachments";
@@ -24,7 +25,7 @@ import { identifyMacro, repeatPrompt } from "@/lib/macro-suggestions";
 import { STATUS_LABEL } from "@/lib/receipts";
 import { teachSpot } from "@/lib/teach";
 import { formatDue, shortDuration, slaState, targetLabel } from "@/lib/sla";
-import { getTicket, listAgents, orgTags, parseTicketNumber } from "@/lib/tickets";
+import { getTicket, listAgents, orgTags, parseTicketNumber, PRIORITIES } from "@/lib/tickets";
 import { replyAction, updateTicketAction } from "../../actions";
 
 export async function generateMetadata({ params }: PageProps<"/app/tickets/[number]">) {
@@ -105,6 +106,8 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
             <SlaBadge state={sla} hours={org?.businessHours ?? null} />
           </p>
         </header>
+
+        <TicketPresence ticketId={ticket.id} latestMessageId={thread.at(-1)?.id ?? null} />
 
         <ActionPanel runs={runs} number={ticket.number} canDecide={!s.viewer} message={actionMessage} />
 
@@ -242,6 +245,15 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
           </AutoSubmitSelect>
         </form>
         </div>
+
+        <form key={`priority-${ticket.priority}`} action={updateTicketAction} className="grid gap-1.5">
+          <input type="hidden" name="ticketId" value={ticket.id} />
+          <input type="hidden" name="number" value={ticket.number} />
+          <label htmlFor="priority" className={heading}>Priority</label>
+          <AutoSubmitSelect id="priority" name="priority" defaultValue={ticket.priority} className={field}>
+            {PRIORITIES.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+          </AutoSubmitSelect>
+        </form>
 
         <form key={`tags-${ticket.tags.join()}`} action={updateTicketAction} className="grid gap-1.5">
           <input type="hidden" name="ticketId" value={ticket.id} />
