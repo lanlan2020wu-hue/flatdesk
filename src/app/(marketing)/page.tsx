@@ -34,6 +34,10 @@ const MORE = [
   { title: "Help center", body: "Articles customers search and the AI links to.", href: "/features#all" },
   { title: "AI test drive", body: "AI drafts for the last 50 tickets your team answered, beside its replies.", href: "/features/ai-test-drive" },
   { title: "Slack alerts and ratings", body: "A ping when a ticket needs a person, reply time targets, and ratings.", href: "/features#all" },
+  { title: "Ticket search", body: "Find any ticket by words in it, the customer, a tag or its #number.", href: "/features#all" },
+  { title: "Priority", body: "Urgent, high, normal or low. Urgent tickets sit at the top of the inbox.", href: "/features#all" },
+  { title: "Bulk changes", body: "Tick several tickets, then close, assign, set priority or tag them at once.", href: "/features#all" },
+  { title: "Who's on this ticket", body: "See when a teammate is already replying, so a customer never gets two answers.", href: "/features#all" },
 ];
 
 // The route from an old help desk to Flatdesk, in the order an admin does it.
