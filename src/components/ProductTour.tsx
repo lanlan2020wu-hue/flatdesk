@@ -121,7 +121,7 @@ const STOPS: Stop[] = [
     id: "integrations",
     tab: "Integrations",
     title: "Orders, billing and contacts, right on the ticket.",
-    body: "Connect Shopify, Stripe and HubSpot and each ticket shows that customer's recent orders with tracking, their plan and payments, and their contact card. Send a bug to Jira with one button and see its status. There's an API for everything else.",
+    body: "Connect Shopify, Stripe and HubSpot and each ticket shows that customer's recent orders with tracking, their plan and payments, and their contact card. Send a bug to Jira with one button and see its status. Ask Claude, Cursor or a similar AI tool about your tickets through Flatdesk's MCP server, or use the API for everything else.",
     src: "/product/inbox.webp",
     alt: "",
     href: "/integrations",
