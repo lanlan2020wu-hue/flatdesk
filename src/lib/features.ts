@@ -68,10 +68,12 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
     id: "inbox",
     title: "Ticketing",
     features: [
-      { id: "inbox", title: "Shared inbox", body: "Email and chat in one queue, with views for mine, unassigned, open, pending and closed.", icon: I.inbox },
+      { id: "inbox", title: "Shared inbox", body: "Email and chat in one queue, with views for mine, my groups, unassigned, open, pending and closed.", icon: I.inbox },
       { id: "email", title: "Email in and out", body: "Forward your support address. Replies thread back onto the same ticket.", icon: I.mail },
       { id: "chat", title: "Website chat widget", body: "One script tag adds a chat bubble to your site. Chats become tickets. Inside your app, signed-in users skip the form and the ticket shows who they are, verified.", icon: I.chat },
       { id: "search", title: "Ticket search", body: "Search every ticket by words in any message or note, the customer's name or email, a tag, or the ticket number.", icon: I.inbox, isNew: true },
+      { id: "groups", title: "Groups and sharing in turn", body: "Put agents in groups like Billing or Tier 2 and send tickets there by hand, in bulk or with a trigger. Tickets can go to people in turn, skipping anyone marked away. The AI's answered tickets never land in anyone's queue.", icon: I.users, isNew: true },
+      { id: "auto-close", title: "Quiet tickets close themselves", body: "Pending tickets with no reply for a week (or 3 to 30 days) close with a note, set up in one click. A reply opens them again.", icon: I.clock, isNew: true },
       { id: "priority-bulk", title: "Priority and bulk changes", body: "Mark tickets urgent, high, normal or low; urgent ones sit at the top. Tick several in the inbox to close, assign, tag or reprioritize them at once.", icon: I.check, isNew: true },
       { id: "collision", title: "Who's on this ticket", body: "See when a teammate has the ticket open or is writing a reply, and get told when a new message lands while you're on it, so nobody answers twice.", icon: I.users, isNew: true },
       { id: "merge", title: "Merge tickets", body: "When one person writes twice, or two people report the same thing, fold one ticket into the other. Messages, tags and people move across, and replies to the old ticket land on the new one.", icon: I.check, isNew: true },

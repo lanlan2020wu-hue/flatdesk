@@ -4,6 +4,7 @@ import { and, asc, count, eq, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema } from "@/db";
 import { alertHandedBack } from "@/lib/alerts";
+import { shareTicketQuietly } from "@/lib/routing";
 import { attachmentsByMessage } from "@/lib/attachments";
 import { actionContext, holdPending, runPending, waitingRun, type ActionContext } from "@/lib/ai-actions";
 import { access, lockBillingMonth } from "@/lib/billing";
@@ -722,6 +723,7 @@ export async function handBackToTeam(orgId: string, ticketId: string, why?: stri
   if (!result) return;
   const counts = result.billed ? "It still counts toward the AI allowance, because that month is already billed." : "It doesn't count toward the AI allowance.";
   await note(orgId, ticketId, why ? `${why} ${counts}` : `The customer replied to the AI answer, so this ticket is now with the team. ${counts}`);
+  await shareTicketQuietly(orgId, ticketId);
   if (alert) await alertHandedBack(orgId, ticketId, why ?? "The customer replied to the AI's answer.");
 }
 

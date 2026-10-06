@@ -72,6 +72,9 @@ export const orgs = pgTable("orgs", {
   escalateTo: text("escalate_to"),
   // Resolution target in minutes (null = off): from arrival to closed, on the same clock as the first-reply target.
   resolveMinutes: integer("resolve_minutes"),
+  // New tickets nobody routed go to the team in turn once they need a person
+  // (lib/routing.ts). Groups can share their own tickets in turn too.
+  shareInTurn: boolean("share_in_turn").notNull().default(false),
   businessHours: jsonb("business_hours").$type<BusinessHours>(),
   slaPolicies: jsonb("sla_policies").$type<SlaPolicy[]>().notNull().default([]),
   // Signs who is signed in on the team's own site, so chat can trust the visitor's email (lib/chat-identity.ts).
@@ -144,7 +147,8 @@ export type TriggerAction =
   | { type: "add_tags"; tags: string[] }
   | { type: "set_status"; status: "open" | "pending" | "closed" }
   | { type: "note"; body: string }
-  | { type: "reply"; body: string }; // emails the customer; timed triggers only
+  | { type: "reply"; body: string } // emails the customer; timed triggers only
+  | { type: "group"; groupId: string }; // groups.id
 
 // A faster (or slower) first-reply target for tickets with a tag. See lib/sla.ts.
 export type SlaPolicy = { tag: string; minutes: number; resolveMinutes?: number | null };
@@ -171,6 +175,10 @@ export const agents = pgTable(
     viewer: boolean("viewer").notNull().default(false),
     // Added under every reply this person sends (not notes or AI answers).
     signature: text("signature").notNull().default(""),
+    // Away people are skipped when tickets are shared in turn.
+    away: boolean("away").notNull().default(false),
+    // When tickets were last shared to them in turn, so the next goes to whoever waited longest.
+    lastTurnAt: timestamp("last_turn_at", { withTimezone: true }),
     // Set when the person left the team in Clerk. They keep their name on old
     // tickets but can't be assigned, get emails or count as a seat.
     removedAt: timestamp("removed_at", { withTimezone: true }),
@@ -216,6 +224,8 @@ export const tickets = pgTable(
     // Set when this ticket was merged into another (lib/merge.ts). Its
     // messages moved there; mail to this ticket goes there too.
     mergedIntoId: uuid("merged_into_id"),
+    // The group the ticket belongs to (Billing, Tier 2...). See lib/routing.ts.
+    groupId: uuid("group_id"),
     externalId: text("external_id"), // "<source>:<id>" for imported tickets, e.g. "zendesk:4521"
     source: text("source"), // "zendesk", "intercom", ... for imported tickets
     // Original fields that have no Flatdesk equivalent (priority, group,
@@ -833,4 +843,28 @@ export const ticketPresence = pgTable(
     seenAt: timestamp("seen_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("ticket_presence_ticket_user").on(t.ticketId, t.userId)],
+);
+
+// Groups of agents (Billing, Tier 2...). A ticket can belong to one; with
+// shareInTurn its tickets go to the members in turn (lib/routing.ts).
+export const groups = pgTable(
+  "groups",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    shareInTurn: boolean("share_in_turn").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("groups_org_name").on(t.orgId, t.name)],
+);
+
+export const groupMembers = pgTable(
+  "group_members",
+  {
+    groupId: uuid("group_id").notNull().references(() => groups.id, { onDelete: "cascade" }),
+    orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.groupId, t.userId] }), index("group_members_org_user").on(t.orgId, t.userId)],
 );

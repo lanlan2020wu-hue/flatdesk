@@ -17,11 +17,12 @@ export const PRIORITIES: { id: TicketPriority; label: string }[] = [
 export const isPriority = (v: unknown): v is TicketPriority => PRIORITIES.some((p) => p.id === v);
 // Urgent first, then high; the rest by when they changed.
 const priorityRank = sql`case ${tickets.priority} when 'urgent' then 0 when 'high' then 1 else 2 end`;
-export type View = "mine" | "unassigned" | "open" | "pending" | "closed";
+export type View = "mine" | "groups" | "unassigned" | "open" | "pending" | "closed";
 
 // Each view with one line on what's in it, shown under the tabs.
 export const VIEWS: { id: View; label: string; hint: string }[] = [
   { id: "mine", label: "Assigned to me", hint: "Open and pending tickets assigned to you." },
+  { id: "groups", label: "My groups", hint: "Open tickets in the groups you're in, assigned or not." },
   { id: "unassigned", label: "Unassigned", hint: "Open tickets nobody has taken yet. Open one and assign it to yourself or a teammate." },
   { id: "open", label: "All open", hint: "Tickets waiting on a reply from your team." },
   { id: "pending", label: "Pending", hint: "Someone replied, you or the AI, and you are waiting on the customer. When they write back, the ticket moves to open." },
@@ -47,6 +48,7 @@ export async function listTickets(orgId: string, userId: string, view: View) {
   const where = [eq(tickets.orgId, orgId)];
   if (view === "mine") where.push(eq(tickets.assigneeId, userId), inArray(tickets.status, ["open", "pending"]));
   if (view === "unassigned") where.push(isNull(tickets.assigneeId), eq(tickets.status, "open"));
+  if (view === "groups") where.push(inMyGroups(orgId, userId), eq(tickets.status, "open"));
   if (view === "open" || view === "pending" || view === "closed") where.push(eq(tickets.status, view));
 
   return db
@@ -67,6 +69,7 @@ export async function listTickets(orgId: string, userId: string, view: View) {
       resolvedByAi: tickets.resolvedByAi,
       assigneeId: tickets.assigneeId,
       assigneeName: agents.name,
+      groupName: sql<string | null>`(select ${schema.groups.name} from ${schema.groups} where ${schema.groups.id} = ${tickets.groupId})`,
       customerName: customers.name,
       customerEmail: customers.email,
       // The latest message the customer can see, for the row's one-line preview.
@@ -80,6 +83,9 @@ export async function listTickets(orgId: string, userId: string, view: View) {
     .limit(200);
 }
 
+const inMyGroups = (orgId: string, userId: string) =>
+  sql`${tickets.groupId} in (select ${schema.groupMembers.groupId} from ${schema.groupMembers} where ${schema.groupMembers.orgId} = ${orgId} and ${schema.groupMembers.userId} = ${userId})`;
+
 export async function viewCounts(orgId: string, userId: string) {
   const [row] = await db
     .select({
@@ -87,11 +93,15 @@ export async function viewCounts(orgId: string, userId: string) {
       unassigned: sql<number>`count(*) filter (where ${tickets.assigneeId} is null and ${tickets.status} = 'open')`,
       open: sql<number>`count(*) filter (where ${tickets.status} = 'open')`,
       pending: sql<number>`count(*) filter (where ${tickets.status} = 'pending')`,
+      groups: sql<number>`count(*) filter (where ${inMyGroups(orgId, userId)} and ${tickets.status} = 'open')`,
+      inGroups: sql<boolean>`exists (select 1 from ${schema.groupMembers} where ${schema.groupMembers.orgId} = ${orgId} and ${schema.groupMembers.userId} = ${userId})`,
     })
     .from(tickets)
     .where(eq(tickets.orgId, orgId));
   return {
     mine: Number(row.mine),
+    // null hides the tab for people in no group.
+    groups: row.inGroups ? Number(row.groups) : null,
     unassigned: Number(row.unassigned),
     open: Number(row.open),
     pending: Number(row.pending),
@@ -174,11 +184,12 @@ export async function createTicket(raw: NewTicket) {
       .returning({ number: sql<number>`${orgs.nextTicketNumber} - 1` });
 
     // Triggers first (they can add tags, assign, set a status, leave a note), then the tag rules for anything still unassigned.
-    const { list, canAssign } = await loadTriggers(tx, input.orgId);
+    const { list, canAssign, isGroup } = await loadTriggers(tx, input.orgId);
     const ran = runTriggers(
       list,
       { channel: input.channel, subject: input.subject, body: input.body, from: input.customerEmail.toLowerCase(), tags: normalizeTags(input.tags ?? []) },
       canAssign,
+      isGroup,
     );
     const tags = normalizeTags(ran.tags);
     const assigneeId = ran.assignTo ?? (await ruleAssignee(tx, input.orgId, tags));
@@ -192,6 +203,7 @@ export async function createTicket(raw: NewTicket) {
         customerId: customer.id,
         tags,
         assigneeId,
+        groupId: ran.groupId,
         ...(ran.status ? { status: ran.status, closedAt: ran.status === "closed" ? new Date() : null } : {}),
         visitorToken: input.visitorToken ?? null,
         test: input.test ?? false,
@@ -343,10 +355,10 @@ export async function addCustomerMessage(opts: { orgId: string; ticketId: string
     }).returning({ id: messages.id });
     const reopen = { status: "open" as const, closedAt: null, timedRan: [] };
     const [ticket] = await tx.select().from(tickets).where(and(eq(tickets.orgId, opts.orgId), eq(tickets.id, opts.ticketId))).for("update");
-    const { list, canAssign } = ticket ? await loadTriggers(tx, opts.orgId, "updated") : { list: [], canAssign: () => false };
+    const { list, canAssign, isGroup } = ticket ? await loadTriggers(tx, opts.orgId, "updated") : { list: [], canAssign: () => false, isGroup: () => false };
     if (ticket && list.length) {
       const [customer] = await tx.select({ email: customers.email }).from(customers).where(eq(customers.id, opts.customerId));
-      const ran = runTriggers(list, ticketForTriggers(ticket, customer?.email ?? "", body), canAssign);
+      const ran = runTriggers(list, ticketForTriggers(ticket, customer?.email ?? "", body), canAssign, isGroup);
       await applyToTicket(tx, ticket, ran, new Date(), reopen);
     } else {
       await tx.update(tickets).set({ ...reopen, updatedAt: new Date() }).where(and(eq(tickets.orgId, opts.orgId), eq(tickets.id, opts.ticketId)));
@@ -358,7 +370,7 @@ export async function addCustomerMessage(opts: { orgId: string; ticketId: string
 export async function updateTicket(
   orgId: string,
   ticketId: string,
-  patch: { status?: TicketStatus; assigneeId?: string | null; tags?: string[]; priority?: TicketPriority },
+  patch: { status?: TicketStatus; assigneeId?: string | null; tags?: string[]; priority?: TicketPriority; groupId?: string | null },
 ) {
   const set: Partial<typeof tickets.$inferInsert> = { updatedAt: new Date() };
   if (patch.status) {
@@ -368,6 +380,7 @@ export async function updateTicket(
   }
   if (patch.assigneeId !== undefined) set.assigneeId = patch.assigneeId;
   if (patch.priority) set.priority = patch.priority;
+  if (patch.groupId !== undefined) set.groupId = patch.groupId;
   if (patch.tags) {
     set.tags = normalizeTags(patch.tags);
     const [current] = await db.select({ assigneeId: tickets.assigneeId }).from(tickets).where(and(eq(tickets.orgId, orgId), eq(tickets.id, ticketId)));

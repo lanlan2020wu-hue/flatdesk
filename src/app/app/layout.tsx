@@ -98,6 +98,10 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
                 Import
               </NavLink>
             )}
+            <NavLink href="/app/routing">
+              <Icon d="M6 4v6a4 4 0 0 0 4 4h8M14 10l4 4-4 4M6 20v-2" />
+              Groups and routing
+            </NavLink>
             <NavLink href="/app/actions">
               <Icon d="M13 3 5 14h6l-1 7 8-11h-6z" />
               AI actions

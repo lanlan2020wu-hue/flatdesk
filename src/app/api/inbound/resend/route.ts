@@ -4,6 +4,7 @@ import { alertNewTicket } from "@/lib/alerts";
 import { emailConfig, htmlToText, resend } from "@/lib/email";
 import { downloadInbound } from "@/lib/attachments";
 import { handleInboundEmailAll } from "@/lib/inbound";
+import { shareTicketQuietly } from "@/lib/routing";
 
 // Resend calls this for every email sent to INBOUND_DOMAIN (event
 // "email.received"). The webhook carries metadata only, so the body is
@@ -65,7 +66,10 @@ export async function POST(request: Request) {
         // Mail whose From failed the sender's own DMARC check is never answered by
         // the AI: someone may be pretending to be a customer to get their details.
         if (!r.unverified) await answerNewTicket(r.orgId!, r.ticketId!);
-        if (r.action === "created") await alertNewTicket(r.orgId!, r.ticketId!);
+        if (r.action === "created") {
+          await shareTicketQuietly(r.orgId!, r.ticketId!);
+          await alertNewTicket(r.orgId!, r.ticketId!);
+        }
       }
     });
     return Response.json({ tickets: done.map((r) => ({ ticket: r.ticket, action: r.action })) });

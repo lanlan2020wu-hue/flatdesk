@@ -225,6 +225,13 @@
       "when": 1791298242317,
       "tag": "0031_merge_cc_signatures",
       "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1791298465653,
+      "tag": "0032_groups_routing",
+      "breakpoints": true
     }
   ]
 }

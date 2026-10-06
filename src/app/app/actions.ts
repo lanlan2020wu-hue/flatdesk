@@ -30,6 +30,7 @@ import { audit, changes } from "@/lib/security";
 import type { SlaPolicy } from "@/db/schema";
 import { RESOLVE_CHOICES, TARGET_CHOICES, validHours } from "@/lib/sla";
 import { addReply, isPriority, normalizeTags, parseTicketNumber, updateTicket, type TicketPriority, type TicketStatus } from "@/lib/tickets";
+import { findGroup, shareTicketQuietly } from "@/lib/routing";
 
 // The paywall hides the app once a trial ends without a card; this keeps
 // direct requests from doing work behind it. Billing stays open.
@@ -118,7 +119,14 @@ export async function updateTicketAction(form: FormData) {
   }
   if (form.has("tags")) patch.tags = tagList(str(form, "tags"));
   if (form.has("priority") && isPriority(str(form, "priority"))) patch.priority = str(form, "priority") as TicketPriority;
+  if (form.has("groupId")) {
+    const groupId = str(form, "groupId");
+    if (groupId && !(await findGroup(s.orgId, groupId))) throw new Error("That group was deleted.");
+    patch.groupId = groupId || null;
+  }
   await updateTicket(s.orgId, ticketId, patch);
+  // Sent to a group that shares tickets in turn, with nobody on it yet.
+  if (patch.groupId) await shareTicketQuietly(s.orgId, ticketId);
   revalidatePath(`/app/tickets/${str(form, "number")}`);
   revalidatePath("/app/inbox");
 }
@@ -186,6 +194,12 @@ export async function bulkUpdateAction(form: FormData) {
     if (!member || member.viewer) redirect(back);
     patch.assigneeId = assignee;
   }
+  const groupId = str(form, "groupId");
+  if (groupId === "none") patch.groupId = null;
+  else if (groupId) {
+    if (!(await findGroup(s.orgId, groupId))) redirect(back);
+    patch.groupId = groupId;
+  }
   const addTags = tagList(str(form, "addTags"));
   const rows = await db
     .select({ id: schema.tickets.id, tags: schema.tickets.tags })
@@ -193,6 +207,7 @@ export async function bulkUpdateAction(form: FormData) {
     .where(and(eq(schema.tickets.orgId, s.orgId), inArray(schema.tickets.id, ids)));
   for (const t of rows) {
     await updateTicket(s.orgId, t.id, addTags.length ? { ...patch, tags: [...t.tags, ...addTags] } : patch);
+    if (patch.groupId) await shareTicketQuietly(s.orgId, t.id);
   }
   revalidatePath("/app/inbox");
   redirect(back);
