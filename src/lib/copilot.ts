@@ -7,10 +7,10 @@
 // pooled across the team. It never counts toward the AI allowance (that's for
 // answers sent to customers) and never shows on receipts.
 
-import { and, asc, count, desc, eq, isNotNull, sql } from "drizzle-orm";
+import { and, asc, count, desc, eq, isNotNull, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema } from "@/db";
-import { MODEL, aiConfigured, loadKnowledge, monthKey } from "@/lib/ai";
+import { CACHE_MIN_WEEKLY_CALLS, MODEL, aiConfigured, loadKnowledge, monthKey } from "@/lib/ai";
 import { access } from "@/lib/billing";
 import { COPILOT, REWRITE_LABEL, REWRITE_STYLES, type RewriteStyle } from "@/lib/copilot-config";
 import { structuredCall, type Metered } from "@/lib/llm";
@@ -180,7 +180,7 @@ function draftSystem(orgName: string, instructions: string, knowledge: { name: s
 
 Use the team's notes and saved answers below for facts, policies, links and steps. Never invent prices, policies, dates, links or promises: where the reply needs something you don't have (an order status, an account detail), write a square-bracket placeholder like [tracking link] and say so in gaps. Answer the customer's latest message, taking the whole conversation into account, including internal notes the customer never saw.
 
-Write plain text, no markdown. Greet the customer by first name if you know it, keep it short, and sign off with "{agent}". Match the language the customer wrote in.
+Write plain text, no markdown. Greet the customer by first name if you know it, keep it short, and sign off with the agent's name given above the conversation. Match the language the customer wrote in.
 
 <team_notes>
 ${instructions.trim() || "(none)"}
@@ -195,13 +195,25 @@ export async function draftReply(orgId: string, userId: string, ticketId: string
   // A ticket from another team throws before anything is counted.
   const { ticket, thread } = await loadThread(orgId, ticketId);
   const { org, eventId } = await reserveAction(orgId, userId, ticket.id, "draft");
-  const [knowledge, agent] = await Promise.all([
+  const [knowledge, agent, [recent]] = await Promise.all([
     loadKnowledge(orgId),
     db.query.agents.findFirst({ where: and(eq(agents.orgId, orgId), eq(agents.userId, userId)) }),
+    db
+      .select({
+        hour: sql<number>`count(*) filter (where ${events.createdAt} > now() - interval '1 hour')`,
+        week: count(),
+      })
+      .from(events)
+      .where(and(eq(events.orgId, orgId), eq(events.kind, "draft"), ne(events.id, eventId), sql`${events.createdAt} > now() - interval '7 days'`)),
   ]);
   const firstName = agent?.name.split(/\s+/)[0] || "the team";
-  const system = draftSystem(org.name, org.aiInstructions, knowledge).replace("{agent}", firstName);
-  const { out, metered } = await structuredCall(orgId, Draft, system, `Subject: ${ticket.subject}\n\n${threadText(thread)}`);
+  // The saved answers are cached by the same rule as AI answers' (worthCaching
+  // in lib/ai.ts), so a lone draft doesn't pay twice for a cache nobody reads.
+  // The agent's name stays out of the cached part so the whole team shares it.
+  const text = draftSystem(org.name, org.aiInstructions, knowledge);
+  const cache = Number(recent.hour) > 0 || Number(recent.week) >= CACHE_MIN_WEEKLY_CALLS;
+  const system = cache ? [{ type: "text" as const, text, cache_control: { type: "ephemeral" as const, ttl: "1h" as const } }] : text;
+  const { out, metered } = await structuredCall(orgId, Draft, system, `Agent's name: ${firstName}\nSubject: ${ticket.subject}\n\n${threadText(thread)}`);
   await settle(eventId, metered);
   if (!out?.reply.trim()) throw new CopilotError(out?.gaps?.trim() || "The copilot didn't have enough to draft this one. Your saved answers don't cover it yet.");
   return { reply: out.reply.trim(), gaps: out.gaps.trim() };
