@@ -180,8 +180,15 @@
     {
       "idx": 25,
       "version": "7",
-      "when": 1791280213962,
-      "tag": "0025_chat_identity",
+      "when": 1791280126085,
+      "tag": "0025_ai_actions",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1791280461804,
+      "tag": "0026_chat_identity",
       "breakpoints": true
     }
   ]

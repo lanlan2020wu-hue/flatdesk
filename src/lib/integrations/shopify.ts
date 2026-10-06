@@ -42,7 +42,7 @@ export function shopDomain(raw: string): string | null {
 // before they expire. Per server instance, which is fine: a new one is cheap.
 const tokens = new Map<string, { token: string; until: number }>();
 
-async function accessToken(c: ShopifyCreds, fetcher: typeof fetch): Promise<string> {
+export async function accessToken(c: ShopifyCreds, fetcher: typeof fetch): Promise<string> {
   if (c.token) return c.token;
   if (!c.clientId || !c.clientSecret) throw new ShopifyError("Add the app's client ID and secret.");
   const cacheKey = `${c.domain}:${c.clientId}`;

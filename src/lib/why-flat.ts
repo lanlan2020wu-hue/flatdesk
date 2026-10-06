@@ -32,7 +32,7 @@ export const LEFT_OUT = [
   "An app marketplace",
   "Full SLA policies with escalations (first-reply targets only)",
   "A help center in several languages or on your own domain",
-  "Shopify refunds and order edits from the ticket (orders show, read only)",
+  "Editing Shopify orders, or refunding orders that already shipped (the AI cancels and refunds unshipped ones)",
   "Replying to customers from inside Slack",
 ];
 

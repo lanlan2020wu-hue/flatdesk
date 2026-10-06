@@ -1,6 +1,6 @@
 {
-  "id": "7f18618e-7901-41ed-80c4-db2d30ff7d6d",
-  "prevId": "3b29f4eb-408b-4e6f-8ae6-032e9a599f97",
+  "id": "c5956afd-b061-450c-a653-e6df47d92600",
+  "prevId": "7f18618e-7901-41ed-80c4-db2d30ff7d6d",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3219,6 +3219,13 @@
           "type": "jsonb",
           "primaryKey": false,
           "notNull": false
+        },
+        "chat_secret": {
+          "name": "chat_secret",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', '')"
         },
         "help_slug": {
           "name": "help_slug",
