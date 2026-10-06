@@ -458,6 +458,18 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
                   {TARGET_CHOICES.map((c) => <option key={c.minutes} value={c.minutes}>{c.label}</option>)}
                 </select>
               </label>
+              <fieldset className="grid gap-2">
+                <legend className="label mb-1">Different targets by tag</legend>
+                <p className="text-sm text-muted">For example vip in 1 hour, or bug-report in 24 hours. A ticket with one of these tags gets that target instead; if it has several, the shortest wins. Tags can come from a trigger.</p>
+                {Array.from({ length: 4 }, (_, i) => org.slaPolicies[i]).map((p, i) => (
+                  <div key={i} className="flex flex-wrap gap-2">
+                    <input name={`policyTag${i}`} defaultValue={p?.tag ?? ""} placeholder={i === 0 ? "vip" : ""} aria-label={`Tag ${i + 1}`} className="field field-sm w-40" />
+                    <select name={`policyMinutes${i}`} defaultValue={String(p?.minutes ?? 60)} aria-label={`Target ${i + 1}`} className="field field-sm">
+                      {TARGET_CHOICES.map((c) => <option key={c.minutes} value={c.minutes}>first reply within {c.label}</option>)}
+                    </select>
+                  </div>
+                ))}
+              </fieldset>
               <label className="grid w-max gap-1">
                 <span className="label">When a ticket misses it</span>
                 <select name="escalateTo" defaultValue={org.escalateTo ?? ""} className="field">

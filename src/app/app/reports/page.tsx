@@ -55,7 +55,7 @@ export default async function ReportsPage({ searchParams }: PageProps<"/app/repo
           value={r.target ? pct(r.target.share) : "–"}
           note={
             r.target
-              ? `${r.target.met} within ${targetLabel(r.target.minutes)}, ${r.target.missed} late. Imported tickets aren't counted.`
+              ? `${r.target.met} on time, ${r.target.missed} late${r.target.minutes ? ` against ${targetLabel(r.target.minutes)}` : ""}${r.target.policies ? ` and ${r.target.policies} tag ${r.target.policies === 1 ? "policy" : "policies"}` : ""}. Imported tickets aren't counted.`
               : "No first-reply target set. Add one in Settings."
           }
         />
