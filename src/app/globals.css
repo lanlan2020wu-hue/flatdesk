@@ -883,7 +883,7 @@ p {
      tour holds it. Each tab's card acts out its screen line by line. */
   [data-play] .tour-progress {
     transform-origin: left;
-    animation: grow-x 7500ms linear;
+    animation: grow-x var(--tour-ms, 7500ms) linear;
   }
   .tour:hover .tour-progress,
   .tour:focus-within .tour-progress {

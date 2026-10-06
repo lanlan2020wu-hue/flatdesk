@@ -7,7 +7,6 @@ import WaitlistForm from "@/components/WaitlistForm";
 import HeroDemo from "@/components/HeroDemo";
 import ProductTour from "@/components/ProductTour";
 import LoopVideo from "@/components/LoopVideo";
-import { ImportShot } from "@/components/ProductShots";
 import { TRIAL_DAYS } from "@/lib/billing";
 import { organization, pageMeta, software, website } from "@/lib/seo";
 import { PLAN, PRICE_PHRASE, usd } from "@/lib/pricing";
@@ -182,7 +181,7 @@ export default function Home() {
       <section id="everything-else" className="mt-24 scroll-mt-20 border-y border-line bg-surface py-24 sm:mt-32 sm:py-32">
         <div className="mx-auto grid w-full max-w-6xl gap-14 px-4 sm:px-6">
           <ChapterHead id="everything-else" tab="In every seat" title="AI answers, AI macros and the whole help desk, in one seat.">
-            There&apos;s one plan, and every agent gets every feature. These are real screens from the app, with sample data.
+            There&apos;s one plan, and every agent gets every feature. Short animations show what each part does, with sample data.
           </ChapterHead>
           <ProductTour />
           <div data-play="" suppressHydrationWarning className="grid gap-4 pt-6">
@@ -265,9 +264,14 @@ export default function Home() {
           ))}
         </ol>
         <div className="grid items-center gap-8 lg:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] lg:gap-16">
-          <div data-play="" suppressHydrationWarning>
-            <ImportShot />
-          </div>
+          <figure className="app-frame">
+            <LoopVideo
+              name="switch"
+              width={1280}
+              height={720}
+              label="An import from Zendesk: tickets and threads, customers, macros, tags and rules fill in on the Flatdesk side. Original records are kept, and the import report lists 3 items to check."
+            />
+          </figure>
           <div data-play="" suppressHydrationWarning className="grid content-start gap-3">
             <h3 className="ink font-display text-2xl">Nothing gets dropped in the import.</h3>
             <p className="text-muted">
