@@ -106,6 +106,18 @@ const STOPS: Stop[] = [
     ),
   },
   {
+    id: "integrations",
+    tab: "Integrations",
+    title: "Orders, billing and contacts, right on the ticket.",
+    body: "Connect Shopify, Stripe and HubSpot and each ticket shows that customer's recent orders with tracking, their plan and payments, and their contact card. Send a bug to Jira with one button and see its status. There's an API for everything else.",
+    src: "/product/inbox.webp",
+    alt: "",
+    href: "/integrations",
+    more: "See integrations",
+    cue: null,
+    video: { name: "integrations", label: "A customer asks where their order is. Shopify, Stripe and HubSpot cards appear beside the ticket, the agent replies with the UPS tracking number, and sends the broken tracking link to Jira as SHIP-212." },
+  },
+  {
     id: "bill",
     tab: "Your bill",
     title: "One bill per agent, the same every month.",
@@ -142,7 +154,7 @@ export default function ProductTour() {
 
   return (
     <div data-play="" suppressHydrationWarning className="tour grid gap-8">
-      <div role="tablist" aria-label="Flatdesk, screen by screen" className="grid grid-cols-2 border-t border-line sm:grid-cols-4">
+      <div role="tablist" aria-label="Flatdesk, screen by screen" className="grid grid-cols-2 border-t border-line sm:grid-cols-5">
         {STOPS.map((s, i) => {
           const on = i === open;
           return (
