@@ -220,7 +220,7 @@ export const SELLING_POINTS: SellingPoint[] = [
     name: "Lossless import",
     short: `Bring tickets, customers, macros and rules from ${IMPORT_SOURCES.join(", ").replace(/, ([^,]*)$/, " or $1")}. Every original record is kept, and anything that didn't fit is listed.`,
     headline: `Move from ${IMPORT_SOURCES.slice(0, 3).join(", ")} or Help Scout without losing a ticket`,
-    answer: `Flatdesk imports tickets, messages, attachments, customers, tags, macros and rules (and, from Zendesk, help center articles) from ${IMPORT_SOURCES.join(", ").replace(/, ([^,]*)$/, " and $1")}. Every original record is kept in an archive you can download, and a report lists anything that didn't fit instead of dropping it. Flatdesk runs one kind of rule today (if tagged X, assign to Y); the report lists the rest so you can rebuild them. Intercom's API doesn't share its rules at all, and Help Scout workflows come over by name only. You can export tickets, messages, customers and macros as CSV or JSON any time.`,
+    answer: `Flatdesk imports tickets, messages, attachments, customers, tags, macros and rules (and, from Zendesk, help center articles) from ${IMPORT_SOURCES.join(", ").replace(/, ([^,]*)$/, " and $1")}. Every original record is kept in an archive you can download, and a report lists anything that didn't fit instead of dropping it. Flatdesk runs one kind of rule today (if tagged X, assign to Y); the report lists the rest so you can rebuild them. Intercom's API doesn't share its rules at all, and Help Scout workflows come over by name only. You can export everything, attachments included, any time.`,
     metaTitle: "Lossless help desk import from Zendesk, Intercom, Freshdesk and Help Scout",
     metaDescription:
       "Import tickets, attachments, customers, macros and rules from Zendesk, Intercom, Freshdesk or Help Scout. Every original record is kept and nothing is dropped.",
@@ -237,7 +237,7 @@ export const SELLING_POINTS: SellingPoint[] = [
       "Tickets, messages, attachments, customers, tags, macros and rules (not from Intercom, whose API doesn't share rules, and Help Scout workflows by name only)",
       "Every original record kept and downloadable",
       "Anything that didn't fit is listed in a report, never dropped",
-      "Export tickets, messages, customers and macros as CSV or JSON any time, without asking us",
+      "Export everything any time, attachments included, without asking us",
     ],
     faq: [
       {
@@ -254,7 +254,7 @@ export const SELLING_POINTS: SellingPoint[] = [
       },
       {
         q: "Can we get our data out of Flatdesk?",
-        a: "Yes. Settings exports tickets (with tags), messages, customers and macros as CSV or JSON. Attachments aren't included; download them from each ticket.",
+        a: "Yes. Settings has one .zip download with every ticket, message, customer, macro, help article, the audit log and every attachment as its original file. Each table is also available as CSV or JSON.",
       },
     ],
     icon: "M12 4v11m0 0l-4-4m4 4l4-4M5 19h14",

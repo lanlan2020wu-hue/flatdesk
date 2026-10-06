@@ -76,7 +76,7 @@ export default function TermsPage() {
         <p>
           You can cancel any time from Settings, under billing. The plan runs to the end of the period you&apos;ve paid for (the month, or
           the year on yearly billing) and isn&apos;t renewed. We don&apos;t refund partial periods, except where the law says we must. You can export your data from Settings at any time,
-          before or after cancelling: tickets, messages, customers and macros, as CSV or JSON. Attachments download from each ticket.
+          before or after cancelling: tickets, messages, customers, macros, help articles, the audit log and every attachment, in one .zip, or each table as CSV or JSON.
         </p>
       </Section>
 
