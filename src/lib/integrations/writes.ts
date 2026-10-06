@@ -83,7 +83,9 @@ export async function checkStripeRefund(key: string, email: string, input: { pay
   const day = new Date(charge.created * 1000).toISOString().slice(0, 10);
   const whole = amount === charge.amount;
   return {
-    summary: `Refund ${money(amount, charge.currency)}${whole ? "" : ` of the ${money(charge.amount, charge.currency)}`} payment from ${day} in Stripe`,
+    summary: whole
+      ? `Refund the ${money(amount, charge.currency)} payment from ${day} in Stripe`
+      : `Refund ${money(amount, charge.currency)} of the ${money(charge.amount, charge.currency)} payment from ${day} in Stripe`,
     amountCents: minorUnits(amount, charge.currency),
     run: async (idem) => {
       const refund = await stripePost<{ id: string; status: string }>(key, "/refunds", { charge: charge.id, amount: String(amount), "metadata[source]": "flatdesk" }, idem, fetcher, "Refunds");

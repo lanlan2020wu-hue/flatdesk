@@ -98,6 +98,10 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
                 Import
               </NavLink>
             )}
+            <NavLink href="/app/actions">
+              <Icon d="M13 3 5 14h6l-1 7 8-11h-6z" />
+              AI actions
+            </NavLink>
             <NavLink href="/app/integrations">
               <Icon d="M9 7V3M15 7V3M7 7h10v4a5 5 0 0 1-10 0zM12 16v5" />
               Integrations

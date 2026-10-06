@@ -26,6 +26,7 @@ const I = {
   clock: "M12 21a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM12 9v4l2.5 2M9 2h6",
   book: "M5 4h9a3 3 0 0 1 3 3v13H8a3 3 0 0 1-3-3zM5 17a3 3 0 0 1 3-3h9M9 8h5",
   smile: "M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18zM8.5 14.5a4.5 4.5 0 0 0 7 0M9 9.5h.01M15 9.5h.01",
+  bolt: "M13 3 5 14h6l-1 7 8-11h-6z",
   bag: "M5 8h14l-1 12H6zM9 8V6a3 3 0 0 1 6 0v2",
   plug: "M9 7V3M15 7V3M7 7h10v4a5 5 0 0 1-10 0zM12 16v5",
   code: "M8 8l-4 4 4 4M16 8l4 4-4 4M13.5 5l-3 14",
@@ -59,6 +60,7 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
     title: "AI",
     features: [
       { id: "ai", title: "AI answers", body: "Replies to customers on its own, by email and chat, when your macros, help articles or the facts you give it cover the question. It hands the rest to your team. Agents can ask it for a draft or a summary.", icon: I.ai },
+      { id: "ai-actions", title: "AI actions", body: "The AI can refund a Stripe payment, cancel a subscription or an unshipped Shopify order, or call your own system to reset a password or change a plan. You set the actions and the limits; anything over a limit waits for a person to approve.", icon: I.bolt, isNew: true },
       { id: "test-drive", title: "AI test drive", body: "After you import, the AI drafts replies to the 50 most recent tickets your team answered, next to your team's reply. Nothing is sent and it uses no AI answers.", icon: I.check, isNew: true },
     ],
   },
@@ -90,8 +92,8 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
     id: "integrations",
     title: "Integrations",
     features: [
-      { id: "shopify", title: "Shopify orders on the ticket", body: "The customer's latest orders beside their ticket: items, total, payment and delivery status, and tracking links. Read only.", icon: I.bag, isNew: true },
-      { id: "stripe", title: "Stripe on the ticket", body: "The customer's plan, renewal date, and latest payments and refunds beside their ticket, from a read-only key.", icon: I.card, isNew: true },
+      { id: "shopify", title: "Shopify orders on the ticket", body: "The customer's latest orders beside their ticket: items, total, payment and delivery status, and tracking links. The AI can read them to answer \"where's my order?\" and cancel unshipped orders.", icon: I.bag, isNew: true },
+      { id: "stripe", title: "Stripe on the ticket", body: "The customer's plan, renewal date, and latest payments and refunds beside their ticket. Give the key write access and the AI can refund and cancel within your limits.", icon: I.card, isNew: true },
       { id: "hubspot", title: "HubSpot on the ticket", body: "The customer's HubSpot contact beside their ticket: company, title, lifecycle stage and owner.", icon: I.users, isNew: true },
       { id: "jira", title: "Send to Jira", body: "Turn a bug report into a Jira issue from the ticket, with the customer's words and a link back. The ticket shows the issue's status.", icon: I.plug, isNew: true },
       { id: "api", title: "API, Zapier and Make", body: "A REST API and signed webhooks. Make tickets from other apps, start workflows when one comes in, reply and close from a script.", icon: I.code, isNew: true },
