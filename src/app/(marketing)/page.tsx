@@ -34,13 +34,13 @@ const MORE = [
   { title: "Help center", body: "Articles customers search and the AI links to.", href: "/features#all" },
   { title: "AI test drive", body: "AI drafts for the last 50 tickets your team answered, beside its replies.", href: "/features/ai-test-drive" },
   { title: "Slack alerts and ratings", body: "A ping when a ticket needs a person, reply time targets, and ratings.", href: "/features#all" },
-  { title: "Ticket search", body: "Find any ticket by words in it, the customer, a tag or its #number.", href: "/features#all" },
-  { title: "Priority", body: "Urgent, high, normal or low. Urgent tickets sit at the top of the inbox.", href: "/features#all" },
+  { title: "Search and priority", body: "Find any ticket by its words, customer, tag or #number. Urgent tickets sit at the top.", href: "/features#all" },
   { title: "Bulk changes", body: "Tick several tickets, then close, assign, set priority or tag them at once.", href: "/features#all" },
   { title: "Who's on this ticket", body: "See when a teammate is already replying, so a customer never gets two answers.", href: "/features#all" },
   { title: "Merge and CC", body: "Fold a duplicate into another ticket. People copied on the email stay copied and can reply.", href: "/features#all" },
   { title: "Mentions and signatures", body: "@name in a note emails that teammate. Each agent's sign-off goes under their replies.", href: "/features#all" },
-  { title: "Triggers", body: "Run on a new ticket, a customer reply, or hours with no update: \"pending 3 days, check in, then close.\"", href: "/features#all" },
+  { title: "Groups and routing", body: "Billing, Tier 2, your call. Tickets go round in turn, skipping anyone away. Ones the AI answers never land in a queue.", href: "/features#all" },
+  { title: "Triggers and auto-close", body: "Run on a new ticket, a customer reply, or hours with no update. One click closes quiet pending tickets.", href: "/features#all" },
   { title: "Resolution targets", body: "Resolved within 4 hours to 7 days, per tag. Late tickets are tagged, escalated and posted to Slack.", href: "/features#all" },
 ];
 
