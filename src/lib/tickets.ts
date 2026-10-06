@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { noNul } from "@/lib/ids";
+import { maskCards } from "@/lib/redact";
 import { loadTriggers, runTriggers, TRIGGER_NOTE_PREFIX } from "@/lib/triggers";
 
 const { tickets, messages, customers, agents, rules, orgs } = schema;
@@ -130,6 +131,7 @@ type NewTicket = {
   tags?: string[];
   emailMessageId?: string | null;
   test?: boolean;
+  fields?: Record<string, string>; // shown on the ticket, e.g. who a chat visitor is signed in as
 };
 
 export async function createTicket(raw: NewTicket) {
@@ -137,8 +139,8 @@ export async function createTicket(raw: NewTicket) {
     ...raw,
     customerEmail: noNul(raw.customerEmail),
     customerName: raw.customerName ? noNul(raw.customerName) : raw.customerName,
-    subject: noNul(raw.subject),
-    body: noNul(raw.body),
+    subject: maskCards(noNul(raw.subject)),
+    body: maskCards(noNul(raw.body)),
     emailMessageId: raw.emailMessageId ? noNul(raw.emailMessageId) : raw.emailMessageId,
   };
   return db.transaction(async (tx) => {
@@ -181,6 +183,7 @@ export async function createTicket(raw: NewTicket) {
         ...(ran.status ? { status: ran.status, closedAt: ran.status === "closed" ? new Date() : null } : {}),
         visitorToken: input.visitorToken ?? null,
         test: input.test ?? false,
+        fields: input.fields ?? {},
       })
       .returning();
 
@@ -268,7 +271,7 @@ export async function addReply(opts: {
         ticketId: ticket.id,
         authorType: "agent",
         authorId: opts.userId,
-        body: opts.body.trim(),
+        body: maskCards(opts.body.trim()),
         internal: opts.internal,
       }).returning({ id: messages.id });
       messageId = inserted.id;
@@ -311,7 +314,7 @@ export async function addCustomerMessage(opts: { orgId: string; ticketId: string
       ticketId: opts.ticketId,
       authorType: "customer",
       authorId: opts.customerId,
-      body: noNul(opts.body),
+      body: maskCards(noNul(opts.body)),
       emailMessageId: opts.emailMessageId ? noNul(opts.emailMessageId) : null,
     }).returning({ id: messages.id });
     await tx

@@ -176,6 +176,13 @@
       "when": 1791279385483,
       "tag": "0024_triggers_escalation",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1791280213962,
+      "tag": "0025_chat_identity",
+      "breakpoints": true
     }
   ]
 }

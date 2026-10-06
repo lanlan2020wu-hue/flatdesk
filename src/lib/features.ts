@@ -68,7 +68,7 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
     features: [
       { id: "inbox", title: "Shared inbox", body: "Email and chat in one queue, with views for mine, unassigned, open, pending and closed.", icon: I.inbox },
       { id: "email", title: "Email in and out", body: "Forward your support address. Replies thread back onto the same ticket.", icon: I.mail },
-      { id: "chat", title: "Website chat widget", body: "One script tag adds a chat bubble to your site. Chats become tickets.", icon: I.chat },
+      { id: "chat", title: "Website chat widget", body: "One script tag adds a chat bubble to your site. Chats become tickets. Inside your app, signed-in users skip the form and the ticket shows who they are, verified.", icon: I.chat },
       { id: "notes", title: "Internal notes", body: "Talk it over on the ticket without the customer seeing it.", icon: I.note },
       { id: "customer-history", title: "Customer history", body: "Each ticket lists the customer's other tickets, so you see what they asked before.", icon: I.history, isNew: true },
       { id: "alerts", title: "Slack and webhook alerts", body: "A post in Slack, Discord, Google Chat or any webhook when a ticket needs a person. Not for ones the AI already answered.", icon: I.bell, isNew: true },
