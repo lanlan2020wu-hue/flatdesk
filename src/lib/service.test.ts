@@ -66,15 +66,30 @@ test("a ticket's place against the target", async () => {
   const created = new Date("2026-09-29T12:00:00Z");
   const at = (m: number) => new Date(created.getTime() + m * 60_000);
   const t = { status: "open", createdAt: created, firstResponseAt: null, source: null };
-  assert.deepEqual(slaState(t, org, at(10)), { kind: "waiting", due: at(60), minutesLeft: 50, soon: false });
+  assert.deepEqual(slaState(t, org, at(10)), { minutes: 60, tag: null, kind: "waiting", due: at(60), minutesLeft: 50, soon: false });
   assert.equal((slaState(t, org, at(50)) as { soon: boolean }).soon, true);
-  assert.deepEqual(slaState(t, org, at(95)), { kind: "overdue", due: at(60), minutesLate: 35 });
+  assert.deepEqual(slaState(t, org, at(95)), { minutes: 60, tag: null, kind: "overdue", due: at(60), minutesLate: 35 });
   assert.equal(slaState({ ...t, firstResponseAt: at(30) }, org)?.kind, "met");
   assert.equal(slaState({ ...t, firstResponseAt: at(90) }, org)?.kind, "missed");
   // Imported tickets, waiting tickets that aren't open, and teams without a target: nothing.
   assert.equal(slaState({ ...t, source: "zendesk" }, org, at(95)), null);
   assert.equal(slaState({ ...t, status: "pending" }, org, at(95)), null);
   assert.equal(slaState(t, { ...org, firstResponseMinutes: null }, at(95)), null);
+});
+
+test("SLA policies: a tagged ticket gets its tag's target, the shortest when several match", async () => {
+  const { slaState } = await import("./sla");
+  const created = new Date("2026-09-29T12:00:00Z");
+  const at = (m: number) => new Date(created.getTime() + m * 60_000);
+  const org = { firstResponseMinutes: 240, businessHours: null, slaPolicies: [{ tag: "vip", minutes: 60 }, { tag: "outage", minutes: 15 }, { tag: "bug", minutes: 1440 }] };
+  const t = { status: "open", createdAt: created, firstResponseAt: null, source: null, tags: ["vip"] };
+  assert.equal(slaState(t, org, at(70))?.kind, "overdue");
+  assert.equal(slaState({ ...t, tags: [] }, org, at(70))?.kind, "waiting");
+  assert.deepEqual(slaState({ ...t, tags: ["vip", "outage"] }, org, at(5)), { minutes: 15, tag: "outage", kind: "waiting", due: at(15), minutesLeft: 10, soon: false });
+  // A slower policy wins over the default too, and policies work without a default.
+  assert.equal(slaState({ ...t, tags: ["bug"] }, org, at(300))?.kind, "waiting");
+  assert.equal(slaState(t, { ...org, firstResponseMinutes: null }, at(70))?.tag, "vip");
+  assert.equal(slaState({ ...t, tags: [] }, { ...org, firstResponseMinutes: null }, at(70)), null);
 });
 
 test("webhook addresses must be public https; each tool gets its own format", async () => {

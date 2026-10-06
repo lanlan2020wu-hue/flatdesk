@@ -1,0 +1,1 @@
+ALTER TABLE "orgs" ADD COLUMN "sla_policies" jsonb DEFAULT '[]'::jsonb NOT NULL;

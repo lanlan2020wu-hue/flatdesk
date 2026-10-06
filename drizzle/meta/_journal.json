@@ -190,6 +190,13 @@
       "when": 1791280461804,
       "tag": "0026_chat_identity",
       "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1791280661720,
+      "tag": "0027_sla_policies",
+      "breakpoints": true
     }
   ]
 }

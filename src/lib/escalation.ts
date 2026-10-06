@@ -1,7 +1,7 @@
-import { and, eq, gt, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, asc, eq, gt, isNotNull, isNull, lte, or, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { alertOverdue } from "@/lib/alerts";
-import { slaState } from "@/lib/sla";
+import { slaState, TARGET_CHOICES } from "@/lib/sla";
 
 // Escalation: when a new ticket goes past the team's first-reply target with
 // no reply, Flatdesk tags it "overdue", leaves a note, hands it to the team's
@@ -11,13 +11,14 @@ import { slaState } from "@/lib/sla";
 export const OVERDUE_TAG = "overdue";
 const LOOKBACK_DAYS = 14; // older unanswered tickets were around before escalation was set up
 const BATCH = 1000;
+const MIN_TARGET = Math.min(...TARGET_CHOICES.map((c) => c.minutes));
 
 const { tickets, orgs, agents } = schema;
 
 export async function escalateOverdue(now = new Date()): Promise<{ escalated: number }> {
-  // Can only be late once the target has passed on the wall clock (business hours only push it later).
+  // Candidates: unanswered tickets old enough to be late on the shortest target. Their own target is checked below.
   const rows = await db
-    .select({ ticket: tickets, org: { id: orgs.id, firstResponseMinutes: orgs.firstResponseMinutes, businessHours: orgs.businessHours, escalateTo: orgs.escalateTo } })
+    .select({ ticket: tickets, org: { id: orgs.id, firstResponseMinutes: orgs.firstResponseMinutes, businessHours: orgs.businessHours, slaPolicies: orgs.slaPolicies, escalateTo: orgs.escalateTo } })
     .from(tickets)
     .innerJoin(orgs, eq(orgs.id, tickets.orgId))
     .where(
@@ -26,11 +27,13 @@ export async function escalateOverdue(now = new Date()): Promise<{ escalated: nu
         isNull(tickets.firstResponseAt),
         isNull(tickets.escalatedAt),
         isNull(tickets.source),
-        isNotNull(orgs.firstResponseMinutes),
+        or(isNotNull(orgs.firstResponseMinutes), sql`jsonb_array_length(${orgs.slaPolicies}) > 0`),
         gt(tickets.createdAt, new Date(now.getTime() - LOOKBACK_DAYS * 86_400_000)),
-        sql`${tickets.createdAt} <= ${now.toISOString()}::timestamptz - (${orgs.firstResponseMinutes} * interval '1 minute')`,
+        // No target is shorter than 15 minutes; business hours and tags are checked below.
+        lte(tickets.createdAt, new Date(now.getTime() - MIN_TARGET * 60_000)),
       ),
     )
+    .orderBy(asc(tickets.createdAt))
     .limit(BATCH);
 
   let escalated = 0;

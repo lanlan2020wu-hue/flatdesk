@@ -306,9 +306,15 @@ export async function saveServiceSettingsAction(form: FormData) {
   }
   const before = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) });
   const escalateTo = str(form, "escalateTo") ? ((await findAssignable(s.orgId, str(form, "escalateTo")))?.userId ?? null) : null;
-  const next = { csatEnabled: form.get("csatEnabled") === "on", firstResponseMinutes, businessHours, escalateTo };
+  const slaPolicies: { tag: string; minutes: number }[] = [];
+  for (let i = 0; i < 4; i++) {
+    const [tag] = tagList(str(form, `policyTag${i}`));
+    const minutes = Number(str(form, `policyMinutes${i}`));
+    if (tag && TARGET_CHOICES.some((c) => c.minutes === minutes) && !slaPolicies.some((p) => p.tag === tag)) slaPolicies.push({ tag, minutes });
+  }
+  const next = { csatEnabled: form.get("csatEnabled") === "on", firstResponseMinutes, businessHours, escalateTo, slaPolicies };
   await db.update(schema.orgs).set(next).where(eq(schema.orgs.id, s.orgId));
-  const detail = changes(before ?? {}, next, { csatEnabled: "Ratings", firstResponseMinutes: "First-reply target (minutes)", businessHours: "Business hours", escalateTo: "Escalate to" });
+  const detail = changes(before ?? {}, next, { csatEnabled: "Ratings", firstResponseMinutes: "First-reply target (minutes)", businessHours: "Business hours", escalateTo: "Escalate to", slaPolicies: "Targets by tag" });
   if (detail) await audit(s.orgId, actor(s), "settings.service", detail);
   revalidatePath("/app/settings");
   revalidatePath("/app/inbox");
