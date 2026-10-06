@@ -2,7 +2,7 @@
 
 import { useRef, useState, useTransition } from "react";
 import { flushSync, useFormStatus } from "react-dom";
-import { copilotDraftAction, copilotRewriteAction } from "@/app/app/actions";
+import { copilotDraftAction, copilotRewriteAction, copilotTranslateAction } from "@/app/app/actions";
 import { CopilotMark } from "@/components/CopilotSummary";
 import { REWRITE_LABEL, type RewriteStyle } from "@/lib/copilot-config";
 
@@ -34,6 +34,7 @@ export default function Composer({
   copilot = true,
   customerName = null,
   agents = [],
+  customerLanguage = null,
 }: {
   action: (f: FormData) => Promise<void>;
   ticketId: string;
@@ -45,6 +46,8 @@ export default function Composer({
   copilot?: boolean;
   customerName?: string | null;
   agents?: { userId: string; name: string }[];
+  // The customer writes in another language than the team: replies can be translated into it.
+  customerLanguage?: { code: string; label: string } | null;
 }) {
   const [internal, setInternal] = useState(false);
   const [body, setBody] = useState("");
@@ -60,6 +63,8 @@ export default function Composer({
   const [working, setWorking] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
   const [usedSuggestion, setUsedSuggestion] = useState(false);
+  // What the agent wrote before translating it for the customer.
+  const [original, setOriginal] = useState<string | null>(null);
   // Macros inserted into this reply, so the server can learn how the team edits them.
   const [macroIds, setMacroIds] = useState<string[]>([]);
   // What the inserted macro will do when the reply is sent.
@@ -90,6 +95,20 @@ export default function Composer({
       setWorking(null);
       if (!r.ok) return setError(r.error);
       setBody(r.value);
+    });
+  }
+
+  function translate() {
+    if (!customerLanguage || !body.trim()) return;
+    setWorking(`Translating to ${customerLanguage.label}…`);
+    startCopilot(async () => {
+      setError(null);
+      const r = await copilotTranslateAction(ticketId, body, customerLanguage.code);
+      setWorking(null);
+      if (!r.ok) return setError(r.error);
+      setOriginal(original ?? body);
+      setBody(r.value);
+      setNote(`This is your reply in ${customerLanguage.label}. Edit it if you like. Your team sees what you wrote beside it.`);
     });
   }
 
@@ -136,6 +155,7 @@ export default function Composer({
           return setError("That didn't save. Check your connection and try again; your text is still here.");
         }
         setBody("");
+        setOriginal(null);
         setNote(null);
         setAddTags("");
         setStatusChoice(null);
@@ -151,6 +171,7 @@ export default function Composer({
       <input type="hidden" name="addTags" value={addTags} />
       <input type="hidden" name="macroIds" value={macroIds.join(",")} />
       <input type="hidden" name="assignTo" value={assignTo} />
+      {original && !internal && <input type="hidden" name="original" value={original} />}
       <div className="flex flex-wrap items-center gap-3 text-sm">
         <div role="radiogroup" aria-label="Message type" className="flex gap-0.5 rounded-lg bg-surface-2 p-0.5">
           <button type="button" role="radio" aria-checked={!internal} onClick={() => setInternal(false)} className={`rounded-md px-3 py-1 transition-colors ${!internal ? "bg-surface font-medium shadow-sm" : "text-muted hover:text-ink"}`}>Reply</button>
@@ -166,6 +187,12 @@ export default function Composer({
         {/* One copilot control at a time: draft into an empty box, rewrite what's there. */}
         {copilot && (
           <span className="flex flex-wrap items-center gap-2 sm:ml-auto">
+            {body.trim() && customerLanguage && !internal && !original && (
+              <button type="button" onClick={translate} disabled={thinking} className="btn btn-secondary btn-sm text-accent">
+                <CopilotMark />
+                Translate to {customerLanguage.label}
+              </button>
+            )}
             {body.trim() ? (
               <select
                 aria-label="Rewrite with the copilot"

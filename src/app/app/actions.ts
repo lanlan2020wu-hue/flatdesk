@@ -14,7 +14,7 @@ import { filesFromForm, saveAttachments } from "@/lib/attachments";
 import { checkWebhookUrl, sendTestAlert } from "@/lib/alerts";
 import { handBackToTeam } from "@/lib/ai";
 import { checkoutUrl, portalUrl, switchToAnnual, syncSeats } from "@/lib/billing";
-import { CopilotError, draftReply, rewriteText, summarizeTicket, type TicketSummary } from "@/lib/copilot";
+import { CopilotError, draftReply, rewriteText, summarizeTicket, translateReply, translateTicket, type TicketSummary } from "@/lib/copilot";
 import type { RewriteStyle } from "@/lib/copilot-config";
 import { deliverReply } from "@/lib/email";
 import { isUuid } from "@/lib/ids";
@@ -31,6 +31,7 @@ import type { SlaPolicy } from "@/db/schema";
 import { RESOLVE_CHOICES, TARGET_CHOICES, validHours } from "@/lib/sla";
 import { addReply, isPriority, normalizeTags, parseTicketNumber, updateTicket, type TicketPriority, type TicketStatus } from "@/lib/tickets";
 import { findGroup, shareTicketQuietly } from "@/lib/routing";
+import { isLanguage } from "@/lib/language";
 
 // The paywall hides the app once a trial ends without a card; this keeps
 // direct requests from doing work behind it. Billing stays open.
@@ -58,11 +59,16 @@ export async function replyAction(form: FormData) {
   // A macro can hand the ticket to someone on the team.
   const assignTo = str(form, "assignTo");
   const assignee = assignTo ? await findAssignable(s.orgId, assignTo) : null;
+  const body = str(form, "body");
+  // Set when the agent translated their reply into the customer's language in
+  // the composer: what they wrote, shown to the team beside what was sent.
+  const original = form.get("internal") === "on" ? null : str(form, "original").slice(0, 8000) || null;
   const { messageId, ticket } = await addReply({
     orgId: s.orgId,
     ticketId,
     userId: s.userId,
-    body: str(form, "body"),
+    body,
+    original,
     internal: form.get("internal") === "on",
     status: status(str(form, "status")),
     addTags: tagList(str(form, "addTags")),
@@ -72,7 +78,7 @@ export async function replyAction(form: FormData) {
   if (messageId && files.length) await saveAttachments(s.orgId, ticketId, messageId, files);
   if (messageId) await deliverReply(s.orgId, messageId);
   // "@sam" in a note emails Sam a link to the ticket.
-  if (messageId && form.get("internal") === "on") await notifyMentions(s.orgId, ticket, str(form, "body"), actor(s));
+  if (messageId && form.get("internal") === "on") await notifyMentions(s.orgId, ticket, body, actor(s));
   // A person on the team answered, so the AI didn't finish this conversation
   // alone: it stops counting (and isn't billed as overage). No alert, since the team is already on it.
   if (messageId && form.get("internal") !== "on" && ticket.resolvedByAi) {
@@ -490,4 +496,29 @@ export async function copilotDraftAction(ticketId: string): Promise<CopilotResul
 
 export async function copilotRewriteAction(ticketId: string, text: string, style: RewriteStyle): Promise<CopilotResult<string>> {
   return copilot(ticketId, (s) => rewriteText(s.orgId, s.userId, ticketId, text, style));
+}
+
+export async function copilotTranslateAction(ticketId: string, text: string, to: string): Promise<CopilotResult<string>> {
+  return copilot(ticketId, (s) => translateReply(s.orgId, s.userId, ticketId, text, to));
+}
+
+// Translates the ticket's customer messages that aren't in the team's
+// language, when someone opens it. Quiet on failure: the originals still show.
+export async function translateTicketAction(ticketId: string): Promise<number> {
+  const s = await requireOpenSession();
+  if (!isUuid(ticketId) || s.viewer) return 0;
+  try {
+    return await translateTicket(s.orgId, s.userId, ticketId);
+  } catch (err) {
+    if (!(err instanceof CopilotError)) console.error("translating ticket failed", err);
+    return 0;
+  }
+}
+
+export async function saveLanguageAction(form: FormData) {
+  const s = await requireOpenAdmin();
+  const language = str(form, "language");
+  if (!isLanguage(language)) return;
+  await db.update(schema.orgs).set({ language }).where(eq(schema.orgs.id, s.orgId));
+  revalidatePath("/app/settings");
 }
