@@ -95,4 +95,7 @@ export const LIMITS = {
     { key: `test-tickets:${orgId}`, max: 30, windowSec: HOUR },
     { key: `test-tickets-day:${orgId}`, max: 100, windowSec: DAY },
   ],
+  // The REST API: per key, and new tickets per team, since each one can run the AI and send email.
+  api: (keyId: string): Limit[] => [{ key: `api:key:${keyId}`, max: 1000, windowSec: HOUR }],
+  apiNewTicket: (orgId: string): Limit[] => [{ key: `api:new-ticket:${orgId}`, max: 200, windowSec: HOUR }],
 };

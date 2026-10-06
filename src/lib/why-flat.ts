@@ -32,7 +32,8 @@ export const LEFT_OUT = [
   "An app marketplace",
   "Full SLA policies with escalations (first-reply targets only)",
   "A help center in several languages or on your own domain",
-  "Shopify order data in the ticket",
+  "Shopify refunds and order edits from the ticket (orders show, read only)",
+  "Replying to customers from inside Slack",
 ];
 
 // Ways to judge the quality before the first charge.
