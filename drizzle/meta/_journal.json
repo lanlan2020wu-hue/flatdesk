@@ -148,13 +148,6 @@
       "when": 1790950811939,
       "tag": "0020_test_tickets",
       "breakpoints": true
-    },
-    {
-      "idx": 21,
-      "version": "7",
-      "when": 1791245212495,
-      "tag": "0021_security_controls",
-      "breakpoints": true
     }
   ]
 }
