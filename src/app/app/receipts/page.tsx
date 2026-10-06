@@ -40,7 +40,7 @@ export default async function ReceiptsPage({ searchParams }: PageProps<"/app/rec
   const error = typeof sp.error === "string" ? sp.error : null;
   const refunded = typeof sp.refunded === "string" ? sp.refunded : null;
   const org = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) });
-  const aiOn = Boolean(org?.aiEnabled) && aiConfigured();
+  const aiOn = Boolean(org?.aiEnabled && org.aiProcessing) && aiConfigured();
   const pct = Math.min(100, Math.round((r.counted / r.included) * 100));
 
   return (

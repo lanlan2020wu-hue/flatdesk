@@ -51,7 +51,7 @@ export default async function InboxPage({ searchParams }: PageProps<"/app/inbox"
         </nav>
         <p className="text-sm text-muted">{VIEWS.find((v) => v.id === view)?.hint}</p>
         {/* Say plainly that the AI replies to customers by itself, so nobody wonders where tickets went. */}
-        {org?.aiEnabled && aiConfigured() ? (
+        {org?.aiEnabled && org.aiProcessing && aiConfigured() ? (
           <p className="rounded-lg bg-accent-soft px-4 py-3 text-sm">
             <strong className="font-medium">The AI is answering customers on its own.</strong> When a new email or chat comes in, it replies if your facts,
             macros or help articles cover the question. Those tickets move to Pending, marked AI answered. Anything else stays open here for your team, with

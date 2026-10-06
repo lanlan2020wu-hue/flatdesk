@@ -10,6 +10,7 @@ import { access, billingConfigured, isActive, refreshSubscription, syncSeats, ty
 import { milestone } from "@/lib/funnel";
 import { clerkEnabled, devAuthEnabled } from "./auth-config";
 import { linkImportedAgent } from "./import/link";
+import { audit } from "./security";
 
 export type Session = {
   orgId: string;
@@ -42,6 +43,11 @@ export const requireSession = cache(async (): Promise<Session> => {
   const existing = await db.query.agents.findFirst({
     where: and(eq(schema.agents.orgId, orgId), eq(schema.agents.userId, userId)),
   });
+  // A team can require two-step verification (Settings, Security). Anyone without it is sent to turn it on first.
+  if (!user?.twoFactorEnabled) {
+    const org = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, orgId), columns: { requireTwoFactor: true } });
+    if (org?.requireTwoFactor) redirect("/setup/two-step");
+  }
   const session: Session = { orgId, userId, role, name, viewer: role === "agent" && Boolean(existing?.viewer) };
   // Also when they rejoined after being removed, or an admin row still says viewer.
   const stale = !existing || existing.role !== session.role || existing.name !== name || existing.removedAt !== null || (role === "admin" && existing.viewer);
@@ -104,6 +110,8 @@ async function ensureRows(session: Session, orgName: string, email: string) {
     .onConflictDoUpdate({ target: schema.orgs.id, set: { name: orgName } })
     .returning({ created: sql<boolean>`xmax = 0` }); // true when the row was inserted, not updated
   if (org?.created) await milestone(session.orgId, "team_created", { source: source?.source ?? "direct", campaign: source?.campaign });
+  const known = await db.query.agents.findFirst({ where: and(eq(schema.agents.orgId, session.orgId), eq(schema.agents.userId, session.userId)), columns: { removedAt: true } });
+  if (!known || known.removedAt) await audit(session.orgId, { userId: session.userId, name: session.name }, "member.joined", `${email} as ${session.role}`);
   await db
     .insert(schema.agents)
     .values({ orgId: session.orgId, userId: session.userId, name: session.name, email, role: session.role })

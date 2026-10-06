@@ -61,7 +61,7 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
     cachedSummary(s.orgId, ticket.id, last?.id),
     orgTags(s.orgId),
   ]);
-  const copilotOn = aiConfigured();
+  const copilotOn = aiConfigured() && Boolean(org?.aiProcessing);
   // AI macros: when the customer is waiting on us, the macro that answers what they asked.
   const lastVisible = thread.filter((m) => !m.internal && m.authorType !== "system").at(-1);
   const suggestedMacro = ticket.status !== "closed" && lastVisible?.authorType === "customer" ? identifyMacro(lastVisible.body, macros) : null;

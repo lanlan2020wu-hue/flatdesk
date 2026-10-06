@@ -84,9 +84,9 @@ export default async function MacrosPage() {
           footnote="A macro can also assign the ticket, set its status, add tags or send right away. Set these when you edit it. Writing and updating macros is included in your plan and doesn't use your AI answers."
         />
 
-        <MacroUpdates updates={updates} aiOn={aiConfigured()} canApply={s.role === "admin"} />
+        <MacroUpdates updates={updates} aiOn={aiConfigured() && Boolean(org?.aiProcessing)} canApply={s.role === "admin"} />
 
-        <SuggestionsSection suggestions={suggestions} aiOn={aiConfigured()} tags={tags} />
+        <SuggestionsSection suggestions={suggestions} aiOn={aiConfigured() && Boolean(org?.aiProcessing)} tags={tags} />
 
         {/* Saved macros as one ruled list; each row opens to edit. */}
         {macros.length > 0 && (

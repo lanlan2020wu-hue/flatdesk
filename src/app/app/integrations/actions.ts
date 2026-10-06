@@ -7,6 +7,7 @@ import { createApiKey, revokeApiKey } from "@/lib/api-keys";
 import { requireAdmin, requireEditor, requireOpen } from "@/lib/auth";
 import { isUuid } from "@/lib/ids";
 import { connectHubSpot, connectJira, connectShopify, connectStripe, disconnect, escalateToJira } from "@/lib/integrations";
+import { audit } from "@/lib/security";
 import { SITE } from "@/lib/site";
 import { addSystemNote } from "@/lib/tickets";
 import { hit, type Limit } from "@/lib/rate-limit";
@@ -29,6 +30,7 @@ export async function connectShopifyAction(_: ConnectState, form: FormData): Pro
     token: str(form, "token"),
   });
   if ("error" in result) return { error: result.error };
+  await audit(s.orgId, { userId: s.userId, name: s.name }, "integration.connect", `Shopify: ${result.name}`);
   revalidatePath("/app/integrations");
   return { error: null, done: `Connected to ${result.name}.` };
 }
@@ -38,6 +40,7 @@ export async function connectStripeAction(_: ConnectState, form: FormData): Prom
   if (!(await hit(connectLimit(s.orgId))).ok) return { error: "That's a lot of tries. Wait an hour and try again." };
   const result = await connectStripe(s.orgId, s.userId, str(form, "key"));
   if ("error" in result) return { error: result.error };
+  await audit(s.orgId, { userId: s.userId, name: s.name }, "integration.connect", `Stripe: ${result.name}`);
   revalidatePath("/app/integrations");
   return { error: null, done: `Connected to ${result.name}.` };
 }
@@ -47,6 +50,7 @@ export async function connectHubSpotAction(_: ConnectState, form: FormData): Pro
   if (!(await hit(connectLimit(s.orgId))).ok) return { error: "That's a lot of tries. Wait an hour and try again." };
   const result = await connectHubSpot(s.orgId, s.userId, str(form, "token"));
   if ("error" in result) return { error: result.error };
+  await audit(s.orgId, { userId: s.userId, name: s.name }, "integration.connect", `HubSpot: ${result.name}`);
   revalidatePath("/app/integrations");
   return { error: null, done: `Connected to ${result.name}.` };
 }
@@ -62,6 +66,7 @@ export async function connectJiraAction(_: ConnectState, form: FormData): Promis
     issueType: str(form, "issueType"),
   });
   if ("error" in result) return { error: result.error };
+  await audit(s.orgId, { userId: s.userId, name: s.name }, "integration.connect", `Jira: ${result.name}`);
   revalidatePath("/app/integrations");
   return { error: null, done: `Connected. New issues go to ${result.name}.` };
 }
@@ -94,7 +99,10 @@ export async function escalateAction(_: ConnectState, form: FormData): Promise<C
 export async function disconnectAction(form: FormData) {
   const s = await requireAdmin();
   const kind = str(form, "kind");
-  if (kind === "shopify" || kind === "stripe" || kind === "hubspot" || kind === "jira") await disconnect(s.orgId, kind);
+  if (kind === "shopify" || kind === "stripe" || kind === "hubspot" || kind === "jira") {
+    await disconnect(s.orgId, kind);
+    await audit(s.orgId, { userId: s.userId, name: s.name }, "integration.disconnect", kind);
+  }
   revalidatePath("/app/integrations");
 }
 
@@ -105,6 +113,7 @@ export async function createKeyAction(_: KeyState, form: FormData): Promise<KeyS
   const s = await requireOpenAdmin();
   const result = await createApiKey(s.orgId, s.userId, str(form, "name"));
   if ("error" in result) return { error: result.error };
+  await audit(s.orgId, { userId: s.userId, name: s.name }, "apikey.create", str(form, "name"));
   revalidatePath("/app/integrations");
   return { error: null, key: result.key };
 }
@@ -112,6 +121,9 @@ export async function createKeyAction(_: KeyState, form: FormData): Promise<KeyS
 export async function revokeKeyAction(form: FormData) {
   const s = await requireAdmin();
   const id = str(form, "id");
-  if (isUuid(id)) await revokeApiKey(s.orgId, id);
+  if (isUuid(id)) {
+    await revokeApiKey(s.orgId, id);
+    await audit(s.orgId, { userId: s.userId, name: s.name }, "apikey.revoke", id);
+  }
   revalidatePath("/app/integrations");
 }

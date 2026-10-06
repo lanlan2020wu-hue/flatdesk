@@ -40,7 +40,7 @@ export default async function WelcomePage({ searchParams }: PageProps<"/app/welc
   const h = await headers();
   const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
   const siteOrigin = `${h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https")}://${host}`;
-  const ai = aiConfigured();
+  const ai = aiConfigured() && org.aiProcessing;
   const widgetTag = `<script src="${siteOrigin}/widget.js" data-key="${org.widgetKey}" async></script>`;
   // Forwarding often needs whoever runs the company's email. This hands them everything in one message.
   const itMail = `mailto:?subject=${encodeURIComponent("Please forward our support email to Flatdesk")}&body=${encodeURIComponent(

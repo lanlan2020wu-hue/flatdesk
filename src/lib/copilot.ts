@@ -49,6 +49,7 @@ async function reserveAction(orgId: string, userId: string, ticketId: string | n
     await tx.execute(sql`select pg_advisory_xact_lock(hashtext(${`copilot:${orgId}`}))`);
     const [org] = await tx.select().from(orgs).where(eq(orgs.id, orgId));
     if (!org || access(org).state === "locked") throw new CopilotError("The free trial has ended. An admin can add a card in Settings.");
+    if (!org.aiProcessing) throw new CopilotError("AI processing is turned off for your team. An admin can turn it back on in Settings.");
     const u = await copilotUsage(orgId, monthKey(), tx);
     if (u.used >= u.limit) throw new CopilotError(`Your team has used this month's ${u.limit} copilot actions. They reset on the 1st.`);
     const [row] = await tx
@@ -156,7 +157,7 @@ export async function summarizeTicket(orgId: string, userId: string, ticketId: s
   const cached = await cachedSummary(orgId, ticketId, last?.id);
   if (cached && !cached.stale) return cached.summary; // free: nothing new to read
   const { eventId } = await reserveAction(orgId, userId, ticketId, "summary");
-  const { out, metered } = await structuredCall(Summary, SUMMARY_SYSTEM, `Subject: ${ticket.subject}\n\n${threadText(thread)}`);
+  const { out, metered } = await structuredCall(orgId, Summary, SUMMARY_SYSTEM, `Subject: ${ticket.subject}\n\n${threadText(thread)}`);
   if (!out) {
     await settle(eventId, metered);
     throw new CopilotError("The copilot couldn't summarize this ticket.");
@@ -200,7 +201,7 @@ export async function draftReply(orgId: string, userId: string, ticketId: string
   ]);
   const firstName = agent?.name.split(/\s+/)[0] || "the team";
   const system = draftSystem(org.name, org.aiInstructions, knowledge).replace("{agent}", firstName);
-  const { out, metered } = await structuredCall(Draft, system, `Subject: ${ticket.subject}\n\n${threadText(thread)}`);
+  const { out, metered } = await structuredCall(orgId, Draft, system, `Subject: ${ticket.subject}\n\n${threadText(thread)}`);
   await settle(eventId, metered);
   if (!out?.reply.trim()) throw new CopilotError(out?.gaps?.trim() || "The copilot didn't have enough to draft this one. Your saved answers don't cover it yet.");
   return { reply: out.reply.trim(), gaps: out.gaps.trim() };
@@ -219,7 +220,7 @@ export async function rewriteText(orgId: string, userId: string, ticketId: strin
   const ticket = ticketId ? await db.query.tickets.findFirst({ where: and(eq(tickets.orgId, orgId), eq(tickets.id, ticketId)), columns: { id: true } }) : null;
   const { eventId } = await reserveAction(orgId, userId, ticket?.id ?? null, "rewrite");
   const system = `You edit a support agent's reply before they send it. ${REWRITE_STYLES[style]} Keep square-bracket placeholders as they are. Keep the language it's written in. Plain text, no markdown. Return only the edited reply.`;
-  const { out, metered } = await structuredCall(Rewrite, system, input);
+  const { out, metered } = await structuredCall(orgId, Rewrite, system, input);
   await settle(eventId, metered);
   if (!out?.text.trim()) throw new CopilotError("The copilot couldn't rewrite that.");
   return out.text.trim();
