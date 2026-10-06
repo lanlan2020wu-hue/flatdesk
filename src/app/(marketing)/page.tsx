@@ -26,7 +26,7 @@ const TERMS = [
   { title: `${TRIAL_DAYS} days free`, body: `No card. Every feature, and ${PLAN.trialPerAgent} AI answers per agent.` },
   { title: "Month to month", body: "No contract on monthly plans. Cancel any time." },
   { title: "Bring your history", body: `Tickets, customers and macros from ${SOURCES.slice(0, 3).join(", ")} or Help Scout.` },
-  { title: "Export your data", body: "Tickets, messages, customers and macros as CSV or JSON." },
+  { title: "Export your data", body: "Everything in one .zip, attachments and help articles included." },
 ];
 
 // Smaller things in the seat, one line each, after the tour.

@@ -79,6 +79,6 @@ export const BILLING_FAQ: QA[] = [
   },
   {
     q: "Can we take our data with us?",
-    a: "Yes. Settings exports tickets (with tags), messages, customers and macros as CSV or JSON. Attachments aren't included; download them from each ticket. You never have to ask us.",
+    a: "Yes. Settings has one download with everything: tickets, messages, customers, macros, help articles, the audit log, and every attachment as its original file, in a .zip. Each table is also available on its own as CSV or JSON. You never have to ask us.",
   },
 ];
