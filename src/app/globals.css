@@ -393,6 +393,47 @@ p {
     line-height: 1.2;
   }
 
+  /* The hero's field stops partway down the product screenshot, so the
+     window sits across the edge between the green and the page. */
+  .hero-split {
+    --split: 6rem;
+    background: linear-gradient(to bottom, var(--field) calc(100% - var(--split)), transparent calc(100% - var(--split)));
+  }
+  @media (min-width: 640px) {
+    .hero-split {
+      --split: 14rem;
+    }
+  }
+
+  /* A real screenshot of the app in a plain window: one bar, no fake
+     traffic lights. On the green field the bar is field-coloured. */
+  .app-frame {
+    border-radius: 10px;
+    border: 1px solid var(--field-line);
+    background: var(--field-2);
+    box-shadow: 0 30px 60px -30px rgb(0 0 0 / 0.55), 0 2px 6px rgb(0 0 0 / 0.12);
+    overflow: hidden;
+  }
+  .app-frame-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.45rem 0.75rem;
+    border-bottom: 1px solid var(--field-line);
+  }
+  .app-frame-light {
+    border-color: var(--line-strong);
+    background: var(--surface);
+    box-shadow: var(--shadow-lg);
+  }
+  /* The green dot beside a conversation that just arrived. */
+  .live-dot {
+    width: 0.45rem;
+    height: 0.45rem;
+    border-radius: 999px;
+    background: var(--accent);
+  }
+
   /* A UI mock: the app's own chrome, drawn smaller, for the feature tour. */
   .shot {
     border-radius: 0.5rem;
@@ -667,6 +708,10 @@ p {
   background: currentColor;
   transform-origin: left;
 }
+.tour-cue .strike::after {
+  left: 0;
+  right: 0;
+}
 
 @media (prefers-reduced-motion: no-preference) {
   /* Page-load entrance: each line of the hero is inked on from the left, like
@@ -815,6 +860,46 @@ p {
   }
   [data-play] .flatline-label {
     animation: appear 300ms ease 2100ms backwards;
+  }
+
+  /* The hero's live inbox. Each new conversation is printed in from the top
+     like a till slip, its outcome inked on after it; changed figures are
+     re-inked left to right. The dot beside it breathes the whole time. */
+  .arrival {
+    animation: print 520ms steps(8, end) backwards;
+  }
+  .arrival-outcome {
+    animation: ink 420ms cubic-bezier(0.65, 0, 0.35, 1) 900ms backwards;
+  }
+  .live-dot {
+    animation: pulse-ring 1600ms ease-out infinite;
+  }
+  .tick {
+    animation: ink 380ms cubic-bezier(0.65, 0, 0.35, 1) backwards;
+  }
+
+  /* Product tour: the rule over the open tab runs out, then the next tab
+     opens (ProductTour listens for animationend). Hovering or focusing the
+     tour holds it. Each tab's card acts out its screen line by line. */
+  [data-play] .tour-progress {
+    transform-origin: left;
+    animation: grow-x 7500ms linear;
+  }
+  .tour:hover .tour-progress,
+  .tour:focus-within .tour-progress {
+    animation-play-state: paused;
+  }
+  [data-play] .cue {
+    animation: print-line 320ms steps(4, end) var(--at, 0ms) backwards;
+  }
+  [data-play] .cue-write {
+    animation: ink 1500ms steps(24, end) var(--at, 0ms) backwards;
+  }
+  [data-play] .stamp-in {
+    animation: stamp 460ms cubic-bezier(0.3, 0.9, 0.4, 1) var(--at, 0ms) backwards;
+  }
+  [data-play] .press {
+    animation: pulse-ring 900ms ease-out var(--at, 0ms);
   }
 
   /* Hold everything above until the block scrolls into view. */
