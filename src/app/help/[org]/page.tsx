@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { excerpt, publishedArticles, searchArticles } from "@/lib/help";
+import { bySection, excerpt, publishedArticles, searchArticles } from "@/lib/help";
 import { helpCenter } from "./data";
 import SearchForm from "./SearchForm";
 
@@ -25,18 +25,24 @@ export default async function HelpHome({ params, searchParams }: PageProps<"/hel
         <SearchForm helpSlug={org.helpSlug} q={q} autoFocus={!q} />
       </div>
       <section className="grid gap-3" aria-live="polite">
-        <h2 className="eyebrow">{q ? `${list.length} ${list.length === 1 ? "result" : "results"} for “${q}”` : "All articles"}</h2>
+        {q && <h2 className="eyebrow">{`${list.length} ${list.length === 1 ? "result" : "results"} for “${q}”`}</h2>}
         {list.length > 0 ? (
-          <ul className="card divide-y divide-line overflow-hidden">
-            {list.map((a) => (
-              <li key={a.id}>
-                <Link href={`/help/${org.helpSlug}/${a.slug}`} className="grid gap-1 px-5 py-4 transition-colors hover:bg-surface-2/60">
-                  <span className="font-medium">{a.title}</span>
-                  <span className="text-sm text-muted">{excerpt(a.body)}</span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          (q ? [{ section: null, articles: list }] : bySection(list)).map((g, i, groups) => (
+            <div key={g.section ?? ""} className="grid gap-3">
+              {!q && <h2 className="eyebrow">{g.section ?? (groups.length > 1 ? "More articles" : "All articles")}</h2>}
+              <ul className="card divide-y divide-line overflow-hidden">
+                {g.articles.map((a) => (
+                  <li key={a.id}>
+                    <Link href={`/help/${org.helpSlug}/${a.slug}`} className="grid gap-1 px-5 py-4 transition-colors hover:bg-surface-2/60">
+                      <span className="font-medium">{a.title}</span>
+                      <span className="text-sm text-muted">{excerpt(a.body)}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              {i < groups.length - 1 && <span aria-hidden="true" className="h-2" />}
+            </div>
+          ))
         ) : (
           <p className="card px-5 py-4 text-sm text-muted">
             {q ? "Nothing matched. Try fewer or different words" : "No articles yet"}

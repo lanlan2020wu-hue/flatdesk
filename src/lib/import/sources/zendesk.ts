@@ -1,4 +1,5 @@
 import { htmlToText } from "@/lib/email";
+import { htmlToArticle, MAX_SECTION } from "@/lib/help";
 import { ApiError, CredentialError } from "../http";
 import { date, fieldMap, str, type Adapter, type Ctx, type Mapped, type Msg, type Raw, type Status } from "../types";
 
@@ -17,6 +18,22 @@ function pager(path: string, key: string, idOf: (r: Raw) => string = (r) => str(
     const { data } = await ctx.get((cursor as string | null) ?? path);
     const rows: Raw[] = data[key] ?? [];
     return { records: rows.map((raw) => ({ externalId: idOf(raw), raw })), next: nextOf(data) };
+  };
+}
+
+// Help center (Guide) lists: an account without Guide answers 404, which means nothing to import.
+function guidePager(path: string, key: string) {
+  const list = pager(path, key);
+  return async (ctx: Ctx, cursor: unknown) => {
+    try {
+      return await list(ctx, cursor);
+    } catch (err) {
+      if (err instanceof ApiError && (err.status === 404 || err.status === 403)) {
+        ctx.note("Zendesk Guide (the help center) isn't turned on for this account, or the token can't read it, so no articles were imported.");
+        return { records: [], next: null };
+      }
+      throw err;
+    }
   };
 }
 
@@ -196,6 +213,29 @@ export const zendesk: Adapter = {
         return { records: rows.map((raw) => ({ externalId: `${kind}:${raw.id}`, raw: { ...raw, _kind: kind } })), next };
       },
       map: (r, ctx) => mapRule(ctx, r, r._kind),
+    },
+    { kind: "section", label: "Help center sections", list: guidePager("help_center/sections.json?page[size]=100", "sections"), map: (r) => ({ kind: "section", label: str(r.name), issues: [] }) },
+    {
+      kind: "article",
+      label: "Help center articles",
+      list: guidePager("help_center/articles.json?page[size]=100", "articles"),
+      async map(r, ctx) {
+        const issues: string[] = [];
+        const html = str(r.body);
+        if (/<img\s/i.test(html)) issues.push("Images still load from Zendesk; upload them again before you close the Zendesk account");
+        if (/<(iframe|video)\s/i.test(html)) issues.push("Embedded videos were left out; the original is in the import archive");
+        const section = r.section_id ? await ctx.lookup("section", str(r.section_id)) : null;
+        return {
+          kind: "article",
+          label: str(r.title),
+          title: str(r.title) || "Untitled article",
+          body: htmlToArticle(html) || str(r.title),
+          // Drafts stay drafts, and so do articles only signed-in users could see in Zendesk.
+          published: r.draft !== true && !r.user_segment_id,
+          section: section ? str(section.name).slice(0, MAX_SECTION) || null : null,
+          issues: [...issues, ...(r.user_segment_id ? ["Only signed-in users could see it in Zendesk, so it was imported as a draft"] : [])],
+        };
+      },
     },
     { kind: "company", label: "Organizations", list: pager("organizations.json?page[size]=100", "organizations"), map: (r) => ({ kind: "company", label: str(r.name), issues: [] }) },
     {

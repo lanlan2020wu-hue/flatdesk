@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
-import { and, asc, count, eq, sql } from "drizzle-orm";
+import { and, asc, count, eq, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema } from "@/db";
 import { alertHandedBack } from "@/lib/alerts";
@@ -24,10 +24,9 @@ import { HANDOFF_PREFIX } from "@/lib/teach";
 // what an unpaid team can spend; adding a card lifts it to the full allowance.
 
 export const MODEL = "claude-opus-5-5";
-// USD per million tokens, for internal cost logging. The system prompt is cached
-// for an hour (small teams often go more than 5 minutes between tickets), which
-// bills cache writes at 2x the input rate; cache reads are $0.20.
-const PRICE_PER_MTOK = { input: 4, output: 20, cacheWrite: 8, cacheRead: 0.2 };
+// USD per million tokens, for internal cost logging. Cache writes cost 1.25x
+// the input rate for a 5-minute cache and 2x for an hour; cache reads are $0.20.
+const PRICE_PER_MTOK = { input: 4, output: 20, cacheWrite5m: 5, cacheWrite1h: 8, cacheRead: 0.2 };
 // Keeps a hung call from outliving the serverless function that started it.
 const CALL_OPTIONS = { timeout: 120_000, maxRetries: 1 };
 
@@ -36,11 +35,16 @@ export function callCost(usage: {
   output_tokens: number;
   cache_creation_input_tokens?: number | null;
   cache_read_input_tokens?: number | null;
+  cache_creation?: { ephemeral_5m_input_tokens: number; ephemeral_1h_input_tokens: number } | null;
 }) {
   const p = PRICE_PER_MTOK;
+  // Without the split by cache length, writes are priced as the dearer 1-hour kind.
+  const written = usage.cache_creation_input_tokens ?? 0;
+  const short = Math.min(written, usage.cache_creation?.ephemeral_5m_input_tokens ?? 0);
   return (
     (usage.input_tokens * p.input +
-      (usage.cache_creation_input_tokens ?? 0) * p.cacheWrite +
+      short * p.cacheWrite5m +
+      (written - short) * p.cacheWrite1h +
       (usage.cache_read_input_tokens ?? 0) * p.cacheRead +
       usage.output_tokens * p.output) /
     1e6
@@ -303,6 +307,27 @@ export type Draft = {
   metered: { model: string; inputTokens: number; outputTokens: number; costUsd: string };
 };
 
+// The prompt (instructions, team notes and every saved answer, up to 30K
+// tokens) can be cached for an hour, which bills the call that writes it at 2x
+// the input rate and later ones at a twentieth of it. That pays off only when
+// another call follows within the hour. A team that gets a ticket or two a day
+// paid double on nearly every call for a cache nobody read, so a call is
+// cached only when the team's previous one started within the hour (the cache
+// is warm, or soon will be) or the team is busy enough that the next one
+// likely will: CACHE_MIN_WEEKLY_CALLS in the last week, about 3.5 a workday.
+// The prompt and the answer are the same either way; only the bill changes.
+export const CACHE_MIN_WEEKLY_CALLS = 25;
+export async function worthCaching(orgId: string, exceptEventId: string) {
+  const [{ hour, week }] = await db
+    .select({
+      hour: sql<number>`count(*) filter (where ${aiEvents.createdAt} > now() - interval '1 hour')`,
+      week: count(),
+    })
+    .from(aiEvents)
+    .where(and(eq(aiEvents.orgId, orgId), ne(aiEvents.id, exceptEventId), sql`${aiEvents.createdAt} > now() - interval '7 days'`));
+  return Number(hour) > 0 || Number(week) >= CACHE_MIN_WEEKLY_CALLS;
+}
+
 // Model rounds per answer when the AI uses tools: lookups and at most one change.
 const MAX_ROUNDS = 5;
 
@@ -320,6 +345,9 @@ export async function draftAnswer(
   options?: { timeout?: number; maxRetries?: number },
   // What came after the first message, oldest first, when this is a follow-up.
   later: { from: "customer" | "ai"; body: string }[] = [],
+  // Whether to cache the prompt for an hour (see worthCaching). The test
+  // drive and setup tries run in bursts, so they always do.
+  cache = true,
   ctx: ActionContext | null = null,
   call?: Call,
 ): Promise<Draft> {
@@ -334,6 +362,7 @@ export async function draftAnswer(
     else turns.push({ role, content: m.body });
   }
   const tools = ctx?.tools.length ? ctx.tools : undefined;
+  const system = systemPrompt(org.name, org.aiInstructions, knowledge, Boolean(tools));
   const params = {
     model: MODEL,
     max_tokens: 16000,
@@ -341,11 +370,17 @@ export async function draftAnswer(
     fallbacks: "default",
     thinking: { type: "adaptive" },
     output_config: { effort: "medium", format: zodOutputFormat(Decision) },
-    system: [{ type: "text", text: systemPrompt(org.name, org.aiInstructions, knowledge, Boolean(tools)), cache_control: { type: "ephemeral", ttl: "1h" } }],
+    // With tools, every round re-reads the prompt within seconds, so even an
+    // uncached call keeps it for the default five minutes.
+    system: cache
+      ? [{ type: "text", text: system, cache_control: { type: "ephemeral", ttl: "1h" } }]
+      : tools
+        ? [{ type: "text", text: system, cache_control: { type: "ephemeral" } }]
+        : system,
     ...(tools ? { tools, tool_choice: { type: "auto" } } : {}),
   } as unknown as Omit<Anthropic.Beta.Messages.MessageCreateParamsNonStreaming, "messages">;
 
-  const total = { input_tokens: 0, output_tokens: 0, cache_creation_input_tokens: 0, cache_read_input_tokens: 0 };
+  const total = { input_tokens: 0, output_tokens: 0, cache_creation_input_tokens: 0, cache_read_input_tokens: 0, cache_creation: { ephemeral_5m_input_tokens: 0, ephemeral_1h_input_tokens: 0 } };
   let model: string = MODEL;
   let response: Awaited<ReturnType<Call>> | null = null;
   for (let round = 0; round < MAX_ROUNDS; round++) {
@@ -355,6 +390,8 @@ export async function draftAnswer(
     total.output_tokens += u.output_tokens;
     total.cache_creation_input_tokens += u.cache_creation_input_tokens ?? 0;
     total.cache_read_input_tokens += u.cache_read_input_tokens ?? 0;
+    total.cache_creation.ephemeral_5m_input_tokens += u.cache_creation?.ephemeral_5m_input_tokens ?? 0;
+    total.cache_creation.ephemeral_1h_input_tokens += u.cache_creation?.ephemeral_1h_input_tokens ?? 0;
     model = response.model;
     if (response.stop_reason !== "tool_use" || !ctx) break;
     // Thinking blocks and all, unchanged, then every result in one message.
@@ -429,7 +466,7 @@ export async function answerNewTicket(orgId: string, ticketId: string) {
   }
 
   try {
-    const knowledge = await loadKnowledge(orgId);
+    const [knowledge, cache] = await Promise.all([loadKnowledge(orgId), worthCaching(orgId, slot.eventId)]);
     const info = ticketInfo(ticket);
     const ctx = customer ? await actionContext(org, info, customer) : null;
     const d = await draftAnswer(
@@ -443,6 +480,7 @@ export async function answerNewTicket(orgId: string, ticketId: string) {
       },
       undefined,
       [],
+      cache,
       ctx,
     );
     const { sources, reason, metered } = d;
@@ -591,6 +629,7 @@ export async function answerFollowUp(orgId: string, ticketId: string) {
       },
       undefined,
       later.map((m) => (m.authorType === "ai" ? { from: "ai" as const, body: stripFooter(m.body) } : { from: "customer" as const, body: withFiles(m) })),
+      await worthCaching(orgId, slot.eventId),
       ctx,
     );
     await db.update(aiEvents).set({ reason: d.reason, sources: d.sources, ...d.metered }).where(eq(aiEvents.id, slot.eventId));

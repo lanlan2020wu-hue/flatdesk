@@ -42,7 +42,10 @@ export default async function HelpCenterAdmin({ searchParams }: PageProps<"/app/
               <li key={a.id}>
                 <Link href={`/app/help/${a.id}`} className="grid gap-1 px-5 py-4 transition-colors hover:bg-surface-2/60">
                   <span className="flex items-center justify-between gap-3">
-                    <span className="truncate font-medium">{a.title}</span>
+                    <span className="truncate font-medium">
+                      {a.title}
+                      {a.section && <span className="ml-2 text-sm font-normal text-muted">{a.section}</span>}
+                    </span>
                     {a.published ? (
                       <span className="pill shrink-0 bg-accent-soft text-accent">Published</span>
                     ) : (

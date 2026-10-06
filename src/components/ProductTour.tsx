@@ -3,17 +3,23 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import LoopVideo from "@/components/LoopVideo";
 import { PLAN, usd } from "@/lib/pricing";
 
-// The seat, one screen at a time: real screenshots of the app, each with a
-// small card acting out what that screen does. The tabs advance on their own
+// The seat, one screen at a time. Most stops play a short story loop (rendered
+// with Remotion); the bill stop is a real screenshot with a small card acting
+// out what that screen does. The tabs advance on their own
 // (the progress rule under the open tab runs out, then the next one opens),
 // pause while the pointer or focus is inside, and stay put for visitors who
 // ask for reduced motion.
 
 const at = (ms: number) => ({ "--at": `${ms}ms` }) as React.CSSProperties;
 
-type Stop = { id: string; tab: string; title: string; body: string; src: string; alt: string; href: string; more: string; cue: React.ReactNode };
+type Stop = { id: string; tab: string; title: string; body: string; src: string; alt: string; href: string; more: string; cue: React.ReactNode; video?: { name: string; label: string } };
+
+// How long a stop stays open: one play of its video, or long enough to read the card.
+const VIDEO_MS = 11000;
+const CARD_MS = 7500;
 
 const STOPS: Stop[] = [
   {
@@ -25,6 +31,7 @@ const STOPS: Stop[] = [
     alt: "A chat ticket in Flatdesk: the customer asks about a grind setting and the AI's reply, sent on its own, shows which saved answer it used and that it counted toward the allowance.",
     href: "/features/ai-test-drive",
     more: "Try it on 50 past tickets first",
+    video: { name: "ai-answers", label: "Customers write in. The AI answers two of them on its own, each counted toward 400 included answers, and hands a third, an upset customer, to Ana without counting it." },
     cue: (
       <div className="grid gap-2 text-sm">
         <p className="cue rounded-[6px] bg-surface-2 px-3 py-2" style={at(150)}>
@@ -49,6 +56,7 @@ const STOPS: Stop[] = [
     alt: "Flatdesk's AI macros page: a list of saved replies, one marked Written by Flatdesk AI, with the tags and status each one sets.",
     href: "/features/ai-macros",
     more: "How AI macros work",
+    video: { name: "ai-macros", label: "Five agents send nearly the same refund reply. Flatdesk folds them into one macro it wrote, Refund timing, and an admin saves it. Macros never use AI answers." },
     cue: (
       <div className="grid gap-2 text-sm">
         <p className="cue flex items-center justify-between gap-3 text-xs" style={at(150)}>
@@ -75,6 +83,7 @@ const STOPS: Stop[] = [
     alt: "Flatdesk's AI answers statement for October: answers included, answers counted, refunds left and AI charges of $0.00, beside the list of answered tickets.",
     href: "/features/ai-receipts",
     more: "How AI receipts work",
+    video: { name: "ai-receipts", label: "October's AI answers print out as a receipt. One wrong answer is refunded: it's struck off, stops counting and goes back to the team. AI charges stay at $0.00." },
     cue: (
       <div className="grid gap-1.5 text-sm">
         <p className="cue num flex justify-between gap-3" style={at(150)}>
@@ -95,6 +104,18 @@ const STOPS: Stop[] = [
         </p>
       </div>
     ),
+  },
+  {
+    id: "integrations",
+    tab: "Integrations",
+    title: "Orders, billing and contacts, right on the ticket.",
+    body: "Connect Shopify, Stripe and HubSpot and each ticket shows that customer's recent orders with tracking, their plan and payments, and their contact card. Send a bug to Jira with one button and see its status. There's an API for everything else.",
+    src: "/product/inbox.webp",
+    alt: "",
+    href: "/integrations",
+    more: "See integrations",
+    cue: null,
+    video: { name: "integrations", label: "A customer asks where their order is. Shopify, Stripe and HubSpot cards appear beside the ticket, the agent replies with the UPS tracking number, and sends the broken tracking link to Jira as SHIP-212." },
   },
   {
     id: "bill",
@@ -133,7 +154,7 @@ export default function ProductTour() {
 
   return (
     <div data-play="" suppressHydrationWarning className="tour grid gap-8">
-      <div role="tablist" aria-label="Flatdesk, screen by screen" className="grid grid-cols-2 border-t border-line sm:grid-cols-4">
+      <div role="tablist" aria-label="Flatdesk, screen by screen" className="grid grid-cols-2 border-t border-line sm:grid-cols-5">
         {STOPS.map((s, i) => {
           const on = i === open;
           return (
@@ -154,7 +175,7 @@ export default function ProductTour() {
               className={`relative py-4 pr-4 text-left font-semibold transition-colors ${on ? "text-ink" : "text-muted hover:text-ink"}`}
             >
               <span aria-hidden="true" className={`absolute inset-x-0 -top-px h-[2px] ${on ? "bg-line-strong" : ""}`} />
-              {on && <span aria-hidden="true" key={open} className="tour-progress absolute inset-x-0 -top-px h-[2px] bg-ink" onAnimationEnd={() => setOpen((open + 1) % STOPS.length)} />}
+              {on && <span aria-hidden="true" key={open} style={{ "--tour-ms": `${s.video ? VIDEO_MS : CARD_MS}ms` } as React.CSSProperties} className="tour-progress absolute inset-x-0 -top-px h-[2px] bg-ink" onAnimationEnd={() => setOpen((open + 1) % STOPS.length)} />}
               {s.tab}
             </button>
           );
@@ -173,14 +194,20 @@ export default function ProductTour() {
           <p className="text-muted">{stop.body}</p>
           <Link href={stop.href} className="link w-max text-sm font-medium text-accent">{stop.more}</Link>
         </div>
-        <div className="relative">
-          <figure className="app-frame app-frame-light">
-            <Image src={stop.src} alt={stop.alt} width={2560} height={1480} sizes="(min-width: 1024px) 720px, 100vw" className="block h-auto w-full" />
+        {stop.video ? (
+          <figure className="app-frame">
+            <LoopVideo name={stop.video.name} label={stop.video.label} width={1280} height={720} />
           </figure>
-          <div aria-hidden="true" className="tour-cue relative z-10 mr-3 -mt-10 ml-auto w-[17rem] rounded-[8px] border border-line bg-surface p-4 text-ink shadow-lg sm:absolute sm:right-[-1rem] sm:bottom-[-1.5rem] sm:mt-0 sm:mr-0 sm:w-[19rem]">
-            {stop.cue}
+        ) : (
+          <div className="relative">
+            <figure className="app-frame app-frame-light">
+              <Image src={stop.src} alt={stop.alt} width={2560} height={1480} sizes="(min-width: 1024px) 720px, 100vw" className="block h-auto w-full" />
+            </figure>
+            <div aria-hidden="true" className="tour-cue relative z-10 mr-3 -mt-10 ml-auto w-[17rem] rounded-[8px] border border-line bg-surface p-4 text-ink shadow-lg sm:absolute sm:right-[-1rem] sm:bottom-[-1.5rem] sm:mt-0 sm:mr-0 sm:w-[19rem]">
+              {stop.cue}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

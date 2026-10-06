@@ -148,7 +148,7 @@ test("the AI gets actions and records only on emailed tickets, and a change wait
     assert.equal(params.tools?.length, 2);
     return { model: "claude-opus-5-5", usage, ...replies[seen.length - 1] };
   }) as never;
-  const d = await draftAnswer({ id: ORG, name: "Acme", aiInstructions: "" }, [], { from: "Kim <kim@example.com>", subject: "Refund", body: "Please refund", attached: [] }, undefined, [], ctx, call);
+  const d = await draftAnswer({ id: ORG, name: "Acme", aiInstructions: "" }, [], { from: "Kim <kim@example.com>", subject: "Refund", body: "Please refund", attached: [] }, undefined, [], false, ctx, call);
   assert.equal(d.decision, "answer");
   assert.equal(d.metered.outputTokens, 150, "every round is metered");
   const second = seen[1] as { role: string; content: { type: string; content?: string }[] }[];

@@ -1,6 +1,7 @@
 import { and, asc, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { INBOUND_FILE_LIMIT, MAX_FILES, saveAttachments, type NewFile } from "@/lib/attachments";
+import { MAX_BODY as HELP_MAX_BODY, MAX_TITLE as HELP_MAX_TITLE, uniqueArticleSlug } from "@/lib/help";
 import { normalizeTags } from "@/lib/tickets";
 import { seal, unseal } from "./crypto";
 import { claimRule } from "./link";
@@ -443,6 +444,7 @@ async function write(job: Job, adapter: Adapter, externalId: string, m: Mapped, 
     case "group":
     case "field":
     case "company":
+    case "section":
       // No Flatdesk equivalent yet: used to label tickets and contacts, kept in the archive.
       return { mappedId: null, imported: false, issues: [] };
 
@@ -524,6 +526,27 @@ async function write(job: Job, adapter: Adapter, externalId: string, m: Mapped, 
         return { mappedId: kept.id, imported: false, issues: ["Will start running when its agent joins Flatdesk"] };
       }
       return { mappedId: kept.id, imported: false, issues: ["Its agent couldn't be matched, so it isn't running"] };
+    }
+
+    case "article": {
+      const ar = schema.articles;
+      const values = { title: cut(m.title.trim(), HELP_MAX_TITLE) || "Untitled article", body: cut(m.body, HELP_MAX_BODY), section: m.section, published: m.published, updatedAt: new Date() };
+      const issues = m.body.length > HELP_MAX_BODY ? ["Its text was too long for a Flatdesk article and was shortened; the full text is in the import archive"] : [];
+      // Re-imports update the same article and keep its address, so links customers have keep working.
+      for (let attempt = 0; ; attempt++) {
+        try {
+          const slug = await uniqueArticleSlug(orgId, values.title);
+          const [row] = await db
+            .insert(ar)
+            .values({ orgId, source: adapter.id, externalId, slug, ...values })
+            .onConflictDoUpdate({ target: [ar.orgId, ar.source, ar.externalId], targetWhere: sql`${ar.externalId} is not null`, set: values })
+            .returning({ id: ar.id });
+          return { mappedId: row.id, imported: true, issues };
+        } catch (err) {
+          // Another article took the same slug at the same moment.
+          if (attempt >= 2 || (err as { code?: string }).code !== "23505") throw err;
+        }
+      }
     }
 
     case "contact": {

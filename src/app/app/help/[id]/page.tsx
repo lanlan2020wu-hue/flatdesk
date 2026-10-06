@@ -6,6 +6,7 @@ import { db, schema } from "@/db";
 import { requireOpenPage } from "@/lib/auth";
 import { articleUrl, ensureHelpSlug } from "@/lib/help";
 import { deleteArticleAction } from "../actions";
+import { articleSections } from "@/lib/help";
 import ArticleForm from "../ArticleForm";
 import { isUuid } from "@/lib/ids";
 
@@ -50,7 +51,7 @@ export default async function EditArticle({ params, searchParams }: PageProps<"/
       {s.viewer ? (
         <h1 className="page-title">{article.title}</h1>
       ) : (
-        <ArticleForm key={article.updatedAt.toISOString()} article={article} />
+        <ArticleForm key={article.updatedAt.toISOString()} article={article} sections={await articleSections(article.orgId)} />
       )}
 
       <section className="grid gap-3 border-t border-line pt-6">

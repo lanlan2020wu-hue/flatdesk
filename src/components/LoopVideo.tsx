@@ -33,8 +33,8 @@ export default function LoopVideo({ name, label, width, height }: { name: string
       aria-label={label}
       className="block h-auto w-full"
     >
-      <source src={`/video/${name}.webm`} type="video/webm" />
       <source src={`/video/${name}.mp4`} type="video/mp4" />
+      <source src={`/video/${name}.webm`} type="video/webm" />
     </video>
   );
 }

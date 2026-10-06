@@ -84,7 +84,7 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
     features: [
       { id: "help-center", title: "Help center", body: "A public help center with search. Write an article once. Customers find it on their own and the AI links to it.", icon: I.book, isNew: true },
       { id: "import", title: "Lossless import", body: "Tickets, customers, macros and rules from Zendesk, Intercom, Freshdesk or Help Scout. Every original record is kept.", icon: I.import },
-      { id: "export", title: "Export your data", body: "Tickets, messages, customers and macros as CSV or JSON, any time, without asking us.", icon: I.export },
+      { id: "export", title: "Export your data", body: "Everything in one .zip, attachments included, or each table as CSV or JSON. Any time, without asking us.", icon: I.export },
       { id: "reports", title: "Reports", body: "Volume, reply and close times, targets met, ratings, the AI's share, and each agent's load.", icon: I.report },
     ],
   },

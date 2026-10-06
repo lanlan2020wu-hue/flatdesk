@@ -93,6 +93,21 @@ const zendeskRoutes: Routes = {
     meta: { has_more: false },
   },
   "automations.json?page[size]=100": { automations: [], meta: { has_more: false } },
+  "help_center/sections.json?page[size]=100": { sections: [{ id: 700, name: "Billing" }], meta: { has_more: false } },
+  "help_center/articles.json?page[size]=100": {
+    articles: [
+      {
+        id: 800,
+        title: "How refunds work",
+        section_id: 700,
+        draft: false,
+        body: "<h2>Refunds</h2><p>We refund within <strong>5 days</strong>. See <a href=\"https://acme.com/policy\">our policy</a>.</p><ol><li>Open Billing</li><li>Click Refund</li></ol><p><img src=\"https://acme.zendesk.com/hc/article_attachments/1/shot.png\" alt=\"Screenshot\"></p>",
+      },
+      { id: 801, title: "Internal: escalation", section_id: 700, draft: false, user_segment_id: 9, body: "<p>Agents only.</p>" },
+      { id: 802, title: "Work in progress", draft: true, body: "<p>Not ready.</p>" },
+    ],
+    meta: { has_more: false },
+  },
   "organizations.json?page[size]=100": { organizations: [{ id: 500, name: "Northwind" }], meta: { has_more: false } },
   "users.json?role=end-user&page[size]=100": {
     users: [{ id: 600, name: "Maria Chen", email: "maria@northwind.io", role: "end-user", organization_id: 500, phone: "+1 555 0100", user_fields: { plan: "pro" } }],
