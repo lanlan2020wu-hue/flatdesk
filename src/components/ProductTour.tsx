@@ -48,6 +48,18 @@ const STOPS: Stop[] = [
     ),
   },
   {
+    id: "actions",
+    tab: "AI actions",
+    title: "The AI can refund, cancel and reset, within your limits.",
+    body: "It can refund a Stripe payment, cancel a subscription or an unshipped Shopify order, or call your own system for things like password resets. For each action you choose: it runs on its own, runs up to an amount, or waits for a person. Only for customers who emailed in, and every refund is checked against their own payments first.",
+    src: "/product/inbox.webp",
+    alt: "",
+    href: "/features#all",
+    more: "See every feature",
+    cue: null,
+    video: { name: "ai-actions", label: "Under a $50 refund limit, the AI checks a $29 double charge against the customer's own Stripe payments, refunds it and replies. A $79 refund is over the limit, so it waits on the ticket until a person clicks Approve and send." },
+  },
+  {
     id: "macros",
     tab: "AI macros",
     title: "The replies your team keeps retyping become macros.",
@@ -154,7 +166,7 @@ export default function ProductTour() {
 
   return (
     <div data-play="" suppressHydrationWarning className="tour grid gap-8">
-      <div role="tablist" aria-label="Flatdesk, screen by screen" className="grid grid-cols-2 border-t border-line sm:grid-cols-5">
+      <div role="tablist" aria-label="Flatdesk, screen by screen" className="grid grid-cols-2 border-t border-line sm:grid-cols-3 lg:grid-cols-6">
         {STOPS.map((s, i) => {
           const on = i === open;
           return (
