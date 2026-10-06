@@ -4,6 +4,8 @@ import { emailConfig, isAutoReply, matchRecipients, parseAddress, senderCheck, s
 import { milestone } from "@/lib/funnel";
 import { TEST_TAG, updateOnboarding } from "@/lib/onboarding";
 import { saveAttachments, type NewFile } from "@/lib/attachments";
+import { ccFromEmail, mergeCc } from "@/lib/cc";
+import { resolveMerged } from "@/lib/merge";
 import { addCustomerMessage, addSystemNote, createTicket, NO_AI_SETUP_NOTE } from "@/lib/tickets";
 
 // The same email delivered twice at once gets past the check above; the unique
@@ -22,6 +24,8 @@ export type Inbound = {
   text: string;
   headers: Record<string, string> | null;
   messageId: string | null;
+  // Everyone in To and Cc, for copying them on replies (lib/cc.ts).
+  copied?: string[];
   // Fetches the email's files; only called once the email is known to become a message.
   attachments?: () => Promise<{ files: NewFile[]; skipped: string[] }>;
 };
@@ -142,13 +146,18 @@ async function handleFor(mail: Inbound, target: { key: string; number: number | 
     ticketId = t?.id ?? null;
   }
   if (!unverified) ticketId ??= await ticketFromHeaders(org.id, mail.headers);
+  // A merged ticket's mail goes to the ticket it was merged into.
+  if (ticketId) ticketId = await resolveMerged(org.id, ticketId);
 
   if (ticketId) {
     const ticket = await db.query.tickets.findFirst({ where: eq(schema.tickets.id, ticketId) });
     const customer = ticket && (await db.query.customers.findFirst({ where: eq(schema.customers.id, ticket.customerId) }));
-    // Only the ticket's own customer can add to it; anyone else starts a new ticket.
-    if (ticket && customer && customer.email === sender.email) {
-      const messageId = await addCustomerMessage({ orgId: org.id, ticketId, customerId: customer.id, body, emailMessageId: mail.messageId }).catch(duplicate);
+    // Only the ticket's own customer, or someone copied on it, can add to it;
+    // anyone else starts a new ticket.
+    const copied = Boolean(ticket?.cc.includes(sender.email));
+    if (ticket && customer && (customer.email === sender.email || copied)) {
+      const author = customer.email === sender.email ? customer : await customerFor(org.id, sender.email, sender.name);
+      const messageId = await addCustomerMessage({ orgId: org.id, ticketId, customerId: author.id, body, emailMessageId: mail.messageId }).catch(duplicate);
       if (!messageId) return { ignored: "duplicate" };
       // A chat's email address is whatever the visitor typed. Once the mailbox
       // owner writes in, the conversation carries on by email only, so whoever
@@ -157,6 +166,8 @@ async function handleFor(mail: Inbound, target: { key: string; number: number | 
         await db.update(schema.tickets).set({ visitorToken: null }).where(and(eq(schema.tickets.orgId, org.id), eq(schema.tickets.id, ticketId)));
       }
       await storeFiles(mail, org.id, ticketId, messageId);
+      const cc = mergeCc(ticket.cc, ccFromEmail(mail.copied ?? [], { customer: sender.email, supportEmail: org.supportEmail }), customer.email);
+      if (cc.join() !== ticket.cc.join()) await db.update(schema.tickets).set({ cc }).where(eq(schema.tickets.id, ticketId));
       // The route runs the AI next, which answers a follow-up or hands the ticket back.
       return { ticket: ticket.number, action: "appended", orgId: org.id, ticketId };
     }
@@ -173,6 +184,9 @@ async function handleFor(mail: Inbound, target: { key: string; number: number | 
     emailMessageId: mail.messageId,
   }).catch(duplicate);
   if (!ticket) return { ignored: "duplicate" };
+  // Mail that failed DMARC copies nobody: its sender may not be who they say.
+  const cc = unverified ? [] : ccFromEmail(mail.copied ?? [], { customer: sender.email, supportEmail: org.supportEmail }).slice(0, 10);
+  if (cc.length) await db.update(schema.tickets).set({ cc }).where(eq(schema.tickets.id, ticket.id));
   await storeFiles(mail, org.id, ticket.id, ticket.messageId);
   if (unverified) {
     await db.insert(schema.messages).values({
@@ -189,4 +203,14 @@ async function handleFor(mail: Inbound, target: { key: string; number: number | 
     await milestone(org.id, "first_customer_ticket", { channel: "email" });
   }
   return { ticket: ticket.number, action: "created", orgId: org.id, ticketId: ticket.id };
+}
+
+// The customer row for someone copied on a ticket who replied.
+async function customerFor(orgId: string, email: string, name: string | null) {
+  const [c] = await db
+    .insert(schema.customers)
+    .values({ orgId, email, name })
+    .onConflictDoUpdate({ target: [schema.customers.orgId, schema.customers.email], set: { email } })
+    .returning();
+  return c;
 }

@@ -18,6 +18,7 @@ import {
   saveAiSettingsAction,
   saveAlertsAction,
   saveSecurityAction,
+  saveSignatureAction,
   saveServiceSettingsAction,
   sendTestAlertAction,
   setViewerAction,
@@ -65,6 +66,16 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
   return (
     <div className="grid max-w-2xl gap-10 px-4 py-6 md:px-8 md:py-8">
       <h1 className="page-title">Settings</h1>
+      {!s.viewer && (
+        <section id="signature" className="grid scroll-mt-6 gap-3 border-t border-line pt-6">
+          <h2 className="text-lg font-semibold">Your signature</h2>
+          <p className="text-muted">Added under every reply you send, by email or chat. Not under internal notes or AI answers. Everyone on the team sets their own.</p>
+          <form action={saveSignatureAction} className="grid gap-2">
+            <textarea name="signature" rows={3} maxLength={1000} defaultValue={team.find((a) => a.userId === s.userId)?.signature ?? ""} placeholder={"Sam\nAcme support"} className="field text-sm" aria-label="Your signature" />
+            <button className="btn btn-secondary btn-sm w-max">Save signature</button>
+          </form>
+        </section>
+      )}
       <section className="grid gap-3 border-t border-line pt-6">
         <h2 className="text-lg font-semibold">
           Email

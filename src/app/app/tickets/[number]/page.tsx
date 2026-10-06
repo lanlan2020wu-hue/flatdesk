@@ -26,7 +26,7 @@ import { STATUS_LABEL } from "@/lib/receipts";
 import { teachSpot } from "@/lib/teach";
 import { formatDue, shortDuration, slaState, targetLabel } from "@/lib/sla";
 import { getTicket, listAgents, orgTags, parseTicketNumber, PRIORITIES } from "@/lib/tickets";
-import { replyAction, updateTicketAction } from "../../actions";
+import { mergeTicketAction, replyAction, saveCcAction, updateTicketAction } from "../../actions";
 
 export async function generateMetadata({ params }: PageProps<"/app/tickets/[number]">) {
   return { title: `#${(await params).number}` };
@@ -50,6 +50,9 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
   const justReplied = last && last.authorType === "agent" && !last.internal && last.authorId === s.userId;
   const sp = await searchParams;
   const actionMessage = typeof sp.action === "string" ? sp.action.slice(0, 300) : null;
+  const mergeError = typeof sp.merge === "string" ? sp.merge.slice(0, 200) : null;
+  const ccError = typeof sp.cc === "string" ? sp.cc.slice(0, 200) : null;
+  const mergedInto = ticket.mergedIntoId ? await db.query.tickets.findFirst({ where: and(eq(schema.tickets.orgId, s.orgId), eq(schema.tickets.id, ticket.mergedIntoId)), columns: { number: true } }) : null;
   const [agents, macros, [aiEvent], repeat, files, ratings, org, summary, tagList, runs] = await Promise.all([
     listAgents(s.orgId),
     db.select().from(schema.macros).where(and(eq(schema.macros.orgId, s.orgId))).orderBy(asc(schema.macros.name)),
@@ -106,6 +109,13 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
             <SlaBadge state={sla} hours={org?.businessHours ?? null} />
           </p>
         </header>
+
+        {mergedInto && (
+          <p role="status" className="rounded-lg border border-accent/30 bg-accent-soft px-4 py-3 text-sm">
+            This ticket was merged into{" "}
+            <Link href={`/app/tickets/${mergedInto.number}`} className="link font-medium text-accent">#{mergedInto.number}</Link>. Its messages and any new replies are there.
+          </p>
+        )}
 
         <TicketPresence ticketId={ticket.id} latestMessageId={thread.at(-1)?.id ?? null} />
 
@@ -266,6 +276,35 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
             <button className="btn btn-secondary btn-sm">Save</button>
           </div>
         </form>
+
+        {ticket.channel === "email" && (
+          <form key={`cc-${ticket.cc.join()}`} action={saveCcAction} className="grid gap-1.5">
+            <input type="hidden" name="ticketId" value={ticket.id} />
+            <input type="hidden" name="number" value={ticket.number} />
+            <label htmlFor="cc" className={heading}>CC</label>
+            <div className="flex gap-2">
+              <input id="cc" name="cc" defaultValue={ticket.cc.join(", ")} placeholder="Copy others on replies" autoComplete="off" spellCheck={false} className={`${field} min-w-0 flex-1`} />
+              <button className="btn btn-secondary btn-sm">Save</button>
+            </div>
+            {ccError ? <p role="alert" className="text-xs text-warn">{ccError}</p> : ticket.cc.length > 0 && <p className="text-xs text-muted">Copied on every reply. They can reply to the ticket too.</p>}
+          </form>
+        )}
+
+        {!ticket.mergedIntoId && (
+          <details className="grid gap-1.5" open={Boolean(mergeError)}>
+            <summary className={`${heading} cursor-pointer`}>Merge into another ticket</summary>
+            <form action={mergeTicketAction} className="mt-2 grid gap-1.5">
+              <input type="hidden" name="ticketId" value={ticket.id} />
+              <input type="hidden" name="number" value={ticket.number} />
+              <p className="text-xs text-muted">Same customer wrote twice, or two people about one problem? Messages move to the other ticket and this one closes.</p>
+              <div className="flex gap-2">
+                <input name="into" inputMode="numeric" placeholder="Ticket number" aria-label="Ticket number to merge into" className={`${field} min-w-0 flex-1`} />
+                <button className="btn btn-secondary btn-sm">Merge</button>
+              </div>
+              {mergeError && <p role="alert" className="text-xs text-warn">{mergeError}</p>}
+            </form>
+          </details>
+        )}
         </fieldset>
 
         {fieldEntries.length > 0 && (

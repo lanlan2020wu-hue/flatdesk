@@ -47,6 +47,7 @@ export async function POST(request: Request) {
     text: email.text ?? (email.html ? htmlToText(email.html) : ""),
     headers: email.headers,
     messageId: email.message_id,
+    copied: [...email.to, ...(email.cc ?? [])],
     attachments: async () => {
       if (!email.attachments?.length) return { files: [], skipped: [] };
       const { data, error: listError } = await resend().emails.receiving.attachments.list({ emailId: email.id });
