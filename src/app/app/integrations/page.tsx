@@ -193,6 +193,10 @@ export default async function IntegrationsPage() {
           <li>
             <span className="text-ink">Look up, reply to or close tickets</span> from a script or another tool with the same key.
           </li>
+          <li>
+            <span className="text-ink">Work tickets from Claude, Cursor or another AI tool:</span> add the MCP server <span className="num">{SITE.url}/api/mcp</span> with the same{" "}
+            <span className="num">Authorization: Bearer</span> header. <Link href="/developers#mcp" className="link text-accent">How to connect</Link>
+          </li>
         </ul>
         <p className="text-sm">
           <Link href="/developers" className="link text-accent">Read the API reference</Link>
