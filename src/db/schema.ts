@@ -76,6 +76,9 @@ export const orgs = pgTable("orgs", {
   aiProcessing: boolean("ai_processing").notNull().default(true),
   // Everyone must have two-step verification on their Clerk account to open the app.
   requireTwoFactor: boolean("require_two_factor").notNull().default(false),
+  // The AI reads a verified customer's orders and payments from connected
+  // Shopify and Stripe when it answers. See lib/ai-actions.ts.
+  aiReadsRecords: boolean("ai_reads_records").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -673,4 +676,70 @@ export const ticketLinks = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("ticket_links_ticket").on(t.ticketId), uniqueIndex("ticket_links_org_kind_key").on(t.orgId, t.kind, t.externalKey)],
+);
+
+export const aiActionKind = pgEnum("ai_action_kind", ["webhook", "stripe_refund", "stripe_cancel", "shopify_cancel"]);
+// always: a person approves every run. over_limit: runs on its own up to
+// limitCents, above that a person approves. never: runs on its own.
+export const aiActionApproval = pgEnum("ai_action_approval", ["always", "over_limit", "never"]);
+
+export type AiActionInput = { name: string; description: string };
+
+// Things the AI may do for a customer while answering: refund a Stripe
+// payment, cancel a subscription or a Shopify order, or call the team's own
+// endpoint (reset a password, change a plan, look up an account). See
+// lib/ai-actions.ts. The built-in kinds are one per team.
+export const aiActions = pgTable(
+  "ai_actions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
+    kind: aiActionKind("kind").notNull(),
+    name: text("name").notNull(),
+    whenToUse: text("when_to_use").notNull().default(""),
+    inputs: jsonb("inputs").$type<AiActionInput[]>().notNull().default([]),
+    url: text("url"), // webhook only
+    // Signs webhook calls (X-Flatdesk-Signature), like the alert secret.
+    secret: text("secret").notNull().default(sql`replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', '')`),
+    // A webhook that only looks something up: it runs straight away and its
+    // answer goes back to the AI. Never needs approval.
+    lookup: boolean("lookup").notNull().default(false),
+    approval: aiActionApproval("approval").notNull().default("always"),
+    limitCents: integer("limit_cents"),
+    enabled: boolean("enabled").notNull().default(true),
+    createdBy: text("created_by").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("ai_actions_org").on(t.orgId), uniqueIndex("ai_actions_org_builtin").on(t.orgId, t.kind).where(sql`${t.kind} <> 'webhook'`)],
+);
+
+export const aiActionRunStatus = pgEnum("ai_action_run_status", ["waiting", "done", "failed", "declined"]);
+
+// Each time the AI used an action on a ticket. "waiting" runs need a person
+// to approve them; the AI's reply is held in `reply` until they do.
+export const aiActionRuns = pgTable(
+  "ai_action_runs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
+    ticketId: uuid("ticket_id").notNull().references(() => tickets.id, { onDelete: "cascade" }),
+    actionId: uuid("action_id").references(() => aiActions.id, { onDelete: "set null" }),
+    kind: aiActionKind("kind").notNull(),
+    actionName: text("action_name").notNull(),
+    inputs: jsonb("inputs").$type<Record<string, string>>().notNull().default({}),
+    summary: text("summary").notNull(), // "Refund 12.00 USD of the 54.00 USD payment on 2026-09-01"
+    amountCents: integer("amount_cents"),
+    status: aiActionRunStatus("status").notNull(),
+    reply: text("reply").notNull().default(""),
+    result: text("result"),
+    aiEventId: uuid("ai_event_id"),
+    // The ticket was already answered by the AI when this run started.
+    followUp: boolean("follow_up").notNull().default(false),
+    decidedBy: text("decided_by"),
+    decidedByName: text("decided_by_name"),
+    decidedAt: timestamp("decided_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("ai_action_runs_ticket").on(t.ticketId), index("ai_action_runs_org_status").on(t.orgId, t.status)],
 );

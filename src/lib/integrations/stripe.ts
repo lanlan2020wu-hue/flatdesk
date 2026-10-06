@@ -33,7 +33,7 @@ export function checkStripeKey(raw: string): { key: string } | { error: string }
 
 const testMode = (key: string) => key.startsWith("rk_test_");
 
-async function get<T>(key: string, path: string, fetcher: typeof fetch): Promise<T> {
+export async function get<T>(key: string, path: string, fetcher: typeof fetch): Promise<T> {
   const res = await fetcher(`${API}${path}`, {
     headers: { authorization: `Bearer ${key}`, "stripe-version": STRIPE_VERSION },
     signal: AbortSignal.timeout(TIMEOUT_MS),
@@ -63,12 +63,16 @@ const day = (unix: number) => new Date(unix * 1000).toISOString().slice(0, 10);
 
 type Customer = { id: string; name: string | null; created: number };
 type Subscription = {
+  id: string;
   status: string;
+  cancel_at_period_end?: boolean;
   cancel_at: number | null;
   current_period_end?: number; // where versions before 2025-03 put it
   items: { data: { current_period_end?: number; quantity?: number; price: { nickname: string | null; unit_amount: number | null; currency: string; recurring: { interval: string; interval_count: number } | null } }[] };
 };
-type Charge = { amount: number; currency: string; status: string; created: number; refunded: boolean; amount_refunded: number; description: string | null };
+type Charge = { id: string; customer: string | null; amount: number; currency: string; status: string; created: number; refunded: boolean; amount_refunded: number; description: string | null };
+
+export type { Subscription as StripeSubscription, Charge as StripeCharge };
 
 export function subscriptionView(s: Subscription) {
   const item = s.items.data[0];

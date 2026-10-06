@@ -162,6 +162,13 @@
       "when": 1791245885019,
       "tag": "0022_security_controls",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1791261473478,
+      "tag": "0023_ai_actions",
+      "breakpoints": true
     }
   ]
 }

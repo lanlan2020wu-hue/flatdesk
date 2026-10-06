@@ -98,4 +98,8 @@ export const LIMITS = {
   // The REST API: per key, and new tickets per team, since each one can run the AI and send email.
   api: (keyId: string): Limit[] => [{ key: `api:key:${keyId}`, max: 1000, windowSec: HOUR }],
   apiNewTicket: (orgId: string): Limit[] => [{ key: `api:new-ticket:${orgId}`, max: 200, windowSec: HOUR }],
+  // AI actions (lib/ai-actions.ts): lookups call the team's endpoint, and
+  // past this many changes a day without a person, every change waits for one.
+  aiLookups: (orgId: string): Limit[] => [{ key: `ai-lookups:${orgId}`, max: 300, windowSec: HOUR }],
+  aiActionsAuto: (orgId: string): Limit[] => [{ key: `ai-actions-auto:${orgId}`, max: 50, windowSec: DAY }],
 };
