@@ -5,7 +5,7 @@ import { bulkUpdateAction } from "@/app/app/actions";
 
 // The bar that appears once tickets are ticked in the inbox. Row checkboxes
 // live in the list and join this form through form="bulk".
-export default function BulkBar({ agents, back, total }: { agents: { userId: string; name: string }[]; back: string; total: number }) {
+export default function BulkBar({ agents, groups = [], back, total }: { agents: { userId: string; name: string }[]; groups?: { id: string; name: string }[]; back: string; total: number }) {
   const [count, setCount] = useState(0);
   useEffect(() => {
     const boxes = () => [...document.querySelectorAll<HTMLInputElement>('input[form="bulk"][name="ids"]')];
@@ -42,6 +42,17 @@ export default function BulkBar({ agents, back, total }: { agents: { userId: str
               </option>
             ))}
           </select>
+          {groups.length > 0 && (
+            <select name="groupId" defaultValue="" className="field field-sm w-auto" aria-label="Set group">
+              <option value="">Group…</option>
+              <option value="none">No group</option>
+              {groups.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
+                </option>
+              ))}
+            </select>
+          )}
           <select name="priority" defaultValue="" className="field field-sm w-auto" aria-label="Set priority">
             <option value="">Priority…</option>
             <option value="urgent">Urgent</option>

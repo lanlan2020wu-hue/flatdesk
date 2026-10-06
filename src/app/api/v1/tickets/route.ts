@@ -5,6 +5,7 @@ import { bool, email, findTicket, json, listTicketsJson, readBody, tagArray, tex
 import { INPUT } from "@/lib/app-input";
 import { hit, LIMITS } from "@/lib/rate-limit";
 import { createTicket } from "@/lib/tickets";
+import { shareTicketQuietly } from "@/lib/routing";
 
 export const maxDuration = 300;
 
@@ -42,6 +43,7 @@ export async function POST(request: Request) {
       });
       after(async () => {
         if (aiAnswer) await answerNewTicket(caller.orgId, ticket.id);
+        await shareTicketQuietly(caller.orgId, ticket.id);
         await alertNewTicket(caller.orgId, ticket.id);
       });
       return json({ ticket: ticketJson(await findTicket(caller.orgId, String(ticket.number))) }, 201);

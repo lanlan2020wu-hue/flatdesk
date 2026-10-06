@@ -9,6 +9,7 @@ import { requireOpenPage } from "@/lib/auth";
 import { STATUS_STYLE, timeAgo } from "@/lib/format";
 import { resolveState, slaState } from "@/lib/sla";
 import { cleanQuery, searchTickets, SEARCH_LIMIT } from "@/lib/search";
+import { listGroups } from "@/lib/routing";
 import { VIEWS, isView, listAgents, listTickets, viewCounts } from "@/lib/tickets";
 
 export const metadata = { title: "Inbox" };
@@ -18,11 +19,12 @@ export default async function InboxPage({ searchParams }: PageProps<"/app/inbox"
   const sp = await searchParams;
   const view = isView(sp.view) ? sp.view : "open";
   const q = typeof sp.q === "string" ? cleanQuery(sp.q) : "";
-  const [tickets, org, counts, team] = await Promise.all([
+  const [tickets, org, counts, team, groups] = await Promise.all([
     q ? searchTickets(s.orgId, q) : listTickets(s.orgId, s.userId, view),
     db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) }),
     viewCounts(s.orgId, s.userId),
     listAgents(s.orgId),
+    listGroups(s.orgId),
   ]);
   const back = q ? `/app/inbox?q=${encodeURIComponent(q)}` : `/app/inbox?view=${view}`;
   const now = new Date();
@@ -53,7 +55,7 @@ export default async function InboxPage({ searchParams }: PageProps<"/app/inbox"
           <button className="btn btn-secondary">Search</button>
         </form>
         <nav aria-label="Views" className="-mx-1 flex gap-1 overflow-x-auto border-b border-line text-sm">
-          {VIEWS.map((v) => (
+          {VIEWS.filter((v) => counts[v.id] !== null || v.id === "closed").map((v) => (
             <Link
               key={v.id}
               href={`/app/inbox?view=${v.id}`}
@@ -97,7 +99,7 @@ export default async function InboxPage({ searchParams }: PageProps<"/app/inbox"
         </div>
       ) : (
         <>
-        {!s.viewer && <BulkBar agents={team.filter((a) => !a.viewer).map((a) => ({ userId: a.userId, name: a.name }))} back={back} total={rows.length} />}
+        {!s.viewer && <BulkBar agents={team.filter((a) => !a.viewer).map((a) => ({ userId: a.userId, name: a.name }))} groups={groups.map((g) => ({ id: g.id, name: g.name }))} back={back} total={rows.length} />}
         <div className="overflow-hidden rounded-[8px] border border-line bg-surface shadow-sm">
           <div className={`hidden gap-4 border-b border-line px-4 py-2.5 text-xs font-medium text-muted lg:grid ${cols}`} aria-hidden="true">
             <span className="col-span-2">Conversation</span>
@@ -130,6 +132,7 @@ export default async function InboxPage({ searchParams }: PageProps<"/app/inbox"
                         {(t.priority === "urgent" || t.priority === "high") && (
                           <span className={`chip shrink-0 capitalize ${t.priority === "urgent" ? "border-warn/50 bg-warn-soft font-semibold text-warn" : "border-warn/30 text-warn"}`}>{t.priority}</span>
                         )}
+                        {"groupName" in t && typeof t.groupName === "string" && <span className="chip shrink-0 text-muted" title="Group">{t.groupName}</span>}
                         {t.resolvedByAi && <span className="chip shrink-0 border-accent/30 bg-accent-soft text-accent" title="The AI replied to this customer on its own.">AI answered</span>}
                         {t.tags.map((tag) => <span key={tag} className="chip hidden shrink-0 sm:inline-flex">{tag}</span>)}
                       </p>

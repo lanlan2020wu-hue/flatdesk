@@ -28,7 +28,10 @@ export type AuditAction =
   | "action.change"
   | "action.decide"
   | "trigger.save"
-  | "trigger.delete";
+  | "trigger.delete"
+  | "group.save"
+  | "group.delete"
+  | "settings.routing";
 
 export const AUDIT_LABELS: Record<AuditAction, string> = {
   "settings.ai": "Changed AI answer settings",
@@ -50,6 +53,9 @@ export const AUDIT_LABELS: Record<AuditAction, string> = {
   "apikey.create": "Created an API key",
   "trigger.save": "Saved a trigger",
   "trigger.delete": "Deleted a trigger",
+  "group.save": "Saved a group",
+  "group.delete": "Deleted a group",
+  "settings.routing": "Changed how tickets are shared in turn",
   "apikey.revoke": "Revoked an API key",
   "action.change": "Changed an AI action",
   "action.decide": "Approved or declined an AI action",

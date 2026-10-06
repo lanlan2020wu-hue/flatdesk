@@ -15,7 +15,7 @@ export type { TriggerAction, TriggerCondition, TriggerEvent };
 
 type Status = "open" | "pending" | "closed";
 export type TriggerTicket = { channel: "email" | "chat"; subject: string; body: string; from: string; tags: string[]; status?: Status };
-export type TriggerResult = { tags: string[]; assignTo: string | null; status: Status | null; notes: string[]; replies: string[]; fired: string[] };
+export type TriggerResult = { tags: string[]; assignTo: string | null; groupId: string | null; status: Status | null; notes: string[]; replies: string[]; fired: string[] };
 type Trigger = Pick<typeof schema.triggers.$inferSelect, "name" | "enabled" | "matchAll" | "conditions" | "actions">;
 
 export const EVENTS: { id: TriggerEvent; label: string }[] = [
@@ -69,10 +69,11 @@ export function triggerMatches(trigger: Trigger, t: TriggerTicket): boolean {
 }
 
 // Runs every trigger over a new ticket. `canAssign` says who can take tickets
-// now (not a viewer or removed); an assignment to anyone else is skipped.
-export function runTriggers(list: Trigger[], ticket: TriggerTicket, canAssign: (userId: string) => boolean): TriggerResult {
+// now (not a viewer or removed); an assignment to anyone else is skipped, and
+// so is a group that was deleted.
+export function runTriggers(list: Trigger[], ticket: TriggerTicket, canAssign: (userId: string) => boolean, isGroup: (id: string) => boolean = () => false): TriggerResult {
   const t = { ...ticket, tags: [...ticket.tags] };
-  const out: TriggerResult = { tags: t.tags, assignTo: null, status: null, notes: [], replies: [], fired: [] };
+  const out: TriggerResult = { tags: t.tags, assignTo: null, groupId: null, status: null, notes: [], replies: [], fired: [] };
   for (const trigger of list) {
     if (!triggerMatches(trigger, t)) continue;
     out.fired.push(trigger.name);
@@ -80,6 +81,7 @@ export function runTriggers(list: Trigger[], ticket: TriggerTicket, canAssign: (
       if (a.type === "add_tags") {
         for (const tag of a.tags) if (!t.tags.includes(tag)) t.tags.push(tag);
       } else if (a.type === "assign" && canAssign(a.to)) out.assignTo = a.to;
+      else if (a.type === "group" && isGroup(a.groupId)) out.groupId = a.groupId;
       else if (a.type === "set_status") out.status = t.status = a.status;
       else if (a.type === "note" && a.body.trim()) out.notes.push(a.body.trim());
       else if (a.type === "reply" && a.body.trim()) out.replies.push(a.body.trim());
@@ -96,8 +98,9 @@ export function describeCondition(c: TriggerCondition): string {
   return `${label} ${c.op === "includes" ? "has" : "doesn't have"} ${list}`;
 }
 
-export function describeAction(a: TriggerAction, agentName: (id: string) => string): string {
+export function describeAction(a: TriggerAction, agentName: (id: string) => string, groupName: (id: string) => string = () => "a group"): string {
   if (a.type === "assign") return `assign to ${agentName(a.to)}`;
+  if (a.type === "group") return `send to ${groupName(a.groupId)}`;
   if (a.type === "add_tags") return `tag ${a.tags.join(", ")}`;
   if (a.type === "set_status") return `set ${a.status}`;
   const short = a.body.length > 60 ? `${a.body.slice(0, 60)}…` : a.body;
@@ -108,15 +111,17 @@ type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
 // The team's triggers for one moment, in order, with who can take tickets.
 export async function loadTriggers(tx: Tx | typeof db, orgId: string, event: TriggerEvent = "created") {
-  const [list, team] = await Promise.all([
+  const [list, team, groups] = await Promise.all([
     tx.select().from(schema.triggers).where(and(eq(schema.triggers.orgId, orgId), eq(schema.triggers.enabled, true), eq(schema.triggers.event, event))).orderBy(asc(schema.triggers.position), asc(schema.triggers.createdAt)),
     tx
       .select({ userId: schema.agents.userId })
       .from(schema.agents)
       .where(and(eq(schema.agents.orgId, orgId), eq(schema.agents.viewer, false), isNull(schema.agents.removedAt))),
+    tx.select({ id: schema.groups.id }).from(schema.groups).where(eq(schema.groups.orgId, orgId)),
   ]);
   const assignable = new Set(team.map((a) => a.userId));
-  return { list, canAssign: (id: string) => assignable.has(id) };
+  const groupIds = new Set(groups.map((g) => g.id));
+  return { list, canAssign: (id: string) => assignable.has(id), isGroup: (id: string) => groupIds.has(id) };
 }
 
 // Checks a trigger built from a form or an import. Returns an error in words, or null.
@@ -162,6 +167,7 @@ export function triggerFromForm(get: (key: string) => string, normalize: (tags: 
   const tags = normalize(get("addTags").split(","));
   if (tags.length) actions.push({ type: "add_tags", tags });
   if (get("assignTo")) actions.push({ type: "assign", to: get("assignTo") });
+  if (get("groupId")) actions.push({ type: "group", groupId: get("groupId") });
   const status = get("setStatus");
   if ((STATUSES as readonly string[]).includes(status)) actions.push({ type: "set_status", status: status as (typeof STATUSES)[number] });
   const note = get("note").slice(0, 2000);
@@ -193,6 +199,7 @@ export async function applyToTicket(tx: Tx, ticket: TicketRow, ran: TriggerResul
   if (ran.fired.length) {
     set.tags = [...new Set(ran.tags)].slice(0, 20);
     if (ran.assignTo) set.assigneeId = ran.assignTo;
+    if (ran.groupId) set.groupId = ran.groupId;
     if (ran.status) {
       set.status = ran.status;
       set.closedAt = ran.status === "closed" ? (ticket.closedAt ?? now) : null;
@@ -251,14 +258,14 @@ export async function runTimedTriggers(now = new Date()): Promise<{ ran: number;
       .orderBy(asc(tickets.updatedAt))
       .limit(TIMED_BATCH);
     if (!due.length) continue;
-    const { canAssign } = await loadTriggers(db, trigger.orgId, "timed");
+    const { canAssign, isGroup } = await loadTriggers(db, trigger.orgId, "timed");
     for (const { id } of due) {
       try {
         const sent = await db.transaction(async (tx) => {
           const [t] = await tx.select().from(tickets).where(eq(tickets.id, id)).for("update");
           if (!t || t.updatedAt > cutoff || t.timedRan.includes(trigger.id)) return null;
           const [c] = await tx.select({ email: customers.email }).from(customers).where(eq(customers.id, t.customerId));
-          const result = runTriggers([trigger], ticketForTriggers(t, c?.email ?? "", ""), canAssign);
+          const result = runTriggers([trigger], ticketForTriggers(t, c?.email ?? "", ""), canAssign, isGroup);
           if (!result.fired.length) {
             const skipped = t.timedSkippedAt?.getTime() === t.updatedAt.getTime() ? t.timedSkipped : [];
             await tx.update(tickets).set({ timedSkipped: [...skipped, trigger.id], timedSkippedAt: t.updatedAt }).where(eq(tickets.id, t.id));

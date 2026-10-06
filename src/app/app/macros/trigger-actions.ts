@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db, schema } from "@/db";
 import { findAssignable } from "@/lib/agents";
+import { findGroup } from "@/lib/routing";
 import { requireAdmin, requireOpen } from "@/lib/auth";
 import { isUuid } from "@/lib/ids";
 import { audit } from "@/lib/security";
@@ -23,6 +24,8 @@ export async function saveTriggerAction(form: FormData) {
   const t = parsed as Exclude<typeof parsed, { error: string }>;
   const assign = t.actions.find((a) => a.type === "assign");
   if (assign && assign.type === "assign" && !(await findAssignable(s.orgId, assign.to))) back("Pick someone on this team who can take tickets.");
+  const group = t.actions.find((a) => a.type === "group");
+  if (group && group.type === "group" && !(await findGroup(s.orgId, group.groupId))) back("That group was deleted. Pick another.");
   const id = str(form, "id");
   if (id) {
     if (!isUuid(id)) back();

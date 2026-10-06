@@ -25,6 +25,7 @@ import { identifyMacro, repeatPrompt } from "@/lib/macro-suggestions";
 import { STATUS_LABEL } from "@/lib/receipts";
 import { teachSpot } from "@/lib/teach";
 import { formatDue, resolveState, shortDuration, slaState, targetLabel } from "@/lib/sla";
+import { listGroups } from "@/lib/routing";
 import { getTicket, listAgents, orgTags, parseTicketNumber, PRIORITIES } from "@/lib/tickets";
 import { mergeTicketAction, replyAction, saveCcAction, updateTicketAction } from "../../actions";
 
@@ -53,6 +54,7 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
   const mergeError = typeof sp.merge === "string" ? sp.merge.slice(0, 200) : null;
   const ccError = typeof sp.cc === "string" ? sp.cc.slice(0, 200) : null;
   const mergedInto = ticket.mergedIntoId ? await db.query.tickets.findFirst({ where: and(eq(schema.tickets.orgId, s.orgId), eq(schema.tickets.id, ticket.mergedIntoId)), columns: { number: true } }) : null;
+  const groups = await listGroups(s.orgId);
   const [agents, macros, [aiEvent], repeat, files, ratings, org, summary, tagList, runs] = await Promise.all([
     listAgents(s.orgId),
     db.select().from(schema.macros).where(and(eq(schema.macros.orgId, s.orgId))).orderBy(asc(schema.macros.name)),
@@ -266,6 +268,18 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
             {PRIORITIES.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
           </AutoSubmitSelect>
         </form>
+
+        {groups.length > 0 && (
+          <form key={`group-${ticket.groupId}`} action={updateTicketAction} className="grid gap-1.5">
+            <input type="hidden" name="ticketId" value={ticket.id} />
+            <input type="hidden" name="number" value={ticket.number} />
+            <label htmlFor="groupId" className={heading}>Group</label>
+            <AutoSubmitSelect id="groupId" name="groupId" defaultValue={ticket.groupId ?? ""} className={field}>
+              <option value="">No group</option>
+              {groups.map((g) => <option key={g.id} value={g.id}>{g.name}{g.shareInTurn ? " (shared in turn)" : ""}</option>)}
+            </AutoSubmitSelect>
+          </form>
+        )}
 
         <form key={`tags-${ticket.tags.join()}`} action={updateTicketAction} className="grid gap-1.5">
           <input type="hidden" name="ticketId" value={ticket.id} />

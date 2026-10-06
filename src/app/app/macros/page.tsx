@@ -12,6 +12,7 @@ import { access } from "@/lib/billing";
 import { macroUpdates } from "@/lib/macro-drift";
 import { macroSuggestions } from "@/lib/macro-suggestions";
 import { withAiDrafts, withUpdateDrafts, writeMacroUpdates, writeMissingDrafts } from "@/lib/macro-writer";
+import { listGroups } from "@/lib/routing";
 import { listAgents, orgTags } from "@/lib/tickets";
 import { CONDITION_FIELDS, describeAction, describeCondition, EVENTS, FORM_ROWS, MAX_HOURS } from "@/lib/triggers";
 import { deleteMacroAction, deleteRuleAction, saveMacroAction, saveRuleAction, toggleRuleAction } from "../actions";
@@ -25,7 +26,7 @@ const SOURCE_NAME: Record<string, string> = { zendesk: "Zendesk", intercom: "Int
 export default async function MacrosPage({ searchParams }: { searchParams: Promise<{ trigger?: string }> }) {
   const s = await requireOpenPage();
   const triggerError = (await searchParams).trigger;
-  const [macros, rules, triggerList, agents, imported, found, drifted, tags] = await Promise.all([
+  const [macros, rules, triggerList, agents, imported, found, drifted, tags, groupList] = await Promise.all([
     db.select().from(schema.macros).where(eq(schema.macros.orgId, s.orgId)).orderBy(asc(schema.macros.name)),
     db.select().from(schema.rules).where(eq(schema.rules.orgId, s.orgId)).orderBy(asc(schema.rules.createdAt)),
     db.select().from(schema.triggers).where(eq(schema.triggers.orgId, s.orgId)).orderBy(asc(schema.triggers.position), asc(schema.triggers.createdAt)),
@@ -34,6 +35,7 @@ export default async function MacrosPage({ searchParams }: { searchParams: Promi
     macroSuggestions(s.orgId),
     macroUpdates(s.orgId),
     orgTags(s.orgId),
+    listGroups(s.orgId),
   ]);
   // Behind the paywall the page still renders, so it must not start paid AI calls.
   const org = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) });
@@ -47,6 +49,7 @@ export default async function MacrosPage({ searchParams }: { searchParams: Promi
   // Imported rules that aren't running as a Flatdesk rule: shown for reference.
   const reference = imported.filter((r) => !r.flatdeskRuleId && !r.flatdeskTriggerId);
   const agentName = (id: string) => agents.find((a) => a.userId === id)?.name ?? "Removed agent";
+  const groupName = (id: string) => groupList.find((g) => g.id === id)?.name ?? "a deleted group";
   const team = agents.filter((a) => !a.viewer).map((a) => ({ userId: a.userId, name: a.name }));
   // What a macro does besides insert its reply, in words, for its row.
   const doesAlso = (m: (typeof macros)[number]) =>
@@ -188,13 +191,13 @@ export default async function MacrosPage({ searchParams }: { searchParams: Promi
                   )}
                 </div>
                 <p className="text-muted">
-                  When {t.event === "timed" ? `a ticket has had no update for ${t.hours} hours` : EVENTS.find((e) => e.id === t.event)?.label} and {t.matchAll ? "all" : "any"} of: {t.conditions.map(describeCondition).join("; ")}. Then {t.actions.map((a) => describeAction(a, agentName)).join(", ")}.
+                  When {t.event === "timed" ? `a ticket has had no update for ${t.hours} hours` : EVENTS.find((e) => e.id === t.event)?.label} and {t.matchAll ? "all" : "any"} of: {t.conditions.map(describeCondition).join("; ")}. Then {t.actions.map((a) => describeAction(a, agentName, groupName)).join(", ")}.
                 </p>
                 {s.role === "admin" && (
                   <details>
                     <summary className="link w-max cursor-pointer list-none">Edit</summary>
                     <div className="card mt-3">
-                      <TriggerForm trigger={t} agents={team} tags={tags} />
+                      <TriggerForm trigger={t} agents={team} tags={tags} groups={groupList} />
                     </div>
                   </details>
                 )}
@@ -207,7 +210,7 @@ export default async function MacrosPage({ searchParams }: { searchParams: Promi
           <details className="grid gap-3" open={triggerList.length === 0 && Boolean(triggerError)}>
             <summary className="btn btn-secondary w-max cursor-pointer list-none">Add a trigger</summary>
             <div className="card mt-3">
-              <TriggerForm agents={team} tags={tags} />
+              <TriggerForm agents={team} tags={tags} groups={groupList} />
             </div>
           </details>
         )}
@@ -326,11 +329,12 @@ function MacroForm({ macro, agents, tags }: { macro?: typeof schema.macros.$infe
   );
 }
 
-function TriggerForm({ trigger, agents, tags }: { trigger?: typeof schema.triggers.$inferSelect; agents: { userId: string; name: string }[]; tags: string[] }) {
+function TriggerForm({ trigger, agents, tags, groups }: { trigger?: typeof schema.triggers.$inferSelect; agents: { userId: string; name: string }[]; tags: string[]; groups: { id: string; name: string }[] }) {
   const key = trigger?.id ?? "new";
   const act = <T extends string>(type: T) => trigger?.actions.find((a) => a.type === type);
   const tagAct = act("add_tags");
   const assignAct = act("assign");
+  const groupAct = act("group");
   const statusAct = act("set_status");
   const noteAct = act("note");
   const replyAct = act("reply");
@@ -378,6 +382,14 @@ function TriggerForm({ trigger, agents, tags }: { trigger?: typeof schema.trigge
             {agents.map((a) => <option key={a.userId} value={a.userId}>{a.name}</option>)}
           </select>
         </label>
+        {groups.length > 0 && (
+          <label className="grid gap-1.5 font-medium" htmlFor={`tgroup-${key}`}>Send to group
+            <select id={`tgroup-${key}`} name="groupId" defaultValue={groupAct?.type === "group" ? groupAct.groupId : ""} className={`${field} font-normal`}>
+              <option value="">No group</option>
+              {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+            </select>
+          </label>
+        )}
         <label className="grid gap-1.5 font-medium" htmlFor={`tstatus-${key}`}>Set status
           <select id={`tstatus-${key}`} name="setStatus" defaultValue={statusAct?.type === "set_status" ? statusAct.status : ""} className={`${field} font-normal`}>
             <option value="">Leave as is</option>

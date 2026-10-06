@@ -8,6 +8,7 @@ import { alertNewTicket } from "@/lib/alerts";
 import { requireAdmin, requireOpen } from "@/lib/auth";
 import { hit, LIMITS } from "@/lib/rate-limit";
 import { clearTestTickets, createTestTicket, customerWritesBack, ownEmail, parseTestForm, TestTicketError } from "@/lib/test-tickets";
+import { shareTicketQuietly } from "@/lib/routing";
 
 const PAGE = "/app/test-tickets";
 
@@ -31,6 +32,7 @@ export async function createTestTicketAction(form: FormData) {
     // The same steps the email and chat routes run after a new ticket.
     after(async () => {
       await answerNewTicket(s.orgId, ticket.id);
+      await shareTicketQuietly(s.orgId, ticket.id);
       await alertNewTicket(s.orgId, ticket.id);
     });
   } catch (err) {
