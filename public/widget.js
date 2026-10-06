@@ -1,5 +1,7 @@
 // Flatdesk chat widget. Embed with:
 // <script src="https://YOUR-FLATDESK-HOST/widget.js" data-key="WIDGET_KEY" async></script>
+// For signed-in users, set this first (userHash is made on your server; see Settings, Website chat):
+// window.FlatdeskSettings = { email: "...", name: "...", userHash: "...", attributes: { Plan: "Pro" } };
 (function () {
   var script = document.currentScript;
   if (!script || window.__flatdeskWidget) return;
@@ -33,7 +35,7 @@
       if (open) focusFrame();
     });
     place();
-    frame.src = origin + "/chat/" + encodeURIComponent(key);
+    frame.src = origin + "/chat/" + encodeURIComponent(key) + identity();
     document.body.insertBefore(frame, button);
   }
   function place() {
@@ -47,6 +49,20 @@
   function focusFrame() {
     frame.focus();
     if (loaded) frame.contentWindow.postMessage("flatdesk:focus", origin);
+  }
+  // Who is signed in, read when the chat first loads so a single-page app can set it after login.
+  // Sent in the URL fragment, which never reaches a server log.
+  function identity() {
+    var s = window.FlatdeskSettings || {};
+    var email = s.email || script.getAttribute("data-email");
+    if (!email) return "";
+    var id = { email: String(email), name: s.name || script.getAttribute("data-name") || "", userHash: s.userHash || script.getAttribute("data-user-hash") || "" };
+    if (s.attributes && typeof s.attributes === "object") id.attributes = s.attributes;
+    try {
+      return "#identity=" + encodeURIComponent(JSON.stringify(id));
+    } catch {
+      return "";
+    }
   }
   var open = false;
   function toggle(next) {

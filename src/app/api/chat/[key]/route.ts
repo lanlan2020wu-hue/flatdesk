@@ -25,7 +25,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/chat/[key]"
   const team = await hit([...LIMITS.chatStartTeam(org.id), ...LIMITS.chatTarget(org.id, v.email)]);
   if (!team.ok) return tooMany(team.retryAfter, "Too many new chats right now");
 
-  const { ticket, token } = await startConversation(org.id, v, body.files);
+  const { ticket, token } = await startConversation(org.id, v, body.files, org.chatSecret);
   after(async () => {
     await answerNewTicket(org.id, ticket.id);
     await alertNewTicket(org.id, ticket.id);

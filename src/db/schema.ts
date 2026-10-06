@@ -71,6 +71,8 @@ export const orgs = pgTable("orgs", {
   // Who gets a ticket that misses its first-reply target (null = leave it with whoever has it). See lib/escalation.ts.
   escalateTo: text("escalate_to"),
   businessHours: jsonb("business_hours").$type<BusinessHours>(),
+  // Signs who is signed in on the team's own site, so chat can trust the visitor's email (lib/chat-identity.ts).
+  chatSecret: text("chat_secret").notNull().default(sql`replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', '')`),
   // Public help center at /help/<helpSlug>. Set the first time an admin opens it.
   helpSlug: text("help_slug").unique(),
   // Security controls for teams that go through vendor review. See lib/security.ts.

@@ -1,0 +1,1 @@
+ALTER TABLE "orgs" ADD COLUMN "chat_secret" text DEFAULT replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', '') NOT NULL;

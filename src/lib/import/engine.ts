@@ -3,6 +3,7 @@ import { db, schema } from "@/db";
 import type { TriggerAction } from "@/db/schema";
 import { INBOUND_FILE_LIMIT, MAX_FILES, saveAttachments, type NewFile } from "@/lib/attachments";
 import { MAX_BODY as HELP_MAX_BODY, MAX_TITLE as HELP_MAX_TITLE, uniqueArticleSlug } from "@/lib/help";
+import { maskCards } from "@/lib/redact";
 import { normalizeTags } from "@/lib/tickets";
 import { seal, unseal } from "./crypto";
 import { claimRule } from "./link";
@@ -585,7 +586,7 @@ async function upsertCustomer(orgId: string, email: string, name: string | null,
 // message is saved; the list shrinks to whatever couldn't be copied. If a step
 // dies halfway, the links are still there.
 function withAttachments(m: Msg, files = m.attachments) {
-  const body = m.body.trim() || (m.attachments.length ? "" : "(empty message)");
+  const body = maskCards(m.body.trim()) || (m.attachments.length ? "" : "(empty message)");
   if (!files.length) return body;
   const list = `${files === m.attachments ? "Attachments" : "Attachments that couldn't be copied"}:\n${files.map((a) => `- ${a.name}${a.url ? `: ${a.url}` : ""}`).join("\n")}`;
   return body ? `${body}\n\n${list}` : list;

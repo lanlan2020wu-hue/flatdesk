@@ -19,7 +19,7 @@ const NOT_YET = [
   "Single sign-on (SAML or OIDC) and SCIM provisioning.",
   "An uptime commitment with service credits.",
   "A choice of data region.",
-  "HIPAA or PCI scope. Don't send health records or card numbers through Flatdesk.",
+  "HIPAA or PCI scope. Don't send health records through Flatdesk. Card numbers customers paste in anyway are masked when they arrive (see below), but Flatdesk isn't PCI assessed.",
 ];
 
 export default function SecurityPage() {
@@ -55,6 +55,18 @@ export default function SecurityPage() {
             <strong className="font-medium">An off switch for AI.</strong> With &ldquo;Allow AI features&rdquo; off, nothing from your team is sent to
             the AI provider: no AI answers, drafts, summaries, AI macros or test drive. Every call to the AI goes through one check, so no feature
             can skip it. You can try Flatdesk this way and turn AI on later, or never.
+          </li>
+          <li>
+            <strong className="font-medium">Card numbers masked on arrival.</strong> Customers paste card numbers into emails and chats whatever you
+            tell them. Any number that looks like a card (13 to 19 digits that pass the card checksum) is replaced with &ldquo;[card number removed,
+            ending 4242]&rdquo; before the message is saved, so it never reaches your team, the AI or an export. This covers emails, chats, replies and
+            imported tickets. It can&apos;t catch a number split across lines or inside an attachment, and the original-record archive of an import
+            keeps what your old help desk had.
+          </li>
+          <li>
+            <strong className="font-medium">Verified chat for signed-in users.</strong> Your server signs the user&apos;s email with your team&apos;s
+            chat secret, so a ticket from your app says who was signed in and whether the signature checked out. A visitor can&apos;t claim to be
+            one of your customers by typing their email.
           </li>
           <li>
             <strong className="font-medium">An audit log.</strong> Settings changes, seat changes, exports, imports, AI answer refunds, deleted macros
