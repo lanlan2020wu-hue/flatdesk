@@ -89,6 +89,9 @@ test("AI cost logging prices cache writes and reads at their own rates", async (
   const cost = callCost({ input_tokens: 1e6, cache_creation_input_tokens: 1e6, cache_read_input_tokens: 1e6, output_tokens: 1e6 });
   assert.equal(cost.toFixed(2), "32.20");
   assert.equal(callCost({ input_tokens: 100, output_tokens: 0 }), 0.0004);
+  // A 5-minute cache write is 1.25x the input rate, not 2x.
+  const split = { ephemeral_5m_input_tokens: 1e6, ephemeral_1h_input_tokens: 0 };
+  assert.equal(callCost({ input_tokens: 0, cache_creation_input_tokens: 1e6, cache_creation: split, output_tokens: 0 }).toFixed(2), "5.00");
 });
 
 test("a no-card trial gets a smaller AI allowance for the whole trial, with no overage; a card lifts it", async () => {
