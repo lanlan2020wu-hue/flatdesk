@@ -151,6 +151,7 @@ export const SELLING_POINTS: SellingPoint[] = [
       "Shows the macros and articles the AI used",
       "Refunds free up allowance and come off any overage",
       "You can refund until the month closes on the 1st",
+      "Up to one in five of the month's included answers can be refunded",
       "Download any month as CSV",
     ],
     faq: [
@@ -165,6 +166,10 @@ export const SELLING_POINTS: SellingPoint[] = [
       {
         q: "How long can we refund an AI answer?",
         a: "Until the month closes. Billing runs on the 1st of the next month, and then the receipt is final.",
+      },
+      {
+        q: "Is there a limit on refunds?",
+        a: "Yes. Each month a team can refund up to one in five of its included AI answers (at least 5). If the AI is wrong more often than that, turn it off and tell us: the problem is the AI, not your receipt.",
       },
     ],
     icon: "M12 3l7 3v5c0 4.5-3 8.3-7 10-4-1.7-7-5.5-7-10V6zM9 12l2 2 4-4",

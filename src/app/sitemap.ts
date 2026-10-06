@@ -19,6 +19,9 @@ const PAGES = [
   ...FREE_TOOLS.map((t) => freeToolPath(t.slug)),
   "/terms",
   "/privacy",
+  "/security",
+  "/dpa",
+  "/about",
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {

@@ -85,7 +85,8 @@ export default function TermsPage() {
           Everything your team and your customers put into Flatdesk is yours. You give us permission to store, process and send it only to run
           the service for you, as described in our <Link href="/privacy" className="link text-accent">privacy policy</Link>. We don&apos;t
           sell it and we don&apos;t use it to train AI models. When you ask us to delete your team, we delete your data within 30 days, except where the
-          law requires us to keep records such as invoices.
+          law requires us to keep records such as invoices. The <Link href="/dpa" className="link text-accent">data processing addendum</Link> is part
+          of these terms and covers how we process personal data for you.
         </p>
         <p>
           You are responsible for having the right to send us the data you put in, including your customers&apos; messages, and for telling
@@ -132,7 +133,8 @@ export default function TermsPage() {
         <p>
           We may update these terms. For meaningful changes we&apos;ll email your team&apos;s admins at least 30 days ahead. If you
           don&apos;t agree, you can cancel before they take effect. Either of us can end this agreement by cancelling. We&apos;ll give at
-          least 30 days&apos; notice unless you&apos;ve broken these terms.
+          least 30 days&apos; notice unless you&apos;ve broken these terms. If we decide to stop offering Flatdesk altogether, we&apos;ll email every admin at least 90 days ahead, keep the service and the full export
+          working until then, charge nothing after the notice, and then delete your data.
         </p>
       </Section>
 

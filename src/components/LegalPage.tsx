@@ -1,9 +1,9 @@
-// Shared frame for the terms and privacy pages: readable measure, numbered sections.
-export default function LegalPage({ title, updated, intro, children }: { title: string; updated: string; intro: React.ReactNode; children: React.ReactNode }) {
+// Shared frame for the legal, security and about pages: readable measure, numbered sections.
+export default function LegalPage({ title, updated, intro, children, kicker = "Legal" }: { title: string; updated: string; intro: React.ReactNode; children: React.ReactNode; kicker?: string | null }) {
   return (
     <article className="mx-auto grid max-w-2xl gap-8 px-4 pt-14 sm:px-6 sm:pt-20">
       <header className="grid gap-3">
-        <p className="eyebrow">Legal</p>
+        {kicker && <p className="eyebrow">{kicker}</p>}
         <h1 className="font-display text-4xl sm:text-5xl">{title}</h1>
         <p className="text-sm text-muted">Last updated {updated}</p>
         <div className="text-lg text-muted">{intro}</div>

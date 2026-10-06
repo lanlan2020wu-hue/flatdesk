@@ -47,11 +47,12 @@ export default function PrivacyPage() {
         <ul className="grid list-disc gap-2 pl-5">
           <li>Running the help desk: receiving and sending email, showing chats, storing tickets and attachments.</li>
           <li>
-            AI answers to customers, when your team has them on. They are on for new teams, and an admin can switch them off in Settings.
+            AI answers to customers, when your team has them on. They are on for new teams, but nothing reaches a customer until you forward your support email or add the chat widget, and an admin can switch them off in Settings first.
           </li>
           <li>
             Other AI features your team uses: reply drafts and summaries, writing and updating macros, and the AI test drive. These send
-            ticket messages to our AI provider even when automatic AI answers are off.
+            ticket messages to our AI provider even when automatic AI answers are off. To send nothing to the AI provider at all, an admin can turn
+            off &ldquo;Allow AI features&rdquo; in Settings, Security.
           </li>
           <li>Billing your team (Stripe sends receipts and payment notices), and emailing admins when the AI allowance is 80% and 100% used.</li>
           <li>Keeping the service secure and fixing problems.</li>
@@ -102,6 +103,9 @@ export default function PrivacyPage() {
       </Section>
 
       <Section title="Security">
+        <p>
+          The <Link href="/security" className="link text-accent">security page</Link> has the details, including what Flatdesk doesn&apos;t have yet.
+        </p>
         <p>
           Data is encrypted in transit and at rest by our hosting and database providers. Attachments can be downloaded only by your team, and
           by the chat visitor they were sent to. API keys for importing from another help desk are encrypted while an import runs and erased
