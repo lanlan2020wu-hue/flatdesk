@@ -1,5 +1,6 @@
 import { htmlToText } from "@/lib/email";
 import { htmlToArticle, MAX_SECTION } from "@/lib/help";
+import { MAX_CONDITIONS } from "@/lib/triggers";
 import { ApiError, CredentialError } from "../http";
 import { date, fieldMap, str, type Adapter, type Ctx, type Mapped, type Msg, type Raw, type Status } from "../types";
 
@@ -107,6 +108,10 @@ async function mapRule(ctx: Ctx, raw: Raw, ruleKind: string): Promise<Mapped> {
       ? { tag: str(tagConds[0].value).trim(), agentExternalId: str(assign[0].value) }
       : null;
 
+  const asTrigger = tagAssign || ruleKind !== "trigger" ? null : toTrigger(all, any, actions);
+  const trigger = asTrigger && "trigger" in asTrigger ? asTrigger.trigger : null;
+  const why = ruleKind !== "trigger" ? `Kept for reference, not running: Flatdesk has no ${ruleKind}s (time-based rules)` : asTrigger && "blocker" in asTrigger ? `Kept for reference, not running: ${asTrigger.blocker}` : null;
+
   return {
     kind: "rule",
     label: str(raw.title),
@@ -115,8 +120,68 @@ async function mapRule(ctx: Ctx, raw: Raw, ruleKind: string): Promise<Mapped> {
     active: raw.active !== false,
     summary,
     tagAssign,
-    issues: tagAssign ? [] : ["Kept for reference, not running: Flatdesk rules can only assign by tag"],
+    trigger,
+    issues: why ? [why] : [],
   };
+}
+
+type TriggerDraft = NonNullable<Extract<Mapped, { kind: "rule" }>["trigger"]>;
+
+// Zendesk word conditions take words separated by spaces ("includes" = any of
+// them; "is" = the whole phrase). Flatdesk takes commas.
+const words = (v: unknown) => (Array.isArray(v) ? v.map(str) : str(v).split(/\s+/)).map((w) => w.trim()).filter(Boolean).join(", ");
+const VIA_EMAIL = new Set(["0", "4"]); // web form, email
+const VIA_CHAT = new Set(["29"]);
+
+// A Zendesk trigger as a Flatdesk trigger, when every condition and action has
+// an equivalent. One that would only half work is kept for reference instead,
+// with the first thing that stopped it.
+export function toTrigger(all: Raw[], any: Raw[], actions: Raw[]): { trigger: TriggerDraft } | { blocker: string } {
+  const conditions: TriggerDraft["conditions"] = [];
+  const convert = (c: Raw): TriggerDraft["conditions"][number] | "scope" | string => {
+    const field = str(c.field);
+    const op = str(c.operator) || "is";
+    if (field === "update_type") return str(c.value).toLowerCase() === "create" ? "scope" : "it runs when tickets are updated, and Flatdesk triggers run on new tickets";
+    if (field === "status" && op === "is" && str(c.value) === "new") return "scope";
+    if (field === "current_tags" && (op === "includes" || op === "not_includes")) return { field: "tags", op: op === "includes" ? "includes" : "excludes", value: words(c.value) };
+    if (field === "comment_includes_word" || field === "subject_includes_word") {
+      const f = field === "comment_includes_word" ? "body" : "subject";
+      if (op === "includes" || op === "not_includes") return { field: f, op: op === "includes" ? "includes" : "excludes", value: words(c.value) };
+      if (op === "is" || op === "is_not") return { field: f, op: op === "is" ? "includes" : "excludes", value: str(c.value).replace(/,/g, " ").trim() };
+    }
+    if (field === "via_id" && (op === "is" || op === "is_not")) {
+      const v = str(c.value);
+      const channel = VIA_EMAIL.has(v) ? "email" : VIA_CHAT.has(v) ? "chat" : null;
+      if (channel) return { field: "channel", op: op === "is" ? "is" : "is_not", value: channel };
+      return "it checks a channel Flatdesk doesn't have";
+    }
+    return `Flatdesk triggers can't check ${field.replace(/_/g, " ")}`;
+  };
+  for (const c of [...all, ...any]) {
+    const r = convert(c);
+    if (typeof r === "string" && r !== "scope") return { blocker: r };
+  }
+  const allConds = all.map(convert).filter((r): r is Exclude<typeof r, string> => typeof r !== "string");
+  const anyConds = any.map(convert).filter((r): r is Exclude<typeof r, string> => typeof r !== "string");
+  if (allConds.length && anyConds.length) return { blocker: "it mixes all and any conditions" };
+  conditions.push(...allConds, ...anyConds);
+  if (conditions.length > MAX_CONDITIONS) return { blocker: `it has more than ${MAX_CONDITIONS} conditions` };
+
+  const out: TriggerDraft["actions"] = [];
+  const tags: string[] = [];
+  for (const a of actions) {
+    const field = str(a.field);
+    const v = a.value;
+    if (field === "current_tags" || field === "set_tags") tags.push(...words(v).split(", ").filter(Boolean));
+    else if (field === "status" && STATUS[str(v)]) out.push({ type: "set_status", status: STATUS[str(v)] });
+    else if (field === "assignee_id" && /^\d+$/.test(str(v))) out.push({ type: "assign_external", agentExternalId: str(v) });
+    else if (field.startsWith("notification_")) return { blocker: "it sends an email or notification, which Flatdesk triggers don't" };
+    else return { blocker: `Flatdesk triggers can't ${field === "assignee_id" ? "assign to the current user" : `set ${field.replace(/_/g, " ")}`}` };
+  }
+  if (tags.length) out.unshift({ type: "add_tags", tags: [...new Set(tags.map((t) => t.toLowerCase()))] });
+  if (!out.length) return { blocker: "it has no actions Flatdesk can run" };
+  if (!conditions.length) return { blocker: "it runs on every new ticket, and Flatdesk triggers need a condition" };
+  return { trigger: { matchAll: anyConds.length === 0, conditions, actions: out } };
 }
 
 export const zendesk: Adapter = {

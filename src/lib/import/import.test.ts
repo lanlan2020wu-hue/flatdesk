@@ -118,13 +118,18 @@ describe("Zendesk", () => {
     const rules = await db.query.rules.findMany({ where: eq(schema.rules.orgId, ORG) });
     assert.deepEqual(rules.map((r) => [r.ifTag, r.assignTo]), [["vip", "user_ana"]]);
     const kept = await db.query.importedRules.findMany({ where: eq(schema.importedRules.orgId, ORG) });
-    assert.equal(kept.length, 3, "every trigger is kept, running or not");
+    assert.equal(kept.length, 4, "every trigger is kept, running or not");
+    const made = await db.query.triggers.findMany({ where: eq(schema.triggers.orgId, ORG) });
+    assert.deepEqual(
+      made.map((t) => [t.name, t.enabled, t.conditions, t.actions]),
+      [["Invoices to Ana", true, [{ field: "body", op: "includes", value: "invoice, receipt" }], [{ type: "add_tags", tags: ["billing"] }, { type: "assign", to: "user_ana" }]]],
+    );
 
     const report = await importReport(ORG, job.id);
     const texts = report.issues.map((i) => i.issue);
     assert.ok(texts.includes("Deleted in the old help desk, so it wasn't imported"));
     assert.ok(texts.some((x) => x.startsWith("Has no email address; kept with a placeholder")));
-    assert.ok(texts.includes("Kept for reference, not running: Flatdesk rules can only assign by tag"));
+    assert.ok(texts.includes("Kept for reference, not running: it sends an email or notification, which Flatdesk triggers don't"));
     assert.ok(texts.includes("Will start running when its agent joins Flatdesk"));
     assert.ok(texts.includes("Its original number was already used in Flatdesk, so it has a new number"));
     assert.equal(report.counts.ticket.found, 3);

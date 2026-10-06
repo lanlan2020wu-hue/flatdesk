@@ -51,7 +51,7 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
     features: [
       { id: "suggested-macros", title: "AI macros", body: "When your team sends the same answer on 5 tickets, the AI writes it up as a macro and suggests it on new tickets. If your team keeps editing a macro the same way, the AI suggests an update you apply in one click.", icon: I.spark, isNew: true },
       { id: "macros", title: "Macros that take action", body: "One click replies with the customer's name filled in, assigns the ticket, sets the status, adds tags, and can send right away.", icon: I.macro },
-      { id: "rules", title: "Assignment rules", body: 'Rules like "if tagged billing, assign to Sam" pick who gets a ticket.', icon: I.rule },
+      { id: "rules", title: "Triggers", body: "When a new ticket's subject, message, sender, tags or channel match, tag it, assign it, set its status or leave a note. Imported Zendesk triggers that fit keep running.", icon: I.rule },
       { id: "tags", title: "Tags", body: "Tag tickets by hand, from a macro, or from your old help desk's data.", icon: I.tag },
     ],
   },
@@ -74,7 +74,7 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
       { id: "notes", title: "Internal notes", body: "Talk it over on the ticket without the customer seeing it.", icon: I.note },
       { id: "customer-history", title: "Customer history", body: "Each ticket lists the customer's other tickets, so you see what they asked before.", icon: I.history, isNew: true },
       { id: "alerts", title: "Slack and webhook alerts", body: "A post in Slack, Discord, Google Chat or any webhook when a ticket needs a person. Not for ones the AI already answered.", icon: I.bell, isNew: true },
-      { id: "first-reply-target", title: "Reply time targets", body: "Set a first reply target like 4 business hours. New tickets count down in the inbox, turn amber near it, and get flagged when late.", icon: I.clock, isNew: true },
+      { id: "first-reply-target", title: "Reply time targets", body: "Set a first reply target like 4 business hours. New tickets count down in the inbox and turn amber near it. A late one is tagged overdue, posted to Slack, and can go straight to your lead.", icon: I.clock, isNew: true },
       { id: "ratings", title: "Ratings", body: "Every reply email ends with Great, Okay or Not good. A Not good on an AI answer sends the ticket to your team.", icon: I.smile, isNew: true },
     ],
   },

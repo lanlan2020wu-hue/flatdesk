@@ -452,7 +452,8 @@ export async function answerNewTicket(orgId: string, ticketId: string) {
     return;
   }
 
-  const thread = await db.select().from(messages).where(eq(messages.ticketId, ticketId)).orderBy(asc(messages.createdAt));
+  // System notes (a trigger that ran) don't count: the AI answers when the customer's message is all there is.
+  const thread = await db.select().from(messages).where(and(eq(messages.ticketId, ticketId), ne(messages.authorType, "system"))).orderBy(asc(messages.createdAt));
   if (thread.length !== 1 || thread[0].authorType !== "customer") return;
   const customer = await db.query.customers.findFirst({ where: eq(schema.customers.id, ticket.customerId) });
   const attached = (await attachmentsByMessage(orgId, [thread[0].id])).get(thread[0].id) ?? [];
@@ -521,7 +522,7 @@ export async function answerNewTicket(orgId: string, ticketId: string) {
     const now = new Date();
     const messageId = await db.transaction(async (tx) => {
       const [current] = await tx.select().from(tickets).where(eq(tickets.id, ticketId)).for("update");
-      const [{ n }] = await tx.select({ n: count() }).from(messages).where(eq(messages.ticketId, ticketId));
+      const [{ n }] = await tx.select({ n: count() }).from(messages).where(and(eq(messages.ticketId, ticketId), ne(messages.authorType, "system")));
       if (!current || current.status !== "open" || Number(n) !== 1) return null;
       const [m] = await tx
         .insert(messages)

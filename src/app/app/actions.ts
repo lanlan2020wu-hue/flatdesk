@@ -305,9 +305,10 @@ export async function saveServiceSettingsAction(form: FormData) {
     businessHours = hours;
   }
   const before = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) });
-  const next = { csatEnabled: form.get("csatEnabled") === "on", firstResponseMinutes, businessHours };
+  const escalateTo = str(form, "escalateTo") ? ((await findAssignable(s.orgId, str(form, "escalateTo")))?.userId ?? null) : null;
+  const next = { csatEnabled: form.get("csatEnabled") === "on", firstResponseMinutes, businessHours, escalateTo };
   await db.update(schema.orgs).set(next).where(eq(schema.orgs.id, s.orgId));
-  const detail = changes(before ?? {}, next, { csatEnabled: "Ratings", firstResponseMinutes: "First-reply target (minutes)", businessHours: "Business hours" });
+  const detail = changes(before ?? {}, next, { csatEnabled: "Ratings", firstResponseMinutes: "First-reply target (minutes)", businessHours: "Business hours", escalateTo: "Escalate to" });
   if (detail) await audit(s.orgId, actor(s), "settings.service", detail);
   revalidatePath("/app/settings");
   revalidatePath("/app/inbox");

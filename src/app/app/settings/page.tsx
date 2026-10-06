@@ -421,7 +421,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
               Response target and ratings
             </h2>
             <p className="text-muted">
-              New tickets show how long is left for a first reply, turn amber near the target, and get flagged when late. Reports show how often you hit it.
+              New tickets show how long is left for a first reply, turn amber near the target, and are escalated when late. Reports show how often you hit it.
             </p>
           </div>
           {serviceNotice && <p className="rounded-lg border border-warn/40 bg-warn-soft px-3 py-2 text-sm text-warn" role="alert">{serviceNotice}</p>}
@@ -433,6 +433,14 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
                   <option value="">No target</option>
                   {TARGET_CHOICES.map((c) => <option key={c.minutes} value={c.minutes}>{c.label}</option>)}
                 </select>
+              </label>
+              <label className="grid w-max gap-1">
+                <span className="label">When a ticket misses it</span>
+                <select name="escalateTo" defaultValue={org.escalateTo ?? ""} className="field">
+                  <option value="">Tag it overdue and alert, leave it where it is</option>
+                  {team.filter((a) => !a.viewer).map((a) => <option key={a.userId} value={a.userId}>Tag it overdue, alert, and hand it to {a.name}</option>)}
+                </select>
+                <span className="text-sm text-muted">Checked every five minutes. The ticket gets a note, and your alert webhook (Slack or other) gets a message.</span>
               </label>
               <label className="flex items-center gap-2.5">
                 <input type="checkbox" name="useBusinessHours" defaultChecked={Boolean(org.businessHours)} className="size-4 accent-[var(--accent)]" />

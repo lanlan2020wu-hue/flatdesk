@@ -1,5 +1,6 @@
-import { and, asc, eq, inArray, isNull, lt, or, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, lt, max, or, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
+import type { TriggerAction } from "@/db/schema";
 import { INBOUND_FILE_LIMIT, MAX_FILES, saveAttachments, type NewFile } from "@/lib/attachments";
 import { MAX_BODY as HELP_MAX_BODY, MAX_TITLE as HELP_MAX_TITLE, uniqueArticleSlug } from "@/lib/help";
 import { normalizeTags } from "@/lib/tickets";
@@ -507,6 +508,7 @@ async function write(job: Job, adapter: Adapter, externalId: string, m: Mapped, 
           set: { name: m.name, kind: m.ruleKind, activeInSource: m.active, summary: m.summary },
         })
         .returning();
+      if (!m.tagAssign && m.trigger) return importTrigger(orgId, adapter.id, kept, m.name, m.active, m.trigger);
       if (!m.tagAssign) return { mappedId: kept.id, imported: false, issues: [] };
 
       const [tag] = normalizeTags([m.tagAssign.tag]);
@@ -808,4 +810,44 @@ async function writeTicket(job: Job, adapter: Adapter, externalId: string, m: Ex
       : [];
     return { mappedId: ticket.id, imported: true, issues, copy: toCopy(ticket.id, added) };
   });
+}
+
+// A rule from the old help desk that fits a Flatdesk trigger. Made once (a
+// re-import leaves it, and any edits, alone). If its assignee hasn't joined
+// Flatdesk yet, it's made but turned off, so it never runs half-done.
+async function importTrigger(
+  orgId: string,
+  source: SourceId,
+  kept: typeof importedRules.$inferSelect,
+  name: string,
+  active: boolean,
+  draft: NonNullable<Extract<Mapped, { kind: "rule" }>["trigger"]>,
+): Promise<{ mappedId: string; imported: boolean; issues: string[] }> {
+  if (kept.flatdeskTriggerId) return { mappedId: kept.id, imported: true, issues: [] };
+  const issues: string[] = [];
+  let enabled = active;
+  const actions: TriggerAction[] = [];
+  for (const a of draft.actions) {
+    if (a.type !== "assign_external") {
+      actions.push(a.type === "add_tags" ? { type: "add_tags", tags: normalizeTags(a.tags) } : a);
+      continue;
+    }
+    const agent = await db.query.externalAgents.findFirst({
+      where: and(eq(externalAgents.orgId, orgId), eq(externalAgents.source, source), eq(externalAgents.externalId, a.agentExternalId)),
+    });
+    if (agent?.linkedUserId) {
+      actions.push({ type: "assign", to: agent.linkedUserId });
+    } else {
+      enabled = false;
+      issues.push(`Turned off until ${agent?.name ?? "its agent"} joins Flatdesk; then pick them in the trigger and turn it on`);
+    }
+  }
+  if (!actions.length) return { mappedId: kept.id, imported: false, issues };
+  const [{ last }] = await db.select({ last: max(schema.triggers.position) }).from(schema.triggers).where(eq(schema.triggers.orgId, orgId));
+  const [made] = await db
+    .insert(schema.triggers)
+    .values({ orgId, name: cut(name, 120) || "Imported trigger", enabled, matchAll: draft.matchAll, conditions: draft.conditions, actions, position: (last ?? -1) + 1 })
+    .returning({ id: schema.triggers.id });
+  await db.update(importedRules).set({ flatdeskTriggerId: made.id }).where(eq(importedRules.id, kept.id));
+  return { mappedId: kept.id, imported: true, issues };
 }

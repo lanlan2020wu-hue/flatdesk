@@ -3,9 +3,10 @@ import { lookup, type LookupAddress } from "node:dns";
 import { request as httpRequest } from "node:http";
 import { request as httpsRequest } from "node:https";
 import { isIP, type LookupFunction } from "node:net";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, notLike } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { SITE } from "@/lib/site";
+import { TRIGGER_NOTE_PREFIX } from "@/lib/triggers";
 
 // Alerts to Slack, Discord, Google Chat or any webhook when a ticket needs a
 // person: a new ticket the AI didn't answer (it's off, paused or handed off),
@@ -16,7 +17,7 @@ import { SITE } from "@/lib/site";
 // else gets JSON (see AlertPayload), signed with the org's alert secret:
 // X-Flatdesk-Signature: sha256=<hex HMAC of the raw body>.
 
-export type AlertEvent = "ticket.created" | "ticket.handed_back" | "test";
+export type AlertEvent = "ticket.created" | "ticket.handed_back" | "ticket.overdue" | "test";
 
 export type AlertPayload = {
   event: AlertEvent;
@@ -223,6 +224,7 @@ export function alertText(event: AlertEvent, t: NonNullable<AlertPayload["ticket
   const who = t.customer.name ? `${t.customer.name} (${t.customer.email})` : t.customer.email;
   const ref = `${t.test ? "test ticket " : ""}#${t.number} ${t.subject}`;
   if (event === "ticket.handed_back") return `Back with the team: ${ref} from ${who}.${reason ? ` ${reason}` : ""}`;
+  if (event === "ticket.overdue") return `Missed the first-reply target: ${ref} from ${who}.${reason ? ` ${reason}` : ""}`;
   const head = needsTeam ? `New ticket for the team: ${ref} from ${who} by ${t.channel}.` : `New ticket answered by the AI: ${ref} from ${who} by ${t.channel}.`;
   return reason && needsTeam ? `${head} ${reason}` : head;
 }
@@ -279,7 +281,7 @@ async function latestNote(ticketId: string) {
   const [n] = await db
     .select({ body: schema.messages.body })
     .from(schema.messages)
-    .where(and(eq(schema.messages.ticketId, ticketId), eq(schema.messages.authorType, "system")))
+    .where(and(eq(schema.messages.ticketId, ticketId), eq(schema.messages.authorType, "system"), notLike(schema.messages.body, `${TRIGGER_NOTE_PREFIX}%`)))
     .orderBy(desc(schema.messages.createdAt))
     .limit(1);
   return n?.body ?? null;
@@ -327,6 +329,26 @@ export async function alertHandedBack(orgId: string, ticketId: string, reason: s
     });
   } catch (err) {
     console.error("hand-back alert failed", err);
+  }
+}
+
+// A ticket that went past its first-reply target with no reply (lib/escalation.ts).
+export async function alertOverdue(orgId: string, ticketId: string, reason: string | null) {
+  try {
+    const org = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, orgId) });
+    if (!org?.alertWebhookUrl) return;
+    const found = await ticketPayload(orgId, ticketId);
+    if (!found) return;
+    await deliver(org, {
+      event: "ticket.overdue",
+      text: alertText("ticket.overdue", found.payload, true, reason),
+      needsTeam: true,
+      reason,
+      ticket: found.payload,
+      sentAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    console.error("overdue alert failed", err);
   }
 }
 
