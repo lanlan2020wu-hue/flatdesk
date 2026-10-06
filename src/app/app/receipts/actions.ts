@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { requireAdmin, requireOpen } from "@/lib/auth";
 import { RefundError, refundResolution } from "@/lib/receipts";
 import { isUuid } from "@/lib/ids";
+import { audit } from "@/lib/security";
 
 export async function refundAction(form: FormData) {
   const s = await requireOpen(await requireAdmin());
@@ -15,6 +16,7 @@ export async function refundAction(form: FormData) {
   try {
     if (!isUuid(eventId)) throw new RefundError("Only a counted AI answer can be refunded.");
     await refundResolution(s.orgId, eventId, { userId: s.userId, name: s.name }, note);
+    await audit(s.orgId, { userId: s.userId, name: s.name }, "receipt.refund", note ? `Note: ${note}` : "");
   } catch (err) {
     if (!(err instanceof RefundError)) throw err;
     error = err.message;

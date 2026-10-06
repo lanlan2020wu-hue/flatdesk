@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import type { z } from "zod";
 import { MODEL, callCost } from "@/lib/ai";
+import { assertAiProcessing } from "@/lib/security";
 
 export type Metered = { model: string; inputTokens: number; outputTokens: number; costUsd: string };
 
@@ -10,11 +11,13 @@ export type Metered = { model: string; inputTokens: number; outputTokens: number
 // model as AI answers, at low effort, because these are small jobs.
 // Returns null output on a refusal. Throws on API errors.
 export async function structuredCall<T extends z.ZodType>(
+  orgId: string,
   schema: T,
   system: string,
   user: string,
   options: { timeout?: number; maxRetries?: number } = { timeout: 60_000, maxRetries: 1 },
 ): Promise<{ out: z.infer<T> | null; metered: Metered }> {
+  await assertAiProcessing(orgId);
   const client = new Anthropic();
   const response = await client.beta.messages.parse(
     {

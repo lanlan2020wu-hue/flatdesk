@@ -68,6 +68,7 @@ export async function startTestDrive(orgId: string): Promise<number> {
     const org = await tx.query.orgs.findFirst({ where: eq(orgs.id, orgId) });
     if (!org) throw new TestDriveError("Workspace not found.");
     if (access(org).state === "locked") throw new TestDriveError("The free trial has ended. Add a card in Settings to keep going.");
+    if (!org.aiProcessing) throw new TestDriveError("AI processing is turned off for your team. An admin can turn it back on in Settings.");
     if (Number(org.testDriveSpentUsd) >= TEST_DRIVE.budgetUsd) throw new TestDriveError("This workspace has used its test drives.");
     const [{ active }] = await tx
       .select({ active: count() })
@@ -158,7 +159,7 @@ export async function fairKnowledge(orgId: string) {
 
 async function draftOne(
   orgId: string,
-  org: { name: string; aiInstructions: string },
+  org: { id: string; name: string; aiInstructions: string },
   knowledge: { name: string; body: string }[],
   row: { id: string; ticketId: string },
   draft: typeof draftAnswer,

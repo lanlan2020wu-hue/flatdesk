@@ -71,6 +71,11 @@ export const orgs = pgTable("orgs", {
   businessHours: jsonb("business_hours").$type<BusinessHours>(),
   // Public help center at /help/<helpSlug>. Set the first time an admin opens it.
   helpSlug: text("help_slug").unique(),
+  // Security controls for teams that go through vendor review. See lib/security.ts.
+  // Off: nothing is sent to the AI provider for this team (answers, drafts, macros, test drive).
+  aiProcessing: boolean("ai_processing").notNull().default(true),
+  // Everyone must have two-step verification on their Clerk account to open the app.
+  requireTwoFactor: boolean("require_two_factor").notNull().default(false),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -474,6 +479,22 @@ export const testDriveDrafts = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("test_drive_drafts_org_ticket").on(t.orgId, t.ticketId), index("test_drive_drafts_org_status").on(t.orgId, t.status)],
+);
+
+// Who changed what, for admins: settings, seats, exports, imports, refunds.
+// Kept as long as the team's account; shown at /app/settings/audit.
+export const auditEvents = pgTable(
+  "audit_events",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
+    actorId: text("actor_id"), // Clerk user id; null for the system
+    actorName: text("actor_name").notNull(),
+    action: text("action").notNull(), // e.g. "settings.ai", "export.archive"
+    detail: text("detail").notNull().default(""),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("audit_events_org_time").on(t.orgId, t.createdAt)],
 );
 
 export const waitlist = pgTable("waitlist", {

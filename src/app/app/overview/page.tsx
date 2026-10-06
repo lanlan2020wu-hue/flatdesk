@@ -50,7 +50,7 @@ export default async function OverviewPage() {
     viewCounts(s.orgId, s.userId),
   ]);
   const receipt = await monthReceipt(s.orgId, ai.month);
-  const aiOn = Boolean(org?.aiEnabled) && aiConfigured();
+  const aiOn = Boolean(org?.aiEnabled && org.aiProcessing) && aiConfigured();
   const { suggestions } = await withAiDrafts(s.orgId, found);
   const plan = org ? access(org) : ({ state: "open" } as const);
   const interval: Interval = org?.billingInterval === "year" ? "year" : "month";

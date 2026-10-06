@@ -22,6 +22,7 @@ import { and, count, eq, gte, inArray, isNull, ne, sql } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema } from "@/db";
 import { aiConfigured } from "@/lib/ai";
+import { aiProcessingAllowed } from "@/lib/security";
 import { structuredCall } from "@/lib/llm";
 import { applyDrift, type Drift, type MacroUpdate } from "@/lib/macro-drift";
 import type { Suggestion } from "@/lib/macro-suggestions";
@@ -196,11 +197,11 @@ async function runClaimed<T>(orgId: string, claimed: string[], items: Map<string
 // Has the AI write up to WRITER.perRun waiting suggestions. Runs after the
 // response (Next's after()), so it never slows a page. Never throws.
 export async function writeMissingDrafts(orgId: string, missing: Suggestion[]) {
-  if (!aiConfigured() || !missing.length) return 0;
+  if (!aiConfigured() || !missing.length || !(await aiProcessingAllowed(orgId))) return 0;
   try {
     const claimed = await claimKeys(orgId, missing.map((s) => ({ key: s.key, name: s.name })));
     return await runClaimed(orgId, claimed, new Map(missing.map((s) => [s.key, s])), async (s) => {
-      const { out, metered } = await structuredCall(Written, WRITER_SYSTEM, writerPrompt(s.samples));
+      const { out, metered } = await structuredCall(orgId, Written, WRITER_SYSTEM, writerPrompt(s.samples));
       return { values: (out && cleanWritten(out)) || null, metered };
     });
   } catch (err) {
@@ -254,11 +255,11 @@ export async function withUpdateDrafts(orgId: string, updates: MacroUpdate[]) {
 
 // Has the AI rewrite up to WRITER.perRun outdated macros. Never throws.
 export async function writeMacroUpdates(orgId: string, missing: MacroUpdate[]) {
-  if (!aiConfigured() || !missing.length) return 0;
+  if (!aiConfigured() || !missing.length || !(await aiProcessingAllowed(orgId))) return 0;
   try {
     const claimed = await claimKeys(orgId, missing.map((u) => ({ key: updateKey(u), name: u.macro.name })));
     return await runClaimed(orgId, claimed, new Map(missing.map((u) => [updateKey(u), u])), async (u) => {
-      const { out, metered } = await structuredCall(Updated, UPDATE_SYSTEM, updatePrompt(u.macro.body, u.drift));
+      const { out, metered } = await structuredCall(orgId, Updated, UPDATE_SYSTEM, updatePrompt(u.macro.body, u.drift));
       const body = out?.body.replace(/\*\*(.+?)\*\*/g, "$1").trim().slice(0, 4000);
       return { values: body ? { body } : null, metered };
     });

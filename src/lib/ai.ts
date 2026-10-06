@@ -10,6 +10,7 @@ import { deliverReply, emailConfig, resend } from "@/lib/email";
 import { milestone } from "@/lib/funnel";
 import { articleKnowledge } from "@/lib/help";
 import { PLAN } from "@/lib/pricing";
+import { assertAiProcessing } from "@/lib/security";
 import { HANDOFF_PREFIX } from "@/lib/teach";
 
 // The AI answers the first message of new email and chat tickets, and up to
@@ -293,13 +294,14 @@ export type Draft = {
 // for live answers and, unchanged, for the test drive, so what a team sees in
 // the test drive is what the AI would really send. Throws on API errors.
 export async function draftAnswer(
-  org: { name: string; aiInstructions: string },
+  org: { id: string; name: string; aiInstructions: string },
   knowledge: { name: string; body: string }[],
   msg: { from: string; subject: string; body: string; attached: string[] },
   options?: { timeout?: number; maxRetries?: number },
   // What came after the first message, oldest first, when this is a follow-up.
   later: { from: "customer" | "ai"; body: string }[] = [],
 ): Promise<Draft> {
+  await assertAiProcessing(org.id);
   const client = new Anthropic();
   const turns: Anthropic.Beta.BetaMessageParam[] = [
     {
@@ -352,7 +354,7 @@ export async function answerNewTicket(orgId: string, ticketId: string) {
   if (ticket?.resolvedByAi) return answerFollowUp(orgId, ticketId);
   if (!aiConfigured()) return;
   const org = await db.query.orgs.findFirst({ where: eq(orgs.id, orgId) });
-  if (!org?.aiEnabled || !ticket || ticket.status !== "open") return;
+  if (!org?.aiEnabled || !org.aiProcessing || !ticket || ticket.status !== "open") return;
   if (access(org).state === "locked") {
     await note(orgId, ticketId, "The AI didn't answer because the free trial has ended. An admin can add a card in Settings.");
     return;
@@ -467,7 +469,7 @@ export async function answerFollowUp(orgId: string, ticketId: string) {
   const ticket = await db.query.tickets.findFirst({ where: and(eq(tickets.orgId, orgId), eq(tickets.id, ticketId)) });
   if (!org || !ticket?.resolvedByAi) return;
   const thread = await db.select().from(messages).where(eq(messages.ticketId, ticketId)).orderBy(asc(messages.createdAt));
-  if (!aiConfigured() || !org.aiEnabled || access(org).state === "locked" || ticket.status !== "open" || !canFollowUp(thread)) {
+  if (!aiConfigured() || !org.aiEnabled || !org.aiProcessing || access(org).state === "locked" || ticket.status !== "open" || !canFollowUp(thread)) {
     return handBackToTeam(orgId, ticketId);
   }
   const slot = await reserveSlot(orgId, ticketId, true);
