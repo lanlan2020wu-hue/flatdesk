@@ -278,12 +278,19 @@ export async function addReply(opts: {
     let messageId: string | null = null;
     const hasContent = Boolean(opts.body.trim()) || Boolean(opts.hasFiles);
     if (hasContent) {
+      // Replies end with the sender's signature (Settings); notes don't.
+      let body = opts.body.trim();
+      if (!opts.internal && body) {
+        const [me] = await tx.select({ signature: agents.signature }).from(agents).where(and(eq(agents.orgId, opts.orgId), eq(agents.userId, opts.userId)));
+        const sig = me?.signature.trim();
+        if (sig && !body.endsWith(sig)) body = `${body}\n\n${sig}`;
+      }
       const [inserted] = await tx.insert(messages).values({
         orgId: opts.orgId,
         ticketId: ticket.id,
         authorType: "agent",
         authorId: opts.userId,
-        body: maskCards(opts.body.trim()),
+        body: maskCards(body),
         internal: opts.internal,
       }).returning({ id: messages.id });
       messageId = inserted.id;

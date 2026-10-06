@@ -169,6 +169,8 @@ export const agents = pgTable(
     role: agentRole("role").notNull().default("agent"),
     // A viewer reads tickets but can't change them, and isn't billed as a seat. Admins never are.
     viewer: boolean("viewer").notNull().default(false),
+    // Added under every reply this person sends (not notes or AI answers).
+    signature: text("signature").notNull().default(""),
     // Set when the person left the team in Clerk. They keep their name on old
     // tickets but can't be assigned, get emails or count as a seat.
     removedAt: timestamp("removed_at", { withTimezone: true }),
@@ -209,6 +211,11 @@ export const tickets = pgTable(
     customerId: uuid("customer_id").notNull().references(() => customers.id),
     assigneeId: text("assignee_id"), // agents.user_id within the same org
     tags: text("tags").array().notNull().default(sql`'{}'::text[]`),
+    // Other people copied on replies: from the email's To and Cc, or added by an agent.
+    cc: text("cc").array().notNull().default(sql`'{}'::text[]`),
+    // Set when this ticket was merged into another (lib/merge.ts). Its
+    // messages moved there; mail to this ticket goes there too.
+    mergedIntoId: uuid("merged_into_id"),
     externalId: text("external_id"), // "<source>:<id>" for imported tickets, e.g. "zendesk:4521"
     source: text("source"), // "zendesk", "intercom", ... for imported tickets
     // Original fields that have no Flatdesk equivalent (priority, group,

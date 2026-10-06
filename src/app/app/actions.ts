@@ -19,6 +19,9 @@ import type { RewriteStyle } from "@/lib/copilot-config";
 import { deliverReply } from "@/lib/email";
 import { isUuid } from "@/lib/ids";
 import { recordMacroUses } from "@/lib/macro-drift";
+import { notifyMentions } from "@/lib/mentions";
+import { mergeTickets } from "@/lib/merge";
+import { parseCcList } from "@/lib/cc";
 import { dismissSuggestion, saveSuggestedMacro } from "@/lib/macro-suggestions";
 import { hit, LIMITS } from "@/lib/rate-limit";
 import { teachAi } from "@/lib/teach";
@@ -26,7 +29,7 @@ import { addRule } from "@/lib/rules";
 import { audit, changes } from "@/lib/security";
 import type { SlaPolicy } from "@/db/schema";
 import { RESOLVE_CHOICES, TARGET_CHOICES, validHours } from "@/lib/sla";
-import { addReply, isPriority, normalizeTags, updateTicket, type TicketPriority, type TicketStatus } from "@/lib/tickets";
+import { addReply, isPriority, normalizeTags, parseTicketNumber, updateTicket, type TicketPriority, type TicketStatus } from "@/lib/tickets";
 
 // The paywall hides the app once a trial ends without a card; this keeps
 // direct requests from doing work behind it. Billing stays open.
@@ -67,6 +70,8 @@ export async function replyAction(form: FormData) {
   });
   if (messageId && files.length) await saveAttachments(s.orgId, ticketId, messageId, files);
   if (messageId) await deliverReply(s.orgId, messageId);
+  // "@sam" in a note emails Sam a link to the ticket.
+  if (messageId && form.get("internal") === "on") await notifyMentions(s.orgId, ticket, str(form, "body"), actor(s));
   // A person on the team answered, so the AI didn't finish this conversation
   // alone: it stops counting (and isn't billed as overage). No alert, since the team is already on it.
   if (messageId && form.get("internal") !== "on" && ticket.resolvedByAi) {
@@ -121,6 +126,44 @@ export async function updateTicketAction(form: FormData) {
 function checkMacroSize(name: string, body: string) {
   if (name.length > INPUT.macroName) throw new Error(`A macro name can be up to ${INPUT.macroName} characters.`);
   if (body.length > INPUT.macroBody) throw new Error(`A macro reply can be up to ${INPUT.macroBody.toLocaleString("en-US")} characters.`);
+}
+
+// Merge this ticket into another (by number). Goes to the merged ticket.
+export async function mergeTicketAction(form: FormData) {
+  const s = await requireOpenSession();
+  const ticketId = idOf(form, "ticketId");
+  const number = str(form, "number");
+  const into = parseTicketNumber(str(form, "into").replace(/^#/, ""));
+  if (!into) redirect(`/app/tickets/${number}?merge=${encodeURIComponent("Enter the number of the ticket to merge into, like 1042.")}`);
+  const result = await mergeTickets(s.orgId, ticketId, into, s.name);
+  if ("error" in result) redirect(`/app/tickets/${number}?merge=${encodeURIComponent(result.error)}`);
+  revalidatePath("/app/inbox");
+  redirect(`/app/tickets/${result.number}`);
+}
+
+// The people copied on a ticket's replies, from the rail.
+export async function saveCcAction(form: FormData) {
+  const s = await requireOpenSession();
+  const ticketId = idOf(form, "ticketId");
+  const number = str(form, "number");
+  const row = await db
+    .select({ email: schema.customers.email, channel: schema.tickets.channel })
+    .from(schema.tickets)
+    .innerJoin(schema.customers, eq(schema.customers.id, schema.tickets.customerId))
+    .where(and(eq(schema.tickets.orgId, s.orgId), eq(schema.tickets.id, ticketId)));
+  if (!row[0]) throw new Error("That ticket doesn't exist.");
+  const cc = parseCcList(str(form, "cc"), row[0].email);
+  if ("error" in cc) redirect(`/app/tickets/${number}?cc=${encodeURIComponent(cc.error)}`);
+  await db.update(schema.tickets).set({ cc }).where(and(eq(schema.tickets.orgId, s.orgId), eq(schema.tickets.id, ticketId)));
+  revalidatePath(`/app/tickets/${number}`);
+}
+
+// Your own reply signature.
+export async function saveSignatureAction(form: FormData) {
+  const s = await requireOpenSession();
+  const signature = String(form.get("signature") ?? "").replace(/\0/g, "").trim().slice(0, 1000);
+  await db.update(schema.agents).set({ signature }).where(and(eq(schema.agents.orgId, s.orgId), eq(schema.agents.userId, s.userId)));
+  revalidatePath("/app/settings");
 }
 
 // Inbox bulk actions: the same changes as the ticket rail, on up to 200

@@ -208,7 +208,7 @@ export default function Composer({
         onKeyDown={(e) => {
           if ((e.metaKey || e.ctrlKey) && e.key === "Enter") formRef.current?.requestSubmit();
         }}
-        placeholder={internal ? "Only your team sees this." : "Write your reply…"}
+        placeholder={internal ? "Only your team sees this. Type @ and a name to email a teammate." : "Write your reply…"}
         className="w-full resize-y rounded-lg bg-transparent px-2 py-1 focus:outline-none"
       />
       {files.length > 0 && (

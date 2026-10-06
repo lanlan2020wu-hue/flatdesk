@@ -183,6 +183,8 @@ export async function deliverReply(orgId: string, messageId: string): Promise<vo
   const { error } = await resend().emails.send({
     from: fromAddress(row.org.name, emailConfig.from),
     to: row.customer.email,
+    // People copied on the ticket; never on chats, whose address nobody checked.
+    cc: !chat && row.ticket.cc.length ? row.ticket.cc : undefined,
     replyTo: replyToAddress(row.org.inboundKey, row.ticket.number) ?? undefined,
     subject,
     // Agent and AI replies end with one-click rating links unless the team turned them off.
