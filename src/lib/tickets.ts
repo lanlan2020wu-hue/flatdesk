@@ -2,7 +2,7 @@ import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { noNul } from "@/lib/ids";
 import { maskCards } from "@/lib/redact";
-import { loadTriggers, runTriggers, TRIGGER_NOTE_PREFIX } from "@/lib/triggers";
+import { applyToTicket, loadTriggers, runTriggers, ticketForTriggers, TRIGGER_NOTE_PREFIX } from "@/lib/triggers";
 
 const { tickets, messages, customers, agents, rules, orgs } = schema;
 
@@ -304,6 +304,8 @@ export async function addReply(opts: {
         updatedAt: now,
         firstResponseAt: !opts.internal && hasContent && !ticket.firstResponseAt ? now : ticket.firstResponseAt,
         closedAt: status === "closed" ? (ticket.closedAt ?? now) : null,
+        // A reply starts the timed triggers over ("pending 72 hours" counts from here).
+        ...(!opts.internal && hasContent ? { timedRan: [] } : {}),
       })
       .where(eq(tickets.id, ticket.id));
     return { ticket, messageId };
@@ -318,21 +320,30 @@ export async function addSystemNote(orgId: string, ticketId: string, body: strin
   await db.insert(messages).values({ orgId, ticketId, authorType: "system", body, internal: true });
 }
 
-// A customer wrote again (usually an email reply): add it and reopen the ticket.
+// A customer wrote again (usually an email reply): add it, reopen the ticket
+// and run the team's "customer writes back" triggers (which see the status it
+// had, so "status is closed" catches replies to closed tickets).
 export async function addCustomerMessage(opts: { orgId: string; ticketId: string; customerId: string; body: string; emailMessageId?: string | null }) {
   return db.transaction(async (tx) => {
+    const body = maskCards(noNul(opts.body));
     const [message] = await tx.insert(messages).values({
       orgId: opts.orgId,
       ticketId: opts.ticketId,
       authorType: "customer",
       authorId: opts.customerId,
-      body: maskCards(noNul(opts.body)),
+      body,
       emailMessageId: opts.emailMessageId ? noNul(opts.emailMessageId) : null,
     }).returning({ id: messages.id });
-    await tx
-      .update(tickets)
-      .set({ status: "open", closedAt: null, updatedAt: new Date() })
-      .where(and(eq(tickets.orgId, opts.orgId), eq(tickets.id, opts.ticketId)));
+    const reopen = { status: "open" as const, closedAt: null, timedRan: [] };
+    const [ticket] = await tx.select().from(tickets).where(and(eq(tickets.orgId, opts.orgId), eq(tickets.id, opts.ticketId))).for("update");
+    const { list, canAssign } = ticket ? await loadTriggers(tx, opts.orgId, "updated") : { list: [], canAssign: () => false };
+    if (ticket && list.length) {
+      const [customer] = await tx.select({ email: customers.email }).from(customers).where(eq(customers.id, opts.customerId));
+      const ran = runTriggers(list, ticketForTriggers(ticket, customer?.email ?? "", body), canAssign);
+      await applyToTicket(tx, ticket, ran, new Date(), reopen);
+    } else {
+      await tx.update(tickets).set({ ...reopen, updatedAt: new Date() }).where(and(eq(tickets.orgId, opts.orgId), eq(tickets.id, opts.ticketId)));
+    }
     return message.id;
   });
 }
@@ -346,6 +357,7 @@ export async function updateTicket(
   if (patch.status) {
     set.status = patch.status;
     set.closedAt = patch.status === "closed" ? new Date() : null;
+    set.timedRan = [];
   }
   if (patch.assigneeId !== undefined) set.assigneeId = patch.assigneeId;
   if (patch.priority) set.priority = patch.priority;

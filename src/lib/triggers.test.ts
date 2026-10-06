@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { after, test } from "node:test";
 import { eq } from "drizzle-orm";
 import { toTrigger } from "./import/sources/zendesk";
-import { conditionMatches, runTriggers, triggerFromForm, type TriggerTicket } from "./triggers";
+import { conditionMatches, runTimedTriggers, runTriggers, triggerFromForm, type TriggerTicket } from "./triggers";
 
 const ticket: TriggerTicket = { channel: "email", subject: "Refund please", body: "I was charged twice for March.", from: "ana@bigfirm.com", tags: [] };
 const trig = (over: object) => ({ name: "t", enabled: true, matchAll: true, conditions: [], actions: [], ...over });
@@ -51,6 +51,46 @@ test("the form: empty rows skipped, channel checked, needs a condition and an ac
   assert.ok("error" in triggerFromForm(form({ name: "x", c0_value: "a" }), norm));
 });
 
+test("status conditions, and timed triggers that email the customer", () => {
+  const pending = { ...ticket, status: "pending" as const };
+  assert.ok(conditionMatches({ field: "status", op: "is", value: "pending" }, pending));
+  assert.ok(!conditionMatches({ field: "status", op: "is_not", value: "pending" }, pending));
+  const r = runTriggers([trig({ name: "Nudge", conditions: [{ field: "status", op: "is", value: "pending" }], actions: [{ type: "reply", body: "Still need help?" }, { type: "add_tags", tags: ["nudged"] }] })], pending, () => true);
+  assert.deepEqual(r.replies, ["Still need help?"]);
+  assert.deepEqual(r.tags, ["nudged"]);
+
+  const form = (v: Record<string, string>) => (k: string) => v[k] ?? "";
+  const norm = (t: string[]) => t.map((x) => x.trim().toLowerCase()).filter(Boolean);
+  const timed = triggerFromForm(form({ name: "Nudge", event: "timed", hours: "72", c0_field: "status", c0_value: "Pending", reply: "Still need help?" }), norm);
+  assert.ok(!("error" in timed));
+  assert.equal(timed.event, "timed");
+  assert.equal(timed.hours, 72);
+  assert.deepEqual(timed.conditions, [{ field: "status", op: "is", value: "pending" }]);
+  assert.match((triggerFromForm(form({ name: "x", event: "created", c0_field: "subject", c0_value: "a", reply: "hi" }), norm) as { error: string }).error, /Only timed/);
+  assert.match((triggerFromForm(form({ name: "x", event: "timed", hours: "0", c0_field: "subject", c0_value: "a", note: "n" }), norm) as { error: string }).error, /hours/);
+  assert.ok("error" in triggerFromForm(form({ name: "x", c0_field: "status", c0_value: "solved", note: "n" }), norm));
+});
+
+test("Zendesk automations become timed triggers", () => {
+  const made = toTrigger(
+    [{ field: "status", operator: "is", value: "pending" }, { field: "hours_since_pending", operator: "greater_than", value: "71" }, { field: "current_tags", operator: "not_includes", value: "nudged" }],
+    [],
+    [{ field: "notification_user", value: ["requester_id", "Checking in", "Did that help? Reply if not."] }, { field: "current_tags", value: "nudged" }],
+    "timed",
+  );
+  assert.ok("trigger" in made);
+  assert.equal(made.trigger.event, "timed");
+  assert.equal(made.trigger.hours, 72);
+  assert.deepEqual(made.trigger.conditions, [{ field: "status", op: "is", value: "pending" }, { field: "tags", op: "excludes", value: "nudged" }]);
+  assert.deepEqual(made.trigger.actions, [{ type: "add_tags", tags: ["nudged"] }, { type: "reply", body: "Did that help? Reply if not." }]);
+  const close = toTrigger([{ field: "status", operator: "is", value: "solved" }, { field: "hours_since_solved", operator: "greater_than", value: "95" }], [], [{ field: "status", value: "closed" }], "timed");
+  assert.ok("trigger" in close && close.trigger.hours === 96);
+  const placeholder = toTrigger([{ field: "status", operator: "is", value: "pending" }, { field: "hours_since_update", operator: "is", value: "24" }], [], [{ field: "notification_user", value: ["requester_id", "Hi", "Hi {{ticket.requester.first_name}}"] }], "timed");
+  assert.ok("blocker" in placeholder && /placeholders/.test(placeholder.blocker));
+  const business = toTrigger([{ field: "status", operator: "is", value: "pending" }, { field: "hours_since_update", operator: "greater_than_business_hours", value: "24" }], [], [{ field: "status", value: "closed" }], "timed");
+  assert.ok("blocker" in business);
+});
+
 test("Zendesk triggers that fit become Flatdesk triggers; the rest say why not", () => {
   const made = toTrigger(
     [{ field: "update_type", operator: "is", value: "Create" }, { field: "comment_includes_word", operator: "includes", value: "refund chargeback" }, { field: "via_id", operator: "is", value: 4 }],
@@ -64,7 +104,7 @@ test("Zendesk triggers that fit become Flatdesk triggers; the rest say why not",
     actions: [{ type: "add_tags", tags: ["billing", "urgent"] }, { type: "assign_external", agentExternalId: "901" }, { type: "set_status", status: "pending" }],
   });
   const updates = toTrigger([{ field: "update_type", operator: "is", value: "Change" }, { field: "current_tags", operator: "includes", value: "vip" }], [], [{ field: "status", value: "open" }]);
-  assert.ok("blocker" in updates && /updated/.test(updates.blocker));
+  assert.ok("blocker" in updates && /update/.test(updates.blocker));
   const mail = toTrigger([{ field: "update_type", operator: "is", value: "Create" }, { field: "current_tags", operator: "includes", value: "vip" }], [], [{ field: "notification_user", value: ["requester_id", "Hi", "Got it"] }]);
   assert.ok("blocker" in mail && /email/.test(mail.blocker));
   const any = toTrigger([{ field: "status", operator: "is", value: "new" }], [{ field: "subject_includes_word", operator: "is", value: "server down" }, { field: "current_tags", operator: "includes", value: "outage" }], [{ field: "current_tags", value: "p1" }]);
@@ -74,10 +114,12 @@ test("Zendesk triggers that fit become Flatdesk triggers; the rest say why not",
 });
 
 const ORG = "org_triggers_test";
+after(async () => {
+  if (process.env.DATABASE_URL) await (await import("@/db")).pool.end();
+});
 
 test("database: a new ticket runs triggers, and a late one is escalated once", { skip: !process.env.DATABASE_URL }, async () => {
-  const { db, schema, pool } = await import("@/db");
-  after(() => pool.end());
+  const { db, schema } = await import("@/db");
   const { createTicket } = await import("./tickets");
   const { escalateOverdue, OVERDUE_TAG } = await import("./escalation");
 
@@ -137,4 +179,58 @@ test("database: a new ticket runs triggers, and a late one is escalated once", {
   assert.ok(r2.resolveEscalated >= 0);
 
   await db.delete(schema.orgs).where(eq(schema.orgs.id, ORG));
+});
+
+const ORG2 = "org_triggers_test2";
+
+test("database: customer-writes-back and timed triggers", { skip: !process.env.DATABASE_URL }, async () => {
+  const { db, schema } = await import("@/db");
+  const { addCustomerMessage, addReply, createTicket } = await import("./tickets");
+  await db.delete(schema.orgs).where(eq(schema.orgs.id, ORG2));
+  await db.insert(schema.orgs).values({ id: ORG2, name: "Timed team", inboundKey: "trig00002", firstResponseMinutes: null });
+  await db.insert(schema.agents).values({ orgId: ORG2, userId: "u_kim", name: "Kim", email: "kim@x.com", role: "admin" });
+  await db.insert(schema.triggers).values([
+    { orgId: ORG2, name: "Reopened", event: "updated", position: 0, conditions: [{ field: "status", op: "is", value: "closed" }], actions: [{ type: "add_tags", tags: ["reopened"] }, { type: "assign", to: "u_kim" }] },
+    { orgId: ORG2, name: "Nudge", event: "timed", hours: 72, position: 1, conditions: [{ field: "status", op: "is", value: "pending" }], actions: [{ type: "reply", body: "Still need help?" }, { type: "add_tags", tags: ["nudged"] }] },
+    { orgId: ORG2, name: "Close", event: "timed", hours: 96, position: 2, conditions: [{ field: "tags", op: "includes", value: "nudged" }, { field: "status", op: "is", value: "pending" }], actions: [{ type: "set_status", status: "closed" }] },
+  ]);
+  const t = await createTicket({ orgId: ORG2, channel: "email", customerEmail: "cy@x.com", subject: "Help", body: "Hi", authorType: "customer" });
+  const get = () => db.query.tickets.findFirst({ where: eq(schema.tickets.id, t.id) }).then((x) => x!);
+  const msgs = () => db.select().from(schema.messages).where(eq(schema.messages.ticketId, t.id));
+
+  // Customer writes back on an open ticket: "status is closed" doesn't match.
+  await addCustomerMessage({ orgId: ORG2, ticketId: t.id, customerId: t.customerId, body: "Hello?" });
+  assert.deepEqual((await get()).tags, []);
+  await addReply({ orgId: ORG2, ticketId: t.id, userId: "u_kim", body: "Try this.", internal: false, status: "closed" });
+  await addCustomerMessage({ orgId: ORG2, ticketId: t.id, customerId: t.customerId, body: "Didn't work" });
+  let now = await get();
+  assert.equal(now.status, "open");
+  assert.deepEqual(now.tags, ["reopened"]);
+  assert.equal(now.assigneeId, "u_kim");
+
+  // Pending, then 73 hours pass: nudged once, by email from the team.
+  await addReply({ orgId: ORG2, ticketId: t.id, userId: "u_kim", body: "Any luck?", internal: false, status: "pending" });
+  const base = (await get()).updatedAt.getTime();
+  const at = (h: number) => new Date(base + h * 3_600_000);
+  const first = await runTimedTriggers(at(73));
+  assert.equal(first.emails.filter((e) => e.orgId === ORG2).length, 1);
+  now = await get();
+  assert.ok(now.tags.includes("nudged"));
+  const sent = (await msgs()).filter((m) => m.authorType === "system" && !m.internal);
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].body, "Still need help?");
+  // Not twice, even later.
+  await runTimedTriggers(at(80));
+  assert.equal((await msgs()).filter((m) => m.authorType === "system" && !m.internal).length, 1);
+  assert.equal((await get()).status, "pending");
+  // 96 hours after the nudge, it closes.
+  await runTimedTriggers(at(73 + 97));
+  now = await get();
+  assert.equal(now.status, "closed");
+
+  // The customer writes again: the cycle starts over.
+  await addCustomerMessage({ orgId: ORG2, ticketId: t.id, customerId: t.customerId, body: "Back again" });
+  assert.deepEqual((await get()).timedRan, []);
+
+  await db.delete(schema.orgs).where(eq(schema.orgs.id, ORG2));
 });
