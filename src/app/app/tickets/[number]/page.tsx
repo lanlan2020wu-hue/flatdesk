@@ -2,6 +2,7 @@ import { and, asc, desc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
+import ActionPanel from "@/components/ActionPanel";
 import AutoSubmitSelect from "@/components/AutoSubmitSelect";
 import Avatar from "@/components/Avatar";
 import Composer from "@/components/Composer";
@@ -17,6 +18,7 @@ import { requireOpenPage } from "@/lib/auth";
 import { RATING_LABEL, ratingsForTicket } from "@/lib/csat";
 import { timeAgo } from "@/lib/format";
 import { aiConfigured } from "@/lib/ai";
+import { ticketRuns } from "@/lib/ai-actions";
 import { cachedSummary } from "@/lib/copilot";
 import { identifyMacro, repeatPrompt } from "@/lib/macro-suggestions";
 import { STATUS_LABEL } from "@/lib/receipts";
@@ -32,7 +34,7 @@ export async function generateMetadata({ params }: PageProps<"/app/tickets/[numb
 const field = "field field-sm";
 const heading = "eyebrow";
 
-export default async function TicketPage({ params }: PageProps<"/app/tickets/[number]">) {
+export default async function TicketPage({ params, searchParams }: PageProps<"/app/tickets/[number]">) {
   const s = await requireOpenPage();
   const number = parseTicketNumber((await params).number);
   if (!number) notFound();
@@ -45,7 +47,9 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
   // Right after this agent replies with an answer they keep sending, offer to save it as a macro.
   const last = thread.at(-1);
   const justReplied = last && last.authorType === "agent" && !last.internal && last.authorId === s.userId;
-  const [agents, macros, [aiEvent], repeat, files, ratings, org, summary, tagList] = await Promise.all([
+  const sp = await searchParams;
+  const actionMessage = typeof sp.action === "string" ? sp.action.slice(0, 300) : null;
+  const [agents, macros, [aiEvent], repeat, files, ratings, org, summary, tagList, runs] = await Promise.all([
     listAgents(s.orgId),
     db.select().from(schema.macros).where(and(eq(schema.macros.orgId, s.orgId))).orderBy(asc(schema.macros.name)),
     db
@@ -60,6 +64,7 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
     db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) }),
     cachedSummary(s.orgId, ticket.id, last?.id),
     orgTags(s.orgId),
+    ticketRuns(s.orgId, ticket.id),
   ]);
   const copilotOn = aiConfigured() && Boolean(org?.aiProcessing);
   // AI macros: when the customer is waiting on us, the macro that answers what they asked.
@@ -100,6 +105,8 @@ export default async function TicketPage({ params }: PageProps<"/app/tickets/[nu
             <SlaBadge state={sla} hours={org?.businessHours ?? null} />
           </p>
         </header>
+
+        <ActionPanel runs={runs} number={ticket.number} canDecide={!s.viewer} message={actionMessage} />
 
         {copilotOn && thread.length > 0 && <CopilotSummary ticketId={ticket.id} initial={summary?.summary ?? null} stale={summary?.stale ?? false} disabled={s.viewer} />}
 

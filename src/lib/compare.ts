@@ -213,7 +213,7 @@ export const RIVALS: Rival[] = [
     slug: "gorgias",
     name: "Gorgias",
     title: "Gorgias",
-    answer: `Gorgias prices by ticket volume rather than seats, and third parties report its AI Agent at about $0.90 to $1.00 per automated interaction on top of the ticket fee. Flatdesk is ${usd(PLAN.annualSeatPrice)} per agent on annual billing (${usd(PLAN.seatPrice)} monthly) with ${PLAN.includedPerAgent} AI answers per agent included. Gorgias is built for ecommerce: it can refund and edit Shopify orders from the ticket and attributes revenue to support. Flatdesk shows a customer's Shopify orders beside the ticket, read only.`,
+    answer: `Gorgias prices by ticket volume rather than seats, and third parties report its AI Agent at about $0.90 to $1.00 per automated interaction on top of the ticket fee. Flatdesk is ${usd(PLAN.annualSeatPrice)} per agent on annual billing (${usd(PLAN.seatPrice)} monthly) with ${PLAN.includedPerAgent} AI answers per agent included. Gorgias is built for ecommerce: it can refund and edit Shopify orders from the ticket and attributes revenue to support. Flatdesk shows a customer's Shopify orders beside the ticket, and its AI can cancel and refund an order that hasn't shipped, within limits you set.`,
     flatdeskWins: [
       "AI included in the seat instead of charged per interaction",
       "An AI answer is never charged on top of a ticket fee",
@@ -221,11 +221,11 @@ export const RIVALS: Rival[] = [
       "AI macros written from your replies, with updates suggested from your team's edits. They can also assign, tag and close tickets",
     ],
     theyWin: [
-      "Refunds, cancellations and order edits in Shopify from the ticket",
+      "Order edits, and refunds on shipped orders, in Shopify from the ticket",
       "Revenue attribution and ecommerce automations",
       "Unlimited seats",
     ],
-    pickThem: "You run a Shopify store and want to refund or change orders without leaving the ticket.",
+    pickThem: "You run a Shopify store and want to edit orders or refund shipped ones without leaving the ticket.",
     canImport: false,
     plans: [],
     fixed: [

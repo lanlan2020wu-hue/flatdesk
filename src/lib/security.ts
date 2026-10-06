@@ -25,6 +25,8 @@ export type AuditAction =
   | "integration.disconnect"
   | "apikey.create"
   | "apikey.revoke"
+  | "action.change"
+  | "action.decide"
   | "trigger.save"
   | "trigger.delete";
 
@@ -49,6 +51,8 @@ export const AUDIT_LABELS: Record<AuditAction, string> = {
   "trigger.save": "Saved a trigger",
   "trigger.delete": "Deleted a trigger",
   "apikey.revoke": "Revoked an API key",
+  "action.change": "Changed an AI action",
+  "action.decide": "Approved or declined an AI action",
 };
 
 type Actor = { userId: string | null; name: string };

@@ -13,11 +13,11 @@ export const metadata = pageMeta({
 const ITEMS = [
   {
     name: "Shopify",
-    body: "The customer's last five orders beside their ticket: what they bought, the total, payment and delivery status, and tracking links. Matched by email. Read only.",
+    body: "The customer's last five orders beside their ticket: what they bought, the total, payment and delivery status, and tracking links. Matched by email. The AI can read them to answer “where's my order?”, and cancel and refund an order that hasn't shipped if you allow it.",
   },
   {
     name: "Stripe",
-    body: "The customer's plan, its status and renewal date, and their last five payments and refunds beside their ticket. Uses a restricted key that can only read.",
+    body: "The customer's plan, its status and renewal date, and their last five payments and refunds beside their ticket. Uses a restricted key. With write access you choose to give, the AI can refund a payment or cancel a subscription within limits you set.",
   },
   {
     name: "HubSpot",
@@ -34,6 +34,10 @@ const ITEMS = [
   {
     name: "Zapier, Make and n8n",
     body: "Start a workflow when a ticket comes in, or make a ticket from a form, a failed payment or an order problem in another app.",
+  },
+  {
+    name: "Your own system, through AI actions",
+    body: "Give the AI actions that call your endpoint: reset a password, change a plan, look up an account. Each call is signed, and you choose which ones a person approves first.",
   },
   {
     name: "REST API and webhooks",

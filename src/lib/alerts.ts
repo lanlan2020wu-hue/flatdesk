@@ -131,7 +131,19 @@ export const publicLookup: LookupFunction = (hostname, options, callback) => {
 
 // Posts the alert. No redirects are followed: a redirect could point the
 // request somewhere the address check never saw.
-export function postAlert(url: string, body: string, headers: Record<string, string>): Promise<{ status: number; statusText: string }> {
+export async function postAlert(url: string, body: string, headers: Record<string, string>): Promise<{ status: number; statusText: string }> {
+  const { status, statusText } = await postWebhook(url, body, headers, 0);
+  return { status, statusText };
+}
+
+// The same, keeping up to maxBody bytes of the answer (AI actions read it).
+export function postWebhook(
+  url: string,
+  body: string,
+  headers: Record<string, string>,
+  maxBody: number,
+  timeoutMs = TIMEOUT_MS,
+): Promise<{ status: number; statusText: string; body: string }> {
   return new Promise((resolve, reject) => {
     const u = new URL(url);
     const host = u.hostname.replace(/^\[|\]$/g, "");
@@ -143,12 +155,27 @@ export function postAlert(url: string, body: string, headers: Record<string, str
       u,
       { method: "POST", headers: { ...headers, "content-length": String(Buffer.byteLength(body)) }, lookup: publicLookup, agent: false },
       (res) => {
-        res.resume(); // only the status matters; the body could be anything
-        clearTimeout(timer);
-        resolve({ status: res.statusCode ?? 0, statusText: res.statusMessage ?? "" });
+        const done = (text: string) => {
+          clearTimeout(timer);
+          resolve({ status: res.statusCode ?? 0, statusText: res.statusMessage ?? "", body: text });
+        };
+        if (maxBody <= 0) {
+          res.resume(); // only the status matters; the body could be anything
+          return done("");
+        }
+        const chunks: Buffer[] = [];
+        let size = 0;
+        res.on("data", (c: Buffer) => {
+          if (size < maxBody) chunks.push(c.subarray(0, maxBody - size));
+          size += c.length;
+          if (size >= maxBody) res.destroy();
+        });
+        const finish = () => done(Buffer.concat(chunks).toString("utf8"));
+        res.on("end", finish);
+        res.on("close", finish);
       },
     );
-    const timer = setTimeout(() => req.destroy(Object.assign(new Error("timeout"), { name: "TimeoutError" })), TIMEOUT_MS);
+    const timer = setTimeout(() => req.destroy(Object.assign(new Error("timeout"), { name: "TimeoutError" })), timeoutMs);
     req.on("error", (err) => {
       clearTimeout(timer);
       reject(err);

@@ -72,7 +72,10 @@ export default async function IntegrationsPage() {
                 <li>Create an app named Flatdesk. In its version settings, add the Admin API scopes <span className="num">read_orders</span> and <span className="num">read_customers</span> (and <span className="num">read_all_orders</span> to see orders older than 60 days). Release the version.</li>
                 <li>Install the app on your store, then copy the client ID and client secret from the app&apos;s settings.</li>
               </ol>
-              <p className="mt-2">Flatdesk only reads orders and customers. The secret is stored encrypted.</p>
+              <p className="mt-2">
+                With these scopes Flatdesk only reads orders and customers. To let the AI cancel unshipped orders, also add <span className="num">write_orders</span> and turn the action on under{" "}
+                <Link href="/app/actions" className="link text-accent">AI actions</Link>. The secret is stored encrypted.
+              </p>
             </details>
             <ShopifyForm connected={Boolean(connected.shopify)} />
             {connected.shopify && <Disconnect kind="shopify" />}
@@ -100,7 +103,10 @@ export default async function IntegrationsPage() {
                 <li>Name it Flatdesk. Set Customers, Subscriptions and Charges to Read. Leave everything else at None.</li>
                 <li>Create the key and paste it here.</li>
               </ol>
-              <p className="mt-2">A restricted key can only read what you allow, so Flatdesk can&apos;t charge, refund or change anything. It&apos;s stored encrypted.</p>
+              <p className="mt-2">
+                A restricted key can only do what you allow. With read access alone, Flatdesk can&apos;t charge, refund or change anything. To let the AI refund or cancel, also give it Write access to Refunds or Subscriptions and add the action on{" "}
+                <Link href="/app/actions" className="link text-accent">AI actions</Link>. It&apos;s stored encrypted.
+              </p>
             </details>
             <StripeForm connected={Boolean(connected.stripe)} />
             {connected.stripe && <Disconnect kind="stripe" />}

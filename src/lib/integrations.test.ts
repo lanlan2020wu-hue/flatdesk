@@ -201,8 +201,9 @@ test("Stripe: restricted keys only, and payments and plans in words", async () =
   assert.ok("key" in checkStripeKey(" rk_live_abcdefghijklmnop "));
   assert.equal(money(4900, "usd"), "49.00 USD");
   assert.equal(money(500, "jpy"), "500 JPY");
-  assert.equal(chargeView({ amount: 4900, currency: "usd", status: "succeeded", created: 1_790_000_000, refunded: false, amount_refunded: 1000, description: null }).status, "10.00 USD refunded");
+  assert.equal(chargeView({ id: "ch_1", customer: "cus_1", amount: 4900, currency: "usd", status: "succeeded", created: 1_790_000_000, refunded: false, amount_refunded: 1000, description: null }).status, "10.00 USD refunded");
   const sub = subscriptionView({
+    id: "sub_1",
     status: "active",
     cancel_at: null,
     items: { data: [{ current_period_end: 1_790_000_000, quantity: 3, price: { nickname: "Team", unit_amount: 1500, currency: "usd", recurring: { interval: "month", interval_count: 1 } } }] },
