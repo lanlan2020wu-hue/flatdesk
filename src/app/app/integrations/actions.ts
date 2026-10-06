@@ -7,6 +7,7 @@ import { createApiKey, revokeApiKey } from "@/lib/api-keys";
 import { requireAdmin, requireEditor, requireOpen } from "@/lib/auth";
 import { isUuid } from "@/lib/ids";
 import { connectHubSpot, connectJira, connectShopify, connectStripe, disconnect, escalateToJira } from "@/lib/integrations";
+import { logTicketToHubSpot, saveHubSpotSettings } from "@/lib/integrations/hubspot-sync";
 import { audit } from "@/lib/security";
 import { SITE } from "@/lib/site";
 import { addSystemNote } from "@/lib/tickets";
@@ -94,6 +95,30 @@ export async function escalateAction(_: ConnectState, form: FormData): Promise<C
   await addSystemNote(s.orgId, ticket.id, `${s.name} sent this ticket to Jira as ${result.key}.`);
   revalidatePath(`/app/tickets/${ticket.number}`);
   return { error: null, done: `Made ${result.key}.` };
+}
+
+// HubSpot write-back settings (lib/integrations/hubspot-sync.ts).
+export async function saveHubSpotSettingsAction(form: FormData) {
+  const s = await requireOpenAdmin();
+  const next = { logClosed: form.get("logClosed") === "on", createContacts: form.get("createContacts") === "on" };
+  await saveHubSpotSettings(s.orgId, next);
+  await audit(s.orgId, { userId: s.userId, name: s.name }, "integration.connect", `HubSpot: ${next.logClosed ? "logging closed tickets" : "not logging tickets"}${next.logClosed && next.createContacts ? ", adding missing contacts" : ""}`);
+  revalidatePath("/app/integrations");
+}
+
+// "Log to HubSpot" on a ticket, or "Add to HubSpot" when there's no contact yet.
+export async function logToHubSpotAction(_: ConnectState, form: FormData): Promise<ConnectState> {
+  const s = await requireOpen(await requireEditor());
+  if (!(await hit([{ key: `hubspot-log:${s.orgId}`, max: 120, windowSec: 3600 }])).ok) return { error: "That's a lot of HubSpot notes this hour. Try again later." };
+  const ticketId = str(form, "ticketId");
+  if (!isUuid(ticketId)) return { error: "That ticket doesn't exist." };
+  const ticket = await db.query.tickets.findFirst({ where: and(eq(schema.tickets.orgId, s.orgId), eq(schema.tickets.id, ticketId)) });
+  if (!ticket) return { error: "That ticket doesn't exist." };
+  const result = await logTicketToHubSpot(s.orgId, ticket.id, { create: form.get("create") === "1" });
+  if (!result.ok) return { error: result.reason === "no-contact" ? "There's no HubSpot contact with this email." : (result.error ?? "HubSpot couldn't be reached.") };
+  await addSystemNote(s.orgId, ticket.id, result.created ? `${s.name} added the customer to HubSpot and logged this ticket on their contact.` : `${s.name} logged this ticket on the customer's HubSpot contact.`);
+  revalidatePath(`/app/tickets/${ticket.number}`);
+  return { error: null, done: result.created ? "Added to HubSpot, with this ticket on their timeline." : "Logged on their HubSpot timeline." };
 }
 
 export async function disconnectAction(form: FormData) {

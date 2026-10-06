@@ -8,6 +8,7 @@ import {
   connectStripeAction,
   createKeyAction,
   escalateAction,
+  logToHubSpotAction,
   type ConnectState,
   type KeyState,
 } from "@/app/app/integrations/actions";
@@ -160,5 +161,19 @@ export function NewKeyForm() {
         </div>
       )}
     </div>
+  );
+}
+
+// On the ticket's HubSpot panel: log this ticket on the contact, or add the contact first.
+export function HubSpotLogButton({ ticketId, create }: { ticketId: string; create: boolean }) {
+  const [state, action, pending] = useActionState<ConnectState, FormData>(logToHubSpotAction, { error: null });
+  if (state.done) return <Notice state={state} />;
+  return (
+    <form action={action} className="grid gap-2">
+      <input type="hidden" name="ticketId" value={ticketId} />
+      {create && <input type="hidden" name="create" value="1" />}
+      <Notice state={state} />
+      <button className="btn btn-secondary btn-sm w-max" disabled={pending}>{pending ? "Writing to HubSpot…" : create ? "Add to HubSpot" : "Log this ticket"}</button>
+    </form>
   );
 }

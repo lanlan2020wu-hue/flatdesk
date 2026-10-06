@@ -4,7 +4,9 @@
 // Teams paste the access token of a HubSpot private app (called legacy apps
 // in newer accounts) with the crm.objects.contacts.read scope, plus
 // crm.objects.companies.read for the company name and crm.objects.owners.read
-// for the owner. Flatdesk only reads.
+// for the owner. With crm.objects.contacts.write as well, Flatdesk can log
+// closed tickets on the contact's timeline and add missing contacts
+// (hubspot-sync.ts); it never changes or deletes existing records.
 
 const API = "https://api.hubapi.com";
 const TIMEOUT_MS = 5000;
@@ -30,7 +32,7 @@ export function checkHubSpotToken(raw: string): { token: string } | { error: str
   return { token };
 }
 
-async function call<T>(token: string, path: string, fetcher: typeof fetch, body?: unknown): Promise<T> {
+async function call<T>(token: string, path: string, fetcher: typeof fetch, body?: unknown, write = false): Promise<T> {
   const res = await fetcher(`${API}${path}`, {
     method: body ? "POST" : "GET",
     headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },
@@ -38,7 +40,7 @@ async function call<T>(token: string, path: string, fetcher: typeof fetch, body?
     signal: AbortSignal.timeout(TIMEOUT_MS),
   });
   if (res.status === 401) throw new HubSpotError("HubSpot didn't accept the token. The app may have been deleted or the token rotated.");
-  if (res.status === 403) throw new HubSpotError("The HubSpot app needs the crm.objects.contacts.read scope.");
+  if (res.status === 403) throw new HubSpotError(write ? "The HubSpot app needs the crm.objects.contacts.write scope to write to HubSpot." : "The HubSpot app needs the crm.objects.contacts.read scope.");
   if (res.status === 429) throw new HubSpotError("HubSpot is rate limiting this app. Try again in a minute.");
   if (!res.ok) throw new HubSpotError(`HubSpot answered ${res.status}.`);
   return (await res.json()) as T;
@@ -109,4 +111,34 @@ export async function hubspotContact(creds: { token: string; portalId: string; u
       : null,
   ]);
   return toContact(c.id, p, creds, { company, owner });
+}
+
+type Creds = { token: string; portalId: string; uiDomain: string };
+
+// Adds a contact for someone who wrote in and isn't in HubSpot yet.
+export async function createHubSpotContact(creds: Creds, person: { email: string; name: string | null }, fetcher: typeof fetch = fetch): Promise<string> {
+  const [first, ...rest] = (person.name ?? "").trim().split(/\s+/).filter(Boolean);
+  const properties: Record<string, string> = { email: person.email };
+  if (first) properties.firstname = first;
+  if (rest.length) properties.lastname = rest.join(" ");
+  const made = await call<{ id: string }>(creds.token, "/crm/v3/objects/contacts", fetcher, { properties }, true);
+  return made.id;
+}
+
+// HubSpot's own association type for a note on a contact.
+export const NOTE_TO_CONTACT = 202;
+
+// A note on the contact's timeline. HubSpot shows note bodies as HTML.
+export async function addHubSpotNote(creds: Creds, contactId: string, html: string, at: Date, fetcher: typeof fetch = fetch): Promise<string> {
+  const made = await call<{ id: string }>(
+    creds.token,
+    "/crm/v3/objects/notes",
+    fetcher,
+    {
+      properties: { hs_timestamp: at.toISOString(), hs_note_body: html },
+      associations: [{ to: { id: contactId }, types: [{ associationCategory: "HUBSPOT_DEFINED", associationTypeId: NOTE_TO_CONTACT }] }],
+    },
+    true,
+  );
+  return made.id;
 }

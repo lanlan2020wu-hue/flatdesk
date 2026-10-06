@@ -376,7 +376,7 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
           <StripeCustomer orgId={s.orgId} email={customer.email} unverified={ticket.channel === "chat"} />
         </Suspense>
         <Suspense fallback={null}>
-          <HubSpotPanel orgId={s.orgId} email={customer.email} />
+          <HubSpotPanel orgId={s.orgId} email={customer.email} ticketId={ticket.id} canWrite={!s.viewer} />
         </Suspense>
 
         <section className="grid gap-1 border-t border-line pt-4 text-muted">

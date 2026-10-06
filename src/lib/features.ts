@@ -104,7 +104,7 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
     features: [
       { id: "shopify", title: "Shopify orders on the ticket", body: "The customer's latest orders beside their ticket: items, total, payment and delivery status, and tracking links. The AI can read them to answer \"where's my order?\" and cancel unshipped orders.", icon: I.bag, isNew: true },
       { id: "stripe", title: "Stripe on the ticket", body: "The customer's plan, renewal date, and latest payments and refunds beside their ticket. Give the key write access and the AI can refund and cancel within your limits.", icon: I.card, isNew: true },
-      { id: "hubspot", title: "HubSpot on the ticket", body: "The customer's HubSpot contact beside their ticket: company, title, lifecycle stage and owner.", icon: I.users, isNew: true },
+      { id: "hubspot", title: "HubSpot on the ticket", body: "The customer's HubSpot contact beside their ticket: company, title, lifecycle stage and owner. Closed tickets can be logged on the contact's timeline, adding people who aren't in HubSpot yet.", icon: I.users, isNew: true },
       { id: "jira", title: "Send to Jira", body: "Turn a bug report into a Jira issue from the ticket, with the customer's words and a link back. The ticket shows the issue's status.", icon: I.plug, isNew: true },
       { id: "api", title: "API, Zapier and Make", body: "A REST API and signed webhooks. Make tickets from other apps, start workflows when one comes in, reply and close from a script.", icon: I.code, isNew: true },
       { id: "mcp", title: "Works with Claude and Cursor", body: "Flatdesk is an MCP server. Connect Claude, Cursor or another AI tool with your API key and ask it to find, read, tag, assign or answer tickets.", icon: I.ai, isNew: true },

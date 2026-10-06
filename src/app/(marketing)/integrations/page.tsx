@@ -21,7 +21,7 @@ const ITEMS = [
   },
   {
     name: "HubSpot",
-    body: "The customer's HubSpot contact beside their ticket: company, title, lifecycle stage, lead status and owner, with a link to the record. Read only.",
+    body: "The customer's HubSpot contact beside their ticket: company, title, lifecycle stage, lead status and owner, with a link to the record. Optionally, each closed ticket is logged as a note on the contact's timeline, and people who aren't in HubSpot yet can be added. Flatdesk never changes or deletes existing HubSpot records.",
   },
   {
     name: "Jira",

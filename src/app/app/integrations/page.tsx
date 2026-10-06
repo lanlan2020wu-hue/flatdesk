@@ -8,7 +8,7 @@ import { requireOpenPage } from "@/lib/auth";
 import { timeAgo } from "@/lib/format";
 import { listIntegrations, type Integration } from "@/lib/integrations";
 import { SITE } from "@/lib/site";
-import { disconnectAction, revokeKeyAction } from "./actions";
+import { disconnectAction, revokeKeyAction, saveHubSpotSettingsAction } from "./actions";
 
 export const metadata = { title: "Integrations" };
 
@@ -119,7 +119,7 @@ export default async function IntegrationsPage() {
       <section id="hubspot" className="grid scroll-mt-6 gap-4 border-t border-line pt-6">
         <div className="grid gap-1">
           <h2 className="text-lg font-semibold">HubSpot</h2>
-          <p className="text-muted">Each ticket shows the customer&apos;s HubSpot contact: company, title, lifecycle stage, lead status and owner, with a link to the record.</p>
+          <p className="text-muted">Each ticket shows the customer&apos;s HubSpot contact: company, title, lifecycle stage, lead status and owner, with a link to the record. Flatdesk can also log closed tickets on the contact&apos;s timeline, so sales and account managers see support history in HubSpot.</p>
         </div>
         {connected.hubspot && <Connected row={connected.hubspot} label="Contacts show on every ticket from someone in this HubSpot account." />}
         {isAdmin ? (
@@ -129,10 +129,33 @@ export default async function IntegrationsPage() {
               <ol className="mt-2 grid list-decimal gap-1 pl-5">
                 <li>In HubSpot, open Settings, then Integrations, then Private Apps (Legacy Apps in newer accounts), and create an app named Flatdesk.</li>
                 <li>Under Scopes, add <span className="num">crm.objects.contacts.read</span>. Add <span className="num">crm.objects.companies.read</span> and <span className="num">crm.objects.owners.read</span> to show the company and owner too.</li>
+                <li>To log tickets in HubSpot, also add <span className="num">crm.objects.contacts.write</span>.</li>
                 <li>Create the app and copy its access token.</li>
               </ol>
-              <p className="mt-2">These scopes only read. The token is stored encrypted.</p>
+              <p className="mt-2">Without the write scope Flatdesk only reads. With it, Flatdesk only adds notes and new contacts; it never changes or deletes what&apos;s already there. The token is stored encrypted.</p>
             </details>
+            {connected.hubspot && (
+              <form action={saveHubSpotSettingsAction} className="grid gap-3 rounded-lg border border-line p-4 text-sm">
+                <label className="flex items-start gap-2">
+                  <input type="checkbox" name="logClosed" defaultChecked={Boolean(connected.hubspot.settings.logClosed)} className="mt-1 size-4 accent-[var(--accent)]" />
+                  <span className="grid gap-0.5">
+                    <span>Log closed tickets on the contact&apos;s timeline</span>
+                    <span className="text-muted">A note with the subject, who handled it, the customer&apos;s first message and a link. Tickets closed from now on; agents can log any ticket from its HubSpot panel.</span>
+                  </span>
+                </label>
+                <label className="flex items-start gap-2">
+                  <input type="checkbox" name="createContacts" defaultChecked={Boolean(connected.hubspot.settings.createContacts)} className="mt-1 size-4 accent-[var(--accent)]" />
+                  <span className="grid gap-0.5">
+                    <span>Add people who aren&apos;t in HubSpot yet</span>
+                    <span className="text-muted">Otherwise tickets from people without a contact aren&apos;t logged.</span>
+                  </span>
+                </label>
+                {connected.hubspot.settings.logClosed && connected.hubspot.settings.logSince && (
+                  <p className="text-muted">Logging tickets closed since {new Date(connected.hubspot.settings.logSince).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })}.</p>
+                )}
+                <button className="btn btn-secondary btn-sm w-max">Save</button>
+              </form>
+            )}
             <HubSpotForm connected={Boolean(connected.hubspot)} />
             {connected.hubspot && <Disconnect kind="hubspot" />}
           </>
