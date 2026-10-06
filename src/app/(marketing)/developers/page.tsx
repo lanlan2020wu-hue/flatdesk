@@ -6,7 +6,7 @@ import { SITE } from "@/lib/site";
 
 export const metadata = pageMeta({
   title: "Flatdesk API reference",
-  description: "The Flatdesk REST API: list, create, update and reply to tickets, look up customers, and get signed webhooks for new tickets. Works with Zapier, Make and n8n.",
+  description: "The Flatdesk REST API and MCP server: list, create, update and reply to tickets, look up customers, get signed webhooks, and connect Claude or Cursor. Works with Zapier, Make and n8n.",
   path: "/developers",
 });
 
@@ -72,6 +72,24 @@ export default function DevelopersPage() {
         <pre className={code}>{WEBHOOK_EXAMPLE}</pre>
         <p className="text-sm text-muted">
           Check it came from Flatdesk with the <span className="num">X-Flatdesk-Signature</span> header: <span className="num">sha256=</span> followed by the HMAC-SHA256 of the raw body, keyed with the secret shown under Alerts.
+        </p>
+      </section>
+
+      <section className="grid gap-3" aria-labelledby="mcp">
+        <h2 id="mcp" className="font-display text-2xl">Claude, Cursor and other AI tools (MCP)</h2>
+        <p className="text-muted">
+          Flatdesk is an MCP server, so an AI assistant can search, read and work your tickets: &ldquo;what are customers saying about the new pricing?&rdquo;,
+          &ldquo;tag every ticket about the outage and mark them urgent&rdquo;, or &ldquo;draft a note on #1042 with what we know&rdquo;. Connect it with the same API key:
+        </p>
+        <pre className={code}>{`URL     ${SITE.url}/api/mcp
+Header  Authorization: Bearer fd_...
+
+# Claude Code
+claude mcp add --transport http flatdesk ${SITE.url}/api/mcp \\
+  --header "Authorization: Bearer fd_..."`}</pre>
+        <p className="text-sm text-muted">
+          Tools: search_tickets, list_tickets, get_ticket, get_customer, update_ticket and reply_to_ticket. Replies are emailed to the customer right away, so the
+          assistant is told to check with you before sending one. A team whose trial has ended can read but not change tickets, as with the API.
         </p>
       </section>
 

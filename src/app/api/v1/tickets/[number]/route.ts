@@ -1,5 +1,4 @@
-import { agentByEmail, findTicket, json, messagesJson, readBody, status, tagArray, ticketJson, withKey, ApiError } from "@/lib/api";
-import { isPriority, normalizeTags, updateTicket } from "@/lib/tickets";
+import { findTicket, json, messagesJson, patchTicket, readBody, ticketJson, withKey } from "@/lib/api";
 
 // GET /api/v1/tickets/:number : the ticket and its whole conversation, internal notes included.
 export async function GET(request: Request, ctx: RouteContext<"/api/v1/tickets/[number]">) {
@@ -13,30 +12,5 @@ export async function GET(request: Request, ctx: RouteContext<"/api/v1/tickets/[
 // PATCH /api/v1/tickets/:number : status, priority, assignee_email (null to unassign), tags (replaces) or add_tags.
 export async function PATCH(request: Request, ctx: RouteContext<"/api/v1/tickets/[number]">) {
   const { number } = await ctx.params;
-  return withKey(
-    request,
-    async (caller) => {
-      const row = await findTicket(caller.orgId, number);
-      const body = await readBody(request);
-      const patch: Parameters<typeof updateTicket>[2] = {};
-      const s = status(body.status);
-      if (s) patch.status = s;
-      if (body.priority !== undefined) {
-        if (!isPriority(body.priority)) throw new ApiError(400, "priority must be low, normal, high or urgent.");
-        patch.priority = body.priority;
-      }
-      if ("assignee_email" in body) {
-        const v = body.assignee_email;
-        if (v !== null && typeof v !== "string") throw new ApiError(400, "assignee_email must be an email address or null.");
-        patch.assigneeId = v ? (await agentByEmail(caller.orgId, v.trim())).userId : null;
-      }
-      const tags = tagArray(body, "tags");
-      const addTags = tagArray(body, "add_tags");
-      if (tags || addTags) patch.tags = normalizeTags([...(tags ?? row.ticket.tags), ...(addTags ?? [])]);
-      if (Object.keys(patch).length === 0) throw new ApiError(400, "Send at least one of status, priority, assignee_email, tags or add_tags.");
-      await updateTicket(caller.orgId, row.ticket.id, patch);
-      return json({ ticket: ticketJson(await findTicket(caller.orgId, number)) });
-    },
-    { write: true },
-  );
+  return withKey(request, async (caller) => json({ ticket: await patchTicket(caller, number, await readBody(request)) }), { write: true });
 }

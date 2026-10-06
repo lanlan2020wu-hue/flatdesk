@@ -6,7 +6,8 @@ import { LOCKED_MESSAGE } from "@/lib/auth";
 import { noNul } from "@/lib/ids";
 import { hit, LIMITS } from "@/lib/rate-limit";
 import { SITE } from "@/lib/site";
-import { normalizeTags, type TicketStatus } from "@/lib/tickets";
+import { deliverReply } from "@/lib/email";
+import { addReply, isPriority, normalizeTags, updateTicket, type TicketStatus } from "@/lib/tickets";
 
 // Shared pieces of the REST API under /api/v1: auth, errors, and the JSON
 // shape of tickets, messages and customers. Documented at /developers.
@@ -198,3 +199,62 @@ export async function customerJson(orgId: string, address: string) {
   return { email: c.email, name: c.name, fields: c.fields, created_at: c.createdAt.toISOString(), tickets: rows.map(ticketJson) };
 }
 
+
+// PATCH /api/v1/tickets/:number and the MCP update_ticket tool.
+export async function patchTicket(caller: ApiCaller, number: string, body: Record<string, unknown>) {
+  const row = await findTicket(caller.orgId, number);
+  const patch: Parameters<typeof updateTicket>[2] = {};
+  const s = status(body.status);
+  if (s) patch.status = s;
+  if (body.priority !== undefined) {
+    if (!isPriority(body.priority)) throw new ApiError(400, "priority must be low, normal, high or urgent.");
+    patch.priority = body.priority;
+  }
+  if ("assignee_email" in body) {
+    const v = body.assignee_email;
+    if (v !== null && typeof v !== "string") throw new ApiError(400, "assignee_email must be an email address or null.");
+    patch.assigneeId = v ? (await agentByEmail(caller.orgId, v.trim())).userId : null;
+  }
+  const tags = tagArray(body, "tags");
+  const addTags = tagArray(body, "add_tags");
+  if (tags || addTags) patch.tags = normalizeTags([...(tags ?? row.ticket.tags), ...(addTags ?? [])]);
+  if (Object.keys(patch).length === 0) throw new ApiError(400, "Send at least one of status, priority, assignee_email, tags or add_tags.");
+  await updateTicket(caller.orgId, row.ticket.id, patch);
+  return ticketJson(await findTicket(caller.orgId, number));
+}
+
+// POST /api/v1/tickets/:number/messages and the MCP reply_to_ticket tool: a
+// reply to the customer (emailed to them) or, with internal: true, a note only
+// the team sees. Signed by author_email, or by whoever made the key. A reply
+// sets the ticket to pending unless status says otherwise.
+export async function postMessage(caller: ApiCaller, number: string, body: Record<string, unknown>) {
+  const row = await findTicket(caller.orgId, number);
+  const message = text(body, "body", { required: true, max: 50_000 })!;
+  const internal = bool(body, "internal", false);
+  const authorEmail = email(body, "author_email");
+  const author = authorEmail ? await agentByEmail(caller.orgId, authorEmail) : await keyOwner(caller.orgId, caller.createdBy);
+  const { messageId } = await addReply({
+    orgId: caller.orgId,
+    ticketId: row.ticket.id,
+    userId: author.userId,
+    body: message,
+    internal,
+    status: status(body.status) ?? (internal ? null : "pending"),
+  });
+  if (messageId && !internal) {
+    await deliverReply(caller.orgId, messageId);
+    // Like a reply typed in the app: the AI didn't finish this one alone.
+    if (row.ticket.resolvedByAi) {
+      const { handBackToTeam } = await import("@/lib/ai");
+      await handBackToTeam(caller.orgId, row.ticket.id, "A person on the team replied.", false);
+    }
+  }
+  const updated = await findTicket(caller.orgId, number);
+  return { ...ticketJson(updated), messages: await messagesJson(caller.orgId, updated.ticket.id) };
+}
+
+async function keyOwner(orgId: string, userId: string) {
+  const agent = await db.query.agents.findFirst({ where: and(eq(agents.orgId, orgId), eq(agents.userId, userId), isNull(agents.removedAt)) });
+  if (!agent || agent.viewer) throw new ApiError(400, "Whoever made this key can't reply anymore. Send author_email with the address of someone on the team.");
+  return agent;
+}

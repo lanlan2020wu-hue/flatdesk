@@ -107,6 +107,7 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
       { id: "hubspot", title: "HubSpot on the ticket", body: "The customer's HubSpot contact beside their ticket: company, title, lifecycle stage and owner.", icon: I.users, isNew: true },
       { id: "jira", title: "Send to Jira", body: "Turn a bug report into a Jira issue from the ticket, with the customer's words and a link back. The ticket shows the issue's status.", icon: I.plug, isNew: true },
       { id: "api", title: "API, Zapier and Make", body: "A REST API and signed webhooks. Make tickets from other apps, start workflows when one comes in, reply and close from a script.", icon: I.code, isNew: true },
+      { id: "mcp", title: "Works with Claude and Cursor", body: "Flatdesk is an MCP server. Connect Claude, Cursor or another AI tool with your API key and ask it to find, read, tag, assign or answer tickets.", icon: I.ai, isNew: true },
     ],
   },
   {
