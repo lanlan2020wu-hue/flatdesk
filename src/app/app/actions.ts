@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -25,7 +25,7 @@ import { teachAi } from "@/lib/teach";
 import { addRule } from "@/lib/rules";
 import { audit, changes } from "@/lib/security";
 import { TARGET_CHOICES, validHours } from "@/lib/sla";
-import { addReply, normalizeTags, updateTicket, type TicketStatus } from "@/lib/tickets";
+import { addReply, isPriority, normalizeTags, updateTicket, type TicketPriority, type TicketStatus } from "@/lib/tickets";
 
 // The paywall hides the app once a trial ends without a card; this keeps
 // direct requests from doing work behind it. Billing stays open.
@@ -111,6 +111,7 @@ export async function updateTicketAction(form: FormData) {
     patch.assigneeId = assignee || null;
   }
   if (form.has("tags")) patch.tags = tagList(str(form, "tags"));
+  if (form.has("priority") && isPriority(str(form, "priority"))) patch.priority = str(form, "priority") as TicketPriority;
   await updateTicket(s.orgId, ticketId, patch);
   revalidatePath(`/app/tickets/${str(form, "number")}`);
   revalidatePath("/app/inbox");
@@ -119,6 +120,38 @@ export async function updateTicketAction(form: FormData) {
 function checkMacroSize(name: string, body: string) {
   if (name.length > INPUT.macroName) throw new Error(`A macro name can be up to ${INPUT.macroName} characters.`);
   if (body.length > INPUT.macroBody) throw new Error(`A macro reply can be up to ${INPUT.macroBody.toLocaleString("en-US")} characters.`);
+}
+
+// Inbox bulk actions: the same changes as the ticket rail, on up to 200
+// selected tickets at once. Tags are added, not replaced.
+export async function bulkUpdateAction(form: FormData) {
+  const s = await requireOpenSession();
+  const ids = [...new Set(form.getAll("ids").map(String).filter(isUuid))].slice(0, 200);
+  const back = str(form, "back").startsWith("/app/inbox") ? str(form, "back") : "/app/inbox";
+  if (ids.length === 0) redirect(back);
+  const patch: Parameters<typeof updateTicket>[2] = {};
+  const st = status(str(form, "status"));
+  if (st) patch.status = st;
+  if (isPriority(str(form, "priority"))) patch.priority = str(form, "priority") as TicketPriority;
+  const assignee = str(form, "assigneeId");
+  if (assignee === "none") patch.assigneeId = null;
+  else if (assignee) {
+    const member = await db.query.agents.findFirst({
+      where: and(eq(schema.agents.orgId, s.orgId), eq(schema.agents.userId, assignee), isNull(schema.agents.removedAt)),
+    });
+    if (!member || member.viewer) redirect(back);
+    patch.assigneeId = assignee;
+  }
+  const addTags = tagList(str(form, "addTags"));
+  const rows = await db
+    .select({ id: schema.tickets.id, tags: schema.tickets.tags })
+    .from(schema.tickets)
+    .where(and(eq(schema.tickets.orgId, s.orgId), inArray(schema.tickets.id, ids)));
+  for (const t of rows) {
+    await updateTicket(s.orgId, t.id, addTags.length ? { ...patch, tags: [...t.tags, ...addTags] } : patch);
+  }
+  revalidatePath("/app/inbox");
+  redirect(back);
 }
 
 export async function saveMacroAction(form: FormData) {
