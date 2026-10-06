@@ -308,3 +308,21 @@ export async function translateReply(orgId: string, userId: string, ticketId: st
   if (!out?.text.trim()) throw new CopilotError("The reply couldn't be translated. Send it as written, or try again.");
   return out.text.trim();
 }
+
+// ---- Help center articles -------------------------------------------------------
+
+// Long enough for nearly every article; the translation has to fit in one answer.
+export const ARTICLE_TRANSLATE_CHARS = 12_000;
+const ArticleText = z.object({ title: z.string().describe("The translated title."), section: z.string().describe("The translated section name, or empty when there is none."), body: z.string().describe("The translated article.") });
+
+// A help center article in another language. One copilot action, no ticket.
+export async function translateArticle(orgId: string, userId: string, article: { title: string; body: string; section: string | null }, to: string): Promise<{ title: string; body: string; section: string | null }> {
+  if (!isLanguage(to)) throw new CopilotError("Unknown language.");
+  if (article.body.length > ARTICLE_TRANSLATE_CHARS) throw new CopilotError(`Articles up to ${ARTICLE_TRANSLATE_CHARS.toLocaleString("en-US")} characters can be translated by the AI. Write this one's translation by hand, or split the article.`);
+  const { eventId } = await reserveAction(orgId, userId, null, "translate");
+  const system = `You translate a help center article into ${languageLabel(to)} for the company's customers. Keep the formatting marks exactly as they are: "## " and "### " headings, "- " and "1. " list items, **bold**, [link text](url) (translate the link text, never the url), and blank lines between paragraphs. Keep product names, button and menu names as they appear in the product, numbers, prices, email addresses and links unchanged. Write naturally, as a native speaker on the company's support team would.`;
+  const { out, metered } = await structuredCall(orgId, ArticleText, system, `Title: ${article.title}\nSection: ${article.section ?? ""}\n\n${article.body}`, { timeout: 150_000, maxRetries: 1 });
+  await settle(eventId, metered);
+  if (!out?.title.trim() || !out.body.trim()) throw new CopilotError("The article couldn't be translated. Try again.");
+  return { title: out.title.trim().slice(0, 200), body: out.body.trim(), section: article.section ? out.section.trim().slice(0, 80) || null : null };
+}

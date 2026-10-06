@@ -2,9 +2,11 @@ import Link from "next/link";
 import { and, count, desc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { requireOpenPage } from "@/lib/auth";
-import { ensureHelpSlug, excerpt, HELP_SLUG_RULE, helpUrl } from "@/lib/help";
+import { domainsConfigured, domainStatus, dnsRecord } from "@/lib/domains";
+import { ensureHelpSlug, excerpt, HELP_SLUG_RULE, helpUrl, MAX_HELP_LANGUAGES, verifiedDomain } from "@/lib/help";
+import { LANGUAGES, languageLabel } from "@/lib/language";
 import { SITE } from "@/lib/site";
-import { saveHelpSlugAction } from "./actions";
+import { checkHelpDomainAction, saveHelpDomainAction, saveHelpLanguagesAction, saveHelpSlugAction } from "./actions";
 
 export const metadata = { title: "Help center" };
 
@@ -12,13 +14,26 @@ const host = SITE.url.replace(/^https?:\/\//, "");
 
 export default async function HelpCenterAdmin({ searchParams }: PageProps<"/app/help">) {
   const s = await requireOpenPage();
-  const { error, saved } = await searchParams;
-  const [helpSlug, list] = await Promise.all([
+  const { error, saved, domainError } = await searchParams;
+  const [helpSlug, list, org] = await Promise.all([
     ensureHelpSlug(s.orgId),
     db.select().from(schema.articles).where(eq(schema.articles.orgId, s.orgId)).orderBy(desc(schema.articles.published), desc(schema.articles.updatedAt)),
+    db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId), columns: { helpDomain: true, helpDomainVerifiedAt: true, helpLanguages: true, language: true } }),
   ]);
+  const domain = org ? verifiedDomain(org) : null;
+  // Until it's serving, show what's left to do (asks Vercel; only while unverified).
+  const pending = org?.helpDomain && !org.helpDomainVerifiedAt ? await domainStatus(org.helpDomain) : null;
+  const isAdmin = s.role === "admin";
+  const translations = org?.helpLanguages.length
+    ? await db
+        .select({ language: schema.articleTranslations.language, n: count() })
+        .from(schema.articleTranslations)
+        .innerJoin(schema.articles, eq(schema.articles.id, schema.articleTranslations.articleId))
+        .where(and(eq(schema.articleTranslations.orgId, s.orgId), eq(schema.articles.published, true)))
+        .groupBy(schema.articleTranslations.language)
+    : [];
   const [{ n: live }] = await db.select({ n: count() }).from(schema.articles).where(and(eq(schema.articles.orgId, s.orgId), eq(schema.articles.published, true)));
-  const url = helpUrl(helpSlug);
+  const url = helpUrl(helpSlug, domain);
 
   return (
     <div className="grid max-w-3xl gap-12 px-4 py-6 md:px-8 md:py-8">
@@ -93,6 +108,107 @@ export default async function HelpCenterAdmin({ searchParams }: PageProps<"/app/
           {s.role === "admin" && <button className="btn btn-secondary w-max">Save address</button>}
         </form>
       </section>
+
+      <section id="domain" className="grid gap-4 border-t border-line pt-6 text-sm">
+        <div className="grid gap-1">
+          <h2 className="text-lg font-semibold">Your own address</h2>
+          <p className="max-w-xl text-muted">Serve the help center at an address on your own domain, like help.yourcompany.com. The AI&apos;s links and the help center&apos;s own links use it once it&apos;s working.</p>
+        </div>
+        {domainsConfigured() || org?.helpDomain ? (
+          <form action={saveHelpDomainAction} className="grid gap-3">
+            <label htmlFor="helpDomain" className="font-medium">Address</label>
+            <div className="flex flex-wrap gap-2">
+              <input id="helpDomain" name="helpDomain" defaultValue={org?.helpDomain ?? ""} placeholder="help.yourcompany.com" disabled={!isAdmin} maxLength={253} className="field min-w-0 flex-1 font-normal" />
+              {isAdmin && <button className="btn btn-secondary">{org?.helpDomain ? "Change" : "Connect"}</button>}
+            </div>
+            {!isAdmin && <p className="text-muted">Only admins can change it.</p>}
+          </form>
+        ) : (
+          <p className="text-muted">Not available on this workspace yet.</p>
+        )}
+        {domainError && <p role="alert" className="text-warn">{String(domainError)}</p>}
+        {saved === "domain-removed" && <p className="text-accent">Disconnected. Your help center is back at {host}/help/{helpSlug} only.</p>}
+        {domain && (
+          <p className="rounded-lg bg-accent-soft px-4 py-3">
+            {saved === "domain-ready" ? "It works. " : ""}Your help center is live at{" "}
+            <a href={`https://${domain}`} target="_blank" rel="noopener" className="link font-medium text-accent">{domain}</a>
+            . The old {host}/help/{helpSlug} address still works too.
+          </p>
+        )}
+        {org?.helpDomain && !domain && (
+          <div className="grid gap-3 rounded-lg border border-line px-4 py-3">
+            {pending?.state === "verify" ? (
+              <>
+                <p>{org.helpDomain} is connected to another site on our hosting provider. Add this record at your domain provider to prove it&apos;s yours:</p>
+                <DnsTable rows={pending.records} />
+              </>
+            ) : (
+              <>
+                <p>{saved === "domain" ? "Saved. " : ""}One step left: add this record where you manage {org.helpDomain.split(".").slice(-2).join(".")}&apos;s DNS.</p>
+                <DnsTable rows={[dnsRecord(org.helpDomain)]} />
+                <p className="text-muted">Some providers want only the first part of the name (like help). The secure certificate is set up for you once the record is in place.</p>
+              </>
+            )}
+            {isAdmin && (
+              <form action={checkHelpDomainAction}>
+                <button className="btn btn-secondary w-max">Check now</button>
+              </form>
+            )}
+          </div>
+        )}
+      </section>
+
+      <section id="languages" className="grid gap-4 border-t border-line pt-6 text-sm">
+        <div className="grid gap-1">
+          <h2 className="text-lg font-semibold">Languages</h2>
+          <p className="max-w-xl text-muted">
+            Articles are written in {languageLabel(org?.language ?? "en")} (change it in Settings). Add languages and each article gets a translation the AI writes in one click, which you can edit. Visitors see their browser&apos;s language when you offer it, and can switch.
+          </p>
+        </div>
+        {translations.length > 0 && (
+          <p>
+            Translated so far:{" "}
+            {translations.filter((t) => org?.helpLanguages.includes(t.language)).map((t) => `${languageLabel(t.language)} ${t.n} of ${live}`).join(" · ")}
+          </p>
+        )}
+        <form action={saveHelpLanguagesAction} className="grid gap-3">
+          <fieldset disabled={!isAdmin} className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            <legend className="sr-only">Languages to offer</legend>
+            {LANGUAGES.filter((l) => l.code !== org?.language).map((l) => (
+              <label key={l.code} className="flex items-center gap-2">
+                <input type="checkbox" name="languages" value={l.code} defaultChecked={org?.helpLanguages.includes(l.code)} className="size-4 accent-[var(--accent)]" />
+                {l.label}
+              </label>
+            ))}
+          </fieldset>
+          <p className="text-muted">Up to {MAX_HELP_LANGUAGES}. Each AI translation is one copilot action.{!isAdmin && " Only admins can change these."}</p>
+          {saved === "languages" && <p className="text-accent">Saved.</p>}
+          {isAdmin && <button className="btn btn-secondary w-max">Save languages</button>}
+        </form>
+      </section>
     </div>
+  );
+}
+
+function DnsTable({ rows }: { rows: { type: string; name: string; value: string }[] }) {
+  return (
+    <table className="w-full text-left">
+      <thead className="text-muted">
+        <tr>
+          <th className="py-1 pr-4 font-normal">Type</th>
+          <th className="py-1 pr-4 font-normal">Name</th>
+          <th className="py-1 font-normal">Value</th>
+        </tr>
+      </thead>
+      <tbody className="font-mono text-xs">
+        {rows.map((r) => (
+          <tr key={`${r.type}${r.name}${r.value}`}>
+            <td className="py-1 pr-4">{r.type}</td>
+            <td className="break-all py-1 pr-4">{r.name}</td>
+            <td className="break-all py-1">{r.value}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
