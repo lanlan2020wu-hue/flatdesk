@@ -24,7 +24,7 @@ import { cachedSummary } from "@/lib/copilot";
 import { identifyMacro, repeatPrompt } from "@/lib/macro-suggestions";
 import { STATUS_LABEL } from "@/lib/receipts";
 import { teachSpot } from "@/lib/teach";
-import { formatDue, shortDuration, slaState, targetLabel } from "@/lib/sla";
+import { formatDue, resolveState, shortDuration, slaState, targetLabel } from "@/lib/sla";
 import { getTicket, listAgents, orgTags, parseTicketNumber, PRIORITIES } from "@/lib/tickets";
 import { replyAction, updateTicketAction } from "../../actions";
 
@@ -72,6 +72,7 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
   const lastVisible = thread.filter((m) => !m.internal && m.authorType !== "system").at(-1);
   const suggestedMacro = ticket.status !== "closed" && lastVisible?.authorType === "customer" ? identifyMacro(lastVisible.body, macros) : null;
   const sla = org ? slaState(ticket, org) : null;
+  const resolution = org ? resolveState(ticket, org) : null;
   // Under the AI's latest handoff note, a box to write the answer it was missing.
   const teachAt = s.viewer ? -1 : teachSpot(thread);
   // The receipt line for this ticket's AI answer, shown under that answer.
@@ -104,6 +105,7 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
               <span className="chip" title="Chat visitors type their own email address; nothing checks it belongs to them.">Email not verified</span>
             )}
             <SlaBadge state={sla} hours={org?.businessHours ?? null} />
+            <SlaBadge state={resolution} hours={org?.businessHours ?? null} target="resolve" />
           </p>
         </header>
 
@@ -310,6 +312,14 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
               {sla.kind === "missed" && `First reply in ${shortDuration(sla.took)}, past the target of ${targetLabel(sla.minutes)}${sla.tag ? ` for ${sla.tag}` : ""}`}
               {sla.kind === "waiting" && `First reply due ${formatDue(sla.due, org.businessHours)}${sla.tag ? ` (${targetLabel(sla.minutes)} for ${sla.tag})` : ""}`}
               {sla.kind === "overdue" && `First reply overdue by ${shortDuration(sla.minutesLate)}`}
+            </p>
+          )}
+          {resolution && org && (
+            <p className={resolution.kind === "overdue" || resolution.kind === "missed" ? "text-warn" : undefined}>
+              {resolution.kind === "met" && `Resolved in ${shortDuration(resolution.took)}, within the target of ${targetLabel(resolution.minutes)}${resolution.tag ? ` for ${resolution.tag}` : ""}`}
+              {resolution.kind === "missed" && `Resolved in ${shortDuration(resolution.took)}, past the target of ${targetLabel(resolution.minutes)}${resolution.tag ? ` for ${resolution.tag}` : ""}`}
+              {resolution.kind === "waiting" && `Resolution due ${formatDue(resolution.due, org.businessHours)}${resolution.tag ? ` (${targetLabel(resolution.minutes)} for ${resolution.tag})` : ""}`}
+              {resolution.kind === "overdue" && `Resolution overdue by ${shortDuration(resolution.minutesLate)}`}
             </p>
           )}
         </section>

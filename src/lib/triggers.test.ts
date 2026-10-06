@@ -123,5 +123,18 @@ test("database: a new ticket runs triggers, and a late one is escalated once", {
   assert.ok(mine.every((x) => x.escalatedAt?.getTime() === later.getTime()));
   assert.ok(again.escalated >= 0);
 
+  // Resolution target: three days later it's still not closed.
+  await db.update(schema.orgs).set({ resolveMinutes: 1440 }).where(eq(schema.orgs.id, ORG));
+  await db.update(schema.tickets).set({ status: "pending", firstResponseAt: later }).where(eq(schema.tickets.id, t.id));
+  const r = await escalateOverdue(new Date(Date.now() + 3 * 86_400_000));
+  assert.ok(r.resolveEscalated >= 2);
+  const resolved = await db.query.tickets.findFirst({ where: eq(schema.tickets.id, t.id) });
+  assert.ok(resolved!.resolveEscalatedAt);
+  assert.ok((await db.select().from(schema.messages).where(eq(schema.messages.ticketId, t.id))).some((m) => m.body.startsWith("Missed the resolution target")));
+  const r2 = await escalateOverdue(new Date(Date.now() + 3 * 86_400_000 + 600_000));
+  const mineAgain = await db.select().from(schema.tickets).where(eq(schema.tickets.orgId, ORG));
+  assert.ok(mineAgain.every((x) => x.resolveEscalatedAt?.getTime() === resolved!.resolveEscalatedAt!.getTime()), "once only");
+  assert.ok(r2.resolveEscalated >= 0);
+
   await db.delete(schema.orgs).where(eq(schema.orgs.id, ORG));
 });

@@ -88,8 +88,19 @@ export function dueAt(from: Date, minutes: number, hours: BusinessHours | null):
   return new Date(t + left * MIN); // unreachable with valid hours
 }
 
-export type SlaTicket = { status: string; createdAt: Date; firstResponseAt: Date | null; source: string | null; tags?: string[] };
-export type SlaOrg = { firstResponseMinutes: number | null; businessHours: BusinessHours | null; slaPolicies?: SlaPolicy[] };
+export type SlaTicket = { status: string; createdAt: Date; firstResponseAt: Date | null; source: string | null; tags?: string[]; closedAt?: Date | null };
+export type SlaOrg = { firstResponseMinutes: number | null; businessHours: BusinessHours | null; slaPolicies?: SlaPolicy[]; resolveMinutes?: number | null };
+
+// Resolution targets: from arrival to closed, pending time included.
+export const RESOLVE_CHOICES = [
+  { minutes: 240, label: "4 hours" },
+  { minutes: 480, label: "8 hours" },
+  { minutes: 1440, label: "24 hours" },
+  { minutes: 2880, label: "2 days" },
+  { minutes: 4320, label: "3 days" },
+  { minutes: 7200, label: "5 days" },
+  { minutes: 10080, label: "7 days" },
+];
 
 export const MAX_POLICIES = 8;
 
@@ -102,6 +113,31 @@ export function targetFor(t: SlaTicket, org: SlaOrg): { minutes: number; tag: st
     if (t.tags?.includes(p.tag) && p.minutes > 0 && (!best || p.minutes < best.minutes)) best = { minutes: p.minutes, tag: p.tag };
   }
   return best ?? (org.firstResponseMinutes ? { minutes: org.firstResponseMinutes, tag: null } : null);
+}
+
+// The resolution target for a ticket: the shortest one among its tags' policies, else the team's.
+export function resolveTargetFor(t: SlaTicket, org: SlaOrg): { minutes: number; tag: string | null } | null {
+  let best: { minutes: number; tag: string | null } | null = null;
+  for (const p of org.slaPolicies ?? []) {
+    if (t.tags?.includes(p.tag) && p.resolveMinutes && p.resolveMinutes > 0 && (!best || p.resolveMinutes < best.minutes)) best = { minutes: p.resolveMinutes, tag: p.tag };
+  }
+  return best ?? (org.resolveMinutes ? { minutes: org.resolveMinutes, tag: null } : null);
+}
+
+// Where a ticket stands against its resolution target, or null when none applies.
+// A reopened ticket counts again until it's closed.
+export function resolveState(t: SlaTicket, org: SlaOrg, now = new Date()): SlaState | null {
+  const target = t.source ? null : resolveTargetFor(t, org);
+  if (!target) return null;
+  const due = dueAt(t.createdAt, target.minutes, org.businessHours);
+  if (t.status === "closed") {
+    if (!t.closedAt) return null;
+    const took = Math.round((t.closedAt.getTime() - t.createdAt.getTime()) / MIN);
+    return { ...target, kind: t.closedAt <= due ? "met" : "missed", due, took };
+  }
+  const left = (due.getTime() - now.getTime()) / MIN;
+  if (left < 0) return { ...target, kind: "overdue", due, minutesLate: Math.ceil(-left) };
+  return { ...target, kind: "waiting", due, minutesLeft: Math.floor(left), soon: left <= Math.min(240, target.minutes / 4) };
 }
 
 export type SlaState = { minutes: number; tag: string | null } & (
@@ -134,7 +170,7 @@ export function shortDuration(minutes: number): string {
 }
 
 export function targetLabel(minutes: number) {
-  return TARGET_CHOICES.find((c) => c.minutes === minutes)?.label ?? shortDuration(minutes);
+  return [...TARGET_CHOICES, ...RESOLVE_CHOICES].find((c) => c.minutes === minutes)?.label ?? shortDuration(minutes);
 }
 
 // A due time on the team's business-hours clock (UTC when they have none).

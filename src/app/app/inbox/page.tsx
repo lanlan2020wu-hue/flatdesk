@@ -7,7 +7,7 @@ import { db, schema } from "@/db";
 import { aiConfigured } from "@/lib/ai";
 import { requireOpenPage } from "@/lib/auth";
 import { STATUS_STYLE, timeAgo } from "@/lib/format";
-import { slaState } from "@/lib/sla";
+import { resolveState, slaState } from "@/lib/sla";
 import { cleanQuery, searchTickets, SEARCH_LIMIT } from "@/lib/search";
 import { VIEWS, isView, listAgents, listTickets, viewCounts } from "@/lib/tickets";
 
@@ -26,7 +26,7 @@ export default async function InboxPage({ searchParams }: PageProps<"/app/inbox"
   ]);
   const back = q ? `/app/inbox?q=${encodeURIComponent(q)}` : `/app/inbox?view=${view}`;
   const now = new Date();
-  const rows = tickets.map((t) => ({ ...t, sla: org ? slaState(t, org, now) : null }));
+  const rows = tickets.map((t) => ({ ...t, sla: org ? slaState(t, org, now) : null, resolution: org ? resolveState(t, org, now) : null }));
   const overdue = rows.filter((t) => t.sla?.kind === "overdue").length;
   // Views that hold one status don't need a status on every row.
   const showStatus = Boolean(q) || view === "mine" || view === "unassigned";
@@ -146,7 +146,7 @@ export default async function InboxPage({ searchParams }: PageProps<"/app/inbox"
                         {t.assigneeName && <Avatar name={t.assigneeName} className="size-5 text-[9px]" />}
                         <span className="truncate">{t.assigneeName ?? "Unassigned"}</span>
                       </span>
-                      <span>{t.sla ? <SlaBadge state={t.sla} hours={org?.businessHours ?? null} /> : <span className="hidden text-muted lg:inline">—</span>}</span>
+                      <span>{t.sla?.kind === "waiting" || t.sla?.kind === "overdue" ? <SlaBadge state={t.sla} hours={org?.businessHours ?? null} /> : t.resolution?.kind === "overdue" || (t.resolution?.kind === "waiting" && t.resolution.soon) ? <SlaBadge state={t.resolution} hours={org?.businessHours ?? null} target="resolve" /> : <span className="hidden text-muted lg:inline">—</span>}</span>
                       <span className="num hidden text-right text-xs text-muted lg:block">{timeAgo(t.updatedAt)}</span>
                     </div>
                   </Link>
