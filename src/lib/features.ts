@@ -61,6 +61,7 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
     features: [
       { id: "ai", title: "AI answers", body: "Replies to customers on its own, by email and chat, when your macros, help articles or the facts you give it cover the question. It hands the rest to your team. Agents can ask it for a draft or a summary.", icon: I.ai },
       { id: "ai-actions", title: "AI actions", body: "The AI can refund a Stripe payment, cancel a subscription or an unshipped Shopify order, or call your own system to reset a password or change a plan. You set the actions and the limits; anything over a limit waits for a person to approve.", icon: I.bolt, isNew: true },
+      { id: "insights", title: "What customers ask about", body: "The AI reads your recent tickets and groups them into topics, with how many the AI answered, why it handed the rest to your team, and one thing to fix for each. On Reports, in the seat.", icon: I.ai, isNew: true },
       { id: "translate", title: "Auto-translate", body: "A customer who writes in Spanish, Japanese or 20 other languages is translated into your team's language when you open the ticket. Translate your reply into theirs before sending, and see both side by side. In the seat, not an add-on.", icon: I.ai, isNew: true },
       { id: "test-drive", title: "AI test drive", body: "After you import, the AI drafts replies to the 50 most recent tickets your team answered, next to your team's reply. Nothing is sent and it uses no AI answers.", icon: I.check, isNew: true },
     ],

@@ -2,8 +2,14 @@ import Link from "next/link";
 import { requireOpenPage } from "@/lib/auth";
 import { targetLabel } from "@/lib/sla";
 import { duration, REPORT_RANGES, type ReportRange, teamReport } from "@/lib/reports";
+import InsightsButton from "@/components/InsightsButton";
+import { aiConfigured } from "@/lib/ai";
+import { timeAgo } from "@/lib/format";
+import { INSIGHTS, latestInsight, nextRunAt, topicStats } from "@/lib/insights";
 
 export const metadata = { title: "Reports" };
+// Insights can take up to a minute to read the tickets.
+export const maxDuration = 180;
 
 // One figure in a ruled grid, like the overview: no boxes around numbers.
 function Tile({ label, value, note }: { label: string; value: string; note?: string }) {
@@ -20,7 +26,9 @@ export default async function ReportsPage({ searchParams }: PageProps<"/app/repo
   const s = await requireOpenPage();
   const { days: raw } = await searchParams;
   const days = (REPORT_RANGES.find((d) => String(d) === raw) ?? 30) as ReportRange;
-  const r = await teamReport(s.orgId, days);
+  const [r, insight] = await Promise.all([teamReport(s.orgId, days), latestInsight(s.orgId)]);
+  const topics = insight ? await topicStats(s.orgId, insight.topics) : null;
+  const canRefresh = aiConfigured() && !nextRunAt(insight);
   const pct = (v: number | null) => (v === null ? "–" : `${Math.round(v * 100)}%`);
 
   return (
@@ -75,6 +83,56 @@ export default async function ReportsPage({ searchParams }: PageProps<"/app/repo
               : "No ratings yet. Customers rate replies with one click from the email."
           }
         />
+      </section>
+
+      <section id="insights" className="grid scroll-mt-6 gap-4">
+        <div className="grid gap-1">
+          <h2 className="text-lg font-semibold">What customers ask about</h2>
+          <p className="text-muted">
+            The AI reads up to {INSIGHTS.maxTickets} recent tickets and groups them by what customers want. For each topic you see how much the AI handled,
+            why it handed some to your team, and one thing to fix. Included in the seat; it doesn&apos;t use AI answers or copilot actions.
+          </p>
+        </div>
+        {insight && topics ? (
+          <>
+            <p className="text-sm text-muted">
+              From {insight.tickets} tickets in the {insight.days} days before {timeAgo(insight.createdAt)}.{canRefresh ? "" : ` Refreshes every ${INSIGHTS.everyHours} hours.`}
+            </p>
+            {insight.notes.length > 0 && (
+              <ul className="grid gap-1 rounded-lg bg-accent-soft px-4 py-3 text-sm">
+                {insight.notes.map((n) => <li key={n}>{n}</li>)}
+              </ul>
+            )}
+            <ol className="grid divide-y divide-line border-y border-line">
+              {topics.map((t) => (
+                <li key={t.name} className="grid gap-2 py-4">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <h3 className="font-semibold">{t.name}</h3>
+                    <span className="num text-sm text-muted">
+                      {t.count} {t.count === 1 ? "ticket" : "tickets"} · AI answered {t.ai} · handed to team {t.handedOff} · not closed {t.open}
+                    </span>
+                  </div>
+                  <p className="text-sm">{t.summary}</p>
+                  {t.gap && <p className="text-sm text-muted"><span className="font-medium text-ink">Why the AI handed off:</span> {t.gap}</p>}
+                  {t.suggestion && <p className="text-sm text-muted"><span className="font-medium text-accent">Try:</span> {t.suggestion}</p>}
+                  <details className="text-sm">
+                    <summary className="w-max cursor-pointer text-muted">Examples</summary>
+                    <ul className="mt-1 grid gap-0.5">
+                      {t.examples.map((e) => (
+                        <li key={e.number}>
+                          <Link href={`/app/tickets/${e.number}`} className="link">#{e.number} {e.subject}</Link>
+                        </li>
+                      ))}
+                    </ul>
+                  </details>
+                </li>
+              ))}
+            </ol>
+          </>
+        ) : (
+          <p className="text-sm text-muted">No insights yet for your team.</p>
+        )}
+        {!s.viewer && canRefresh && <InsightsButton days={days} label={topics ? `Refresh for the last ${days} days` : `Find topics in the last ${days} days`} />}
       </section>
 
       <section className="grid gap-3">

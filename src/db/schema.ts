@@ -877,3 +877,23 @@ export const groupMembers = pgTable(
   },
   (t) => [primaryKey({ columns: [t.groupId, t.userId] }), index("group_members_org_user").on(t.orgId, t.userId)],
 );
+
+// AI insights: what customers asked about over a window, grouped into topics
+// (lib/insights.ts). The latest run per team is shown on Reports.
+export type InsightTopic = { name: string; summary: string; ticketIds: string[]; gap: string; suggestion: string };
+export const insights = pgTable(
+  "insights",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
+    days: integer("days").notNull(),
+    tickets: integer("tickets").notNull(),
+    topics: jsonb("topics").$type<InsightTopic[]>().notNull().default([]),
+    notes: jsonb("notes").$type<string[]>().notNull().default([]),
+    createdBy: text("created_by").notNull(),
+    model: text("model"),
+    costUsd: numeric("cost_usd", { precision: 10, scale: 5 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("insights_org_created").on(t.orgId, t.createdAt)],
+);
