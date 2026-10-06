@@ -264,6 +264,8 @@ export const tickets = pgTable(
     nextEscalatedAt: timestamp("next_escalated_at", { withTimezone: true }),
     pendingSince: timestamp("pending_since", { withTimezone: true }),
     pausedSeconds: integer("paused_seconds").notNull().default(0),
+    // When the ticket was last logged to the customer's CRM record (HubSpot write-back).
+    crmLoggedAt: timestamp("crm_logged_at", { withTimezone: true }),
     // Timed triggers (lib/triggers.ts): the ones that ran since the customer or
     // team last wrote, and the ones that didn't match it as of timedSkippedAt.
     timedRan: uuid("timed_ran").array().notNull().default(sql`'{}'::uuid[]`),
@@ -778,6 +780,14 @@ export const integrationKind = pgEnum("integration_kind", ["shopify", "stripe", 
 // Accounts connected to the team's tickets: Shopify orders, Stripe payments
 // and HubSpot contacts shown beside a ticket, and the Jira project tickets are
 // escalated to (lib/integrations/). Credentials are encrypted.
+export type IntegrationSettings = {
+  // HubSpot: log each closed ticket on the contact's timeline, for tickets closed from logSince on.
+  logClosed?: boolean;
+  logSince?: string;
+  // HubSpot: add a contact for people who aren't in HubSpot yet, when logging their ticket.
+  createContacts?: boolean;
+};
+
 export const integrations = pgTable(
   "integrations",
   {
@@ -789,6 +799,8 @@ export const integrations = pgTable(
     connectedBy: text("connected_by").notNull(),
     lastError: text("last_error"),
     lastErrorAt: timestamp("last_error_at", { withTimezone: true }),
+    // What the team turned on for this connection, like HubSpot write-back (lib/integrations/hubspot-sync.ts).
+    settings: jsonb("settings").$type<IntegrationSettings>().notNull().default({}),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("integrations_org_kind").on(t.orgId, t.kind)],

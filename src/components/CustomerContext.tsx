@@ -3,7 +3,7 @@ import { and, desc, eq, ne } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { timeAgo } from "@/lib/format";
 import { hubspotForCustomer, jiraForTicket, shopifyForCustomer, stripeForCustomer } from "@/lib/integrations";
-import { EscalateForm } from "@/components/IntegrationForms";
+import { EscalateForm, HubSpotLogButton } from "@/components/IntegrationForms";
 
 // Panels in the ticket's side rail about the customer: their other tickets,
 // and data from the team's connected Shopify store and Stripe account. Each
@@ -128,7 +128,8 @@ export async function StripeCustomer({ orgId, email, unverified }: { orgId: stri
   );
 }
 
-export async function HubSpotPanel({ orgId, email }: { orgId: string; email: string }) {
+// canWrite: the agent can log the ticket on the contact (or add the contact) from here.
+export async function HubSpotPanel({ orgId, email, ticketId, canWrite = false }: { orgId: string; email: string; ticketId?: string; canWrite?: boolean }) {
   const result = await hubspotForCustomer(orgId, email);
   if (result.state === "off") return null;
   const c = result.state === "ok" ? result.data : null;
@@ -147,6 +148,7 @@ export async function HubSpotPanel({ orgId, email }: { orgId: string; email: str
       <h2 className={heading}>HubSpot</h2>
       {result.state === "error" && <Failed what="HubSpot" error={result.error} />}
       {result.state === "ok" && !c && <p className="text-muted">No HubSpot contact with this email.</p>}
+      {result.state === "ok" && !c && canWrite && ticketId && <HubSpotLogButton ticketId={ticketId} create />}
       {c && (
         <>
           <a href={c.url} target="_blank" rel="noopener" className="link w-max font-medium">{c.name ?? "Open contact"}</a>
@@ -160,6 +162,7 @@ export async function HubSpotPanel({ orgId, email }: { orgId: string; email: str
               ))}
             </dl>
           )}
+          {canWrite && ticketId && <HubSpotLogButton ticketId={ticketId} create={false} />}
         </>
       )}
     </section>
