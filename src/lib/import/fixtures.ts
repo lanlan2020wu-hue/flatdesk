@@ -89,6 +89,13 @@ const zendeskRoutes: Routes = {
         conditions: { all: [{ field: "status", operator: "is", value: "new" }], any: [] },
         actions: [{ field: "notification_user", value: ["requester_id", "We got it", "Thanks"] }],
       },
+      {
+        id: 403,
+        title: "Invoices to Ana",
+        active: true,
+        conditions: { all: [{ field: "update_type", operator: "is", value: "Create" }, { field: "comment_includes_word", operator: "includes", value: "invoice receipt" }], any: [] },
+        actions: [{ field: "current_tags", value: "billing" }, { field: "assignee_id", value: "10" }],
+      },
     ],
     meta: { has_more: false },
   },

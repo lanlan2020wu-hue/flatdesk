@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, inArray, isNull, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { noNul } from "@/lib/ids";
+import { loadTriggers, runTriggers, TRIGGER_NOTE_PREFIX } from "@/lib/triggers";
 
 const { tickets, messages, customers, agents, rules, orgs } = schema;
 
@@ -158,8 +159,15 @@ export async function createTicket(raw: NewTicket) {
       .where(eq(orgs.id, input.orgId))
       .returning({ number: sql<number>`${orgs.nextTicketNumber} - 1` });
 
-    const tags = normalizeTags(input.tags ?? []);
-    const assigneeId = await ruleAssignee(tx, input.orgId, tags);
+    // Triggers first (they can add tags, assign, set a status, leave a note), then the tag rules for anything still unassigned.
+    const { list, canAssign } = await loadTriggers(tx, input.orgId);
+    const ran = runTriggers(
+      list,
+      { channel: input.channel, subject: input.subject, body: input.body, from: input.customerEmail.toLowerCase(), tags: normalizeTags(input.tags ?? []) },
+      canAssign,
+    );
+    const tags = normalizeTags(ran.tags);
+    const assigneeId = ran.assignTo ?? (await ruleAssignee(tx, input.orgId, tags));
     const [ticket] = await tx
       .insert(tickets)
       .values({
@@ -170,6 +178,7 @@ export async function createTicket(raw: NewTicket) {
         customerId: customer.id,
         tags,
         assigneeId,
+        ...(ran.status ? { status: ran.status, closedAt: ran.status === "closed" ? new Date() : null } : {}),
         visitorToken: input.visitorToken ?? null,
         test: input.test ?? false,
       })
@@ -186,6 +195,11 @@ export async function createTicket(raw: NewTicket) {
         emailMessageId: input.emailMessageId ?? null,
       })
       .returning({ id: messages.id });
+    // Notes go after the first message (now() is the same for the whole transaction).
+    if (ran.fired.length) {
+      const body = `${TRIGGER_NOTE_PREFIX} ${ran.fired.join(", ")}.${ran.notes.length ? `\n\n${ran.notes.join("\n\n")}` : ""}`;
+      await tx.insert(messages).values({ orgId: input.orgId, ticketId: ticket.id, authorType: "system", internal: true, body, createdAt: new Date() });
+    }
     return { ...ticket, messageId: message.id };
   });
 }

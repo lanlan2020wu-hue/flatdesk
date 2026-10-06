@@ -24,7 +24,9 @@ export type AuditAction =
   | "integration.connect"
   | "integration.disconnect"
   | "apikey.create"
-  | "apikey.revoke";
+  | "apikey.revoke"
+  | "trigger.save"
+  | "trigger.delete";
 
 export const AUDIT_LABELS: Record<AuditAction, string> = {
   "settings.ai": "Changed AI answer settings",
@@ -44,6 +46,8 @@ export const AUDIT_LABELS: Record<AuditAction, string> = {
   "integration.connect": "Connected an integration",
   "integration.disconnect": "Disconnected an integration",
   "apikey.create": "Created an API key",
+  "trigger.save": "Saved a trigger",
+  "trigger.delete": "Deleted a trigger",
   "apikey.revoke": "Revoked an API key",
 };
 

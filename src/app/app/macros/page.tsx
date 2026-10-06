@@ -13,18 +13,22 @@ import { macroUpdates } from "@/lib/macro-drift";
 import { macroSuggestions } from "@/lib/macro-suggestions";
 import { withAiDrafts, withUpdateDrafts, writeMacroUpdates, writeMissingDrafts } from "@/lib/macro-writer";
 import { listAgents, orgTags } from "@/lib/tickets";
+import { CONDITION_FIELDS, describeAction, describeCondition, FORM_ROWS } from "@/lib/triggers";
 import { deleteMacroAction, deleteRuleAction, saveMacroAction, saveRuleAction, toggleRuleAction } from "../actions";
+import { deleteTriggerAction, moveTriggerUpAction, saveTriggerAction, toggleTriggerAction } from "./trigger-actions";
 
 export const metadata = { title: "AI macros and rules" };
 
 const field = "field";
 const SOURCE_NAME: Record<string, string> = { zendesk: "Zendesk", intercom: "Intercom", freshdesk: "Freshdesk", helpscout: "Help Scout" };
 
-export default async function MacrosPage() {
+export default async function MacrosPage({ searchParams }: { searchParams: Promise<{ trigger?: string }> }) {
   const s = await requireOpenPage();
-  const [macros, rules, agents, imported, found, drifted, tags] = await Promise.all([
+  const triggerError = (await searchParams).trigger;
+  const [macros, rules, triggerList, agents, imported, found, drifted, tags] = await Promise.all([
     db.select().from(schema.macros).where(eq(schema.macros.orgId, s.orgId)).orderBy(asc(schema.macros.name)),
     db.select().from(schema.rules).where(eq(schema.rules.orgId, s.orgId)).orderBy(asc(schema.rules.createdAt)),
+    db.select().from(schema.triggers).where(eq(schema.triggers.orgId, s.orgId)).orderBy(asc(schema.triggers.position), asc(schema.triggers.createdAt)),
     listAgents(s.orgId),
     db.select().from(schema.importedRules).where(eq(schema.importedRules.orgId, s.orgId)).orderBy(asc(schema.importedRules.name)),
     macroSuggestions(s.orgId),
@@ -41,7 +45,7 @@ export default async function MacrosPage() {
   const { updates, missing: unwritten } = await withUpdateDrafts(s.orgId, drifted);
   if (open && unwritten.length) after(() => writeMacroUpdates(s.orgId, unwritten));
   // Imported rules that aren't running as a Flatdesk rule: shown for reference.
-  const reference = imported.filter((r) => !r.flatdeskRuleId);
+  const reference = imported.filter((r) => !r.flatdeskRuleId && !r.flatdeskTriggerId);
   const agentName = (id: string) => agents.find((a) => a.userId === id)?.name ?? "Removed agent";
   const team = agents.filter((a) => !a.viewer).map((a) => ({ userId: a.userId, name: a.name }));
   // What a macro does besides insert its reply, in words, for its row.
@@ -148,6 +152,67 @@ export default async function MacrosPage() {
         </details>
       </section>
 
+      <section id="triggers" className="grid scroll-mt-6 gap-4 border-t border-line pt-4">
+        <div className="grid gap-1">
+          <h2 className="text-lg font-semibold">Triggers</h2>
+          <p className="text-sm text-muted">
+            When a new ticket matches, a trigger can tag it, assign it, set its status and leave a note for the team. They run top to bottom, so tags one adds can match the next. The ticket gets a note saying which ran. Imported Zendesk triggers that fit show up here.{s.role !== "admin" && " Only admins can change triggers."}
+          </p>
+        </div>
+        {triggerError && <p className="rounded-lg border border-warn/40 bg-warn-soft px-3 py-2 text-sm text-warn" role="alert">{triggerError}</p>}
+
+        {triggerList.length > 0 && (
+          <ol className="card divide-y divide-line overflow-hidden">
+            {triggerList.map((t, i) => (
+              <li key={t.id} className="grid gap-2 px-5 py-3.5 text-sm">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <span className={`font-medium ${t.enabled ? "" : "text-muted line-through"}`}>{i + 1}. {t.name}</span>
+                  {s.role === "admin" && (
+                    <span className="flex gap-3">
+                      {i > 0 && (
+                        <form action={moveTriggerUpAction}>
+                          <input type="hidden" name="id" value={t.id} />
+                          <button className="link">Move up</button>
+                        </form>
+                      )}
+                      <form action={toggleTriggerAction}>
+                        <input type="hidden" name="id" value={t.id} />
+                        <input type="hidden" name="enabled" value={String(!t.enabled)} />
+                        <button className="link">{t.enabled ? "Turn off" : "Turn on"}</button>
+                      </form>
+                      <form action={deleteTriggerAction}>
+                        <input type="hidden" name="id" value={t.id} />
+                        <button className="link text-warn">Delete</button>
+                      </form>
+                    </span>
+                  )}
+                </div>
+                <p className="text-muted">
+                  When {t.matchAll ? "all" : "any"} of: {t.conditions.map(describeCondition).join("; ")}. Then {t.actions.map((a) => describeAction(a, agentName)).join(", ")}.
+                </p>
+                {s.role === "admin" && (
+                  <details>
+                    <summary className="link w-max cursor-pointer list-none">Edit</summary>
+                    <div className="card mt-3">
+                      <TriggerForm trigger={t} agents={team} tags={tags} />
+                    </div>
+                  </details>
+                )}
+              </li>
+            ))}
+          </ol>
+        )}
+
+        {s.role === "admin" && (
+          <details className="grid gap-3" open={triggerList.length === 0 && Boolean(triggerError)}>
+            <summary className="btn btn-secondary w-max cursor-pointer list-none">Add a trigger</summary>
+            <div className="card mt-3">
+              <TriggerForm agents={team} tags={tags} />
+            </div>
+          </details>
+        )}
+      </section>
+
       <section className="grid gap-4 border-t border-line pt-4">
         <div className="grid gap-1">
           <h2 className="text-lg font-semibold">Assignment rules</h2>
@@ -195,7 +260,7 @@ export default async function MacrosPage() {
           <div className="grid gap-2 pt-2">
             <h3 className="eyebrow">Kept from your old help desk</h3>
             <p className="text-sm text-muted">
-              These rules were imported for reference and aren&apos;t running. Flatdesk rules assign by tag; recreate the ones you still need above.
+              These rules were imported for reference and aren&apos;t running, because they do something Flatdesk triggers can&apos;t (like send an email or set a custom field). Recreate the parts you still need as triggers above.
             </p>
             <ul className="card divide-y divide-line overflow-hidden">
               {reference.map((r) => (
@@ -257,6 +322,64 @@ function MacroForm({ macro, agents, tags }: { macro?: typeof schema.macros.$infe
       </div>
       <p className="text-xs text-muted">[customer name] is filled in for you. A macro set to send right away waits if it still has other blanks, like [order number].</p>
       <button className="btn btn-primary w-max">{macro ? "Save macro" : "Add macro"}</button>
+    </form>
+  );
+}
+
+function TriggerForm({ trigger, agents, tags }: { trigger?: typeof schema.triggers.$inferSelect; agents: { userId: string; name: string }[]; tags: string[] }) {
+  const key = trigger?.id ?? "new";
+  const act = <T extends string>(type: T) => trigger?.actions.find((a) => a.type === type);
+  const tagAct = act("add_tags");
+  const assignAct = act("assign");
+  const statusAct = act("set_status");
+  const noteAct = act("note");
+  const rows = Array.from({ length: FORM_ROWS }, (_, i) => trigger?.conditions[i]);
+  return (
+    <form action={saveTriggerAction} className="grid gap-4 p-5 text-sm">
+      {trigger && <input type="hidden" name="id" value={trigger.id} />}
+      <label className="grid gap-1.5 font-medium" htmlFor={`tname-${key}`}>Name<input id={`tname-${key}`} name="name" required maxLength={120} defaultValue={trigger?.name} placeholder="Refunds to billing" className={`${field} font-normal`} /></label>
+      <fieldset className="grid gap-2">
+        <legend className="mb-1 flex flex-wrap items-center gap-2 font-medium">
+          When a new ticket matches
+          <select name="match" defaultValue={trigger && !trigger.matchAll ? "any" : "all"} className={`${field} field-sm font-normal`} aria-label="All or any">
+            <option value="all">all</option>
+            <option value="any">any</option>
+          </select>
+          of these
+        </legend>
+        {rows.map((c, i) => (
+          <div key={i} className="flex flex-wrap gap-2">
+            <select name={`c${i}_field`} defaultValue={c?.field ?? "subject_or_body"} className={`${field} field-sm`} aria-label={`Condition ${i + 1} field`}>
+              {CONDITION_FIELDS.map((f) => <option key={f.id} value={f.id}>{f.label}</option>)}
+            </select>
+            <select name={`c${i}_op`} defaultValue={c && (c.op === "excludes" || c.op === "is_not") ? "excludes" : "includes"} className={`${field} field-sm`} aria-label={`Condition ${i + 1} test`}>
+              <option value="includes">has any of</option>
+              <option value="excludes">has none of</option>
+            </select>
+            <input name={`c${i}_value`} defaultValue={c?.value} placeholder={i === 0 ? "refund, money back" : ""} className={`${field} field-sm min-w-48 flex-1`} aria-label={`Condition ${i + 1} words`} />
+          </div>
+        ))}
+        <p className="text-xs text-muted">Separate words or phrases with commas. Case doesn&apos;t matter. For Channel, type email or chat. Leave a row empty to skip it.</p>
+      </fieldset>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <label className="grid gap-1.5 font-medium" htmlFor={`ttags-${key}`}>Add tags<TagInput tags={tags} id={`ttags-${key}`} name="addTags" defaultValue={tagAct?.type === "add_tags" ? tagAct.tags.join(", ") : ""} placeholder="billing" className={`${field} font-normal`} /></label>
+        <label className="grid gap-1.5 font-medium" htmlFor={`tassign-${key}`}>Assign to
+          <select id={`tassign-${key}`} name="assignTo" defaultValue={assignAct?.type === "assign" ? assignAct.to : ""} className={`${field} font-normal`}>
+            <option value="">Leave as is</option>
+            {agents.map((a) => <option key={a.userId} value={a.userId}>{a.name}</option>)}
+          </select>
+        </label>
+        <label className="grid gap-1.5 font-medium" htmlFor={`tstatus-${key}`}>Set status
+          <select id={`tstatus-${key}`} name="setStatus" defaultValue={statusAct?.type === "set_status" ? statusAct.status : ""} className={`${field} font-normal`}>
+            <option value="">Leave open</option>
+            <option value="pending">Pending</option>
+            <option value="closed">Closed</option>
+          </select>
+        </label>
+        <label className="grid gap-1.5 font-medium" htmlFor={`tnote-${key}`}>Note for the team<input id={`tnote-${key}`} name="note" maxLength={2000} defaultValue={noteAct?.type === "note" ? noteAct.body : ""} placeholder="Check the order in Shopify first" className={`${field} font-normal`} /></label>
+      </div>
+      <p className="text-xs text-muted">The AI only answers tickets that are still open, so a trigger that sets pending or closed keeps the AI off them.</p>
+      <button className="btn btn-primary w-max">{trigger ? "Save trigger" : "Add trigger"}</button>
     </form>
   );
 }

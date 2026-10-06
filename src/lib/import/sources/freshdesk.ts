@@ -95,7 +95,7 @@ async function mapRule(ctx: Ctx, r: Raw): Promise<Mapped> {
     active: r.active !== false,
     summary,
     tagAssign,
-    issues: tagAssign ? [] : ["Kept for reference, not running: Flatdesk rules can only assign by tag"],
+    issues: tagAssign ? [] : ["Kept for reference, not running: from Freshdesk, only rules that assign by tag carry over; rebuild it as a trigger"],
   };
 }
 
