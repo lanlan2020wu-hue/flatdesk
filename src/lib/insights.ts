@@ -15,7 +15,7 @@ export const INSIGHTS = { maxTickets: 300, everyHours: 12, maxTopics: 10 };
 
 export class InsightsError extends Error {}
 
-const { tickets, messages, aiEvents, insights } = schema;
+const { tickets, insights } = schema;
 
 export type InsightTicket = { id: string; number: number; subject: string; first: string; tags: string[]; outcome: "ai" | "handoff" | "team"; reason: string | null };
 
@@ -29,9 +29,11 @@ export async function insightTickets(orgId: string, days: number, limit = INSIGH
       subject: tickets.subject,
       tags: tickets.tags,
       resolvedByAi: tickets.resolvedByAi,
-      first: sql<string | null>`(select left(${messages.body}, 400) from ${messages} where ${messages.ticketId} = ${tickets.id} and ${messages.authorType} = 'customer' order by ${messages.createdAt} limit 1)`,
-      reason: sql<string | null>`(select ${aiEvents.reason} from ${aiEvents} where ${aiEvents.ticketId} = ${tickets.id} and ${aiEvents.kind} = 'handoff' order by ${aiEvents.createdAt} desc limit 1)`,
-      handedOff: sql<boolean>`exists (select 1 from ${aiEvents} where ${aiEvents.ticketId} = ${tickets.id} and ${aiEvents.kind} = 'handoff')`,
+      // Aliased by hand: in a one-table select, drizzle leaves column names
+      // unqualified, so "id" would resolve to the subquery's own table.
+      first: sql<string | null>`(select left(m.body, 400) from messages m where m.ticket_id = ${tickets}.id and m.author_type = 'customer' order by m.created_at limit 1)`,
+      reason: sql<string | null>`(select e.reason from ai_events e where e.ticket_id = ${tickets}.id and e.kind = 'handoff' order by e.created_at desc limit 1)`,
+      handedOff: sql<boolean>`exists (select 1 from ai_events e where e.ticket_id = ${tickets}.id and e.kind = 'handoff')`,
     })
     .from(tickets)
     .where(and(eq(tickets.orgId, orgId), gte(tickets.createdAt, since), eq(tickets.test, false), sql`${tickets.mergedIntoId} is null`))
@@ -120,7 +122,7 @@ export async function topicStats(orgId: string, topics: InsightTopic[]) {
       subject: tickets.subject,
       status: tickets.status,
       resolvedByAi: tickets.resolvedByAi,
-      handedOff: sql<boolean>`exists (select 1 from ${aiEvents} where ${aiEvents.ticketId} = ${tickets.id} and ${aiEvents.kind} = 'handoff')`,
+      handedOff: sql<boolean>`exists (select 1 from ai_events e where e.ticket_id = ${tickets}.id and e.kind = 'handoff')`,
     })
     .from(tickets)
     .where(and(eq(tickets.orgId, orgId), inArray(tickets.id, ids)));

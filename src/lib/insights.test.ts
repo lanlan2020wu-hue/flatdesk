@@ -43,11 +43,15 @@ test("database: topics show live counts from their tickets, never another team's
   const theirs = await make(OTHER, "Not yours");
   await db.update(schema.tickets).set({ resolvedByAi: true, status: "pending" }).where(eq(schema.tickets.id, a.id));
   await updateTicket(ORG, c.id, { status: "closed" });
+  await db.insert(schema.aiEvents).values({ orgId: ORG, ticketId: b.id, kind: "handoff", month: "2026-10", model: "m", reason: "No tracking info." });
   await createTicket({ orgId: ORG, channel: "email", customerEmail: "t@x.com", subject: "Test", body: "test", authorType: "customer", test: true });
 
   const list = await insightTickets(ORG, 30);
   assert.deepEqual(list.map((t) => t.number).sort(), [a.number, b.number, c.number], "test tickets and other teams are left out");
   assert.equal(list.find((t) => t.id === a.id)?.outcome, "ai");
+  // The first message and the handoff reason come from each ticket's own rows.
+  assert.equal(list.find((t) => t.id === b.id)?.first, "Order still not here, please help");
+  assert.deepEqual([list.find((t) => t.id === b.id)?.outcome, list.find((t) => t.id === b.id)?.reason], ["handoff", "No tracking info."]);
 
   const stats = await topicStats(ORG, [
     { name: "Where is my order", summary: "", ticketIds: [a.id, b.id, theirs.id], gap: "", suggestion: "" },
