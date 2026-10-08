@@ -4,6 +4,7 @@ import { db, schema } from "@/db";
 import { requireOpenPage } from "@/lib/auth";
 import { domainsConfigured, domainStatus, dnsRecord } from "@/lib/domains";
 import { ensureHelpSlug, excerpt, HELP_SLUG_RULE, helpUrl, MAX_HELP_LANGUAGES, verifiedDomain } from "@/lib/help";
+import { HELP_SEARCH_DAYS, helpSearchReport, REPORT_DAYS } from "@/lib/help-searches";
 import { LANGUAGES, languageLabel } from "@/lib/language";
 import DnsTable from "@/components/DnsTable";
 import { SITE } from "@/lib/site";
@@ -38,6 +39,7 @@ export default async function HelpCenterAdmin({ searchParams }: PageProps<"/app/
     .from(schema.articles)
     .where(and(eq(schema.articles.orgId, s.orgId), eq(schema.articles.published, true), eq(schema.articles.internal, false)));
   const url = helpUrl(helpSlug, domain);
+  const searches = await helpSearchReport(s.orgId);
 
   return (
     <div className="grid max-w-3xl gap-12 px-4 py-6 md:px-8 md:py-8">
@@ -86,6 +88,50 @@ export default async function HelpCenterAdmin({ searchParams }: PageProps<"/app/
             </p>
           </div>
         )}
+      </section>
+
+      <section id="searches" className="grid gap-4 border-t border-line pt-6 text-sm">
+        <div className="grid gap-1">
+          <h2 className="text-lg font-semibold">What customers search for</h2>
+          <p className="max-w-xl text-muted">
+            {searches.total === 0
+              ? `Searches in your help center from the last ${REPORT_DAYS} days show up here, with the ones that found nothing, so you know which articles to write next.`
+              : `${searches.total} ${searches.total === 1 ? "search" : "searches"} in the last ${REPORT_DAYS} days, ${searches.empty} with no results.`}
+          </p>
+        </div>
+        {searches.total > 0 && (
+          <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid content-start gap-2">
+              <h3 className="eyebrow">Found nothing</h3>
+              {searches.misses.length ? (
+                <ul className="card divide-y divide-line overflow-hidden">
+                  {searches.misses.map((m) => (
+                    <li key={m.query} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                      <span className="min-w-0 truncate">
+                        {m.query} <span className="num text-xs text-muted">×{m.searches}</span>
+                      </span>
+                      {!s.viewer && <Link href={`/app/help/new?title=${encodeURIComponent(m.query)}`} className="link shrink-0 text-accent">Write it</Link>}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-muted">Every search found at least one article.</p>
+              )}
+            </div>
+            <div className="grid content-start gap-2">
+              <h3 className="eyebrow">Most searched</h3>
+              <ul className="card divide-y divide-line overflow-hidden">
+                {searches.top.map((t) => (
+                  <li key={t.query} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                    <a href={`${url}?q=${encodeURIComponent(t.query)}`} target="_blank" rel="noopener" className="min-w-0 truncate hover:underline">{t.query}</a>
+                    <span className="num shrink-0 text-xs text-muted">{t.searches}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+        <p className="text-xs text-muted">Searches that look like they contain an email address or an order or phone number aren&apos;t kept. Nothing about the visitor is saved, and searches are deleted after {HELP_SEARCH_DAYS} days.</p>
       </section>
 
       <section className="grid gap-4 border-t border-line pt-6">

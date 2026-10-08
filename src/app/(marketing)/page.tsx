@@ -41,6 +41,7 @@ const MORE = [
   { title: "What customers ask about", body: "The AI groups recent tickets into topics, shows where it handed off and why, and suggests one fix for each.", href: "/features#all" },
   { title: "Groups and routing", body: "Billing, Tier 2, your call. Tickets go round in turn, skipping anyone away. Ones the AI answers never land in a queue.", href: "/features#all" },
   { title: "Triggers and auto-close", body: "Run on a new ticket, a customer reply, or hours with no update. One click closes quiet pending tickets.", href: "/features#all" },
+  { title: "Help center search report", body: "See what customers search your help center for, and which searches found nothing, with one click to write that article.", href: "/features#all" },
   { title: "Snooze", body: "Put a ticket away until tomorrow morning or next week. It comes back to Open on time, or as soon as the customer writes.", href: "/features#all" },
   { title: "Block senders, trash", body: "Block an address or a whole domain and its email skips your inbox. Deleted tickets wait 30 days in the trash in case you need them back.", href: "/features#all" },
   { title: "Reply and resolve targets", body: "Next reply within 15 minutes to 24 hours, resolved within 4 hours to 7 days. The clock can pause while you wait on the customer. Late tickets are escalated.", href: "/features#all" },
