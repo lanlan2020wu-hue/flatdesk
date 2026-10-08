@@ -8,7 +8,9 @@ import Avatar from "@/components/Avatar";
 import Composer from "@/components/Composer";
 import CopilotSummary from "@/components/CopilotSummary";
 import { HubSpotPanel, JiraPanel, OtherTickets, RelatedArticles, ShopifyOrders, StripeCustomer } from "@/components/CustomerContext";
+import LocalTime from "@/components/LocalTime";
 import SlaBadge from "@/components/SlaBadge";
+import SnoozeMenu from "@/components/SnoozeMenu";
 import TagInput from "@/components/TagInput";
 import TeachAi from "@/components/TeachAi";
 import TicketPresence from "@/components/TicketPresence";
@@ -30,7 +32,7 @@ import { guessLanguage, isForeign, languageLabel } from "@/lib/language";
 import AutoTranslate from "@/components/AutoTranslate";
 import { getTicket, listAgents, orgTags, parseTicketNumber, PRIORITIES } from "@/lib/tickets";
 import { TRASH_DAYS } from "@/lib/trash";
-import { mergeTicketAction, replyAction, saveCcAction, ticketTrashAction, updateTicketAction } from "../../actions";
+import { mergeTicketAction, replyAction, saveCcAction, ticketSnoozeAction, ticketTrashAction, updateTicketAction } from "../../actions";
 
 export async function generateMetadata({ params }: PageProps<"/app/tickets/[number]">) {
   return { title: `#${(await params).number}` };
@@ -133,6 +135,18 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
               {new Date(ticket.deletedAt.getTime() + TRASH_DAYS * 86_400_000).toLocaleDateString("en-US", { month: "long", day: "numeric" })} unless you restore it.
             </p>
             {!s.viewer && <button name="op" value="restore" className="btn btn-secondary btn-sm">Restore</button>}
+          </form>
+        )}
+
+        {ticket.snoozedUntil && ticket.snoozedUntil > new Date() && !ticket.deletedAt && ticket.status !== "closed" && (
+          <form action={ticketSnoozeAction} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-line bg-surface px-4 py-3 text-sm">
+            <input type="hidden" name="ticketId" value={ticket.id} />
+            <input type="hidden" name="number" value={ticket.number} />
+            <p>
+              <strong className="font-medium">Snoozed</strong>
+              {ticket.snoozedBy ? ` by ${ticket.snoozedBy}` : ""} until <LocalTime at={ticket.snoozedUntil.toISOString()} />. It comes back to Open then, or sooner if the customer writes.
+            </p>
+            {!s.viewer && <button name="op" value="wake" className="btn btn-secondary btn-sm">Wake now</button>}
           </form>
         )}
 
@@ -359,6 +373,8 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
             </form>
           </details>
         )}
+
+        {!ticket.deletedAt && !ticket.mergedIntoId && ticket.status !== "closed" && <SnoozeMenu ticketId={ticket.id} number={ticket.number} />}
 
         {!ticket.deletedAt && (
           <form action={ticketTrashAction} className="grid gap-1.5">
