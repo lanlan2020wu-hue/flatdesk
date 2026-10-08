@@ -373,6 +373,16 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
                 />
               </label>
               <label className="flex items-start gap-2.5">
+                <input type="checkbox" name="aiAutoLearn" defaultChecked={org.aiAutoLearn} className="mt-1 size-4 accent-[var(--accent)]" />
+                <span>
+                  Let the AI learn from tickets your team solves
+                  <span className="block text-sm text-muted">
+                    Once a day it reads what your team told customers and saves new facts as saved answers, updates the ones that changed and retires the ones nobody uses. You see every change on the{" "}
+                    <Link href="/app/macros#learned" className="link">Macros page</Link>. Included in your plan; it never uses your AI answers.
+                  </span>
+                </span>
+              </label>
+              <label className="flex items-start gap-2.5">
                 <input type="checkbox" name="aiOverageEnabled" defaultChecked={org.aiOverageEnabled} className="mt-1 size-4 accent-[var(--accent)]" />
                 <span>
                   Keep answering after the allowance is used, at {usd(PLAN.overageRate, true)} per answer
