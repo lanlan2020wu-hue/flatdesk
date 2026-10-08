@@ -31,7 +31,7 @@ const TERMS = [
 // Smaller things in the seat, one line each, after the tour.
 const MORE = [
   { title: "Live chat widget", body: "One script tag. Chats become tickets.", href: "/features#all" },
-  { title: "Help center", body: "Articles customers search and the AI links to, in up to 10 more languages with one-click translation.", href: "/features#all" },
+  { title: "Help center", body: "Articles customers search and the AI links to, in up to 10 more languages. Team-only articles stay private and show on matching tickets.", href: "/features#all" },
   { title: "AI test drive", body: "AI drafts for the last 50 tickets your team answered, beside its replies.", href: "/features/ai-test-drive" },
   { title: "Slack alerts and ratings", body: "A ping when a ticket needs a person, reply time targets, and ratings.", href: "/features#all" },
   { title: "Search, priority, bulk", body: "Find any ticket by its words, customer, tag or #number. Urgent sits on top. Change many at once.", href: "/features#all" },
