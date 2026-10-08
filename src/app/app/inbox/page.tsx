@@ -44,6 +44,7 @@ export default async function InboxPage({ searchParams }: PageProps<"/app/inbox"
           <h1 className="page-title">Inbox</h1>
           {overdue > 0 && !q && <p className="text-sm font-medium text-warn">{overdue} past the first-reply target</p>}
         </div>
+        {sp.erased === "1" && <p role="status" className="rounded-lg bg-accent-soft px-4 py-3 text-sm">The customer and all their tickets were erased. The audit log in Settings records it.</p>}
         <form action="/app/inbox" role="search" className="flex max-w-xl gap-2">
           <input
             type="search"

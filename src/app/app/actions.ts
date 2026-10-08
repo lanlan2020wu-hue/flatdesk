@@ -25,6 +25,7 @@ import { parseCcList } from "@/lib/cc";
 import { dismissSuggestion, saveSuggestedMacro } from "@/lib/macro-suggestions";
 import { hit, LIMITS } from "@/lib/rate-limit";
 import { teachAi } from "@/lib/teach";
+import { eraseCustomer, maskEmail } from "@/lib/customer-data";
 import { parseSnoozeUntil, snoozeTicket, unsnoozeTicket } from "@/lib/snooze";
 import { blockSender, parseBlockList, restoreTickets, trashTickets } from "@/lib/trash";
 import { addRule } from "@/lib/rules";
@@ -206,6 +207,24 @@ export async function ticketSnoozeAction(form: FormData) {
   await snoozeTicket(s.orgId, ticketId, until, s.name);
   revalidatePath("/app/inbox");
   redirect("/app/inbox");
+}
+
+// Erases one customer and everything about them, on their request. Admins
+// only, confirmed by typing the address. Works after a trial ends too: a
+// data request can't wait for billing.
+export async function eraseCustomerAction(form: FormData) {
+  const s = await requireAdmin();
+  const customerId = idOf(form, "customerId");
+  const back = `/app/tickets/${parseTicketNumber(str(form, "number")) ?? ""}`;
+  const customer = await db.query.customers.findFirst({ where: and(eq(schema.customers.orgId, s.orgId), eq(schema.customers.id, customerId)), columns: { email: true } });
+  if (!customer) redirect("/app/inbox");
+  if (str(form, "confirm").trim().toLowerCase() !== customer.email.toLowerCase()) redirect(`${back}?erase=mismatch#erase`);
+  const gone = await eraseCustomer(s.orgId, customerId);
+  if (gone) {
+    await audit(s.orgId, actor(s), "customer.erase", `${maskEmail(gone.email)}: ${gone.tickets} ${gone.tickets === 1 ? "ticket" : "tickets"}${gone.otherMessages ? `, ${gone.otherMessages} ${gone.otherMessages === 1 ? "message" : "messages"} on other tickets` : ""}`);
+  }
+  revalidatePath("/app/inbox");
+  redirect("/app/inbox?erased=1");
 }
 
 // Settings: the senders whose email goes straight to the trash.

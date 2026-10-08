@@ -32,7 +32,7 @@ import { guessLanguage, isForeign, languageLabel } from "@/lib/language";
 import AutoTranslate from "@/components/AutoTranslate";
 import { getTicket, listAgents, orgTags, parseTicketNumber, PRIORITIES } from "@/lib/tickets";
 import { TRASH_DAYS } from "@/lib/trash";
-import { mergeTicketAction, replyAction, saveCcAction, ticketSnoozeAction, ticketTrashAction, updateTicketAction } from "../../actions";
+import { eraseCustomerAction, mergeTicketAction, replyAction, saveCcAction, ticketSnoozeAction, ticketTrashAction, updateTicketAction } from "../../actions";
 
 export async function generateMetadata({ params }: PageProps<"/app/tickets/[number]">) {
   return { title: `#${(await params).number}` };
@@ -57,6 +57,7 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
   const sp = await searchParams;
   const actionMessage = typeof sp.action === "string" ? sp.action.slice(0, 300) : null;
   const mergeError = typeof sp.merge === "string" ? sp.merge.slice(0, 200) : null;
+  const eraseMismatch = sp.erase === "mismatch";
   const ccError = typeof sp.cc === "string" ? sp.cc.slice(0, 200) : null;
   const mergedInto = ticket.mergedIntoId ? await db.query.tickets.findFirst({ where: and(eq(schema.tickets.orgId, s.orgId), eq(schema.tickets.id, ticket.mergedIntoId)), columns: { number: true } }) : null;
   const groups = await listGroups(s.orgId);
@@ -390,6 +391,29 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
             </div>
             <p className="text-xs text-muted">Deleted tickets stay in the trash for {TRASH_DAYS} days.</p>
           </form>
+        )}
+
+        {s.role === "admin" && (
+          <details id="erase" className="grid gap-2" open={eraseMismatch}>
+            <summary className={`${heading} cursor-pointer list-none`}>Customer data requests</summary>
+            <div className="grid gap-3 pt-1">
+              <p className="text-xs text-muted">
+                When {customer.name || customer.email} asks for a copy of their data or to be forgotten (GDPR, CCPA).
+              </p>
+              <a href={`/app/export/customer?id=${customer.id}`} className="btn btn-secondary btn-sm w-fit">Download their data</a>
+              <form action={eraseCustomerAction} className="grid gap-1.5">
+                <input type="hidden" name="customerId" value={customer.id} />
+                <input type="hidden" name="number" value={ticket.number} />
+                <label htmlFor="erase-confirm" className="text-xs text-muted">
+                  Erasing deletes all their tickets, messages and files, now and for good. To confirm, type <strong className="font-medium text-ink">{customer.email}</strong>
+                </label>
+                <input id="erase-confirm" name="confirm" autoComplete="off" spellCheck={false} className={field} />
+                {eraseMismatch && <p role="alert" className="text-xs text-warn">That doesn&apos;t match their email address, so nothing was erased.</p>}
+                <button className="btn btn-secondary btn-sm w-fit text-warn">Erase this customer</button>
+                <p className="text-xs text-muted">Copies already sent to connected tools, like HubSpot, have to be removed there.</p>
+              </form>
+            </div>
+          </details>
         )}
         </fieldset>
 
