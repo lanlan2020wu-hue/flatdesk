@@ -34,6 +34,7 @@ import { findGroup, shareTicketQuietly } from "@/lib/routing";
 import { isLanguage } from "@/lib/language";
 import { rememberRemoved } from "@/lib/learn";
 import { checkSendDomain, SendDomainError, setSendAddress } from "@/lib/send-domain";
+import { disconnectMailbox, mailboxFor } from "@/lib/mailbox";
 
 // The paywall hides the app once a trial ends without a card; this keeps
 // direct requests from doing work behind it. Billing stays open.
@@ -555,4 +556,16 @@ export async function checkSendAddressAction() {
   const s = await requireOpen(await requireAdmin());
   const state = await checkSendDomain(s.orgId);
   sendBack(state === "verified" ? "verified" : state === "pending" ? "pending" : "Couldn't check just now. Try again in a minute.");
+}
+
+// ---- A connected mailbox --------------------------------------------------------------
+
+export async function disconnectMailboxAction() {
+  const s = await requireAdmin();
+  const row = await mailboxFor(s.orgId);
+  if (row) {
+    await disconnectMailbox(s.orgId);
+    await audit(s.orgId, actor(s), "integration.disconnect", `Gmail: ${row.account}`);
+  }
+  redirect("/app/settings?mailbox=disconnected#mailbox");
 }

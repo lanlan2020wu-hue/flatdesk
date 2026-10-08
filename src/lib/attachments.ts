@@ -111,22 +111,32 @@ type InboundMeta = { id: string; filename?: string | null; size: number; content
 // that are too big are named in the returned `skipped` list, so the ticket can
 // say so instead of silently dropping them.
 export async function downloadInbound(list: InboundMeta[], fetcher: typeof fetch = fetch) {
+  return keepInbound(
+    list.map((a) => ({ filename: a.filename, size: a.size, contentType: a.content_type, inline: a.content_disposition === "inline" })),
+    async (i) => {
+      const r = await fetcher(list[i].download_url);
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return Buffer.from(await r.arrayBuffer());
+    },
+  );
+}
+
+// The same choice for any source: `get` fetches the i-th file's bytes.
+export async function keepInbound(list: { filename?: string | null; size: number; contentType: string; inline: boolean }[], get: (i: number) => Promise<Buffer>) {
   const files: NewFile[] = [];
   const skipped: string[] = [];
   let total = 0;
-  for (const a of list) {
+  for (const [i, a] of list.entries()) {
     const name = cleanFilename(a.filename);
-    if (a.content_disposition === "inline" && a.content_type.startsWith("image/") && a.size < INLINE_NOISE) continue;
+    if (a.inline && a.contentType.startsWith("image/") && a.size < INLINE_NOISE) continue;
     if (files.length >= MAX_FILES || a.size > INBOUND_FILE_LIMIT || total + a.size > INBOUND_TOTAL_LIMIT) {
       skipped.push(name);
       continue;
     }
     try {
-      const r = await fetcher(a.download_url);
-      if (!r.ok) throw new Error(`HTTP ${r.status}`);
-      const data = Buffer.from(await r.arrayBuffer());
+      const data = await get(i);
       total += data.length;
-      files.push({ filename: name, contentType: a.content_type, data });
+      files.push({ filename: name, contentType: a.contentType, data });
     } catch (err) {
       console.error("attachment download failed", name, err);
       skipped.push(name);
