@@ -25,6 +25,7 @@ import { parseCcList } from "@/lib/cc";
 import { dismissSuggestion, saveSuggestedMacro } from "@/lib/macro-suggestions";
 import { hit, LIMITS } from "@/lib/rate-limit";
 import { teachAi } from "@/lib/teach";
+import { parseSnoozeUntil, snoozeTicket, unsnoozeTicket } from "@/lib/snooze";
 import { blockSender, parseBlockList, restoreTickets, trashTickets } from "@/lib/trash";
 import { addRule } from "@/lib/rules";
 import { audit, changes } from "@/lib/security";
@@ -186,6 +187,23 @@ export async function ticketTrashAction(form: FormData) {
   } else {
     return;
   }
+  revalidatePath("/app/inbox");
+  redirect("/app/inbox");
+}
+
+// Snooze a ticket until a time picked on its page, or wake it now.
+export async function ticketSnoozeAction(form: FormData) {
+  const s = await requireOpenSession();
+  const ticketId = idOf(form, "ticketId");
+  if (str(form, "op") === "wake") {
+    await unsnoozeTicket(s.orgId, ticketId, s.name);
+    revalidatePath(`/app/tickets/${str(form, "number")}`);
+    revalidatePath("/app/inbox");
+    return;
+  }
+  const until = parseSnoozeUntil(form.get("until"));
+  if (!until) return;
+  await snoozeTicket(s.orgId, ticketId, until, s.name);
   revalidatePath("/app/inbox");
   redirect("/app/inbox");
 }

@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
 import Link from "next/link";
+import LocalTime from "@/components/LocalTime";
 import Avatar from "@/components/Avatar";
 import BulkBar from "@/components/BulkBar";
 import SlaBadge from "@/components/SlaBadge";
@@ -55,7 +56,7 @@ export default async function InboxPage({ searchParams }: PageProps<"/app/inbox"
           <button className="btn btn-secondary">Search</button>
         </form>
         <nav aria-label="Views" className="-mx-1 flex gap-1 overflow-x-auto border-b border-line text-sm">
-          {VIEWS.filter((v) => counts[v.id] !== null || v.id === "closed" || v.id === "trash").map((v) => (
+          {VIEWS.filter((v) => counts[v.id] !== null || v.id === "closed" || v.id === "trash" || v.id === view).map((v) => (
             <Link
               key={v.id}
               href={`/app/inbox?view=${v.id}`}
@@ -95,7 +96,7 @@ export default async function InboxPage({ searchParams }: PageProps<"/app/inbox"
       {rows.length === 0 ? (
         <div className="grid place-items-center gap-1 px-4 py-16 text-center">
           <p className="font-medium">{q ? "Nothing matches that." : "No tickets here."}</p>
-          <p className="text-sm text-muted">{q ? "Search looks at subjects, customers, tags and every message. Try fewer words." : view === "trash" ? "Deleted tickets wait here for 30 days." : "New email and chat conversations land in All open."}</p>
+          <p className="text-sm text-muted">{q ? "Search looks at subjects, customers, tags and every message. Try fewer words." : view === "trash" ? "Deleted tickets wait here for 30 days." : view === "snoozed" ? "Nothing is snoozed. Snooze a ticket from its page to put it away until later." : "New email and chat conversations land in All open."}</p>
         </div>
       ) : (
         <>
@@ -133,6 +134,13 @@ export default async function InboxPage({ searchParams }: PageProps<"/app/inbox"
                           <span className={`chip shrink-0 capitalize ${t.priority === "urgent" ? "border-warn/50 bg-warn-soft font-semibold text-warn" : "border-warn/30 text-warn"}`}>{t.priority}</span>
                         )}
                         {"groupName" in t && typeof t.groupName === "string" && <span className="chip shrink-0 text-muted" title="Group">{t.groupName}</span>}
+                        {view === "snoozed" && !q && "snoozedUntil" in t && t.snoozedUntil instanceof Date && (
+                          <span className="chip shrink-0 text-muted" title="Comes back to Open then">
+                            <span>
+                              Until <LocalTime at={t.snoozedUntil.toISOString()} />
+                            </span>
+                          </span>
+                        )}
                         {t.resolvedByAi && <span className="chip shrink-0 border-accent/30 bg-accent-soft text-accent" title="The AI replied to this customer on its own.">AI answered</span>}
                         {t.tags.map((tag) => <span key={tag} className="chip hidden shrink-0 sm:inline-flex">{tag}</span>)}
                       </p>

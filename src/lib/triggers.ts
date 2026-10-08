@@ -2,6 +2,7 @@ import { and, asc, eq, gt, isNull, lte, not, or, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import type { TriggerAction, TriggerCondition, TriggerEvent } from "@/db/schema";
 import { maskCards } from "@/lib/redact";
+import { awake } from "@/lib/snooze";
 
 export type { TriggerAction, TriggerCondition, TriggerEvent };
 
@@ -248,6 +249,8 @@ export async function runTimedTriggers(now = new Date()): Promise<{ ran: number;
         and(
           eq(tickets.orgId, trigger.orgId),
           isNull(tickets.deletedAt),
+          // Snoozed tickets wait; waking counts as an update, so clocks restart then.
+          awake,
           lte(tickets.updatedAt, cutoff),
           gt(tickets.updatedAt, new Date(cutoff.getTime() - TIMED_WINDOW_MS)),
           not(sql`${trigger.id}::uuid = any(${tickets.timedRan})`),

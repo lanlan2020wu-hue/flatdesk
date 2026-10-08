@@ -300,11 +300,17 @@ export const tickets = pgTable(
     // puts back; a trashed ticket is closed so nothing works on it meanwhile.
     deletedAt: timestamp("deleted_at", { withTimezone: true }),
     deletedStatus: ticketStatus("deleted_status"),
+    // Snoozed (lib/snooze.ts): out of the working views until then, when it
+    // comes back to Open. A customer message wakes it sooner.
+    snoozedUntil: timestamp("snoozed_until", { withTimezone: true }),
+    snoozedBy: text("snoozed_by"),
   },
   (t) => [
     uniqueIndex("tickets_org_number").on(t.orgId, t.number),
     index("tickets_org_status_updated").on(t.orgId, t.status, t.updatedAt),
     index("tickets_org_assignee").on(t.orgId, t.assigneeId),
+    // The wake-up job looks for snoozes that are up.
+    index("tickets_snoozed_until").on(t.snoozedUntil).where(sql`${t.snoozedUntil} is not null`),
     // Makes imports safe to re-run: a ticket already imported is skipped.
     uniqueIndex("tickets_org_external").on(t.orgId, t.externalId),
   ],

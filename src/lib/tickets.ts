@@ -2,6 +2,7 @@ import { and, asc, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm
 import { db, schema } from "@/db";
 import { noNul } from "@/lib/ids";
 import { maskCards } from "@/lib/redact";
+import { awake, snoozed } from "@/lib/snooze";
 import { notTrashed, TRASH_DAYS } from "@/lib/trash";
 import { applyToTicket, loadTriggers, runTriggers, ticketForTriggers, TRIGGER_NOTE_PREFIX } from "@/lib/triggers";
 
@@ -18,7 +19,7 @@ export const PRIORITIES: { id: TicketPriority; label: string }[] = [
 export const isPriority = (v: unknown): v is TicketPriority => PRIORITIES.some((p) => p.id === v);
 // Urgent first, then high; the rest by when they changed.
 const priorityRank = sql`case ${tickets.priority} when 'urgent' then 0 when 'high' then 1 else 2 end`;
-export type View = "mine" | "groups" | "unassigned" | "open" | "pending" | "closed" | "trash";
+export type View = "mine" | "groups" | "unassigned" | "open" | "pending" | "snoozed" | "closed" | "trash";
 
 // Each view with one line on what's in it, shown under the tabs.
 export const VIEWS: { id: View; label: string; hint: string }[] = [
@@ -27,6 +28,7 @@ export const VIEWS: { id: View; label: string; hint: string }[] = [
   { id: "unassigned", label: "Unassigned", hint: "Open tickets nobody has taken yet. Open one and assign it to yourself or a teammate." },
   { id: "open", label: "All open", hint: "Tickets waiting on a reply from your team." },
   { id: "pending", label: "Pending", hint: "Someone replied, you or the AI, and you are waiting on the customer. When they write back, the ticket moves to open." },
+  { id: "snoozed", label: "Snoozed", hint: "Tickets put away until a time someone picked. Each comes back to Open then, or sooner if the customer writes." },
   { id: "closed", label: "Closed", hint: "Finished tickets. A new message from the customer reopens one." },
   { id: "trash", label: "Trash", hint: `Deleted tickets and email from blocked senders. Restore one to put it back; each is deleted for good ${TRASH_DAYS} days after it got here.` },
 ];
@@ -48,6 +50,8 @@ export function parseTicketNumber(raw: string | number | null | undefined): numb
 
 export async function listTickets(orgId: string, userId: string, view: View) {
   const where = [eq(tickets.orgId, orgId), view === "trash" ? isNotNull(tickets.deletedAt) : notTrashed];
+  if (view === "snoozed") where.push(snoozed);
+  else if (view !== "closed" && view !== "trash") where.push(awake);
   if (view === "mine") where.push(eq(tickets.assigneeId, userId), inArray(tickets.status, ["open", "pending"]));
   if (view === "unassigned") where.push(isNull(tickets.assigneeId), eq(tickets.status, "open"));
   if (view === "groups") where.push(inMyGroups(orgId, userId), eq(tickets.status, "open"));
@@ -66,6 +70,7 @@ export async function listTickets(orgId: string, userId: string, view: View) {
       createdAt: tickets.createdAt,
       firstResponseAt: tickets.firstResponseAt,
       closedAt: tickets.closedAt,
+      snoozedUntil: tickets.snoozedUntil,
       awaitingSince: tickets.awaitingSince,
       pendingSince: tickets.pendingSince,
       pausedSeconds: tickets.pausedSeconds,
@@ -84,7 +89,7 @@ export async function listTickets(orgId: string, userId: string, view: View) {
     .innerJoin(customers, eq(customers.id, tickets.customerId))
     .leftJoin(agents, and(eq(agents.orgId, tickets.orgId), eq(agents.userId, tickets.assigneeId)))
     .where(and(...where))
-    .orderBy(...(view === "closed" || view === "trash" ? [desc(tickets.updatedAt)] : [priorityRank, asc(tickets.updatedAt)]))
+    .orderBy(...(view === "closed" || view === "trash" ? [desc(tickets.updatedAt)] : view === "snoozed" ? [asc(tickets.snoozedUntil)] : [priorityRank, asc(tickets.updatedAt)]))
     .limit(200);
 }
 
@@ -94,11 +99,12 @@ const inMyGroups = (orgId: string, userId: string) =>
 export async function viewCounts(orgId: string, userId: string) {
   const [row] = await db
     .select({
-      mine: sql<number>`count(*) filter (where ${tickets.assigneeId} = ${userId} and ${tickets.status} in ('open','pending'))`,
-      unassigned: sql<number>`count(*) filter (where ${tickets.assigneeId} is null and ${tickets.status} = 'open')`,
-      open: sql<number>`count(*) filter (where ${tickets.status} = 'open')`,
-      pending: sql<number>`count(*) filter (where ${tickets.status} = 'pending')`,
-      groups: sql<number>`count(*) filter (where ${inMyGroups(orgId, userId)} and ${tickets.status} = 'open')`,
+      mine: sql<number>`count(*) filter (where ${tickets.assigneeId} = ${userId} and ${tickets.status} in ('open','pending') and ${awake})`,
+      unassigned: sql<number>`count(*) filter (where ${tickets.assigneeId} is null and ${tickets.status} = 'open' and ${awake})`,
+      open: sql<number>`count(*) filter (where ${tickets.status} = 'open' and ${awake})`,
+      pending: sql<number>`count(*) filter (where ${tickets.status} = 'pending' and ${awake})`,
+      groups: sql<number>`count(*) filter (where ${inMyGroups(orgId, userId)} and ${tickets.status} = 'open' and ${awake})`,
+      snoozed: sql<number>`count(*) filter (where ${snoozed})`,
       inGroups: sql<boolean>`exists (select 1 from ${schema.groupMembers} where ${schema.groupMembers.orgId} = ${orgId} and ${schema.groupMembers.userId} = ${userId})`,
     })
     .from(tickets)
@@ -110,6 +116,8 @@ export async function viewCounts(orgId: string, userId: string) {
     unassigned: Number(row.unassigned),
     open: Number(row.open),
     pending: Number(row.pending),
+    // null hides the tab while nothing is snoozed.
+    snoozed: Number(row.snoozed) || null,
     closed: null,
     trash: null,
   } satisfies Record<View, number | null>;
@@ -365,7 +373,7 @@ export async function addCustomerMessage(opts: { orgId: string; ticketId: string
       emailMessageId: opts.emailMessageId ? noNul(opts.emailMessageId) : null,
     }).returning({ id: messages.id });
     // A new message brings a trashed ticket back (mail from blocked senders never gets here).
-    const reopen = { status: "open" as const, closedAt: null, timedRan: [], deletedAt: null, deletedStatus: null };
+    const reopen = { status: "open" as const, closedAt: null, timedRan: [], deletedAt: null, deletedStatus: null, snoozedUntil: null, snoozedBy: null };
     const [ticket] = await tx.select().from(tickets).where(and(eq(tickets.orgId, opts.orgId), eq(tickets.id, opts.ticketId))).for("update");
     const { list, canAssign, isGroup } = ticket ? await loadTriggers(tx, opts.orgId, "updated") : { list: [], canAssign: () => false, isGroup: () => false };
     if (ticket && list.length) {
