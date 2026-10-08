@@ -80,6 +80,10 @@ export default function SecurityPage() {
             <strong className="font-medium">A full export, any time.</strong> One download has every ticket, message, customer, macro, help article,
             the audit log, and every attachment as its original file. Admins don&apos;t need to ask us.
           </li>
+          <li>
+            <strong className="font-medium">Customer data requests.</strong> When a customer asks for their data or to be forgotten, an admin
+            downloads it as a file or erases them, with every ticket, message and file, from any of their tickets. Both are in the audit log.
+          </li>
         </ul>
       </Section>
 

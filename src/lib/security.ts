@@ -15,6 +15,8 @@ export type AuditAction =
   | "seat.viewer"
   | "export.download"
   | "export.archive"
+  | "customer.export"
+  | "customer.erase"
   | "import.start"
   | "receipt.refund"
   | "macro.delete"
@@ -45,6 +47,8 @@ export const AUDIT_LABELS: Record<AuditAction, string> = {
   "seat.viewer": "Changed a seat",
   "export.download": "Exported data",
   "export.archive": "Downloaded the full archive",
+  "customer.export": "Downloaded a customer's data",
+  "customer.erase": "Erased a customer's data",
   "import.start": "Started an import",
   "receipt.refund": "Refunded an AI answer",
   "macro.delete": "Deleted a macro",
