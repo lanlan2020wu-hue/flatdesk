@@ -19,6 +19,9 @@ import {
 // source of truth for who belongs to an org; these rows exist so tickets can
 // reference agents and so billing can count seats.
 
+// A DNS record the team adds so mail from its own domain is signed and delivered.
+export type SendDomainRecord = { type: string; name: string; value: string; priority?: number; status: string };
+
 export const orgs = pgTable("orgs", {
   id: text("id").primaryKey(), // Clerk organization id
   name: text("name").notNull(),
@@ -93,6 +96,15 @@ export const orgs = pgTable("orgs", {
   // when Flatdesk last saw it pointed here and serving. Links use it once verified.
   helpDomain: text("help_domain").unique(),
   helpDomainVerifiedAt: timestamp("help_domain_verified_at", { withTimezone: true }),
+  // Replies sent from the team's own address, like support@acme.com, once its
+  // domain is verified with the email provider (lib/send-domain.ts). Until
+  // then, and if it's removed, replies go out from EMAIL_FROM.
+  sendAddress: text("send_address"),
+  sendDomain: text("send_domain").unique(),
+  sendDomainId: text("send_domain_id"),
+  sendDomainRecords: jsonb("send_domain_records").$type<SendDomainRecord[]>(),
+  sendDomainAddedAt: timestamp("send_domain_added_at", { withTimezone: true }),
+  sendDomainVerifiedAt: timestamp("send_domain_verified_at", { withTimezone: true }),
   // Languages the help center offers besides the team's own (orgs.language).
   helpLanguages: text("help_languages").array().notNull().default(sql`'{}'::text[]`),
   // Security controls for teams that go through vendor review. See lib/security.ts.

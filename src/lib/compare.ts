@@ -135,11 +135,11 @@ export const RIVALS: Rival[] = [
     ],
     theyWin: [
       "A free plan for up to 5 users",
-      "Docs, a fuller help center with collections and custom domains",
+      "Docs, a fuller help center with collections",
       "Also lets admins cap AI spend",
       "Lower entry seat price if you use little AI",
     ],
-    pickThem: "You're a very small team that uses little AI, or you need a help center on your own domain now.",
+    pickThem: "You're a very small team that uses little AI.",
     canImport: true,
     plans: ["helpscout-standard", "helpscout-plus"],
     faq: [

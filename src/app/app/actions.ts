@@ -33,6 +33,7 @@ import { addReply, isPriority, normalizeTags, parseTicketNumber, updateTicket, t
 import { findGroup, shareTicketQuietly } from "@/lib/routing";
 import { isLanguage } from "@/lib/language";
 import { rememberRemoved } from "@/lib/learn";
+import { checkSendDomain, SendDomainError, setSendAddress } from "@/lib/send-domain";
 
 // The paywall hides the app once a trial ends without a card; this keeps
 // direct requests from doing work behind it. Billing stays open.
@@ -529,4 +530,29 @@ export async function saveLanguageAction(form: FormData) {
   if (!isLanguage(language)) return;
   await db.update(schema.orgs).set({ language }).where(eq(schema.orgs.id, s.orgId));
   revalidatePath("/app/settings");
+}
+
+// ---- Sending from the team's own address -------------------------------------------
+
+const sendBack = (notice: string): never => redirect(`/app/settings?send=${encodeURIComponent(notice)}#sending`);
+
+export async function saveSendAddressAction(form: FormData) {
+  const s = await requireOpen(await requireAdmin());
+  const before = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId), columns: { sendAddress: true } });
+  const raw = String(form.get("sendAddress") ?? "").trim().slice(0, 320);
+  if (raw.toLowerCase() === (before?.sendAddress ?? "")) sendBack("unchanged");
+  try {
+    await setSendAddress(s.orgId, raw || null);
+  } catch (err) {
+    if (err instanceof SendDomainError) sendBack(err.message);
+    throw err;
+  }
+  await audit(s.orgId, actor(s), "settings.send_address", raw ? `${before?.sendAddress ?? "shared address"} → ${raw.toLowerCase()}` : `Removed ${before?.sendAddress}`);
+  sendBack(raw ? "saved" : "removed");
+}
+
+export async function checkSendAddressAction() {
+  const s = await requireOpen(await requireAdmin());
+  const state = await checkSendDomain(s.orgId);
+  sendBack(state === "verified" ? "verified" : state === "pending" ? "pending" : "Couldn't check just now. Try again in a minute.");
 }

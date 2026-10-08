@@ -120,10 +120,10 @@ async function handleFor(mail: Inbound, target: { key: string; number: number | 
   }
 
   if (isAutoReply(mail.headers, mail)) return { ignored: "auto-reply" };
-  // Every team sends from the same address. Mail from it is our own unless it
-  // says it came from another team (X-Flatdesk-Org), which is a person at
-  // another Flatdesk team writing to this one.
-  if (emailConfig.from && sender.email === emailConfig.from.toLowerCase()) {
+  // Teams send from the shared address, or their own (orgs.sendAddress). Mail
+  // from either is our own unless it says it came from another team
+  // (X-Flatdesk-Org), which is a person at another Flatdesk team writing to this one.
+  if ((emailConfig.from && sender.email === emailConfig.from.toLowerCase()) || (org.sendAddress && sender.email === org.sendAddress)) {
     const fromOrg = Object.entries(mail.headers ?? {}).find(([k]) => k.toLowerCase() === "x-flatdesk-org")?.[1];
     if (!fromOrg || fromOrg === org.id) return { ignored: "own message" };
   }
@@ -166,7 +166,7 @@ async function handleFor(mail: Inbound, target: { key: string; number: number | 
         await db.update(schema.tickets).set({ visitorToken: null }).where(and(eq(schema.tickets.orgId, org.id), eq(schema.tickets.id, ticketId)));
       }
       await storeFiles(mail, org.id, ticketId, messageId);
-      const cc = mergeCc(ticket.cc, ccFromEmail(mail.copied ?? [], { customer: sender.email, supportEmail: org.supportEmail }), customer.email);
+      const cc = mergeCc(ticket.cc, ccFromEmail(mail.copied ?? [], { customer: sender.email, supportEmail: org.supportEmail ?? org.sendAddress }), customer.email);
       if (cc.join() !== ticket.cc.join()) await db.update(schema.tickets).set({ cc }).where(eq(schema.tickets.id, ticketId));
       // The route runs the AI next, which answers a follow-up or hands the ticket back.
       return { ticket: ticket.number, action: "appended", orgId: org.id, ticketId };
@@ -185,7 +185,7 @@ async function handleFor(mail: Inbound, target: { key: string; number: number | 
   }).catch(duplicate);
   if (!ticket) return { ignored: "duplicate" };
   // Mail that failed DMARC copies nobody: its sender may not be who they say.
-  const cc = unverified ? [] : ccFromEmail(mail.copied ?? [], { customer: sender.email, supportEmail: org.supportEmail }).slice(0, 10);
+  const cc = unverified ? [] : ccFromEmail(mail.copied ?? [], { customer: sender.email, supportEmail: org.supportEmail ?? org.sendAddress }).slice(0, 10);
   if (cc.length) await db.update(schema.tickets).set({ cc }).where(eq(schema.tickets.id, ticket.id));
   await storeFiles(mail, org.id, ticket.id, ticket.messageId);
   if (unverified) {

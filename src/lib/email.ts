@@ -40,6 +40,15 @@ export function fromAddress(teamName: string, address: string) {
   return name ? `"${name}" <${address}>` : address;
 }
 
+// The address a team's replies go out from: its own once the domain is
+// verified (lib/send-domain.ts), else the shared EMAIL_FROM.
+export function senderAddress(org: { sendAddress: string | null; sendDomainVerifiedAt: Date | null }): string | undefined {
+  return org.sendAddress && org.sendDomainVerifiedAt ? org.sendAddress : emailConfig.from;
+}
+
+// The provider refusing a team's own address because its domain is no longer verified.
+export const isDomainRefusal = (message: string) => /domain/i.test(message) && /verif|not (?:found|allowed)|registered/i.test(message);
+
 // Pulls the bare address out of `"Name" <a@b.co>`, `a@b.co (Name)` or a bare
 // address. Anything else gives an empty email rather than storing the whole
 // header as one, which would make a second customer for the same person.
@@ -158,8 +167,8 @@ export async function deliverReply(orgId: string, messageId: string): Promise<vo
     .orderBy(asc(schema.messages.createdAt));
   const refs = earlier.map((e) => e.id!).filter((id) => id !== row.message.emailMessageId);
 
-  const fromDomain = emailConfig.from.split("@")[1];
-  const ownId = `<${row.message.id}@${fromDomain}>`;
+  const from = senderAddress(row.org) ?? emailConfig.from;
+  const ownId = `<${row.message.id}@${from.split("@")[1]}>`;
   // X-Flatdesk-Org lets another Flatdesk team's inbox tell our mail from its own.
   // AI answers say they're automatic (RFC 3834), so a well-behaved autoresponder
   // stays quiet and two help desks can't answer each other forever.
@@ -180,23 +189,34 @@ export async function deliverReply(orgId: string, messageId: string): Promise<vo
     ? `Your chat with ${row.org.name}`
     : /^re:/i.test(row.ticket.subject) ? row.ticket.subject : `Re: ${row.ticket.subject}`;
   const chatNote = chat ? `\n\n--\nYou're getting this because someone started a chat with ${row.org.name} using this email address. If that wasn't you, you can ignore it.` : "";
-  const { error } = await resend().emails.send({
-    from: fromAddress(row.org.name, emailConfig.from),
-    to: row.customer.email,
-    // People copied on the ticket; never on chats, whose address nobody checked.
-    cc: !chat && row.ticket.cc.length ? row.ticket.cc : undefined,
-    replyTo: replyToAddress(row.org.inboundKey, row.ticket.number) ?? undefined,
-    subject,
-    // Agent and AI replies end with one-click rating links unless the team turned them off.
-    text: (rateable ? row.message.body + csatText(row.message.id) : row.message.body) + chatNote,
-    html: replyHtml(row.message.body + chatNote, rateable ? row.message.id : null),
-    headers,
-    attachments: await emailAttachments(row.message.id),
-  });
+  const attachments = await emailAttachments(row.message.id);
+  const send = (address: string, messageId: string) =>
+    resend().emails.send({
+      from: fromAddress(row.org.name, address),
+      to: row.customer.email,
+      // People copied on the ticket; never on chats, whose address nobody checked.
+      cc: !chat && row.ticket.cc.length ? row.ticket.cc : undefined,
+      replyTo: replyToAddress(row.org.inboundKey, row.ticket.number) ?? undefined,
+      subject,
+      // Agent and AI replies end with one-click rating links unless the team turned them off.
+      text: (rateable ? row.message.body + csatText(row.message.id) : row.message.body) + chatNote,
+      html: replyHtml(row.message.body + chatNote, rateable ? row.message.id : null),
+      headers: { ...headers, "Message-ID": messageId },
+      attachments,
+    });
+  let sentId = ownId;
+  let { error } = await send(from, ownId);
+  // The team's own domain stopped working (its DNS records were removed):
+  // send from the shared address instead and show the team in Settings.
+  if (error && from !== emailConfig.from && isDomainRefusal(error.message)) {
+    await db.update(schema.orgs).set({ sendDomainVerifiedAt: null }).where(eq(schema.orgs.id, orgId));
+    sentId = `<${row.message.id}@${emailConfig.from.split("@")[1]}>`;
+    ({ error } = await send(emailConfig.from, sentId));
+  }
 
   await db
     .update(schema.messages)
-    .set(error ? { deliveryError: error.message.slice(0, 300) } : { emailMessageId: ownId, deliveryError: null })
+    .set(error ? { deliveryError: error.message.slice(0, 300) } : { emailMessageId: sentId, deliveryError: null })
     .where(eq(schema.messages.id, row.message.id));
 }
 
