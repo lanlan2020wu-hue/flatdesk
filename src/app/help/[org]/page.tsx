@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
+import { after } from "next/server";
 import { bySection, excerpt, helpUrl, localize, publishedArticles, searchArticles, searchTranslations, translationsFor } from "@/lib/help";
 import { helpWords } from "@/lib/help-i18n";
+import { logHelpSearch } from "@/lib/help-searches";
+import { ipKey } from "@/lib/rate-limit";
 import { helpCenter, helpHref, visitLanguage } from "./data";
 import HelpFrame from "./HelpFrame";
 import SearchForm from "./SearchForm";
@@ -36,6 +40,10 @@ export default async function HelpHome({ params, searchParams }: PageProps<"/hel
   }
   const list = translated ? localize(found, await translationsFor(org.id, lang, found.map((a) => a.id))) : found;
   if (!q && translated) list.sort((a, b) => a.title.localeCompare(b.title, lang));
+  if (q) {
+    const ip = ipKey(new Request("http://x", { headers: await headers() }));
+    after(() => logHelpSearch(org.id, q, list.length, ip));
+  }
 
   return (
     <HelpFrame org={org} lang={lang} here="">

@@ -485,6 +485,21 @@ export const articleTranslations = pgTable(
   (t) => [uniqueIndex("article_translations_article_language").on(t.articleId, t.language), index("article_translations_org_language").on(t.orgId, t.language)],
 );
 
+// What visitors type into the help center's search box, and how many articles
+// came back, so a team can see what people look for and what's missing
+// (lib/help-searches.ts). No visitor details; kept HELP_SEARCH_DAYS.
+export const helpSearches = pgTable(
+  "help_searches",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
+    query: text("query").notNull(),
+    results: integer("results").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("help_searches_org_created").on(t.orgId, t.createdAt)],
+);
+
 // v1 rules are deliberately narrow: "when a ticket has tag X, assign it to Y".
 export const rules = pgTable("rules", {
   id: uuid("id").primaryKey().defaultRandom(),

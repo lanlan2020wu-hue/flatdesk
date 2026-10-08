@@ -78,6 +78,9 @@ export const LIMITS = {
   chatFiles: (ip: string, files: number): Limit[] => [{ key: `chat-files:ip:${ip}`, max: 20, windowSec: HOUR, cost: files }],
   // Article suggestions while a visitor types in the chat widget.
   chatArticles: (ip: string): Limit[] => [{ key: `chat-articles:ip:${ip}`, max: 120, windowSec: 10 * MIN }],
+  // Help center searches saved for the team's search report, per visitor, so
+  // a script can't fill the report. Searching itself is never limited.
+  helpSearchLog: (ip: string): Limit[] => [{ key: `help-search:ip:${ip}`, max: 30, windowSec: HOUR }],
   // Satisfaction ratings from the links in reply emails.
   rate: (ip: string): Limit[] => [{ key: `rate:ip:${ip}`, max: 30, windowSec: 10 * MIN }],
   waitlist: (ip: string): Limit[] => [{ key: `waitlist:ip:${ip}`, max: 5, windowSec: HOUR }],

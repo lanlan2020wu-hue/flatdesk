@@ -11,13 +11,14 @@ const TEMPLATE = `One or two sentences that answer the question.
 - Something to check
 - Another thing to check`;
 
-export default function ArticleForm({ article, sections = [] }: { article?: { id: string; title: string; body: string; published: boolean; internal: boolean; section: string | null }; sections?: string[] }) {
+// suggestedTitle: a new article started from a search that found nothing.
+export default function ArticleForm({ article, sections = [], suggestedTitle }: { article?: { id: string; title: string; body: string; published: boolean; internal: boolean; section: string | null }; sections?: string[]; suggestedTitle?: string }) {
   return (
     <form action={saveArticleAction} className="grid gap-4 text-sm">
       {article && <input type="hidden" name="id" value={article.id} />}
       <label className="grid gap-1.5 font-medium" htmlFor="title">
         Title
-        <input id="title" name="title" required maxLength={MAX_TITLE} defaultValue={article?.title} placeholder="How do I reset my password?" className="field font-normal" />
+        <input id="title" name="title" required maxLength={MAX_TITLE} defaultValue={article?.title ?? suggestedTitle} placeholder="How do I reset my password?" className="field font-normal" />
       </label>
       <label className="grid gap-1.5 font-medium" htmlFor="section">
         Section <span className="font-normal text-muted">(optional)</span>
