@@ -55,7 +55,7 @@ export default async function InboxPage({ searchParams }: PageProps<"/app/inbox"
           <button className="btn btn-secondary">Search</button>
         </form>
         <nav aria-label="Views" className="-mx-1 flex gap-1 overflow-x-auto border-b border-line text-sm">
-          {VIEWS.filter((v) => counts[v.id] !== null || v.id === "closed").map((v) => (
+          {VIEWS.filter((v) => counts[v.id] !== null || v.id === "closed" || v.id === "trash").map((v) => (
             <Link
               key={v.id}
               href={`/app/inbox?view=${v.id}`}
@@ -95,11 +95,11 @@ export default async function InboxPage({ searchParams }: PageProps<"/app/inbox"
       {rows.length === 0 ? (
         <div className="grid place-items-center gap-1 px-4 py-16 text-center">
           <p className="font-medium">{q ? "Nothing matches that." : "No tickets here."}</p>
-          <p className="text-sm text-muted">{q ? "Search looks at subjects, customers, tags and every message. Try fewer words." : "New email and chat conversations land in All open."}</p>
+          <p className="text-sm text-muted">{q ? "Search looks at subjects, customers, tags and every message. Try fewer words." : view === "trash" ? "Deleted tickets wait here for 30 days." : "New email and chat conversations land in All open."}</p>
         </div>
       ) : (
         <>
-        {!s.viewer && <BulkBar agents={team.filter((a) => !a.viewer).map((a) => ({ userId: a.userId, name: a.name }))} groups={groups.map((g) => ({ id: g.id, name: g.name }))} back={back} total={rows.length} />}
+        {!s.viewer && <BulkBar agents={team.filter((a) => !a.viewer).map((a) => ({ userId: a.userId, name: a.name }))} groups={groups.map((g) => ({ id: g.id, name: g.name }))} back={back} total={rows.length} trash={view === "trash" && !q} />}
         <div className="overflow-hidden rounded-[8px] border border-line bg-surface shadow-sm">
           <div className={`hidden gap-4 border-b border-line px-4 py-2.5 text-xs font-medium text-muted lg:grid ${cols}`} aria-hidden="true">
             <span className="col-span-2">Conversation</span>

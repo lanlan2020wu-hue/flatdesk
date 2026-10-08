@@ -6,6 +6,7 @@ import { TEST_TAG, updateOnboarding } from "@/lib/onboarding";
 import { saveAttachments, type NewFile } from "@/lib/attachments";
 import { ccFromEmail, mergeCc } from "@/lib/cc";
 import { resolveMerged } from "@/lib/merge";
+import { isBlocked, trashTickets } from "@/lib/trash";
 import { addCustomerMessage, addSystemNote, createTicket, NO_AI_SETUP_NOTE } from "@/lib/tickets";
 
 // The same email delivered twice at once gets past the check above; the unique
@@ -62,6 +63,7 @@ export type InboundResult = {
   orgId?: string;
   ticketId?: string;
   unverified?: boolean; // the From address failed DMARC: no AI answer
+  blocked?: boolean; // from a blocked sender: went straight to the trash
 };
 
 // One email can be for several teams (it was sent to each of their support
@@ -144,6 +146,25 @@ async function handleFor(mail: Inbound, target: { key: string; number: number | 
   }
 
   const body = stripQuoted(mail.text) || "(empty message)";
+
+  // Blocked senders: kept in the trash in case the block was a mistake, but no
+  // AI answer, alert, routing or reply, and never added to a live conversation.
+  if (isBlocked(org.blockedSenders, sender.email)) {
+    const ticket = await createTicket({
+      orgId: org.id,
+      channel: "email",
+      customerEmail: sender.email,
+      customerName: sender.name,
+      subject: mail.subject?.trim() || "(no subject)",
+      body,
+      authorType: "customer",
+      emailMessageId: mail.messageId,
+    }).catch(duplicate);
+    if (!ticket) return { ignored: "duplicate" };
+    await storeFiles(mail, org.id, ticket.id, ticket.messageId);
+    await trashTickets(org.id, [ticket.id], "Flatdesk", `${sender.email} is on your blocked senders list (Settings), so this went straight to the trash. Restore it if that was a mistake.`);
+    return { ticket: ticket.number, action: "created", blocked: true };
+  }
 
   let ticketId: string | null = null;
   if (target.number && !unverified) {

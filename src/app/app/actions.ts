@@ -25,6 +25,7 @@ import { parseCcList } from "@/lib/cc";
 import { dismissSuggestion, saveSuggestedMacro } from "@/lib/macro-suggestions";
 import { hit, LIMITS } from "@/lib/rate-limit";
 import { teachAi } from "@/lib/teach";
+import { blockSender, parseBlockList, restoreTickets, trashTickets } from "@/lib/trash";
 import { addRule } from "@/lib/rules";
 import { audit, changes } from "@/lib/security";
 import type { SlaPolicy } from "@/db/schema";
@@ -58,6 +59,8 @@ export async function replyAction(form: FormData) {
   const s = await requireOpenSession();
   const ticketId = idOf(form, "ticketId");
   const number = str(form, "number");
+  const trashed = await db.query.tickets.findFirst({ where: and(eq(schema.tickets.orgId, s.orgId), eq(schema.tickets.id, ticketId)), columns: { deletedAt: true } });
+  if (trashed?.deletedAt) throw new Error("This ticket is in the trash. Restore it to reply.");
   const files = await filesFromForm(form);
   // A macro can hand the ticket to someone on the team.
   const assignTo = str(form, "assignTo");
@@ -158,6 +161,50 @@ export async function mergeTicketAction(form: FormData) {
   redirect(`/app/tickets/${result.number}`);
 }
 
+// Delete, restore, or delete and block the sender, from a ticket's rail.
+export async function ticketTrashAction(form: FormData) {
+  const s = await requireOpenSession();
+  const ticketId = idOf(form, "ticketId");
+  const op = str(form, "op");
+  if (op === "restore") {
+    await restoreTickets(s.orgId, [ticketId], s.name);
+    revalidatePath(`/app/tickets/${str(form, "number")}`);
+    revalidatePath("/app/inbox");
+    return;
+  }
+  if (op === "block") {
+    const [row] = await db
+      .select({ email: schema.customers.email })
+      .from(schema.tickets)
+      .innerJoin(schema.customers, eq(schema.customers.id, schema.tickets.customerId))
+      .where(and(eq(schema.tickets.orgId, s.orgId), eq(schema.tickets.id, ticketId)));
+    const entry = row && (await blockSender(s.orgId, row.email));
+    if (entry) await audit(s.orgId, actor(s), "settings.blocklist", `Blocked ${entry}`);
+    await trashTickets(s.orgId, [ticketId], s.name, entry ? `Moved to the trash by ${s.name}, who blocked ${entry}. Their future email goes straight to the trash.` : undefined);
+  } else if (op === "trash") {
+    await trashTickets(s.orgId, [ticketId], s.name);
+  } else {
+    return;
+  }
+  revalidatePath("/app/inbox");
+  redirect("/app/inbox");
+}
+
+// Settings: the senders whose email goes straight to the trash.
+export async function saveBlocklistAction(form: FormData) {
+  const s = await requireOpenAdmin();
+  const { list, rejected } = parseBlockList(String(form.get("blocked") ?? "").slice(0, 40_000));
+  const before = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId), columns: { blockedSenders: true } });
+  await db.update(schema.orgs).set({ blockedSenders: list }).where(eq(schema.orgs.id, s.orgId));
+  const added = list.filter((e) => !before?.blockedSenders.includes(e));
+  const removed = (before?.blockedSenders ?? []).filter((e) => !list.includes(e));
+  if (added.length || removed.length) {
+    await audit(s.orgId, actor(s), "settings.blocklist", [added.length ? `Blocked ${added.join(", ")}` : "", removed.length ? `Unblocked ${removed.join(", ")}` : ""].filter(Boolean).join(". "));
+  }
+  revalidatePath("/app/settings");
+  if (rejected.length) redirect(`/app/settings?blocked=${encodeURIComponent(`Not an email address or domain, so left out: ${rejected.slice(0, 5).join(", ")}`)}#blocked`);
+}
+
 // The people copied on a ticket's replies, from the rail.
 export async function saveCcAction(form: FormData) {
   const s = await requireOpenSession();
@@ -190,6 +237,12 @@ export async function bulkUpdateAction(form: FormData) {
   const ids = [...new Set(form.getAll("ids").map(String).filter(isUuid))].slice(0, 200);
   const back = str(form, "back").startsWith("/app/inbox") ? str(form, "back") : "/app/inbox";
   if (ids.length === 0) redirect(back);
+  const op = str(form, "op");
+  if (op === "trash" || op === "restore") {
+    await (op === "trash" ? trashTickets : restoreTickets)(s.orgId, ids, s.name);
+    revalidatePath("/app/inbox");
+    redirect(back);
+  }
   const patch: Parameters<typeof updateTicket>[2] = {};
   const st = status(str(form, "status"));
   if (st) patch.status = st;
