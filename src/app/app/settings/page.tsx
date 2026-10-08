@@ -9,6 +9,8 @@ import { access, billingConfigured, isActive, refreshSubscription, seatCount, tr
 import DnsTable from "@/components/DnsTable";
 import { emailConfig, inboundAddress, senderAddress } from "@/lib/email";
 import { checkSendDomain, sendDomainsConfigured } from "@/lib/send-domain";
+import { mailboxFor } from "@/lib/mailbox";
+import { gmailConfigured } from "@/lib/mailbox/gmail";
 import { PLAN, annualSavingsPct, usd } from "@/lib/pricing";
 import { webhookKind, webhookLabel } from "@/lib/alerts";
 import { DEFAULT_HOURS, RESOLVE_CHOICES, TARGET_CHOICES } from "@/lib/sla";
@@ -22,6 +24,7 @@ import {
   saveAiSettingsAction,
   saveAlertsAction,
   saveSendAddressAction,
+  disconnectMailboxAction,
   checkSendAddressAction,
   saveBlocklistAction,
   saveSecurityAction,
@@ -49,7 +52,7 @@ const STATUS_TEXT: Record<string, string> = {
 
 export default async function SettingsPage({ searchParams }: PageProps<"/app/settings">) {
   const s = await requireSession();
-  const { billing, alerts: alertsNotice, service: serviceNotice, security: securityNotice, send: sendNotice, blocked: blockedNotice } = await searchParams;
+  const { billing, alerts: alertsNotice, service: serviceNotice, security: securityNotice, send: sendNotice, blocked: blockedNotice, mailbox: mailboxNotice } = await searchParams;
   // A team's own sending address waiting on DNS: look again on each visit, so the page is current.
   const pendingSend = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId), columns: { sendDomainId: true, sendDomainVerifiedAt: true } });
   if (pendingSend?.sendDomainId && !pendingSend.sendDomainVerifiedAt && !sendNotice) await checkSendDomain(s.orgId);
@@ -64,6 +67,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
   const host = h.get("x-forwarded-host") ?? h.get("host") ?? "";
   const siteOrigin = `${h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https")}://${host}`;
   const address = org ? inboundAddress(org.inboundKey) : null;
+  const mailbox = await mailboxFor(s.orgId);
   const usage = await aiUsage(s.orgId);
   const pct = Math.min(100, Math.round((usage.used / usage.included) * 100));
   const isAdmin = s.role === "admin";
@@ -110,6 +114,9 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
         <h2 className="text-lg font-semibold">
           Email
         </h2>
+        {(gmailConfigured() || mailbox) && (
+          <Mailbox row={mailbox} isAdmin={isAdmin} notice={typeof mailboxNotice === "string" ? mailboxNotice : null} />
+        )}
         {address ? (
           <>
             <p className="text-muted">
@@ -118,9 +125,9 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
             </p>
             <p className="num w-max max-w-full select-all break-all rounded-lg border border-dashed border-accent/40 bg-accent-soft px-3 py-2 text-sm">{address}</p>
             <p className="text-sm text-muted">
-              Replies to customers are sent from {org ? senderAddress(org) : emailConfig.from} under your team&apos;s name, {org?.name}.
+              Replies to customers are sent from {mailbox?.settings.mailbox ?? (org ? senderAddress(org) : emailConfig.from)} under your team&apos;s name, {org?.name}.
             </p>
-            {org && (sendDomainsConfigured() || org.sendAddress) && (
+            {org && !mailbox && (sendDomainsConfigured() || org.sendAddress) && (
               <SendingAddress org={org} isAdmin={isAdmin} notice={typeof sendNotice === "string" ? sendNotice : null} />
             )}
           </>
@@ -724,6 +731,40 @@ function SendingAddress({ org, isAdmin, notice }: { org: typeof schema.orgs.$inf
           <input type="hidden" name="sendAddress" value="" />
           <button className="link w-max text-muted">Stop using {org.sendAddress}</button>
         </form>
+      )}
+    </div>
+  );
+}
+
+// Gmail connected by signing in (lib/mailbox/): mail is read from it and replies sent from it.
+function Mailbox({ row, isAdmin, notice }: { row: Awaited<ReturnType<typeof mailboxFor>>; isAdmin: boolean; notice: string | null }) {
+  const message = notice === "connected" ? "Connected. New mail in its inbox becomes a ticket within a couple of minutes." : notice === "disconnected" ? "Disconnected. Flatdesk no longer reads or sends from it." : notice;
+  const ok = notice === "connected" || notice === "disconnected";
+  return (
+    <div id="mailbox" className="grid gap-3 rounded-lg border border-line px-4 py-4 text-sm">
+      <div className="grid gap-1">
+        <h3 className="font-medium">{row ? `Gmail: ${row.settings.mailbox ?? row.account}` : "Use your Gmail or Google Workspace mailbox"}</h3>
+        <p className="text-muted">
+          {row
+            ? "Flatdesk reads new mail in this inbox every couple of minutes and turns it into tickets. Replies go out from this mailbox and show in its Sent folder. Nothing in the mailbox is changed or deleted."
+            : "Sign in with Google instead of setting up forwarding. New mail in the inbox becomes tickets, and replies go out from the mailbox itself. Mail already in the inbox stays where it is."}
+        </p>
+      </div>
+      {message && <p role={ok ? undefined : "alert"} className={ok ? "text-accent" : "text-warn"}>{message}</p>}
+      {row?.lastError && <p role="alert" className="text-warn">{row.lastError}</p>}
+      {isAdmin ? (
+        <div className="flex flex-wrap items-center gap-3">
+          {(!row || row.lastError) && (
+            <a href="/api/mailbox/gmail/connect" className="btn btn-secondary w-max">{row ? "Connect again" : "Connect Gmail"}</a>
+          )}
+          {row && (
+            <form action={disconnectMailboxAction}>
+              <button className="link text-muted">Disconnect</button>
+            </form>
+          )}
+        </div>
+      ) : (
+        <p className="text-muted">Only admins can change it.</p>
       )}
     </div>
   );

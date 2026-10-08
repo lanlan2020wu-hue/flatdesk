@@ -29,6 +29,8 @@ export type Inbound = {
   copied?: string[];
   // Fetches the email's files; only called once the email is known to become a message.
   attachments?: () => Promise<{ files: NewFile[]; skipped: string[] }>;
+  // Read from the team's connected mailbox (lib/mailbox/), this address.
+  mailbox?: string;
 };
 
 async function storeFiles(mail: Inbound, orgId: string, ticketId: string, messageId: string) {
@@ -78,6 +80,11 @@ export async function handleInboundEmailAll(mail: Inbound): Promise<InboundResul
   return results;
 }
 
+// Mail read from a team's own connected mailbox: it's for that team whatever the To says.
+export function handleMailboxEmail(mail: Inbound & { mailbox: string }, inboundKey: string): Promise<InboundResult> {
+  return handleFor(mail, { key: inboundKey, number: null });
+}
+
 async function handleFor(mail: Inbound, target: { key: string; number: number | null }): Promise<InboundResult> {
   const org = await db.query.orgs.findFirst({ where: eq(schema.orgs.inboundKey, target.key) });
   if (!org) return { ignored: "unknown inbox" };
@@ -125,7 +132,7 @@ async function handleFor(mail: Inbound, target: { key: string; number: number | 
   // Teams send from the shared address, or their own (orgs.sendAddress). Mail
   // from either is our own unless it says it came from another team
   // (X-Flatdesk-Org), which is a person at another Flatdesk team writing to this one.
-  if ((emailConfig.from && sender.email === emailConfig.from.toLowerCase()) || (org.sendAddress && sender.email === org.sendAddress)) {
+  if ((emailConfig.from && sender.email === emailConfig.from.toLowerCase()) || (org.sendAddress && sender.email === org.sendAddress) || (mail.mailbox && sender.email === mail.mailbox)) {
     const fromOrg = Object.entries(mail.headers ?? {}).find(([k]) => k.toLowerCase() === "x-flatdesk-org")?.[1];
     if (!fromOrg || fromOrg === org.id) return { ignored: "own message" };
   }
@@ -187,7 +194,7 @@ async function handleFor(mail: Inbound, target: { key: string; number: number | 
         await db.update(schema.tickets).set({ visitorToken: null }).where(and(eq(schema.tickets.orgId, org.id), eq(schema.tickets.id, ticketId)));
       }
       await storeFiles(mail, org.id, ticketId, messageId);
-      const cc = mergeCc(ticket.cc, ccFromEmail(mail.copied ?? [], { customer: sender.email, supportEmail: org.supportEmail ?? org.sendAddress }), customer.email);
+      const cc = mergeCc(ticket.cc, ccFromEmail(mail.copied ?? [], { customer: sender.email, supportEmail: org.supportEmail ?? org.sendAddress, own: mail.mailbox }), customer.email);
       if (cc.join() !== ticket.cc.join()) await db.update(schema.tickets).set({ cc }).where(eq(schema.tickets.id, ticketId));
       // The route runs the AI next, which answers a follow-up or hands the ticket back.
       return { ticket: ticket.number, action: "appended", orgId: org.id, ticketId };
@@ -206,7 +213,7 @@ async function handleFor(mail: Inbound, target: { key: string; number: number | 
   }).catch(duplicate);
   if (!ticket) return { ignored: "duplicate" };
   // Mail that failed DMARC copies nobody: its sender may not be who they say.
-  const cc = unverified ? [] : ccFromEmail(mail.copied ?? [], { customer: sender.email, supportEmail: org.supportEmail ?? org.sendAddress }).slice(0, 10);
+  const cc = unverified ? [] : ccFromEmail(mail.copied ?? [], { customer: sender.email, supportEmail: org.supportEmail ?? org.sendAddress, own: mail.mailbox }).slice(0, 10);
   if (cc.length) await db.update(schema.tickets).set({ cc }).where(eq(schema.tickets.id, ticket.id));
   await storeFiles(mail, org.id, ticket.id, ticket.messageId);
   if (unverified) {

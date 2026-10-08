@@ -36,9 +36,11 @@ export function replyToAddress(inboundKey: string, ticketNumber: number) {
 // address or a new header line are dropped: "Acme, Inc" stays one sender, and
 // a team can't name itself "Bank <alerts@bank.com>" to look like someone else.
 export function fromAddress(teamName: string, address: string) {
-  const name = teamName.replace(/[\x00-\x1f\x7f"\\<>@]/g, " ").replace(/\s+/g, " ").trim().slice(0, 60).trim();
+  const name = cleanSenderName(teamName);
   return name ? `"${name}" <${address}>` : address;
 }
+
+export const cleanSenderName = (teamName: string) => teamName.replace(/[\x00-\x1f\x7f"\\<>@]/g, " ").replace(/\s+/g, " ").trim().slice(0, 60).trim();
 
 // The address a team's replies go out from: its own once the domain is
 // verified (lib/send-domain.ts), else the shared EMAIL_FROM.
@@ -147,7 +149,11 @@ export function isAutoReply(headers: Record<string, string> | null, mail?: { fro
 // Sends one agent reply to the customer and records the result on the message.
 // A failed send never loses the reply: it stays in the ticket with an error.
 export async function deliverReply(orgId: string, messageId: string): Promise<void> {
-  if (!emailConfig.apiKey || !emailConfig.from) return; // email not configured (local dev)
+  // A connected mailbox (lib/mailbox/) sends the team's replies itself; otherwise Resend.
+  const { mailboxFor, sendFromMailbox } = await import("@/lib/mailbox");
+  const box = await mailboxFor(orgId);
+  const shared = emailConfig.apiKey ? emailConfig.from : undefined;
+  if (!box && !shared) return; // email not configured (local dev)
 
   const [row] = await db
     .select({ message: schema.messages, ticket: schema.tickets, customer: schema.customers, org: schema.orgs })
@@ -167,7 +173,7 @@ export async function deliverReply(orgId: string, messageId: string): Promise<vo
     .orderBy(asc(schema.messages.createdAt));
   const refs = earlier.map((e) => e.id!).filter((id) => id !== row.message.emailMessageId);
 
-  const from = senderAddress(row.org) ?? emailConfig.from;
+  const from = box?.settings.mailbox ?? (senderAddress(row.org) || shared)!;
   const ownId = `<${row.message.id}@${from.split("@")[1]}>`;
   // X-Flatdesk-Org lets another Flatdesk team's inbox tell our mail from its own.
   // AI answers say they're automatic (RFC 3834), so a well-behaved autoresponder
@@ -190,34 +196,45 @@ export async function deliverReply(orgId: string, messageId: string): Promise<vo
     : /^re:/i.test(row.ticket.subject) ? row.ticket.subject : `Re: ${row.ticket.subject}`;
   const chatNote = chat ? `\n\n--\nYou're getting this because someone started a chat with ${row.org.name} using this email address. If that wasn't you, you can ignore it.` : "";
   const attachments = await emailAttachments(row.message.id);
+  const content = {
+    to: row.customer.email,
+    // People copied on the ticket; never on chats, whose address nobody checked.
+    cc: !chat && row.ticket.cc.length ? row.ticket.cc : undefined,
+    subject,
+    // Agent and AI replies end with one-click rating links unless the team turned them off.
+    text: (rateable ? row.message.body + csatText(row.message.id) : row.message.body) + chatNote,
+    html: replyHtml(row.message.body + chatNote, rateable ? row.message.id : null),
+    attachments,
+  };
+  const save = (result: { error: string } | { messageId: string | null }) =>
+    db
+      .update(schema.messages)
+      .set("error" in result ? { deliveryError: result.error.slice(0, 300) } : { emailMessageId: result.messageId, deliveryError: null })
+      .where(eq(schema.messages.id, row.message.id));
+
+  // From the team's mailbox: answers come back to it, so no Reply-To.
+  if (box) {
+    await save(await sendFromMailbox(box, { ...content, fromName: row.org.name, headers }));
+    return;
+  }
+
   const send = (address: string, messageId: string) =>
     resend().emails.send({
+      ...content,
       from: fromAddress(row.org.name, address),
-      to: row.customer.email,
-      // People copied on the ticket; never on chats, whose address nobody checked.
-      cc: !chat && row.ticket.cc.length ? row.ticket.cc : undefined,
       replyTo: replyToAddress(row.org.inboundKey, row.ticket.number) ?? undefined,
-      subject,
-      // Agent and AI replies end with one-click rating links unless the team turned them off.
-      text: (rateable ? row.message.body + csatText(row.message.id) : row.message.body) + chatNote,
-      html: replyHtml(row.message.body + chatNote, rateable ? row.message.id : null),
       headers: { ...headers, "Message-ID": messageId },
-      attachments,
     });
   let sentId = ownId;
   let { error } = await send(from, ownId);
   // The team's own domain stopped working (its DNS records were removed):
   // send from the shared address instead and show the team in Settings.
-  if (error && from !== emailConfig.from && isDomainRefusal(error.message)) {
+  if (error && shared && from !== shared && isDomainRefusal(error.message)) {
     await db.update(schema.orgs).set({ sendDomainVerifiedAt: null }).where(eq(schema.orgs.id, orgId));
-    sentId = `<${row.message.id}@${emailConfig.from.split("@")[1]}>`;
-    ({ error } = await send(emailConfig.from, sentId));
+    sentId = `<${row.message.id}@${shared.split("@")[1]}>`;
+    ({ error } = await send(shared, sentId));
   }
-
-  await db
-    .update(schema.messages)
-    .set(error ? { deliveryError: error.message.slice(0, 300) } : { emailMessageId: sentId, deliveryError: null })
-    .where(eq(schema.messages.id, row.message.id));
+  await save(error ? { error: error.message } : { messageId: sentId });
 }
 
 // Looks up the ticket an inbound email belongs to via its In-Reply-To and

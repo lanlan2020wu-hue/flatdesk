@@ -824,7 +824,7 @@ export const apiKeys = pgTable(
   (t) => [index("api_keys_org").on(t.orgId)],
 );
 
-export const integrationKind = pgEnum("integration_kind", ["shopify", "stripe", "hubspot", "jira", "slack"]);
+export const integrationKind = pgEnum("integration_kind", ["shopify", "stripe", "hubspot", "jira", "slack", "gmail"]);
 
 // Accounts connected to the team's tickets: Shopify orders, Stripe payments
 // and HubSpot contacts shown beside a ticket, and the Jira project tickets are
@@ -838,6 +838,10 @@ export type IntegrationSettings = {
   // Slack app: the workspace it's installed in (requests from Slack name it) and the alert channel.
   slackTeamId?: string;
   slackChannel?: string;
+  // A connected mailbox (lib/mailbox/): its address, and where reading new
+  // mail left off (Gmail's history id).
+  mailbox?: string;
+  historyId?: string;
 };
 
 export const integrations = pgTable(

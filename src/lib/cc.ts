@@ -9,8 +9,8 @@ export const MAX_CC = 10;
 
 const domainOf = (email: string) => email.split("@")[1] ?? "";
 
-export function ccFromEmail(addresses: string[], opts: { customer: string; supportEmail: string | null }): string[] {
-  const own = new Set([opts.customer.toLowerCase(), (emailConfig.from ?? "").toLowerCase()]);
+export function ccFromEmail(addresses: string[], opts: { customer: string; supportEmail: string | null; own?: string }): string[] {
+  const own = new Set([opts.customer.toLowerCase(), (emailConfig.from ?? "").toLowerCase(), (opts.own ?? "").toLowerCase()]);
   const teamDomain = opts.supportEmail ? domainOf(opts.supportEmail.toLowerCase()) : null;
   const out: string[] = [];
   for (const raw of addresses) {
