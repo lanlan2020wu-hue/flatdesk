@@ -261,10 +261,11 @@ ${kb || "(none)"}
 // center articles. The test drive can leave out macros Flatdesk suggested
 // after a date (see lib/test-drive.ts). Macros imported from a private source
 // (a Zendesk personal macro, a Freshdesk note) are for agents only and never
-// reach the AI, since it could repeat them to a customer.
-export async function loadKnowledge(orgId: string, opts?: { skipSuggestedSince: Date }) {
+// reach the AI, since it could repeat them to a customer. Team-only articles
+// are added only for drafts an agent reviews (`team`).
+export async function loadKnowledge(orgId: string, opts: { skipSuggestedSince?: Date; team?: boolean } = {}) {
   const where = [eq(macros.orgId, orgId), eq(macros.internal, false)];
-  if (opts) where.push(sql`not (${macros.source} is not distinct from 'suggested' and ${macros.createdAt} >= ${opts.skipSuggestedSince})`);
+  if (opts.skipSuggestedSince) where.push(sql`not (${macros.source} is not distinct from 'suggested' and ${macros.createdAt} >= ${opts.skipSuggestedSince})`);
   const [saved, help] = await Promise.all([
     db
       .select({ name: macros.name, body: macros.body })
@@ -272,7 +273,7 @@ export async function loadKnowledge(orgId: string, opts?: { skipSuggestedSince: 
       .where(and(...where))
       .orderBy(asc(macros.name))
       .limit(100),
-    articleKnowledge(orgId),
+    articleKnowledge(orgId, { team: opts.team }),
   ]);
   return capKnowledge([...saved, ...help]);
 }

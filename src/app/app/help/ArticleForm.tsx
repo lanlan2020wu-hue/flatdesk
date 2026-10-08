@@ -11,7 +11,7 @@ const TEMPLATE = `One or two sentences that answer the question.
 - Something to check
 - Another thing to check`;
 
-export default function ArticleForm({ article, sections = [] }: { article?: { id: string; title: string; body: string; published: boolean; section: string | null }; sections?: string[] }) {
+export default function ArticleForm({ article, sections = [] }: { article?: { id: string; title: string; body: string; published: boolean; internal: boolean; section: string | null }; sections?: string[] }) {
   return (
     <form action={saveArticleAction} className="grid gap-4 text-sm">
       {article && <input type="hidden" name="id" value={article.id} />}
@@ -27,6 +27,17 @@ export default function ArticleForm({ article, sections = [] }: { article?: { id
         </datalist>
         <span className="text-xs font-normal text-muted">Articles with the same section are listed together on your help center.</span>
       </label>
+      <fieldset className="grid gap-1.5">
+        <legend className="mb-1.5 font-medium">Who reads it</legend>
+        <label className="flex items-start gap-2">
+          <input type="radio" name="internal" value="" defaultChecked={!article?.internal} className="mt-1" />
+          <span>Customers. It goes on your help center, and the AI can answer from it and link to it.</span>
+        </label>
+        <label className="flex items-start gap-2">
+          <input type="radio" name="internal" value="1" defaultChecked={article?.internal} className="mt-1" />
+          <span>Your team only. Internal how-tos and policies: never public, and the AI that answers customers doesn&apos;t see it. AI drafts for your team do use it.</span>
+        </label>
+      </fieldset>
       <label className="grid gap-1.5 font-medium" htmlFor="body">
         Article
         <textarea

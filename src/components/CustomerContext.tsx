@@ -2,6 +2,7 @@ import Link from "next/link";
 import { and, desc, eq, ne } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { timeAgo } from "@/lib/format";
+import { articlesForTicket } from "@/lib/help";
 import { hubspotForCustomer, jiraForTicket, shopifyForCustomer, stripeForCustomer } from "@/lib/integrations";
 import { EscalateForm, HubSpotLogButton } from "@/components/IntegrationForms";
 
@@ -31,6 +32,25 @@ export async function OtherTickets({ orgId, customerId, ticketId }: { orgId: str
             <span className="text-xs text-muted">
               <span className="num">#{t.number}</span> · <span className="capitalize">{t.status}</span> · {timeAgo(t.createdAt)}
             </span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+// Help center articles, team-only ones included, that match what the ticket is about.
+export async function RelatedArticles({ orgId, text }: { orgId: string; text: string }) {
+  const rows = await articlesForTicket(orgId, text);
+  if (rows.length === 0) return null;
+  return (
+    <section className="grid gap-2 border-t border-line pt-4">
+      <h2 className={heading}>Articles that may help</h2>
+      <ul className="grid gap-1.5">
+        {rows.map((a) => (
+          <li key={a.id} className="grid">
+            <Link href={`/app/help/${a.id}`} className="link truncate">{a.title}</Link>
+            {a.internal && <span className="text-xs text-muted">Team only</span>}
           </li>
         ))}
       </ul>

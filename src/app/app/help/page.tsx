@@ -29,10 +29,13 @@ export default async function HelpCenterAdmin({ searchParams }: PageProps<"/app/
         .select({ language: schema.articleTranslations.language, n: count() })
         .from(schema.articleTranslations)
         .innerJoin(schema.articles, eq(schema.articles.id, schema.articleTranslations.articleId))
-        .where(and(eq(schema.articleTranslations.orgId, s.orgId), eq(schema.articles.published, true)))
+        .where(and(eq(schema.articleTranslations.orgId, s.orgId), eq(schema.articles.published, true), eq(schema.articles.internal, false)))
         .groupBy(schema.articleTranslations.language)
     : [];
-  const [{ n: live }] = await db.select({ n: count() }).from(schema.articles).where(and(eq(schema.articles.orgId, s.orgId), eq(schema.articles.published, true)));
+  const [{ n: live }] = await db
+    .select({ n: count() })
+    .from(schema.articles)
+    .where(and(eq(schema.articles.orgId, s.orgId), eq(schema.articles.published, true), eq(schema.articles.internal, false)));
   const url = helpUrl(helpSlug, domain);
 
   return (
@@ -42,7 +45,7 @@ export default async function HelpCenterAdmin({ searchParams }: PageProps<"/app/
           <div className="grid max-w-xl gap-1">
             <h1 className="page-title">Help center</h1>
             <p className="text-sm text-muted">
-              Articles your customers can search on their own. The AI reads published articles too, and links to them in its answers.
+              Articles your customers can search on their own. The AI reads published articles too, and links to them in its answers. Mark an article team only for internal how-tos: your team finds it here and beside matching tickets, and customers never see it.
             </p>
           </div>
           {!s.viewer && <Link href="/app/help/new" className="btn btn-primary">New article</Link>}
@@ -61,7 +64,9 @@ export default async function HelpCenterAdmin({ searchParams }: PageProps<"/app/
                       {a.title}
                       {a.section && <span className="ml-2 text-sm font-normal text-muted">{a.section}</span>}
                     </span>
-                    {a.published ? (
+                    {a.published && a.internal ? (
+                      <span className="pill shrink-0 bg-surface-2 text-ink">Team only</span>
+                    ) : a.published ? (
                       <span className="pill shrink-0 bg-accent-soft text-accent">Published</span>
                     ) : (
                       <span className="pill shrink-0 bg-surface-2 text-muted">Draft</span>

@@ -38,14 +38,20 @@ export default async function EditArticle({ params, searchParams }: PageProps<"/
     <div className="grid max-w-3xl gap-6 px-4 py-6 md:px-8 md:py-8">
       <div className="flex items-center justify-between gap-3">
         <Link href="/app/help" className="link text-sm text-muted">Help center</Link>
-        {article.published ? (
+        {article.published && article.internal ? (
+          <span className="pill bg-surface-2 text-ink">Team only</span>
+        ) : article.published ? (
           <span className="pill bg-accent-soft text-accent">Published</span>
         ) : (
           <span className="pill bg-surface-2 text-muted">Draft</span>
         )}
       </div>
 
-      {article.published ? (
+      {article.published && article.internal ? (
+        <p className="rounded-lg bg-surface-2 px-4 py-3 text-sm">
+          {saved === "published" ? "Published for your team. " : ""}Only your team sees this article, here and beside tickets it matches. It isn&apos;t on your help center, and the AI that answers customers doesn&apos;t use it; AI drafts for your team do.
+        </p>
+      ) : article.published ? (
         <p className="rounded-lg bg-accent-soft px-4 py-3 text-sm">
           {saved === "published" ? "Published at " : "Live at "}
           <a href={url} target="_blank" rel="noopener" className="link font-medium text-accent">{url.replace(/^https?:\/\//, "")}</a>
@@ -72,7 +78,7 @@ export default async function EditArticle({ params, searchParams }: PageProps<"/
         </div>
       </section>
 
-      {languages.length > 0 && (
+      {languages.length > 0 && !article.internal && (
         <section id="translations" className="grid gap-3 border-t border-line pt-6 text-sm">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="eyebrow">Translations</h2>

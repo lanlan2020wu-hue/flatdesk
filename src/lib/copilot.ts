@@ -197,7 +197,7 @@ export async function draftReply(orgId: string, userId: string, ticketId: string
   const { ticket, thread } = await loadThread(orgId, ticketId);
   const { org, eventId } = await reserveAction(orgId, userId, ticket.id, "draft");
   const [knowledge, agent, [recent]] = await Promise.all([
-    loadKnowledge(orgId),
+    loadKnowledge(orgId, { team: true }),
     db.query.agents.findFirst({ where: and(eq(agents.orgId, orgId), eq(agents.userId, userId)) }),
     db
       .select({
