@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import { after, test } from "node:test";
 import { eq } from "drizzle-orm";
 import { newInboxMessages, readGmailMessage, type GmailMessage } from "./mailbox/gmail";
+import type { GraphMessage } from "./mailbox/microsoft";
 import { addressHeader, buildMime, encodeWord, splitAddresses } from "./mailbox/mime";
 
 const ORG = "org_mailbox_test";
@@ -178,6 +179,92 @@ test("a connected Gmail mailbox: new mail becomes tickets, replies go out from i
 
   await disconnectMailbox(ORG, f);
   assert.equal(await mailboxFor(ORG), null);
+});
+
+// A stand-in for Microsoft's sign-in and Graph.
+function fakeMicrosoft(state: { inbox: GraphMessage[]; calls: string[]; posted: Record<string, unknown>[] }) {
+  return (async (input: string | URL | Request, init?: RequestInit) => {
+    const url = new URL(String(input));
+    const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+    const method = init?.method ?? "GET";
+    if (url.host === "login.microsoftonline.com") return json({ access_token: "msacc", refresh_token: "msref", expires_in: 3600, scope: "User.Read Mail.ReadWrite Mail.Send" });
+    const path = url.pathname.replace("/v1.0/me", "");
+    state.calls.push(`${method} ${path}`);
+    if (path === "" ) return json({ mail: "Help@Contoso.test", userPrincipalName: "help@contoso.test" });
+    if (path === "/mailFolders/inbox/messages") {
+      const since = /receivedDateTime ge (\S+)/.exec(url.searchParams.get("$filter") ?? "")![1];
+      return json({ value: state.inbox.filter((m) => m.receivedDateTime >= since) });
+    }
+    if (/^\/messages\/[^/]+\/attachments$/.test(path) && method === "GET") {
+      return json({ value: [{ "@odata.type": "#microsoft.graph.fileAttachment", name: "photo.jpg", contentType: "image/jpeg", size: 40000, isInline: false, contentBytes: Buffer.from("JPG").toString("base64") }] });
+    }
+    if (path === "/messages" && method === "GET") return json({ value: url.searchParams.get("$filter")?.includes("<ms1@contoso-client.test>") ? [{ id: "ms1" }] : [] });
+    if (path === "/messages/ms1/createReply") return json({ id: "draft1" });
+    if (path === "/messages" && method === "POST") return json({ id: "draft2" });
+    if (/^\/messages\/draft\d$/.test(path) && method === "PATCH") {
+      state.posted.push(JSON.parse(String(init?.body)));
+      return json({});
+    }
+    if (/^\/messages\/draft\d\/attachments$/.test(path)) return json({ id: "a" }, 201);
+    if (/^\/messages\/draft\d$/.test(path)) return json({ internetMessageId: `<${path.split("/")[2]}@contoso.test>` });
+    if (/^\/messages\/draft\d\/send$/.test(path)) return new Response(null, { status: 202 });
+    return json({ error: { message: `no route ${method} ${path}` } }, 404);
+  }) as typeof fetch;
+}
+
+test("a connected Outlook mailbox: new mail becomes tickets, replies thread on the customer's message", async (t) => {
+  if (!process.env.DATABASE_URL) return t.skip("needs DATABASE_URL");
+  const { db, schema } = await import("@/db");
+  const { connectGmail, connectMicrosoft, mailboxFor, pollMailbox, sendFromMailbox } = await import("./mailbox");
+  await db.delete(schema.orgs).where(eq(schema.orgs.id, ORG));
+  await db.insert(schema.orgs).values({ id: ORG, name: "Contoso", inboundKey: "mbox00001" });
+  // Connected to Gmail first; connecting Outlook replaces it.
+  await connectGmail(ORG, "user_1", "code", fakeGoogle({ history: [], messages: {}, sent: [] }));
+  const state = {
+    inbox: [
+      {
+        id: "ms1",
+        receivedDateTime: "2026-10-08T10:05:00Z",
+        subject: "Refund please",
+        from: { emailAddress: { name: "Ann", address: "ann@contoso-client.test" } },
+        toRecipients: [{ emailAddress: { address: "help@contoso.test" } }],
+        ccRecipients: [{ emailAddress: { name: "Bo", address: "bo@contoso-client.test" } }],
+        internetMessageId: "<ms1@contoso-client.test>",
+        internetMessageHeaders: [{ name: "Authentication-Results", value: "spf=pass; dmarc=pass" }],
+        body: { contentType: "text" as const, content: "I was charged twice" },
+        hasAttachments: true,
+      },
+    ] as GraphMessage[],
+    calls: [] as string[],
+    posted: [] as Record<string, unknown>[],
+  };
+  const f = fakeMicrosoft(state);
+  assert.deepEqual(await connectMicrosoft(ORG, "user_1", "code", f, new Date("2026-10-08T10:00:00Z")), { address: "help@contoso.test" });
+  const row = (await mailboxFor(ORG))!;
+  assert.equal(row.kind, "microsoft");
+  assert.equal((await db.select().from(schema.integrations).where(eq(schema.integrations.orgId, ORG))).length, 1, "one mailbox per team");
+
+  const found = await pollMailbox(row, f);
+  assert.equal(found.length, 1);
+  const ticket = (await db.query.tickets.findFirst({ where: eq(schema.tickets.id, found[0].ticketId) }))!;
+  assert.equal(ticket.subject, "Refund please");
+  assert.deepEqual(ticket.cc, ["bo@contoso-client.test"]);
+  assert.equal((await db.select().from(schema.attachments).where(eq(schema.attachments.ticketId, ticket.id))).length, 1);
+  const after1 = (await mailboxFor(ORG))!;
+  assert.equal(after1.settings.since, "2026-10-08T10:05:00Z");
+  // The last message comes back on the next run (>=) and is recognised as already in.
+  assert.equal((await pollMailbox(after1, f)).length, 0);
+
+  const sent = await sendFromMailbox(after1, { fromName: "Contoso", to: "ann@contoso-client.test", cc: ["bo@contoso-client.test"], subject: "Re: Refund please", text: "Done", html: "<p>Done</p>", headers: { "In-Reply-To": "<ms1@contoso-client.test>", "X-Flatdesk-Org": ORG }, attachments: [{ filename: "r.pdf", contentType: "application/pdf", content: Buffer.from("x") }] }, f);
+  assert.deepEqual(sent, { messageId: "<draft1@contoso.test>" });
+  assert.ok(state.calls.includes("POST /messages/ms1/createReply"), "replies on the customer's own message");
+  assert.ok(state.calls.includes("POST /messages/draft1/attachments"));
+  assert.ok(state.calls.includes("POST /messages/draft1/send"));
+  assert.deepEqual(state.posted[0], { subject: "Re: Refund please", body: { contentType: "html", content: "<p>Done</p>" }, toRecipients: [{ emailAddress: { address: "ann@contoso-client.test" } }], ccRecipients: [{ emailAddress: { address: "bo@contoso-client.test" } }] });
+
+  // Not in the mailbox (say, it came by forwarding): a new message.
+  const fresh = await sendFromMailbox(after1, { fromName: "Contoso", to: "zed@x.test", subject: "Hi", text: "Hi", html: "Hi", headers: { "In-Reply-To": "<other@x.test>" } }, f);
+  assert.deepEqual(fresh, { messageId: "<draft2@contoso.test>" });
 });
 
 after(async () => {

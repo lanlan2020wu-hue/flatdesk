@@ -35,7 +35,7 @@ import { findGroup, shareTicketQuietly } from "@/lib/routing";
 import { isLanguage } from "@/lib/language";
 import { rememberRemoved } from "@/lib/learn";
 import { checkSendDomain, SendDomainError, setSendAddress } from "@/lib/send-domain";
-import { disconnectMailbox, mailboxFor } from "@/lib/mailbox";
+import { disconnectMailbox, MAILBOX_NAMES, mailboxFor, type MailboxKind } from "@/lib/mailbox";
 
 // The paywall hides the app once a trial ends without a card; this keeps
 // direct requests from doing work behind it. Billing stays open.
@@ -618,7 +618,7 @@ export async function disconnectMailboxAction() {
   const row = await mailboxFor(s.orgId);
   if (row) {
     await disconnectMailbox(s.orgId);
-    await audit(s.orgId, actor(s), "integration.disconnect", `Gmail: ${row.account}`);
+    await audit(s.orgId, actor(s), "integration.disconnect", `${MAILBOX_NAMES[row.kind as MailboxKind]}: ${row.account}`);
   }
   redirect("/app/settings?mailbox=disconnected#mailbox");
 }
