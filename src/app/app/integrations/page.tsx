@@ -7,6 +7,7 @@ import { webhookLabel } from "@/lib/alerts";
 import { requireOpenPage } from "@/lib/auth";
 import { timeAgo } from "@/lib/format";
 import { listIntegrations, type Integration } from "@/lib/integrations";
+import { slackAppConfigured } from "@/lib/integrations/slack";
 import { SITE } from "@/lib/site";
 import { disconnectAction, revokeKeyAction, saveHubSpotSettingsAction } from "./actions";
 
@@ -28,7 +29,7 @@ function Connected({ row, label }: { row: Integration; label: string }) {
   );
 }
 
-function Disconnect({ kind }: { kind: "shopify" | "stripe" | "hubspot" | "jira" }) {
+function Disconnect({ kind }: { kind: "shopify" | "stripe" | "hubspot" | "jira" | "slack" }) {
   return (
     <form action={disconnectAction}>
       <input type="hidden" name="kind" value={kind} />
@@ -37,8 +38,9 @@ function Disconnect({ kind }: { kind: "shopify" | "stripe" | "hubspot" | "jira" 
   );
 }
 
-export default async function IntegrationsPage() {
+export default async function IntegrationsPage({ searchParams }: PageProps<"/app/integrations">) {
   const s = await requireOpenPage();
+  const { slack: slackError, slackConnected } = await searchParams;
   const isAdmin = s.role === "admin";
   const [connected, keys, org] = await Promise.all([
     listIntegrations(s.orgId),
@@ -161,6 +163,30 @@ export default async function IntegrationsPage() {
           </>
         ) : (
           !connected.hubspot && adminsOnly
+        )}
+      </section>
+
+      <section id="slack" className="grid scroll-mt-6 gap-4 border-t border-line pt-6">
+        <div className="grid gap-1">
+          <h2 className="text-lg font-semibold">Slack</h2>
+          <p className="text-muted">
+            Tickets that need your team are posted to a Slack channel with Reply, Assign to me and Open buttons. Replies typed in Slack are emailed to the customer, or saved as an internal note, under the name of the person who wrote them.
+          </p>
+        </div>
+        {connected.slack && <Connected row={connected.slack} label="Alerts go to this channel. People reply as themselves: their Slack email has to match their Flatdesk sign-in." />}
+        {slackError && <p role="alert" className="rounded-lg bg-warn-soft px-3 py-2 text-sm text-warn">{String(slackError)}</p>}
+        {slackConnected && <p role="status" className="rounded-lg border border-accent/30 bg-accent-soft px-3 py-2 text-sm">Connected. New tickets that need your team will show up in Slack. Which ones are posted is set in Settings, Alerts.</p>}
+        {!slackAppConfigured() ? (
+          <p className="text-sm text-muted">
+            Not available on this workspace yet. You can still post alerts to Slack with a webhook in <Link href="/app/settings#alerts" className="link text-accent">Settings, Alerts</Link>.
+          </p>
+        ) : isAdmin ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <a href="/api/slack/install" className="btn btn-primary w-max">{connected.slack ? "Change channel" : "Add to Slack"}</a>
+            {connected.slack && <Disconnect kind="slack" />}
+          </div>
+        ) : (
+          !connected.slack && adminsOnly
         )}
       </section>
 

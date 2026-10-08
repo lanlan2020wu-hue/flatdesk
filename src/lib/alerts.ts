@@ -5,6 +5,8 @@ import { request as httpsRequest } from "node:https";
 import { isIP, type LookupFunction } from "node:net";
 import { and, desc, eq, notLike } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { unseal } from "@/lib/import/crypto";
+import { alertBlocks, slackAppConfigured } from "@/lib/integrations/slack";
 import { SITE } from "@/lib/site";
 import { TRIGGER_NOTE_PREFIX } from "@/lib/triggers";
 
@@ -201,10 +203,15 @@ export function sign(secret: string, body: string) {
   return `sha256=${createHmac("sha256", secret).update(body).digest("hex")}`;
 }
 
-// The request for one alert, in the shape the receiving tool wants.
-export function buildRequest(url: string, secret: string, p: AlertPayload): { body: string; headers: Record<string, string> } {
+// The request for one alert, in the shape the receiving tool wants. With
+// `buttons` (the webhook is Flatdesk's own Slack app's), Slack gets Reply,
+// Assign to me and Open buttons for the ticket.
+export function buildRequest(url: string, secret: string, p: AlertPayload, buttons?: { ticketId: string }): { body: string; headers: Record<string, string> } {
   const kind = webhookKind(url);
   const headers: Record<string, string> = { "content-type": "application/json", "user-agent": "Flatdesk-Alerts/1" };
+  if (kind === "slack" && buttons && p.ticket) {
+    return { body: JSON.stringify({ text: p.text, blocks: alertBlocks(p.text, { id: buttons.ticketId, ...p.ticket }), unfurl_links: false }), headers };
+  }
   if (kind === "slack") {
     // Slack's own link syntax; <, > and & must be escaped in the rest.
     const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -233,11 +240,12 @@ type Org = typeof schema.orgs.$inferSelect;
 
 // Posts one alert and records how it went on the org, for the settings page.
 // Never throws: an alert that fails must not break the ticket flow.
-export async function deliver(org: Pick<Org, "id" | "alertWebhookUrl" | "alertSecret">, payload: AlertPayload): Promise<string | null> {
+export async function deliver(org: Pick<Org, "id" | "alertWebhookUrl" | "alertSecret">, payload: AlertPayload, ticketId?: string): Promise<string | null> {
   if (!org.alertWebhookUrl) return null;
   let error: string | null = null;
   try {
-    const { body, headers } = buildRequest(org.alertWebhookUrl, org.alertSecret, payload);
+    const buttons = ticketId && webhookKind(org.alertWebhookUrl) === "slack" && (await slackAppWebhook(org.id)) === org.alertWebhookUrl ? { ticketId } : undefined;
+    const { body, headers } = buildRequest(org.alertWebhookUrl, org.alertSecret, payload, buttons);
     const res = await postAlert(org.alertWebhookUrl, body, headers);
     if (res.status < 200 || res.status >= 300) error = `${res.status} ${res.statusText}`.trim();
   } catch (err) {
@@ -250,6 +258,13 @@ export async function deliver(org: Pick<Org, "id" | "alertWebhookUrl" | "alertSe
     .catch((err) => console.error("recording alert result failed", err));
   if (error) console.error("alert failed", org.id, error);
   return error;
+}
+
+// The webhook of the team's Flatdesk Slack app, when it's installed.
+async function slackAppWebhook(orgId: string): Promise<string | null> {
+  if (!slackAppConfigured()) return null;
+  const [row] = await db.select({ credentials: schema.integrations.credentials }).from(schema.integrations).where(and(eq(schema.integrations.orgId, orgId), eq(schema.integrations.kind, "slack")));
+  return row ? ((unseal(row.credentials) as { webhookUrl?: string }).webhookUrl ?? null) : null;
 }
 
 async function ticketPayload(orgId: string, ticketId: string) {
@@ -305,7 +320,7 @@ export async function alertNewTicket(orgId: string, ticketId: string) {
       reason,
       ticket: found.payload,
       sentAt: new Date().toISOString(),
-    });
+    }, ticketId);
   } catch (err) {
     console.error("new ticket alert failed", err);
   }
@@ -326,7 +341,7 @@ export async function alertHandedBack(orgId: string, ticketId: string, reason: s
       reason,
       ticket: found.payload,
       sentAt: new Date().toISOString(),
-    });
+    }, ticketId);
   } catch (err) {
     console.error("hand-back alert failed", err);
   }
@@ -346,7 +361,7 @@ export async function alertOverdue(orgId: string, ticketId: string, reason: stri
       reason,
       ticket: found.payload,
       sentAt: new Date().toISOString(),
-    });
+    }, ticketId);
   } catch (err) {
     console.error("overdue alert failed", err);
   }
