@@ -1,9 +1,10 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, ne, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { seal, unseal } from "@/lib/import/crypto";
 import { ShopifyError, shopDomain, shopifyOrders, verifyShopify, type ShopifyCreds, type ShopifyOrder } from "./shopify";
 import { checkStripeKey, StripeLookupError, stripeCustomer, verifyStripe, type StripeCustomerView } from "./stripe";
 import { checkHubSpotToken, HubSpotError, hubspotContact, verifyHubSpot, type HubSpotContact } from "./hubspot";
+import type { SlackInstall } from "./slack";
 import { createJiraIssue, JiraError, jiraIssues, jiraSite, projectKey, verifyJira, type JiraCreds, type JiraIssue } from "./jira";
 
 // Connected stores and accounts whose data shows beside a ticket. One of each
@@ -19,15 +20,42 @@ export async function listIntegrations(orgId: string): Promise<Partial<Record<In
   return Object.fromEntries(rows.map((r) => [r.kind, r]));
 }
 
-async function save(orgId: string, kind: IntegrationKind, account: string, creds: Record<string, string>, userId: string) {
-  const values = { account, credentials: seal(creds), connectedBy: userId, lastError: null, lastErrorAt: null };
+async function save(orgId: string, kind: IntegrationKind, account: string, creds: Record<string, string>, userId: string, settings?: schema.IntegrationSettings) {
+  const values = { account, credentials: seal(creds), connectedBy: userId, lastError: null, lastErrorAt: null, ...(settings ? { settings } : {}) };
   await db
     .insert(integrations)
     .values({ orgId, kind, ...values })
     .onConflictDoUpdate({ target: [integrations.orgId, integrations.kind], set: { ...values, createdAt: new Date() } });
 }
 
+// The Slack app (lib/integrations/slack.ts). Alerts go to the channel picked
+// while installing it, through the app's own webhook, so they carry buttons.
+export async function connectSlack(orgId: string, userId: string, install: SlackInstall) {
+  // One Flatdesk team per Slack workspace, so a click in Slack finds one team.
+  const [other] = await db
+    .select({ orgId: integrations.orgId })
+    .from(integrations)
+    .where(and(eq(integrations.kind, "slack"), sql`${integrations.settings} ->> 'slackTeamId' = ${install.teamId}`, ne(integrations.orgId, orgId)));
+  if (other) return { error: `${install.teamName} is already connected to another Flatdesk team.` };
+  await save(orgId, "slack", `${install.teamName} · ${install.channel}`, { token: install.token, webhookUrl: install.webhookUrl, channelId: install.channelId }, userId, { slackTeamId: install.teamId, slackChannel: install.channel });
+  await db.update(schema.orgs).set({ alertWebhookUrl: install.webhookUrl, alertLastError: null }).where(eq(schema.orgs.id, orgId));
+  return { ok: true as const, error: undefined };
+}
+
+// The team and its Slack token for a request Slack sent from this workspace.
+export async function slackConnection(teamId: string) {
+  const [row] = await db.select().from(integrations).where(and(eq(integrations.kind, "slack"), sql`${integrations.settings} ->> 'slackTeamId' = ${teamId}`));
+  if (!row) return null;
+  return { orgId: row.orgId, ...(unseal(row.credentials) as { token: string; webhookUrl: string; channelId: string }) };
+}
+
 export async function disconnect(orgId: string, kind: IntegrationKind) {
+  if (kind === "slack") {
+    // Alerts stop too, since they went through the app's webhook.
+    const [row] = await db.select().from(integrations).where(and(eq(integrations.orgId, orgId), eq(integrations.kind, "slack")));
+    const hook = row ? (unseal(row.credentials) as { webhookUrl?: string }).webhookUrl : undefined;
+    if (hook) await db.update(schema.orgs).set({ alertWebhookUrl: null }).where(and(eq(schema.orgs.id, orgId), eq(schema.orgs.alertWebhookUrl, hook)));
+  }
   await db.delete(integrations).where(and(eq(integrations.orgId, orgId), eq(integrations.kind, kind)));
 }
 
