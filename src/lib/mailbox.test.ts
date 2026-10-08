@@ -4,7 +4,10 @@ import assert from "node:assert/strict";
 import { after, test } from "node:test";
 import { eq } from "drizzle-orm";
 import { newInboxMessages, readGmailMessage, type GmailMessage } from "./mailbox/gmail";
+<<<<<<< HEAD
 import type { GraphMessage } from "./mailbox/microsoft";
+=======
+>>>>>>> origin/main
 import { addressHeader, buildMime, encodeWord, splitAddresses } from "./mailbox/mime";
 
 const ORG = "org_mailbox_test";
@@ -181,6 +184,7 @@ test("a connected Gmail mailbox: new mail becomes tickets, replies go out from i
   assert.equal(await mailboxFor(ORG), null);
 });
 
+<<<<<<< HEAD
 // A stand-in for Microsoft's sign-in and Graph.
 function fakeMicrosoft(state: { inbox: GraphMessage[]; calls: string[]; posted: Record<string, unknown>[] }) {
   return (async (input: string | URL | Request, init?: RequestInit) => {
@@ -267,6 +271,8 @@ test("a connected Outlook mailbox: new mail becomes tickets, replies thread on t
   assert.deepEqual(fresh, { messageId: "<draft2@contoso.test>" });
 });
 
+=======
+>>>>>>> origin/main
 after(async () => {
   if (!process.env.DATABASE_URL) return;
   const { db, schema, pool } = await import("@/db");
