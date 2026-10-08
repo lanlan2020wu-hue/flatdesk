@@ -124,7 +124,7 @@ export async function logToHubSpotAction(_: ConnectState, form: FormData): Promi
 export async function disconnectAction(form: FormData) {
   const s = await requireAdmin();
   const kind = str(form, "kind");
-  if (kind === "shopify" || kind === "stripe" || kind === "hubspot" || kind === "jira") {
+  if (kind === "shopify" || kind === "stripe" || kind === "hubspot" || kind === "jira" || kind === "slack") {
     await disconnect(s.orgId, kind);
     await audit(s.orgId, { userId: s.userId, name: s.name }, "integration.disconnect", kind);
   }
