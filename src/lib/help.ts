@@ -281,19 +281,43 @@ export async function articleKnowledge(orgId: string, opts: { team?: boolean } =
   });
 }
 
-// Published articles, team-only ones included, that look related to a ticket:
-// any of its longer words, best match first. For the ticket's side rail.
-export async function articlesForTicket(orgId: string, text: string, limit = 4) {
-  const words = [...new Set(text.toLowerCase().match(/[\p{L}\p{N}]{4,}/gu) ?? [])].slice(0, 12);
+// Words people write to a help desk that say nothing about the question, left
+// out when matching articles so "Hello, I need help with my refund" matches on "refund".
+const FILLER = new Set(["hello", "thanks", "thank", "please", "help", "need", "question", "issue", "problem", "hope", "know", "want", "just", "able", "tried", "trying", "anyone", "someone", "there", "here", "what", "when", "where", "which", "while", "does", "doesn", "cannot", "wont", "dont", "really", "still", "also", "something", "anything"]);
+
+export function matchWords(text: string) {
+  return [...new Set(text.toLowerCase().match(/[\p{L}\p{N}]{4,}/gu) ?? [])].filter((w) => !FILLER.has(w)).slice(0, 12);
+}
+
+async function relatedArticles(orgId: string, text: string, limit: number, publicOnly: boolean) {
+  const words = matchWords(text);
   if (!words.length) return [];
   const tsq = sql`to_tsquery('english', ${words.join(" | ")})`;
   const doc = sql`setweight(to_tsvector('english', ${articles.title}), 'A') || setweight(to_tsvector('english', ${articles.body}), 'B')`;
   return db
-    .select({ id: articles.id, title: articles.title, internal: articles.internal })
+    .select({ id: articles.id, title: articles.title, slug: articles.slug, body: articles.body, internal: articles.internal, rank: sql<number>`ts_rank(${doc}, ${tsq})` })
     .from(articles)
-    .where(and(eq(articles.orgId, orgId), eq(articles.published, true), sql`${doc} @@ ${tsq}`))
+    .where(and(eq(articles.orgId, orgId), publicOnly ? isPublic : eq(articles.published, true), sql`${doc} @@ ${tsq}`))
     .orderBy(desc(sql`ts_rank(${doc}, ${tsq})`), articles.title)
     .limit(limit);
+}
+
+// Published articles, team-only ones included, that look related to a ticket:
+// any of its longer words, best match first. For the ticket's side rail.
+export async function articlesForTicket(orgId: string, text: string, limit = 4) {
+  return (await relatedArticles(orgId, text, limit, false)).map(({ id, title, internal }) => ({ id, title, internal }));
+}
+
+// Public articles that may answer what a visitor is typing into the chat
+// widget, with links into the help center, so they can find the answer
+// before starting a chat. Empty when the team has no help center or it's dark.
+export async function articlesForChat(org: { id: string; helpSlug: string | null; helpDomain: string | null; helpDomainVerifiedAt: Date | null }, text: string, limit = 3) {
+  if (!org.helpSlug) return [];
+  const rows = await relatedArticles(org.id, text.slice(0, 2000), limit, true);
+  // A visitor reads these before asking, so only the close matches: one
+  // shared word ("order") shouldn't put shipping times under a refund question.
+  const best = rows[0]?.rank ?? 0;
+  return rows.filter((a) => a.rank >= best / 2).map((a) => ({ title: a.title, excerpt: excerpt(a.body, 120), url: articleUrl(org.helpSlug!, a.slug, verifiedDomain(org)) }));
 }
 
 // ---- Imported articles ------------------------------------------------------

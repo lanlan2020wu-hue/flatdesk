@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 type Message = { id: string; from: string; mine: boolean; body: string; at: string; files?: { name: string; size: number; url: string }[] };
 type Saved = { number: number; token: string };
+type Suggestion = { title: string; excerpt: string; url: string };
 
 const POLL_MS = 5000;
 // Mirrors REPLY_UPLOAD_LIMIT and MAX_FILES in lib/attachments.ts (Vercel caps request bodies at 4.5 MB).
@@ -46,6 +47,9 @@ export default function ChatPanel({ widgetKey, teamName, fresh = false }: { widg
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
+  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
+  const suggestTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const suggestFor = useRef("");
   // Set when the site the widget is on says who is signed in (widget.js puts it in the URL fragment).
   const [who, setWho] = useState<{ email: string; name: string; userHash: string; attributes?: Record<string, unknown> } | null>(null);
   const listRef = useRef<HTMLOListElement>(null);
@@ -145,6 +149,20 @@ export default function ChatPanel({ widgetKey, teamName, fresh = false }: { widg
     return () => window.removeEventListener("message", onMessage);
   }, []);
 
+  // Help center articles that may answer the question, looked up once the
+  // visitor pauses typing. The latest text wins over slower earlier lookups.
+  function suggest(text: string) {
+    if (suggestTimer.current) clearTimeout(suggestTimer.current);
+    const q = text.trim();
+    suggestFor.current = q;
+    if (q.length < 12) return setSuggestions([]);
+    suggestTimer.current = setTimeout(async () => {
+      const r = await fetch(`/api/chat/${widgetKey}/articles?q=${encodeURIComponent(q.slice(0, 500))}`, { cache: "no-store" }).catch(() => null);
+      const data = r?.ok ? await r.json().catch(() => null) : null;
+      if (suggestFor.current === q && Array.isArray(data?.articles)) setSuggestions(data.articles);
+    }, 600);
+  }
+
   async function start(form: FormData) {
     setSending(true);
     setError(null);
@@ -242,8 +260,24 @@ export default function ChatPanel({ widgetKey, teamName, fresh = false }: { widg
           )}
           <label className="grid gap-1 text-sm">
             How can we help?
-            <textarea name="message" required rows={5} className={field} />
+            <textarea name="message" required rows={5} className={field} onChange={(e) => suggest(e.currentTarget.value)} />
           </label>
+          {suggestions.length > 0 && (
+            <div className="grid gap-1.5" aria-live="polite">
+              <p className="text-xs font-medium text-muted">These articles might answer it</p>
+              <ul className="grid gap-1.5">
+                {suggestions.map((a) => (
+                  <li key={a.url}>
+                    <a href={a.url} target="_blank" rel="noopener" className="block rounded-md border border-line bg-surface px-3 py-2 hover:border-accent">
+                      <span className="block text-sm font-medium underline-offset-2">{a.title}</span>
+                      {a.excerpt && <span className="mt-0.5 line-clamp-2 block text-xs text-muted">{a.excerpt}</span>}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-xs text-muted">Still stuck? Start the chat below.</p>
+            </div>
+          )}
           <div className="grid gap-2">
             {attachButton("Attach files", "flex w-fit items-center gap-1.5 text-sm text-muted underline-offset-2 hover:underline")}
             <Picked files={files} onRemove={removeFile} />
