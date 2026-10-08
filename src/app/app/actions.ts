@@ -32,6 +32,7 @@ import { RESOLVE_CHOICES, TARGET_CHOICES, validHours } from "@/lib/sla";
 import { addReply, isPriority, normalizeTags, parseTicketNumber, updateTicket, type TicketPriority, type TicketStatus } from "@/lib/tickets";
 import { findGroup, shareTicketQuietly } from "@/lib/routing";
 import { isLanguage } from "@/lib/language";
+import { rememberRemoved } from "@/lib/learn";
 
 // The paywall hides the app once a trial ends without a card; this keeps
 // direct requests from doing work behind it. Billing stays open.
@@ -248,8 +249,11 @@ export async function deleteMacroAction(form: FormData) {
   const [gone] = await db
     .delete(schema.macros)
     .where(and(eq(schema.macros.orgId, s.orgId), eq(schema.macros.id, idOf(form, "id"))))
-    .returning({ name: schema.macros.name });
-  if (gone) await audit(s.orgId, actor(s), "macro.delete", gone.name);
+    .returning({ id: schema.macros.id, name: schema.macros.name, source: schema.macros.source });
+  if (gone) {
+    await audit(s.orgId, actor(s), "macro.delete", gone.name);
+    await rememberRemoved(s.orgId, gone);
+  }
   revalidatePath("/app/macros");
 }
 
@@ -346,9 +350,10 @@ export async function saveAiSettingsAction(form: FormData) {
     aiInstructions: str(form, "aiInstructions").slice(0, 20000),
     aiOverageEnabled: form.get("aiOverageEnabled") === "on",
     aiOverageMonthlyLimit: parseOverageLimit(str(form, "aiOverageMonthlyLimit")),
+    aiAutoLearn: form.get("aiAutoLearn") === "on",
   };
   await db.update(schema.orgs).set(next).where(eq(schema.orgs.id, s.orgId));
-  const detail = changes(before ?? {}, next, { aiEnabled: "AI answers", aiInstructions: "What the AI should know", aiOverageEnabled: "Overage", aiOverageMonthlyLimit: "Overage limit" });
+  const detail = changes(before ?? {}, next, { aiEnabled: "AI answers", aiInstructions: "What the AI should know", aiOverageEnabled: "Overage", aiOverageMonthlyLimit: "Overage limit", aiAutoLearn: "Learn from solved tickets" });
   if (detail) await audit(s.orgId, actor(s), "settings.ai", detail);
   revalidatePath("/app/settings");
 }

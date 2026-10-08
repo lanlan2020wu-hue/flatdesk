@@ -30,7 +30,7 @@ import { PLAN } from "@/lib/pricing";
 
 export const WRITER = { perDay: 12, perRun: 3, maxAttempts: 3, usdPerSeat: 2 };
 
-const { macroAiDrafts: drafts, orgs, agents } = schema;
+const { macroAiDrafts: drafts, orgs, agents, aiLearning } = schema;
 
 // Writes this run may make: what's left of today's count and this month's
 // spend. Seats are counted as the AI allowance counts them: paid seats, or
@@ -40,12 +40,14 @@ export function writeRoom(o: { writtenToday: number; spentThisMonth: number; sea
   return Math.max(0, Math.min(WRITER.perRun, WRITER.perDay - o.writtenToday));
 }
 
-async function room(orgId: string) {
+// Today's writes, this month's spend on writing (macros and the AI's own
+// learning, lib/learn.ts, share one budget) and the seats it's sized from.
+export async function writingBudget(orgId: string) {
   const monthStart = new Date();
   monthStart.setUTCDate(1);
   monthStart.setUTCHours(0, 0, 0, 0);
   const since = new Date(Date.now() - 86_400_000);
-  const [org, [{ agentCount }], [{ today, spent }]] = await Promise.all([
+  const [org, [{ agentCount }], [{ today, spent }], [{ learned }]] = await Promise.all([
     db.query.orgs.findFirst({ where: eq(orgs.id, orgId), columns: { billedSeats: true } }),
     db.select({ agentCount: count() }).from(agents).where(and(eq(agents.orgId, orgId), eq(agents.viewer, false), isNull(agents.removedAt))),
     db
@@ -55,9 +57,17 @@ async function room(orgId: string) {
       })
       .from(drafts)
       .where(and(eq(drafts.orgId, orgId), gte(drafts.createdAt, since < monthStart ? since : monthStart))),
+    db
+      .select({ learned: sql<string>`coalesce(sum(${aiLearning.costUsd}), 0)` })
+      .from(aiLearning)
+      .where(and(eq(aiLearning.orgId, orgId), gte(aiLearning.createdAt, monthStart))),
   ]);
   const seats = org?.billedSeats ?? Math.min(Number(agentCount), PLAN.trialAgentCap);
-  return writeRoom({ writtenToday: Number(today), spentThisMonth: Number(spent), seats });
+  return { writtenToday: Number(today), spentThisMonth: Number(spent) + Number(learned), seats };
+}
+
+async function room(orgId: string) {
+  return writeRoom(await writingBudget(orgId));
 }
 
 const Written = z.object({

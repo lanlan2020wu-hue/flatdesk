@@ -10,6 +10,7 @@ import { requireOpenPage } from "@/lib/auth";
 import { aiConfigured } from "@/lib/ai";
 import { access } from "@/lib/billing";
 import { macroUpdates } from "@/lib/macro-drift";
+import { LEARN, LEARNED_SOURCE, recentLearning } from "@/lib/learn";
 import { macroSuggestions } from "@/lib/macro-suggestions";
 import { withAiDrafts, withUpdateDrafts, writeMacroUpdates, writeMissingDrafts } from "@/lib/macro-writer";
 import { listGroups } from "@/lib/routing";
@@ -26,7 +27,7 @@ const SOURCE_NAME: Record<string, string> = { zendesk: "Zendesk", intercom: "Int
 export default async function MacrosPage({ searchParams }: { searchParams: Promise<{ trigger?: string }> }) {
   const s = await requireOpenPage();
   const triggerError = (await searchParams).trigger;
-  const [macros, rules, triggerList, agents, imported, found, drifted, tags, groupList] = await Promise.all([
+  const [macros, rules, triggerList, agents, imported, found, drifted, tags, groupList, learned] = await Promise.all([
     db.select().from(schema.macros).where(eq(schema.macros.orgId, s.orgId)).orderBy(asc(schema.macros.name)),
     db.select().from(schema.rules).where(eq(schema.rules.orgId, s.orgId)).orderBy(asc(schema.rules.createdAt)),
     db.select().from(schema.triggers).where(eq(schema.triggers.orgId, s.orgId)).orderBy(asc(schema.triggers.position), asc(schema.triggers.createdAt)),
@@ -36,6 +37,7 @@ export default async function MacrosPage({ searchParams }: { searchParams: Promi
     macroUpdates(s.orgId),
     orgTags(s.orgId),
     listGroups(s.orgId),
+    recentLearning(s.orgId),
   ]);
   // Behind the paywall the page still renders, so it must not start paid AI calls.
   const org = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) });
@@ -81,6 +83,7 @@ export default async function MacrosPage({ searchParams }: { searchParams: Promi
             { title: "You check it and save it", body: "Edit anything you like, then click Save as macro. Nothing is offered to anyone until it's saved." },
             { title: "It's offered on new tickets", body: "When a customer asks the same thing, the reply box on the ticket shows the macro with a Use macro button. One click fills it in. The AI also uses saved macros when it answers customers on its own." },
             { title: "It keeps up with changes", body: "If your team keeps making the same edit before sending it (on most of the last 3 or more sends), the AI drafts an updated macro here. An admin applies it or keeps the old one." },
+            { title: "The AI learns on its own", body: `Once a day the AI reads tickets your team solved, starting with the ones it handed over. When your team answered something no saved answer covers, it saves the answer. When your reply shows a learned answer changed, it updates it, and it retires learned answers nobody used in ${LEARN.staleDays} days. Your own macros are never changed; if one looks out of date, it's flagged here.` },
           ]}
           example={
             <>
@@ -93,6 +96,8 @@ export default async function MacrosPage({ searchParams }: { searchParams: Promi
 
         <MacroUpdates updates={updates} aiOn={aiConfigured() && Boolean(org?.aiProcessing)} canApply={s.role === "admin"} />
 
+        {learned.length > 0 && <LearnedLog rows={learned} />}
+
         <SuggestionsSection suggestions={suggestions} aiOn={aiConfigured() && Boolean(org?.aiProcessing)} tags={tags} />
 
         {/* Saved macros as one ruled list; each row opens to edit. */}
@@ -103,7 +108,9 @@ export default async function MacrosPage({ searchParams }: { searchParams: Promi
             <summary className="flex cursor-pointer items-center justify-between gap-3 px-5 py-4 font-medium transition-colors hover:bg-surface-2/60">
               <span className="flex min-w-0 items-center gap-2">
                 <span className="truncate">{m.name}</span>
-                {m.source === "suggested" ? (
+                {m.source === LEARNED_SOURCE ? (
+                  <span className="chip shrink-0">Learned by the AI</span>
+                ) : m.source === "suggested" ? (
                   <span className="chip shrink-0">Written by Flatdesk AI</span>
                 ) : m.source === "taught" ? (
                   <span className="chip shrink-0">Taught from a ticket</span>
@@ -406,5 +413,30 @@ function TriggerForm({ trigger, agents, tags, groups }: { trigger?: typeof schem
       <p className="text-xs text-muted">The AI only answers tickets that are still open, so a trigger that sets pending or closed keeps the AI off them. A timed trigger runs once on a ticket until the customer or your team writes again, so a nudge isn&apos;t sent twice. The email goes out from your team&apos;s address, marked as automatic.</p>
       <button className="btn btn-primary w-max">{trigger ? "Save trigger" : "Add trigger"}</button>
     </form>
+  );
+}
+
+const LEARNED_VERB = { added: "Learned", updated: "Updated", retired: "Retired", flagged: "Looks out of date" } as const;
+
+// What the AI changed in its own knowledge lately (lib/learn.ts).
+function LearnedLog({ rows }: { rows: Awaited<ReturnType<typeof recentLearning>> }) {
+  return (
+    <section id="learned" className="card grid scroll-mt-6 gap-3 p-5">
+      <div className="grid gap-1">
+        <h2 className="font-semibold">What the AI learned lately</h2>
+        <p className="text-sm text-muted">From tickets your team solved. Learned answers are in the list below; edit or delete any of them and the AI follows.</p>
+      </div>
+      <ul className="grid gap-2.5 text-sm">
+        {rows.map((r) => (
+          <li key={r.id} className="grid gap-0.5">
+            <span>
+              <span className={r.kind === "flagged" ? "font-medium text-warn" : "font-medium"}>{LEARNED_VERB[r.kind as keyof typeof LEARNED_VERB]}:</span> {r.name}
+              <span className="text-muted"> · {r.createdAt.toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+            </span>
+            {r.detail && <span className="text-muted">{r.detail}</span>}
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }

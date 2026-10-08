@@ -103,6 +103,9 @@ export const orgs = pgTable("orgs", {
   // The AI reads a verified customer's orders and payments from connected
   // Shopify and Stripe when it answers. See lib/ai-actions.ts.
   aiReadsRecords: boolean("ai_reads_records").notNull().default(false),
+  // The AI learns from tickets the team solves and keeps what it learned up
+  // to date on its own. See lib/learn.ts.
+  aiAutoLearn: boolean("ai_auto_learn").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -560,6 +563,29 @@ export const macroUpdateDismissals = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("macro_update_dismissals_macro_sig").on(t.macroId, t.signature)],
+);
+
+// The evolving knowledge log (lib/learn.ts). A "run" row is one daily pass
+// over a team's solved tickets: the tickets it read and what it cost. The
+// other kinds record what that pass changed: a saved answer added, updated or
+// retired, or a team macro flagged as out of date. "removed" is a learned
+// answer someone on the team deleted, so it isn't learned again.
+export const aiLearningKind = pgEnum("ai_learning_kind", ["run", "added", "updated", "retired", "flagged", "removed"]);
+export const aiLearning = pgTable(
+  "ai_learning",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
+    kind: aiLearningKind("kind").notNull(),
+    macroId: uuid("macro_id").references(() => macros.id, { onDelete: "set null" }),
+    name: text("name").notNull().default(""),
+    detail: text("detail").notNull().default(""),
+    ticketIds: uuid("ticket_ids").array().notNull().default(sql`'{}'::uuid[]`),
+    model: text("model"),
+    costUsd: numeric("cost_usd", { precision: 10, scale: 5 }).notNull().default("0"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("ai_learning_org_created").on(t.orgId, t.createdAt)],
 );
 
 // The agent copilot: summaries, drafted replies and rewrites an agent asks
