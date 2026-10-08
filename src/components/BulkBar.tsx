@@ -5,7 +5,8 @@ import { bulkUpdateAction } from "@/app/app/actions";
 
 // The bar that appears once tickets are ticked in the inbox. Row checkboxes
 // live in the list and join this form through form="bulk".
-export default function BulkBar({ agents, groups = [], back, total }: { agents: { userId: string; name: string }[]; groups?: { id: string; name: string }[]; back: string; total: number }) {
+// In the trash the only thing to do with tickets is restore them.
+export default function BulkBar({ agents, groups = [], back, total, trash = false }: { agents: { userId: string; name: string }[]; groups?: { id: string; name: string }[]; back: string; total: number; trash?: boolean }) {
   const [count, setCount] = useState(0);
   useEffect(() => {
     const boxes = () => [...document.querySelectorAll<HTMLInputElement>('input[form="bulk"][name="ids"]')];
@@ -25,7 +26,15 @@ export default function BulkBar({ agents, groups = [], back, total }: { agents: 
         <input type="checkbox" checked={count > 0 && count === total} onChange={(e) => all(e.target.checked)} aria-label="Select all tickets shown" />
         <span className="font-medium">{count ? `${count} selected` : "Select"}</span>
       </label>
-      {count > 0 && (
+      {count > 0 && trash && (
+        <>
+          <button name="op" value="restore" className="btn btn-primary btn-sm">Restore</button>
+          <button type="button" className="link text-muted" onClick={() => all(false)}>
+            Clear
+          </button>
+        </>
+      )}
+      {count > 0 && !trash && (
         <>
           <select name="status" defaultValue="" className="field field-sm w-auto" aria-label="Set status">
             <option value="">Status…</option>
@@ -62,6 +71,7 @@ export default function BulkBar({ agents, groups = [], back, total }: { agents: 
           </select>
           <input name="addTags" placeholder="Add tags" className="field field-sm w-32" aria-label="Add tags, separated by commas" />
           <button className="btn btn-primary btn-sm">Apply</button>
+          <button name="op" value="trash" className="btn btn-secondary btn-sm" title="Moves them to the trash. You can restore them from there.">Delete</button>
           <button type="button" className="link text-muted" onClick={() => all(false)}>
             Clear
           </button>

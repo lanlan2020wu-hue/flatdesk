@@ -1,4 +1,4 @@
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { parseTicketNumber } from "@/lib/tickets";
 
@@ -63,7 +63,7 @@ export async function searchTickets(orgId: string, raw: string) {
     .from(tickets)
     .innerJoin(customers, eq(customers.id, tickets.customerId))
     .leftJoin(agents, and(eq(agents.orgId, tickets.orgId), eq(agents.userId, tickets.assigneeId)))
-    .where(and(eq(tickets.orgId, orgId), match))
+    .where(and(eq(tickets.orgId, orgId), match, isNull(tickets.deletedAt)))
     .orderBy(...(number ? [sql`(${tickets.number} = ${number}) desc`] : []), desc(tickets.updatedAt))
     .limit(SEARCH_LIMIT);
 }

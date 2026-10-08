@@ -247,6 +247,7 @@ export async function runTimedTriggers(now = new Date()): Promise<{ ran: number;
       .where(
         and(
           eq(tickets.orgId, trigger.orgId),
+          isNull(tickets.deletedAt),
           lte(tickets.updatedAt, cutoff),
           gt(tickets.updatedAt, new Date(cutoff.getTime() - TIMED_WINDOW_MS)),
           not(sql`${trigger.id}::uuid = any(${tickets.timedRan})`),

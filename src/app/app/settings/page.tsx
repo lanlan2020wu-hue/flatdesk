@@ -14,6 +14,7 @@ import { webhookKind, webhookLabel } from "@/lib/alerts";
 import { DEFAULT_HOURS, RESOLVE_CHOICES, TARGET_CHOICES } from "@/lib/sla";
 import { timeAgo } from "@/lib/format";
 import { LANGUAGES } from "@/lib/language";
+import { TRASH_DAYS } from "@/lib/trash";
 import { currentUser } from "@clerk/nextjs/server";
 import { clerkEnabled } from "@/lib/auth-config";
 import {
@@ -22,6 +23,7 @@ import {
   saveAlertsAction,
   saveSendAddressAction,
   checkSendAddressAction,
+  saveBlocklistAction,
   saveSecurityAction,
   saveLanguageAction,
   saveSignatureAction,
@@ -47,7 +49,7 @@ const STATUS_TEXT: Record<string, string> = {
 
 export default async function SettingsPage({ searchParams }: PageProps<"/app/settings">) {
   const s = await requireSession();
-  const { billing, alerts: alertsNotice, service: serviceNotice, security: securityNotice, send: sendNotice } = await searchParams;
+  const { billing, alerts: alertsNotice, service: serviceNotice, security: securityNotice, send: sendNotice, blocked: blockedNotice } = await searchParams;
   // A team's own sending address waiting on DNS: look again on each visit, so the page is current.
   const pendingSend = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId), columns: { sendDomainId: true, sendDomainVerifiedAt: true } });
   if (pendingSend?.sendDomainId && !pendingSend.sendDomainVerifiedAt && !sendNotice) await checkSendDomain(s.orgId);
@@ -230,6 +232,38 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
               <span className="text-muted">: who changed settings and seats, exported data, imported or refunded.</span>
             </p>
           )}
+        </section>
+      )}
+
+      {org && !s.viewer && (
+        <section id="blocked" className="grid scroll-mt-6 gap-4 border-t border-line pt-6">
+          <div className="grid gap-1">
+            <h2 className="text-lg font-semibold">Blocked senders</h2>
+            <p className="text-muted">
+              Email from these senders goes straight to the trash: no AI answer, no alert, nothing in your views. One per line: a whole address, or{" "}
+              <span className="font-mono text-sm">@example.com</span> for everyone at a domain. You can also block a sender from any email ticket.
+            </p>
+          </div>
+          {typeof blockedNotice === "string" && <p className="rounded-lg border border-warn/40 bg-surface-2/60 px-3 py-2 text-sm" role="alert">{blockedNotice.slice(0, 300)}</p>}
+          <form action={saveBlocklistAction} className="grid gap-3">
+            <fieldset disabled={!isAdmin} className="grid gap-3">
+              <textarea
+                name="blocked"
+                rows={Math.min(12, Math.max(4, org.blockedSenders.length + 1))}
+                defaultValue={org.blockedSenders.join("\n")}
+                placeholder={"spam@example.com\n@cold-outreach.io"}
+                aria-label="Blocked senders, one per line"
+                spellCheck={false}
+                className="field font-mono text-sm"
+              />
+              {isAdmin && <button className="btn btn-primary w-max">Save blocked senders</button>}
+            </fieldset>
+            {!isAdmin && <p className="text-sm text-muted">Only admins can change this list.</p>}
+          </form>
+          <p className="text-sm">
+            <Link href="/app/inbox?view=trash" className="link text-accent">Trash</Link>
+            <span className="text-muted">: blocked email and deleted tickets, kept {TRASH_DAYS} days in case you need them back.</span>
+          </p>
         </section>
       )}
 
