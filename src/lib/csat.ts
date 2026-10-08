@@ -1,4 +1,4 @@
-import { and, eq, gte, sql } from "drizzle-orm";
+import { and, eq, gte, isNull, sql } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { RATINGS, type Rating } from "@/lib/csat-ratings";
 import { SITE } from "@/lib/site";
@@ -111,7 +111,7 @@ export async function csatReport(orgId: string, since: Date) {
     })
     .from(schema.csatRatings)
     .innerJoin(schema.tickets, eq(schema.tickets.id, schema.csatRatings.ticketId))
-    .where(and(eq(schema.csatRatings.orgId, orgId), gte(schema.csatRatings.createdAt, since), eq(schema.tickets.test, false)))
+    .where(and(eq(schema.csatRatings.orgId, orgId), gte(schema.csatRatings.createdAt, since), eq(schema.tickets.test, false), isNull(schema.tickets.deletedAt)))
     .groupBy(schema.csatRatings.ratedAuthorType, schema.csatRatings.agentId);
   const sum = (rs: typeof rows) => rs.reduce((a, r) => ({ total: a.total + r.total, great: a.great + r.great, bad: a.bad + r.bad }), { total: 0, great: 0, bad: 0 });
   return {

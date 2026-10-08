@@ -118,6 +118,9 @@ export const orgs = pgTable("orgs", {
   // The AI learns from tickets the team solves and keeps what it learned up
   // to date on its own. See lib/learn.ts.
   aiAutoLearn: boolean("ai_auto_learn").notNull().default(true),
+  // Email from these senders goes straight to the trash: whole addresses, or
+  // "@domain.com" for everyone at a domain. Lowercase. See lib/trash.ts.
+  blockedSenders: text("blocked_senders").array().notNull().default(sql`'{}'::text[]`),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -292,6 +295,11 @@ export const tickets = pgTable(
     // Made by an admin from /app/test-tickets to see how Flatdesk handles a
     // situation. Kept out of reports, the AI allowance and the test drive.
     test: boolean("test").notNull().default(false),
+    // In the trash (lib/trash.ts): hidden from every view, search and report,
+    // and deleted for good after TRASH_DAYS. deletedStatus is what restoring
+    // puts back; a trashed ticket is closed so nothing works on it meanwhile.
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    deletedStatus: ticketStatus("deleted_status"),
   },
   (t) => [
     uniqueIndex("tickets_org_number").on(t.orgId, t.number),

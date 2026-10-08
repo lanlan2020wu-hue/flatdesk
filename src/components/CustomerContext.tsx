@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { and, desc, eq, ne } from "drizzle-orm";
+import { and, desc, eq, isNull, ne } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { timeAgo } from "@/lib/format";
 import { articlesForTicket } from "@/lib/help";
@@ -18,7 +18,7 @@ export async function OtherTickets({ orgId, customerId, ticketId }: { orgId: str
   const rows = await db
     .select({ number: tickets.number, subject: tickets.subject, status: tickets.status, createdAt: tickets.createdAt })
     .from(tickets)
-    .where(and(eq(tickets.orgId, orgId), eq(tickets.customerId, customerId), ne(tickets.id, ticketId)))
+    .where(and(eq(tickets.orgId, orgId), eq(tickets.customerId, customerId), ne(tickets.id, ticketId), isNull(tickets.deletedAt)))
     .orderBy(desc(tickets.createdAt))
     .limit(5);
   if (rows.length === 0) return null;

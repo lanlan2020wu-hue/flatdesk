@@ -36,7 +36,7 @@ export async function insightTickets(orgId: string, days: number, limit = INSIGH
       handedOff: sql<boolean>`exists (select 1 from ai_events e where e.ticket_id = ${tickets}.id and e.kind = 'handoff')`,
     })
     .from(tickets)
-    .where(and(eq(tickets.orgId, orgId), gte(tickets.createdAt, since), eq(tickets.test, false), sql`${tickets.mergedIntoId} is null`))
+    .where(and(eq(tickets.orgId, orgId), gte(tickets.createdAt, since), eq(tickets.test, false), sql`${tickets.mergedIntoId} is null`, sql`${tickets.deletedAt} is null`))
     .orderBy(desc(tickets.createdAt))
     .limit(limit);
   return rows.map((r) => ({

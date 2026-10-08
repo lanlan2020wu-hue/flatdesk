@@ -295,6 +295,13 @@
       "when": 1791461833252,
       "tag": "0041_send_domain",
       "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1791462405143,
+      "tag": "0042_trash_and_blocked_senders",
+      "breakpoints": true
     }
   ]
 }

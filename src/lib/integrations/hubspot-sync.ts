@@ -99,6 +99,7 @@ export async function syncHubSpot(now = new Date(), fetcher: typeof fetch = fetc
           eq(tickets.test, false),
           isNull(tickets.source),
           isNull(tickets.mergedIntoId),
+          isNull(tickets.deletedAt),
           gte(tickets.closedAt, since),
           or(isNull(tickets.crmLoggedAt), lt(tickets.crmLoggedAt, tickets.closedAt)),
         ),

@@ -156,7 +156,7 @@ export async function findTicket(orgId: string, rawNumber: string) {
 // Newest change first. updated_since makes polling cheap: Zapier and Make
 // remember the newest updated_at they've seen and ask for anything after it.
 export async function listTicketsJson(orgId: string, params: URLSearchParams) {
-  const where = [eq(tickets.orgId, orgId)];
+  const where = [eq(tickets.orgId, orgId), isNull(tickets.deletedAt)];
   const s = status(params.get("status") ?? undefined);
   if (s) where.push(eq(tickets.status, s));
   const since = params.get("updated_since");

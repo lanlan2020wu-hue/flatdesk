@@ -185,6 +185,7 @@ export async function learnCandidates(orgId: string, limit = LEARN.perRun): Prom
         gte(tickets.closedAt, since),
         eq(tickets.test, false),
         sql`${tickets.mergedIntoId} is null`,
+        sql`${tickets.deletedAt} is null`,
         sql`${tickets.source} is null`,
         sql`exists (select 1 from ${messages} where ${messages.ticketId} = ${tickets.id} and ${messages.authorType} = 'agent' and ${messages.internal} = false and ${messages.deliveryError} is null)`,
         sql`not exists (select 1 from ${messages} where ${messages.ticketId} = ${tickets.id} and ${messages.authorType} = 'system' and ${messages.body} like ${`${TAUGHT_PREFIX}%`})`,

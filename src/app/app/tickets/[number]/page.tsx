@@ -29,7 +29,8 @@ import { listGroups } from "@/lib/routing";
 import { guessLanguage, isForeign, languageLabel } from "@/lib/language";
 import AutoTranslate from "@/components/AutoTranslate";
 import { getTicket, listAgents, orgTags, parseTicketNumber, PRIORITIES } from "@/lib/tickets";
-import { mergeTicketAction, replyAction, saveCcAction, updateTicketAction } from "../../actions";
+import { TRASH_DAYS } from "@/lib/trash";
+import { mergeTicketAction, replyAction, saveCcAction, ticketTrashAction, updateTicketAction } from "../../actions";
 
 export async function generateMetadata({ params }: PageProps<"/app/tickets/[number]">) {
   return { title: `#${(await params).number}` };
@@ -123,6 +124,18 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
           </p>
         </header>
 
+        {ticket.deletedAt && (
+          <form action={ticketTrashAction} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-warn/40 bg-warn-soft px-4 py-3 text-sm">
+            <input type="hidden" name="ticketId" value={ticket.id} />
+            <input type="hidden" name="number" value={ticket.number} />
+            <p>
+              <strong className="font-medium">In the trash.</strong> Moved there {timeAgo(ticket.deletedAt)}; deleted for good on{" "}
+              {new Date(ticket.deletedAt.getTime() + TRASH_DAYS * 86_400_000).toLocaleDateString("en-US", { month: "long", day: "numeric" })} unless you restore it.
+            </p>
+            {!s.viewer && <button name="op" value="restore" className="btn btn-secondary btn-sm">Restore</button>}
+          </form>
+        )}
+
         {mergedInto && (
           <p role="status" className="rounded-lg border border-accent/30 bg-accent-soft px-4 py-3 text-sm">
             This ticket was merged into{" "}
@@ -215,7 +228,9 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
 
         {repeat && <RepeatPrompt number={ticket.number} prompt={repeat} />}
 
-        {s.viewer ? (
+        {ticket.deletedAt && !s.viewer ? (
+          <p className="card p-4 text-sm text-muted">Restore this ticket to reply to it.</p>
+        ) : s.viewer ? (
           <p className="card p-4 text-sm text-muted">You have a viewer seat, so you can read this ticket but not reply. An admin can make you an agent in Settings.</p>
         ) : (
         <Composer
@@ -343,6 +358,22 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
               {mergeError && <p role="alert" className="text-xs text-warn">{mergeError}</p>}
             </form>
           </details>
+        )}
+
+        {!ticket.deletedAt && (
+          <form action={ticketTrashAction} className="grid gap-1.5">
+            <input type="hidden" name="ticketId" value={ticket.id} />
+            <input type="hidden" name="number" value={ticket.number} />
+            <div className="flex flex-wrap gap-2">
+              <button name="op" value="trash" className="btn btn-secondary btn-sm">Delete</button>
+              {ticket.channel === "email" && !ticket.test && (
+                <button name="op" value="block" className="btn btn-secondary btn-sm" title={`Their future email goes straight to the trash. Undo in Settings, Blocked senders.`}>
+                  Delete and block sender
+                </button>
+              )}
+            </div>
+            <p className="text-xs text-muted">Deleted tickets stay in the trash for {TRASH_DAYS} days.</p>
+          </form>
         )}
         </fieldset>
 
