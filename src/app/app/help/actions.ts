@@ -37,13 +37,14 @@ export async function saveArticleAction(form: FormData) {
   const body = String(form.get("body") ?? "").replace(/\r\n?/g, "\n").trim();
   const section = str(form, "section").replace(/\s+/g, " ").slice(0, MAX_SECTION) || null;
   const intent = str(form, "intent"); // "publish", "draft" or "save" (keep as is)
+  const internal = str(form, "internal") === "1";
   if (!title || !body) throw new Error("An article needs a title and some text.");
   if (body.length > MAX_BODY) throw new Error(`Articles can be up to ${MAX_BODY.toLocaleString("en-US")} characters.`);
 
   let articleId = id;
   if (id) {
     if (!isId(id)) return;
-    const patch: Partial<typeof articles.$inferInsert> = { title, body, section, updatedAt: new Date() };
+    const patch: Partial<typeof articles.$inferInsert> = { title, body, section, internal, updatedAt: new Date() };
     if (intent === "publish") patch.published = true;
     if (intent === "draft") patch.published = false;
     await db.update(articles).set(patch).where(and(eq(articles.orgId, s.orgId), eq(articles.id, id)));
@@ -54,7 +55,7 @@ export async function saveArticleAction(form: FormData) {
         const slug = await uniqueArticleSlug(s.orgId, title);
         const [row] = await db
           .insert(articles)
-          .values({ orgId: s.orgId, title, body, section, slug, published: intent === "publish" })
+          .values({ orgId: s.orgId, title, body, section, internal, slug, published: intent === "publish" })
           .returning({ id: articles.id });
         articleId = row.id;
         break;

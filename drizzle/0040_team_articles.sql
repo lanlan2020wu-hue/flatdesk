@@ -1,0 +1,1 @@
+ALTER TABLE "articles" ADD COLUMN "internal" boolean DEFAULT false NOT NULL;

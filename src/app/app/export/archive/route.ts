@@ -53,7 +53,7 @@ async function* archiveParts(orgId: string): AsyncGenerator<Buffer[]> {
   const zip = new ZipWriter();
   for (const type of TYPES) yield zip.file(`${type}.json`, asJson(await build(orgId, type)));
   const help = await db.select().from(articles).where(eq(articles.orgId, orgId)).orderBy(asc(articles.title));
-  yield zip.file("help-articles.json", JSON.stringify(help.map((a) => ({ id: a.id, slug: a.slug, title: a.title, body: a.body, published: a.published, createdAt: a.createdAt, updatedAt: a.updatedAt })), null, 2));
+  yield zip.file("help-articles.json", JSON.stringify(help.map((a) => ({ id: a.id, slug: a.slug, title: a.title, body: a.body, published: a.published, teamOnly: a.internal, section: a.section, createdAt: a.createdAt, updatedAt: a.updatedAt })), null, 2));
   yield zip.file("audit-log.json", JSON.stringify((await auditLog(orgId, undefined, 100_000)).map((e) => ({ at: e.createdAt, actor: e.actorName, actorId: e.actorId, action: e.action, detail: e.detail })), null, 2));
 
   // Attachments by id, a batch at a time, with a manifest tying each file to its ticket and message.

@@ -7,7 +7,7 @@ import AutoSubmitSelect from "@/components/AutoSubmitSelect";
 import Avatar from "@/components/Avatar";
 import Composer from "@/components/Composer";
 import CopilotSummary from "@/components/CopilotSummary";
-import { HubSpotPanel, JiraPanel, OtherTickets, ShopifyOrders, StripeCustomer } from "@/components/CustomerContext";
+import { HubSpotPanel, JiraPanel, OtherTickets, RelatedArticles, ShopifyOrders, StripeCustomer } from "@/components/CustomerContext";
 import SlaBadge from "@/components/SlaBadge";
 import TagInput from "@/components/TagInput";
 import TeachAi from "@/components/TeachAi";
@@ -363,6 +363,9 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
           </details>
         )}
 
+        <Suspense fallback={null}>
+          <RelatedArticles orgId={s.orgId} text={`${ticket.subject} ${thread.filter((m) => m.authorType === "customer").at(-1)?.body.slice(0, 2000) ?? ""}`} />
+        </Suspense>
         <Suspense fallback={null}>
           <JiraPanel orgId={s.orgId} ticketId={ticket.id} subject={ticket.subject} canEdit={!s.viewer} />
         </Suspense>

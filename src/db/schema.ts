@@ -421,6 +421,9 @@ export const articles = pgTable(
     title: text("title").notNull(),
     body: text("body").notNull(), // plain text with a little markdown, see renderArticle()
     published: boolean("published").notNull().default(false),
+    // Team only: never on the help center or used by the AI that answers
+    // customers; agents read it in Flatdesk and AI drafts for agents use it.
+    internal: boolean("internal").notNull().default(false),
     // Groups articles on the help center ("Billing", "Getting started"). Null: shown under "More articles".
     section: text("section"),
     // Set for articles imported from another help desk, so a re-import updates instead of duplicating.

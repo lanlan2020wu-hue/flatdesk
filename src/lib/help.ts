@@ -178,17 +178,20 @@ export async function uniqueArticleSlug(orgId: string, title: string, exceptId?:
   for (let n = 2; ; n++) if (!taken.has(`${base}-${n}`)) return `${base}-${n}`;
 }
 
+// What customers can see: published and not team only.
+const isPublic = and(eq(articles.published, true), eq(articles.internal, false));
+
 export function publishedArticles(orgId: string) {
   return db
     .select()
     .from(articles)
-    .where(and(eq(articles.orgId, orgId), eq(articles.published, true)))
+    .where(and(eq(articles.orgId, orgId), isPublic))
     .orderBy(articles.title);
 }
 
 export async function publishedArticle(orgId: string, slug: string) {
   if (hasNul(slug)) return undefined;
-  return db.query.articles.findFirst({ where: and(eq(articles.orgId, orgId), eq(articles.slug, slug), eq(articles.published, true)) });
+  return db.query.articles.findFirst({ where: and(eq(articles.orgId, orgId), eq(articles.slug, slug), isPublic) });
 }
 
 // Published articles matching a customer's search, best first. Full-text search
@@ -203,7 +206,7 @@ export async function searchArticles(orgId: string, query: string, limit = 20) {
   return db
     .select()
     .from(articles)
-    .where(and(eq(articles.orgId, orgId), eq(articles.published, true), sql`(${doc} @@ ${tsq} or ${articles.title} ilike ${like} or ${articles.body} ilike ${like})`))
+    .where(and(eq(articles.orgId, orgId), isPublic, sql`(${doc} @@ ${tsq} or ${articles.title} ilike ${like} or ${articles.body} ilike ${like})`))
     .orderBy(
       desc(sql`(${articles.title} ilike ${like})`),
       desc(sql`ts_rank(setweight(to_tsvector('english', ${articles.title}), 'A') || setweight(to_tsvector('english', ${articles.body}), 'B'), ${tsq})`),
@@ -246,7 +249,7 @@ export async function searchTranslations(orgId: string, language: string, query:
       and(
         eq(articleTranslations.orgId, orgId),
         eq(articleTranslations.language, language),
-        eq(articles.published, true),
+        isPublic,
         sql`(${articleTranslations.title} ilike ${like} or ${articleTranslations.body} ilike ${like} or to_tsvector('simple', ${articleTranslations.title} || ' ' || ${articleTranslations.body}) @@ websearch_to_tsquery('simple', ${q}))`,
       ),
     )
@@ -259,20 +262,38 @@ export async function searchTranslations(orgId: string, language: string, query:
 export const isStale = (t: { sourceUpdatedAt: Date }, article: { updatedAt: Date }) => article.updatedAt.getTime() > t.sourceUpdatedAt.getTime();
 
 // Published articles as the AI sees them: the text plus the public link, so a
-// reply can point the customer at the article.
-export async function articleKnowledge(orgId: string): Promise<{ name: string; body: string }[]> {
+// reply can point the customer at the article. Team-only articles are added
+// only for drafts an agent reads before sending (`team`), never for the AI
+// that answers customers on its own.
+export async function articleKnowledge(orgId: string, opts: { team?: boolean } = {}): Promise<{ name: string; body: string }[]> {
   const org = await db.query.orgs.findFirst({ where: eq(orgs.id, orgId), columns: { helpSlug: true, helpDomain: true, helpDomainVerifiedAt: true } });
   const rows = await db
-    .select({ title: articles.title, slug: articles.slug, body: articles.body })
+    .select({ title: articles.title, slug: articles.slug, body: articles.body, internal: articles.internal })
     .from(articles)
-    .where(and(eq(articles.orgId, orgId), eq(articles.published, true)))
-    .orderBy(desc(articles.updatedAt))
+    .where(and(eq(articles.orgId, orgId), opts.team ? eq(articles.published, true) : isPublic))
+    .orderBy(articles.internal, desc(articles.updatedAt))
     .limit(100);
   return rows.map((a) => {
     const text = plainText(a.body);
     const body = text.length > AI_BODY_CHARS ? `${text.slice(0, AI_BODY_CHARS)}…` : text;
+    if (a.internal) return { name: `${a.title} (team only: use it to answer, but don't quote it or link to it)`, body };
     return { name: a.title, body: org?.helpSlug ? `${body}\n\nHelp center article: ${articleUrl(org.helpSlug, a.slug, verifiedDomain(org))}` : body };
   });
+}
+
+// Published articles, team-only ones included, that look related to a ticket:
+// any of its longer words, best match first. For the ticket's side rail.
+export async function articlesForTicket(orgId: string, text: string, limit = 4) {
+  const words = [...new Set(text.toLowerCase().match(/[\p{L}\p{N}]{4,}/gu) ?? [])].slice(0, 12);
+  if (!words.length) return [];
+  const tsq = sql`to_tsquery('english', ${words.join(" | ")})`;
+  const doc = sql`setweight(to_tsvector('english', ${articles.title}), 'A') || setweight(to_tsvector('english', ${articles.body}), 'B')`;
+  return db
+    .select({ id: articles.id, title: articles.title, internal: articles.internal })
+    .from(articles)
+    .where(and(eq(articles.orgId, orgId), eq(articles.published, true), sql`${doc} @@ ${tsq}`))
+    .orderBy(desc(sql`ts_rank(${doc}, ${tsq})`), articles.title)
+    .limit(limit);
 }
 
 // ---- Imported articles ------------------------------------------------------
