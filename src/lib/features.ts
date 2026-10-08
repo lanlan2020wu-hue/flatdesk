@@ -71,7 +71,7 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
     title: "Ticketing",
     features: [
       { id: "inbox", title: "Shared inbox", body: "Email and chat in one queue, with views for mine, my groups, unassigned, open, pending and closed.", icon: I.inbox },
-      { id: "email", title: "Email in and out", body: "Forward your support address. Replies thread back onto the same ticket.", icon: I.mail },
+      { id: "email", title: "Email in and out", body: "Forward your support address. Replies go out from it once you add a few DNS records, and thread back onto the same ticket.", icon: I.mail, isNew: true },
       { id: "chat", title: "Website chat widget", body: "One script tag adds a chat bubble to your site. Chats become tickets. Inside your app, signed-in users skip the form and the ticket shows who they are, verified.", icon: I.chat },
       { id: "search", title: "Ticket search", body: "Search every ticket by words in any message or note, the customer's name or email, a tag, or the ticket number.", icon: I.inbox, isNew: true },
       { id: "groups", title: "Groups and sharing in turn", body: "Put agents in groups like Billing or Tier 2 and send tickets there by hand, in bulk or with a trigger. Tickets can go to people in turn, skipping anyone marked away. The AI's answered tickets never land in anyone's queue.", icon: I.users, isNew: true },

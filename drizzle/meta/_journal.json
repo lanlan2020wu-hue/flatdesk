@@ -288,6 +288,13 @@
       "when": 1791461663979,
       "tag": "0040_team_articles",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1791461833252,
+      "tag": "0041_send_domain",
+      "breakpoints": true
     }
   ]
 }

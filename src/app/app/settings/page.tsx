@@ -6,7 +6,9 @@ import { db, schema } from "@/db";
 import { requireSession } from "@/lib/auth";
 import { aiConfigured, aiUsage } from "@/lib/ai";
 import { access, billingConfigured, isActive, refreshSubscription, seatCount, trialEndsAt } from "@/lib/billing";
-import { emailConfig, inboundAddress } from "@/lib/email";
+import DnsTable from "@/components/DnsTable";
+import { emailConfig, inboundAddress, senderAddress } from "@/lib/email";
+import { checkSendDomain, sendDomainsConfigured } from "@/lib/send-domain";
 import { PLAN, annualSavingsPct, usd } from "@/lib/pricing";
 import { webhookKind, webhookLabel } from "@/lib/alerts";
 import { DEFAULT_HOURS, RESOLVE_CHOICES, TARGET_CHOICES } from "@/lib/sla";
@@ -18,6 +20,8 @@ import {
   openBillingPortalAction,
   saveAiSettingsAction,
   saveAlertsAction,
+  saveSendAddressAction,
+  checkSendAddressAction,
   saveSecurityAction,
   saveLanguageAction,
   saveSignatureAction,
@@ -43,7 +47,10 @@ const STATUS_TEXT: Record<string, string> = {
 
 export default async function SettingsPage({ searchParams }: PageProps<"/app/settings">) {
   const s = await requireSession();
-  const { billing, alerts: alertsNotice, service: serviceNotice, security: securityNotice } = await searchParams;
+  const { billing, alerts: alertsNotice, service: serviceNotice, security: securityNotice, send: sendNotice } = await searchParams;
+  // A team's own sending address waiting on DNS: look again on each visit, so the page is current.
+  const pendingSend = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId), columns: { sendDomainId: true, sendDomainVerifiedAt: true } });
+  if (pendingSend?.sendDomainId && !pendingSend.sendDomainVerifiedAt && !sendNotice) await checkSendDomain(s.orgId);
   let org = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) });
   if (org?.stripeCustomerId && billingConfigured()) {
     org = await refreshSubscription(s.orgId).catch(() => org);
@@ -109,8 +116,11 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
             </p>
             <p className="num w-max max-w-full select-all break-all rounded-lg border border-dashed border-accent/40 bg-accent-soft px-3 py-2 text-sm">{address}</p>
             <p className="text-sm text-muted">
-              Replies to customers are sent from {emailConfig.from} under your team&apos;s name, {org?.name}.
+              Replies to customers are sent from {org ? senderAddress(org) : emailConfig.from} under your team&apos;s name, {org?.name}.
             </p>
+            {org && (sendDomainsConfigured() || org.sendAddress) && (
+              <SendingAddress org={org} isAdmin={isAdmin} notice={typeof sendNotice === "string" ? sendNotice : null} />
+            )}
           </>
         ) : (
           <p className="text-muted">Email isn&apos;t connected on this server yet.</p>
@@ -625,6 +635,62 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
         </ul>
         <p className="text-sm text-muted">Admins always have a paid seat. People you invite show up here after they first sign in.</p>
       </section>
+    </div>
+  );
+}
+
+const SEND_NOTICES: Record<string, string> = {
+  saved: "Saved. Add the records below and replies switch over once they're found.",
+  removed: "Removed. Replies go out from the shared address again.",
+  verified: "It works. Replies now go out from your address.",
+  pending: "Not found yet. DNS changes can take up to an hour to show.",
+  unchanged: "",
+};
+
+// Replies from the team's own address (lib/send-domain.ts).
+function SendingAddress({ org, isAdmin, notice }: { org: typeof schema.orgs.$inferSelect; isAdmin: boolean; notice: string | null }) {
+  const live = Boolean(org.sendAddress && org.sendDomainVerifiedAt);
+  const message = notice === null ? null : (SEND_NOTICES[notice] ?? notice);
+  const failed = notice !== null && !(notice in SEND_NOTICES);
+  return (
+    <div id="sending" className="grid gap-3 rounded-lg border border-line px-4 py-4 text-sm">
+      <div className="grid gap-1">
+        <h3 className="font-medium">Send from your own address</h3>
+        <p className="text-muted">
+          Customers see replies from your address, like support@yourcompany.com, instead of {emailConfig.from}. Their answers still come back to Flatdesk.
+        </p>
+      </div>
+      <form action={saveSendAddressAction} className="flex flex-wrap gap-2">
+        <label htmlFor="sendAddress" className="sr-only">Your support address</label>
+        <input id="sendAddress" name="sendAddress" type="email" defaultValue={org.sendAddress ?? ""} placeholder="support@yourcompany.com" disabled={!isAdmin} maxLength={320} className="field min-w-0 flex-1" />
+        {isAdmin && <button className="btn btn-secondary">{org.sendAddress ? "Change" : "Use it"}</button>}
+      </form>
+      {!isAdmin && <p className="text-muted">Only admins can change it.</p>}
+      {message && <p role={failed ? "alert" : undefined} className={failed ? "text-warn" : "text-accent"}>{message}</p>}
+      {org.sendAddress && live && <p>Replies go out from <span className="font-medium">{org.sendAddress}</span>.</p>}
+      {org.sendAddress && !live && org.sendDomain && (
+        <div className="grid gap-3">
+          <p>
+            {(org.sendDomainRecords ?? []).some((r) => r.status === "verified") ? "Some records are in place. " : ""}
+            Add these records where you manage {org.sendDomain}&apos;s DNS. They let Flatdesk sign mail as {org.sendDomain} and don&apos;t change where your own email goes.
+          </p>
+          <DnsTable rows={org.sendDomainRecords ?? []} />
+          <p className="text-muted">
+            Names are shown the way most providers want them, without {org.sendDomain} at the end. Until all of them are found, replies keep going out from {emailConfig.from}.
+          </p>
+          {isAdmin && (
+            <form action={checkSendAddressAction}>
+              <button className="btn btn-secondary w-max">Check now</button>
+            </form>
+          )}
+        </div>
+      )}
+      {org.sendAddress && isAdmin && (
+        <form action={saveSendAddressAction}>
+          <input type="hidden" name="sendAddress" value="" />
+          <button className="link w-max text-muted">Stop using {org.sendAddress}</button>
+        </form>
+      )}
     </div>
   );
 }

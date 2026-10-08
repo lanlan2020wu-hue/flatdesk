@@ -5,6 +5,7 @@ import { requireOpenPage } from "@/lib/auth";
 import { domainsConfigured, domainStatus, dnsRecord } from "@/lib/domains";
 import { ensureHelpSlug, excerpt, HELP_SLUG_RULE, helpUrl, MAX_HELP_LANGUAGES, verifiedDomain } from "@/lib/help";
 import { LANGUAGES, languageLabel } from "@/lib/language";
+import DnsTable from "@/components/DnsTable";
 import { SITE } from "@/lib/site";
 import { checkHelpDomainAction, saveHelpDomainAction, saveHelpLanguagesAction, saveHelpSlugAction } from "./actions";
 
@@ -192,28 +193,5 @@ export default async function HelpCenterAdmin({ searchParams }: PageProps<"/app/
         </form>
       </section>
     </div>
-  );
-}
-
-function DnsTable({ rows }: { rows: { type: string; name: string; value: string }[] }) {
-  return (
-    <table className="w-full text-left">
-      <thead className="text-muted">
-        <tr>
-          <th className="py-1 pr-4 font-normal">Type</th>
-          <th className="py-1 pr-4 font-normal">Name</th>
-          <th className="py-1 font-normal">Value</th>
-        </tr>
-      </thead>
-      <tbody className="font-mono text-xs">
-        {rows.map((r) => (
-          <tr key={`${r.type}${r.name}${r.value}`}>
-            <td className="py-1 pr-4">{r.type}</td>
-            <td className="break-all py-1 pr-4">{r.name}</td>
-            <td className="break-all py-1">{r.value}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
   );
 }
