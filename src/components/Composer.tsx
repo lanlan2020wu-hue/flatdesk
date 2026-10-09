@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { flushSync, useFormStatus } from "react-dom";
 import { copilotDraftAction, copilotRewriteAction, copilotTranslateAction } from "@/app/app/actions";
 import { CopilotMark } from "@/components/CopilotSummary";
@@ -14,6 +14,45 @@ type Macro = { id: string; name: string; body: string; addTags: string[]; setSta
 
 const NAME_PLACEHOLDER = /\[(customer(?:'s)? (?:first )?name|first name|name)\]/gi;
 const STATUS_WORD: Record<string, string> = { open: "open", pending: "pending", closed: "closed" };
+
+// Unsent replies and notes are kept in this browser as they're typed, so a
+// closed tab, a refresh or a new message landing on the ticket doesn't lose them.
+const DRAFT_PREFIX = "flatdesk:draft:";
+const DRAFT_DAYS = 14;
+type Draft = { body: string; internal: boolean; at: number };
+
+function readDraft(key: string): Draft | null {
+  try {
+    const d = JSON.parse(localStorage.getItem(DRAFT_PREFIX + key) ?? "null") as Draft | null;
+    return d && typeof d.body === "string" && d.body.trim() ? d : null;
+  } catch {
+    return null;
+  }
+}
+
+function writeDraft(key: string, d: Draft | null) {
+  try {
+    if (d && d.body.trim()) localStorage.setItem(DRAFT_PREFIX + key, JSON.stringify(d));
+    else localStorage.removeItem(DRAFT_PREFIX + key);
+  } catch {
+    // storage full or blocked; the reply box still works
+  }
+}
+
+// Drafts nobody came back to.
+function dropOldDrafts() {
+  try {
+    const cutoff = Date.now() - DRAFT_DAYS * 86_400_000;
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const k = localStorage.key(i);
+      if (!k?.startsWith(DRAFT_PREFIX)) continue;
+      const d = JSON.parse(localStorage.getItem(k) ?? "null") as Draft | null;
+      if (!d || !(d.at > cutoff)) localStorage.removeItem(k);
+    }
+  } catch {
+    // nothing to tidy
+  }
+}
 
 function SendButton({ internal }: { internal: boolean }) {
   const { pending } = useFormStatus();
@@ -35,6 +74,7 @@ export default function Composer({
   customerName = null,
   agents = [],
   customerLanguage = null,
+  draftKey = null,
 }: {
   action: (f: FormData) => Promise<void>;
   ticketId: string;
@@ -48,6 +88,8 @@ export default function Composer({
   agents?: { userId: string; name: string }[];
   // The customer writes in another language than the team: replies can be translated into it.
   customerLanguage?: { code: string; label: string } | null;
+  // Where this person's unsent draft for this ticket is kept, e.g. "<userId>:<ticketId>".
+  draftKey?: string | null;
 }) {
   const [internal, setInternal] = useState(false);
   const [body, setBody] = useState("");
@@ -70,6 +112,43 @@ export default function Composer({
   // What the inserted macro will do when the reply is sent.
   const [assignTo, setAssignTo] = useState("");
   const [actions, setActions] = useState<string[]>([]);
+  const textRef = useRef<HTMLTextAreaElement>(null);
+  const [restored, setRestored] = useState(false);
+  const draftReady = useRef(false);
+
+  // Bring back an unsent draft once the page is in the browser (after
+  // hydration, since the server can't see localStorage).
+  useEffect(() => {
+    if (!draftKey) return;
+    const t = setTimeout(() => {
+      dropOldDrafts();
+      const d = readDraft(draftKey);
+      if (d) {
+        setBody((b) => b || d.body);
+        setInternal(d.internal);
+        setRestored(true);
+      }
+      draftReady.current = true;
+    });
+    return () => clearTimeout(t);
+  }, [draftKey]);
+
+  // Saved on every change, so nothing is lost if the box goes away mid-sentence.
+  useEffect(() => {
+    if (!draftKey || !draftReady.current) return;
+    writeDraft(draftKey, { body, internal, at: Date.now() });
+  }, [draftKey, body, internal]);
+
+  // Keyboard shortcuts (components/Shortcuts.tsx): r to reply, n for a note.
+  useEffect(() => {
+    const onCompose = (e: Event) => {
+      setInternal((e as CustomEvent<string>).detail === "note");
+      textRef.current?.focus();
+    };
+    window.addEventListener("flatdesk:compose", onCompose);
+    return () => window.removeEventListener("flatdesk:compose", onCompose);
+  }, []);
+
   const suggested = !usedSuggestion && suggestedMacroId ? macros.find((m) => m.id === suggestedMacroId) : undefined;
 
   function draft() {
@@ -149,11 +228,18 @@ export default function Composer({
         for (const file of files) f.append("files", file);
         if (!f.get("body")?.toString().trim() && files.length === 0) return setError("Write a reply or attach a file first.");
         setError(null);
+        // The page may move on as soon as it's sent, so the draft goes first.
+        draftReady.current = false;
+        if (draftKey) writeDraft(draftKey, null);
         try {
           await action(f);
         } catch {
+          draftReady.current = true;
+          if (draftKey) writeDraft(draftKey, { body: f.get("body")?.toString() ?? "", internal, at: Date.now() });
           return setError("That didn't save. Check your connection and try again; your text is still here.");
         }
+        setRestored(false);
+        draftReady.current = true;
         setBody("");
         setOriginal(null);
         setNote(null);
@@ -225,7 +311,24 @@ export default function Composer({
         </p>
       )}
       <label htmlFor="composer" className="sr-only">{internal ? "Internal note" : "Reply"}</label>
+      {restored && body.trim() && (
+        <p className="flex flex-wrap items-center gap-2 px-2 text-sm text-muted" role="status">
+          Your unsent {internal ? "note" : "reply"} is back.
+          <button
+            type="button"
+            className="link text-muted"
+            onClick={() => {
+              setBody("");
+              setRestored(false);
+              textRef.current?.focus();
+            }}
+          >
+            Discard it
+          </button>
+        </p>
+      )}
       <textarea
+        ref={textRef}
         id="composer"
         name="body"
         rows={6}
@@ -234,6 +337,7 @@ export default function Composer({
         onChange={(e) => setBody(e.target.value)}
         onKeyDown={(e) => {
           if ((e.metaKey || e.ctrlKey) && e.key === "Enter") formRef.current?.requestSubmit();
+          if (e.key === "Escape") e.currentTarget.blur();
         }}
         placeholder={internal ? "Only your team sees this. Type @ and a name to email a teammate." : "Write your reply…"}
         className="w-full resize-y rounded-lg bg-transparent px-2 py-1 focus:outline-none"

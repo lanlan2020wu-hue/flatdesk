@@ -41,6 +41,7 @@ const MORE = [
   { title: "Who's on this ticket", body: "See when a teammate is already replying, so a customer never gets two answers.", href: "/features#all" },
   { title: "Custom ticket fields", body: "Plan, order number, refund issued: text, number, dropdown or checkbox, searchable, and required before closing if you want.", href: "/features#all" },
   { title: "Saved views", body: "Urgent billing, unassigned. My chats. Save the filters you use every day as inbox tabs, with a count on each.", href: "/features#all" },
+  { title: "Faster replying", body: "Drafts that survive a closed tab, keyboard shortcuts, and a desktop alert when a ticket needs you.", href: "/features#all" },
   { title: "Merge, CC, mentions", body: "Fold a duplicate into another ticket, keep everyone copied, and @name a teammate in a note.", href: "/features#all" },
   { title: "What customers ask about", body: "The AI groups recent tickets into topics, shows where it handed off and why, and suggests one fix for each.", href: "/features#all" },
   { title: "Groups and routing", body: "Billing, Tier 2, your call. Tickets go round in turn, skipping anyone away. Ones the AI answers never land in a queue.", href: "/features#all" },

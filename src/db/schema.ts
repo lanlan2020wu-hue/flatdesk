@@ -306,11 +306,17 @@ export const tickets = pgTable(
     // comes back to Open. A customer message wakes it sooner.
     snoozedUntil: timestamp("snoozed_until", { withTimezone: true }),
     snoozedBy: text("snoozed_by"),
+    // Browser alerts (lib/browser-alerts.ts): when the ticket became the team's
+    // after the AI had its turn, and when it was last given to someone (set by
+    // a database trigger, so every way of assigning counts).
+    needsTeamAt: timestamp("needs_team_at", { withTimezone: true }),
+    assignedAt: timestamp("assigned_at", { withTimezone: true }),
   },
   (t) => [
     uniqueIndex("tickets_org_number").on(t.orgId, t.number),
     index("tickets_org_status_updated").on(t.orgId, t.status, t.updatedAt),
     index("tickets_org_assignee").on(t.orgId, t.assigneeId),
+    index("tickets_org_needs_team").on(t.orgId, t.needsTeamAt),
     // The wake-up job looks for snoozes that are up.
     index("tickets_snoozed_until").on(t.snoozedUntil).where(sql`${t.snoozedUntil} is not null`),
     // Makes imports safe to re-run: a ticket already imported is skipped.

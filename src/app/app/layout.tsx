@@ -2,9 +2,11 @@ import Link from "next/link";
 import { eq } from "drizzle-orm";
 import AccountMenu from "@/components/AccountMenu";
 import AuthProvider from "@/components/AuthProvider";
+import BrowserAlerts from "@/components/BrowserAlerts";
 import Logo from "@/components/Logo";
 import MobileNav from "@/components/MobileNav";
 import Paywall from "@/components/Paywall";
+import Shortcuts from "@/components/Shortcuts";
 import { db, schema } from "@/db";
 import NavLink from "@/components/NavLink";
 import { requireSession, teamPlan } from "@/lib/auth";
@@ -135,6 +137,8 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
         {plan.state === "locked" ? <Paywall isAdmin={s.role === "admin"} /> : children}
       </div>
     </div>
+    <Shortcuts />
+    {!s.viewer && plan.state !== "locked" && <BrowserAlerts />}
     </AuthProvider>
   );
 }
