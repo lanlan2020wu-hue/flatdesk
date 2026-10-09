@@ -84,6 +84,14 @@ export default function PricingPage() {
         </div>
       </section>
 
+      <section className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-line bg-surface-2/70 px-6 py-5">
+        <p>
+          <span className="font-medium">Larger team?</span>{" "}
+          <span className="text-muted">We can set the AI up on your own tickets and docs for you. Same plan, same cap.</span>
+        </p>
+        <Link href="/enterprise" className="btn btn-secondary">Done-for-you AI setup</Link>
+      </section>
+
       <section id="why-less" className="scroll-mt-24">
         <WhyFlat headingLevel="h2" />
       </section>
