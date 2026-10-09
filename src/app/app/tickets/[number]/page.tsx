@@ -7,7 +7,7 @@ import AutoSubmitSelect from "@/components/AutoSubmitSelect";
 import Avatar from "@/components/Avatar";
 import Composer from "@/components/Composer";
 import CopilotSummary from "@/components/CopilotSummary";
-import { HubSpotPanel, JiraPanel, OtherTickets, RelatedArticles, ShopifyOrders, StripeCustomer } from "@/components/CustomerContext";
+import { CompanyPanel, HubSpotPanel, JiraPanel, OtherTickets, RelatedArticles, ShopifyOrders, StripeCustomer } from "@/components/CustomerContext";
 import LocalTime from "@/components/LocalTime";
 import SlaBadge from "@/components/SlaBadge";
 import SnoozeMenu from "@/components/SnoozeMenu";
@@ -512,6 +512,9 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
         </Suspense>
         <Suspense fallback={null}>
           <OtherTickets orgId={s.orgId} customerId={customer.id} ticketId={ticket.id} />
+        </Suspense>
+        <Suspense fallback={null}>
+          <CompanyPanel orgId={s.orgId} email={customer.email} customerId={customer.id} />
         </Suspense>
         <Suspense fallback={null}>
           <ShopifyOrders orgId={s.orgId} email={customer.email} unverified={ticket.channel === "chat"} />

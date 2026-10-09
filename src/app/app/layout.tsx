@@ -53,6 +53,10 @@ export default async function AppLayout({ children }: LayoutProps<"/app">) {
               <span>Inbox</span>
               <span className="nav-count">{counts.open}</span>
             </NavLink>
+            <NavLink href="/app/companies">
+              <Icon d="M4 21V5a1 1 0 0 1 1-1h9a1 1 0 0 1 1 1v16M15 9h4a1 1 0 0 1 1 1v11M3 21h18M8 8h3M8 12h3M8 16h3" />
+              Companies
+            </NavLink>
             <NavLink href="/app/overview">
               <Icon d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z" />
               Overview
