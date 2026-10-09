@@ -36,6 +36,7 @@ import { addRule } from "@/lib/rules";
 import { audit, changes } from "@/lib/security";
 import type { SlaPolicy } from "@/db/schema";
 import { RESOLVE_CHOICES, TARGET_CHOICES, validHours } from "@/lib/sla";
+import { cancelScheduled, parseSendAt, scheduleReply, ScheduleError, sendScheduled } from "@/lib/scheduled-replies";
 import { addReply, isPriority, normalizeTags, parseTicketNumber, updateTicket, type TicketPriority, type TicketStatus } from "@/lib/tickets";
 import { findGroup, shareTicketQuietly } from "@/lib/routing";
 import { isLanguage } from "@/lib/language";
@@ -105,6 +106,55 @@ export async function replyAction(form: FormData) {
   revalidatePath(`/app/tickets/${number}`);
   revalidatePath("/app/inbox");
   if (missing) redirect(`/app/tickets/${number}?fields=${encodeURIComponent(`Sent, and left pending. ${missingMessage(missing)}`)}#fields`);
+}
+
+// Send later (lib/scheduled-replies.ts): the composer's reply, kept until the
+// time the agent picked. Returns a message for the composer instead of throwing.
+export async function scheduleReplyAction(form: FormData): Promise<{ ok: true } | { ok: false; error: string }> {
+  const s = await requireOpenSession();
+  try {
+    if (form.get("internal") === "on") throw new ScheduleError("Notes are added right away. Send later is for replies.");
+    if ((await filesFromForm(form)).length) throw new ScheduleError("Send later doesn't carry attachments. Send now, or remove the files.");
+    const assignTo = str(form, "assignTo");
+    const assignee = assignTo ? await findAssignable(s.orgId, assignTo) : null;
+    await scheduleReply({
+      orgId: s.orgId,
+      ticketId: idOf(form, "ticketId"),
+      userId: s.userId,
+      body: str(form, "body"),
+      original: str(form, "original").slice(0, 8000) || null,
+      nextStatus: status(str(form, "status")) ?? "pending",
+      addTags: tagList(str(form, "addTags")),
+      assignTo: assignee?.userId ?? null,
+      macroIds: str(form, "macroIds").split(",").filter(isUuid).slice(0, 20),
+      sendAt: parseSendAt(str(form, "sendAt")),
+    });
+  } catch (err) {
+    if (err instanceof ScheduleError) return { ok: false, error: err.message };
+    throw err;
+  }
+  revalidatePath(`/app/tickets/${str(form, "number")}`);
+  revalidatePath("/app/inbox");
+  return { ok: true };
+}
+
+export async function sendScheduledNowAction(id: string, number: number): Promise<{ ok: true } | { ok: false; error: string }> {
+  const s = await requireOpenSession();
+  if (!isUuid(id)) return { ok: false, error: "That reply is gone." };
+  const r = await sendScheduled(s.orgId, id, { now: true });
+  revalidatePath(`/app/tickets/${number}`);
+  revalidatePath("/app/inbox");
+  return r.sent ? { ok: true } : { ok: false, error: r.reason };
+}
+
+// Cancelling hands the text back to the reply box.
+export async function cancelScheduledAction(id: string, number: number): Promise<{ body: string } | null> {
+  const s = await requireOpenSession();
+  if (!isUuid(id)) return null;
+  const row = await cancelScheduled(s.orgId, id);
+  revalidatePath(`/app/tickets/${number}`);
+  revalidatePath("/app/inbox");
+  return row ? { body: row.original ?? row.body } : null;
 }
 
 // The answer the AI was missing, written under its handoff note. It becomes a

@@ -1148,3 +1148,29 @@ export const savedViews = pgTable(
   },
   (t) => [index("saved_views_org").on(t.orgId)],
 );
+
+// Replies an agent scheduled to go out later (lib/scheduled-replies.ts). The
+// sla cron sends the ones that are due; one is held instead when the customer
+// wrote again in the meantime, so a stale answer never goes out on its own.
+export const scheduledReplyStatus = pgEnum("scheduled_reply_status", ["scheduled", "sent", "held", "cancelled"]);
+export const scheduledReplies = pgTable(
+  "scheduled_replies",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
+    ticketId: uuid("ticket_id").notNull().references(() => tickets.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(), // agents.user_id: who wrote it, and whose signature it gets
+    body: text("body").notNull(),
+    original: text("original"), // what they wrote, when the body was translated for the customer
+    status: scheduledReplyStatus("status").notNull().default("scheduled"),
+    nextStatus: ticketStatus("next_status").notNull().default("pending"),
+    addTags: text("add_tags").array().notNull().default(sql`'{}'::text[]`),
+    assignTo: text("assign_to"),
+    macroIds: uuid("macro_ids").array().notNull().default(sql`'{}'::uuid[]`),
+    sendAt: timestamp("send_at", { withTimezone: true }).notNull(),
+    heldReason: text("held_reason"),
+    messageId: uuid("message_id"), // the reply once it was sent
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("scheduled_replies_due").on(t.status, t.sendAt), index("scheduled_replies_ticket").on(t.ticketId)],
+);

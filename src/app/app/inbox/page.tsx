@@ -262,6 +262,7 @@ export default async function InboxPage({ searchParams }: PageProps<"/app/inbox"
                             </span>
                           </span>
                         )}
+                        {"replyScheduled" in t && t.replyScheduled === true && <span className="chip shrink-0 text-muted" title="A reply is scheduled to send later.">Reply scheduled</span>}
                         {t.resolvedByAi && <span className="chip shrink-0 border-accent/30 bg-accent-soft text-accent" title="The AI replied to this customer on its own.">AI answered</span>}
                         {t.tags.map((tag) => <span key={tag} className="chip hidden shrink-0 sm:inline-flex">{tag}</span>)}
                       </p>

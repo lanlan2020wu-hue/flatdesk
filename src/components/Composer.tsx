@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { flushSync, useFormStatus } from "react-dom";
-import { copilotDraftAction, copilotRewriteAction, copilotTranslateAction } from "@/app/app/actions";
+import { useRouter } from "next/navigation";
+import { copilotDraftAction, copilotRewriteAction, copilotTranslateAction, scheduleReplyAction } from "@/app/app/actions";
 import { CopilotMark } from "@/components/CopilotSummary";
 import { REWRITE_LABEL, type RewriteStyle } from "@/lib/copilot-config";
 
@@ -30,9 +31,9 @@ function readDraft(key: string): Draft | null {
   }
 }
 
-function writeDraft(key: string, d: Draft | null) {
+function writeDraft(key: string, d: Omit<Draft, "at"> | null) {
   try {
-    if (d && d.body.trim()) localStorage.setItem(DRAFT_PREFIX + key, JSON.stringify(d));
+    if (d && d.body.trim()) localStorage.setItem(DRAFT_PREFIX + key, JSON.stringify({ ...d, at: Date.now() }));
     else localStorage.removeItem(DRAFT_PREFIX + key);
   } catch {
     // storage full or blocked; the reply box still works
@@ -54,6 +55,9 @@ function dropOldDrafts() {
   }
 }
 
+// Replies wait this long with an Undo button before they go (notes don't).
+const UNDO_SECONDS = 5;
+
 function SendButton({ internal }: { internal: boolean }) {
   const { pending } = useFormStatus();
   return (
@@ -62,6 +66,26 @@ function SendButton({ internal }: { internal: boolean }) {
     </button>
   );
 }
+
+// Send later's quick picks, in the agent's own time zone.
+function laterChoices(now = new Date()) {
+  const at = (days: number, hour: number) => {
+    const d = new Date(now);
+    d.setDate(d.getDate() + days);
+    d.setHours(hour, 0, 0, 0);
+    return d;
+  };
+  const toMonday = ((8 - now.getDay()) % 7) || 7;
+  return [
+    { label: "In 1 hour", at: new Date(now.getTime() + 3_600_000) },
+    { label: "In 3 hours", at: new Date(now.getTime() + 3 * 3_600_000) },
+    { label: "Tomorrow at 9:00", at: at(1, 9) },
+    ...(toMonday > 1 ? [{ label: "Monday at 9:00", at: at(toMonday, 9) }] : []),
+  ];
+}
+
+// "2026-10-09T14:30" for a datetime-local input, in local time.
+const localInput = (d: Date) => new Date(d.getTime() - d.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
 
 export default function Composer({
   action,
@@ -114,6 +138,101 @@ export default function Composer({
   const [actions, setActions] = useState<string[]>([]);
   const textRef = useRef<HTMLTextAreaElement>(null);
   const [dragging, setDragging] = useState(false);
+  const router = useRouter();
+  // Undo send: seconds left, and how to stop or skip the wait.
+  const [countdown, setCountdown] = useState<number | null>(null);
+  const finishWait = useRef<((go: boolean) => void) | null>(null);
+  const [laterOpen, setLaterOpen] = useState(false);
+  const [pickAt, setPickAt] = useState("");
+  const [scheduling, setScheduling] = useState(false);
+
+  function waitForUndo(): Promise<boolean> {
+    return new Promise((resolve) => {
+      let left = UNDO_SECONDS;
+      setCountdown(left);
+      const timer = setInterval(() => {
+        left -= 1;
+        if (left <= 0) finish(true);
+        else setCountdown(left);
+      }, 1000);
+      const finish = (go: boolean) => {
+        clearInterval(timer);
+        finishWait.current = null;
+        setCountdown(null);
+        resolve(go);
+      };
+      finishWait.current = finish;
+    });
+  }
+
+  // Esc during the wait is Undo.
+  useEffect(() => {
+    if (countdown === null) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") finishWait.current?.(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [countdown]);
+
+  // Back to an empty box after a reply went or was scheduled.
+  function resetComposer() {
+    setRestored(false);
+    draftReady.current = true;
+    setBody("");
+    setOriginal(null);
+    setNote(null);
+    setAddTags("");
+    setStatusChoice(null);
+    setFiles([]);
+    setMacroIds([]);
+    setAssignTo("");
+    setActions([]);
+  }
+
+  async function submit(f: FormData) {
+    f.delete("files");
+    for (const file of files) f.append("files", file);
+    if (!f.get("body")?.toString().trim() && files.length === 0) return setError("Write a reply or attach a file first.");
+    setError(null);
+    // A reply waits a moment so a slip can be taken back; notes go straight in.
+    if (!internal && !(await waitForUndo())) return;
+    // The page may move on as soon as it's sent, so the draft goes first.
+    draftReady.current = false;
+    if (draftKey) writeDraft(draftKey, null);
+    try {
+      await action(f);
+    } catch {
+      draftReady.current = true;
+      if (draftKey) writeDraft(draftKey, { body: f.get("body")?.toString() ?? "", internal });
+      return setError("That didn't save. Check your connection and try again; your text is still here.");
+    }
+    resetComposer();
+  }
+
+  async function sendLater(at: Date) {
+    const form = formRef.current;
+    if (!form) return;
+    if (!body.trim()) return setError("Write the reply first, then pick when to send it.");
+    if (files.length) return setError("Send later doesn't carry attachments. Send now, or remove the files.");
+    const f = new FormData(form);
+    f.set("sendAt", at.toISOString());
+    setScheduling(true);
+    setError(null);
+    try {
+      const r = await scheduleReplyAction(f);
+      if (!r.ok) return setError(r.error);
+      draftReady.current = false;
+      if (draftKey) writeDraft(draftKey, null);
+      setLaterOpen(false);
+      resetComposer();
+      router.refresh();
+    } catch {
+      setError("That didn't save. Check your connection and try again; your text is still here.");
+    } finally {
+      setScheduling(false);
+    }
+  }
 
   // From the Attach button, a pasted screenshot, or files dropped on the reply box.
   function addFiles(added: File[]) {
@@ -148,7 +267,7 @@ export default function Composer({
   // Saved on every change, so nothing is lost if the box goes away mid-sentence.
   useEffect(() => {
     if (!draftKey || !draftReady.current) return;
-    writeDraft(draftKey, { body, internal, at: Date.now() });
+    writeDraft(draftKey, { body, internal });
   }, [draftKey, body, internal]);
 
   // Keyboard shortcuts (components/Shortcuts.tsx): r to reply, n for a note.
@@ -157,8 +276,19 @@ export default function Composer({
       setInternal((e as CustomEvent<string>).detail === "note");
       textRef.current?.focus();
     };
+    // A cancelled scheduled reply (components/ScheduledReplies.tsx) comes back here to edit.
+    const onText = (e: Event) => {
+      const text = (e as CustomEvent<string>).detail;
+      setInternal(false);
+      setBody((b) => (b.trim() ? `${b}\n\n${text}` : text));
+      textRef.current?.focus();
+    };
     window.addEventListener("flatdesk:compose", onCompose);
-    return () => window.removeEventListener("flatdesk:compose", onCompose);
+    window.addEventListener("flatdesk:compose-text", onText);
+    return () => {
+      window.removeEventListener("flatdesk:compose", onCompose);
+      window.removeEventListener("flatdesk:compose-text", onText);
+    };
   }, []);
 
   const suggested = !usedSuggestion && suggestedMacroId ? macros.find((m) => m.id === suggestedMacroId) : undefined;
@@ -235,33 +365,7 @@ export default function Composer({
   return (
     <form
       ref={formRef}
-      action={async (f) => {
-        f.delete("files");
-        for (const file of files) f.append("files", file);
-        if (!f.get("body")?.toString().trim() && files.length === 0) return setError("Write a reply or attach a file first.");
-        setError(null);
-        // The page may move on as soon as it's sent, so the draft goes first.
-        draftReady.current = false;
-        if (draftKey) writeDraft(draftKey, null);
-        try {
-          await action(f);
-        } catch {
-          draftReady.current = true;
-          if (draftKey) writeDraft(draftKey, { body: f.get("body")?.toString() ?? "", internal, at: Date.now() });
-          return setError("That didn't save. Check your connection and try again; your text is still here.");
-        }
-        setRestored(false);
-        draftReady.current = true;
-        setBody("");
-        setOriginal(null);
-        setNote(null);
-        setAddTags("");
-        setStatusChoice(null);
-        setFiles([]);
-        setMacroIds([]);
-        setAssignTo("");
-        setActions([]);
-      }}
+      action={submit}
       onDragOver={(e) => {
         if (!e.dataTransfer.types.includes("Files")) return;
         e.preventDefault();
@@ -414,9 +518,41 @@ export default function Composer({
             <option value="pending">Pending</option>
             <option value="closed">Closed</option>
           </select>
-          <SendButton internal={internal} />
+          {countdown !== null ? (
+            <span className="flex items-center gap-2" role="status">
+              <span className="text-muted">Sending in {countdown}…</span>
+              <button type="button" onClick={() => finishWait.current?.(false)} className="btn btn-secondary btn-sm">Undo</button>
+              <button type="button" onClick={() => finishWait.current?.(true)} className="link px-1 text-muted">Send now</button>
+            </span>
+          ) : (
+            <>
+              {!internal && (
+                <button type="button" onClick={() => setLaterOpen((o) => !o)} aria-expanded={laterOpen} className="btn btn-secondary btn-sm" disabled={scheduling}>
+                  Send later
+                </button>
+              )}
+              <SendButton internal={internal} />
+            </>
+          )}
         </div>
       </div>
+      {laterOpen && !internal && countdown === null && (
+        <div className="flex flex-wrap items-end gap-2 border-t border-line pt-3 text-sm" role="group" aria-label="Send later">
+          {laterChoices().map((c) => (
+            <button key={c.label} type="button" disabled={scheduling} onClick={() => sendLater(c.at)} className="btn btn-secondary btn-sm">
+              {c.label}
+            </button>
+          ))}
+          <label className="grid gap-1">
+            <span className="label">Or pick a time</span>
+            <input type="datetime-local" value={pickAt} min={localInput(new Date())} onChange={(e) => setPickAt(e.target.value)} className="field field-sm w-auto" />
+          </label>
+          <button type="button" disabled={scheduling || !pickAt} onClick={() => sendLater(new Date(pickAt))} className="btn btn-primary btn-sm">
+            {scheduling ? "Scheduling…" : "Schedule"}
+          </button>
+          <span className="w-full text-muted">It goes out within a few minutes of that time, with your signature. If the customer writes again first, it waits for you instead.</span>
+        </div>
+      )}
     </form>
   );
 }
