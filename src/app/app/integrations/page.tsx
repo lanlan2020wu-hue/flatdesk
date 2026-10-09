@@ -220,7 +220,7 @@ export default async function IntegrationsPage({ searchParams }: PageProps<"/app
       <section id="slack" className="grid scroll-mt-6 gap-3 border-t border-line pt-6">
         <h2 className="text-lg font-semibold">Slack, Discord and Google Chat</h2>
         <p className="text-muted">
-          A post in your team&apos;s channel when a new ticket needs a person, or a customer writes back to an AI answer, with a link to the ticket.
+          A post in your team&apos;s channel when a new ticket needs a person, or a customer replies after the AI has answered, with a link to the ticket.
         </p>
         <p className="text-sm">
           {org?.alertWebhookUrl ? `On, posting to ${webhookLabel(org.alertWebhookUrl)}. ` : "Not set up. "}
