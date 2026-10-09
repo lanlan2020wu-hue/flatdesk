@@ -118,7 +118,7 @@ async function measure(q: Pick<typeof db, "select">, org: Org, month: string): P
   // A paying team's allowance follows the seats it pays for. Agent rows are
   // never deleted, so counting them would keep paying for people who left.
   const seats = trial ? Math.min(Number(agentCount), TRIAL_AGENT_CAP) : (org.billedSeats ?? Number(agentCount));
-  const included = Math.max(1, seats) * (trial ? PLAN.trialPerAgent : PLAN.includedPerAgent);
+  const included = Math.max(1, seats) * (trial ? PLAN.trialPerAgent : PLAN.includedPerAgent) + (trial && org.reviewedAt ? PLAN.trialReviewBonus : 0);
   // An answer is flagged as overage when it starts, but an earlier one that
   // stops counting (handed back to the team) brings the month back under the
   // allowance, so overage is never more than what the month is over by. This

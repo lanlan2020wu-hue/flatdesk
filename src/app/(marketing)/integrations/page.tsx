@@ -76,7 +76,7 @@ export default function IntegrationsPage() {
       <section className="grid max-w-3xl gap-3 border-t border-line pt-6">
         <h2 className="text-lg font-semibold">Not yet</h2>
         <p className="text-muted">
-          There&apos;s no app marketplace, and no replying to customers from inside Slack. If you need either today, a bigger suite fits better. Anything with a webhook or an API can reach Flatdesk through Zapier, Make or n8n.
+          There&apos;s no app marketplace. If you need one today, a bigger suite fits better. Anything with a webhook or an API can reach Flatdesk through Zapier, Make or n8n.
         </p>
         <p className="flex flex-wrap gap-4 text-sm">
           <Link href="/developers" className="link font-medium text-accent">API reference</Link>

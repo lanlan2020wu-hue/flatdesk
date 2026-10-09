@@ -1,6 +1,6 @@
 {
-  "id": "9ad2d8f0-0106-4e86-a0ad-f0b9376f9eff",
-  "prevId": "66cffedd-6c1c-4f34-8912-0222f43b86b9",
+  "id": "3831ba38-7aee-46cb-a78a-bc3b76a451f4",
+  "prevId": "9ad2d8f0-0106-4e86-a0ad-f0b9376f9eff",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -4544,6 +4544,13 @@
           "type": "jsonb",
           "primaryKey": false,
           "notNull": false
+        },
+        "after_hours_message": {
+          "name": "after_hours_message",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "''"
         },
         "sla_policies": {
           "name": "sla_policies",
