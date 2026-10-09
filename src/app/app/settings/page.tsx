@@ -464,7 +464,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
           </div>
           <p className="text-sm text-muted">
             {usage.trial
-              ? `${PLAN.trialPerAgent} per agent for the whole trial, shared by the team. Add a card to get the full ${PLAN.includedPerAgent} per agent each month; the first charge still waits until the trial ends.`
+              ? `${PLAN.trialPerAgent} per agent for the whole trial, shared by the team, plus ${PLAN.trialReviewBonus} for leaving a review on the overview page. Add a card to get the full ${PLAN.includedPerAgent} per agent each month; the first charge still waits until the trial ends.`
               : `${PLAN.includedPerAgent} per agent, shared by the team. Resets on the 1st.`}{" "}
             Admins get an email at 80% and 100%.
           </p>

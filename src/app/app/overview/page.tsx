@@ -8,6 +8,7 @@ import { macroUpdates } from "@/lib/macro-drift";
 import { macroSuggestions } from "@/lib/macro-suggestions";
 import { withAiDrafts } from "@/lib/macro-writer";
 import { monthReceipt } from "@/lib/receipts";
+import { trialReviewAction } from "@/app/app/actions";
 import { PLAN, seatPriceFor, usd, type Interval } from "@/lib/pricing";
 import { viewCounts } from "@/lib/tickets";
 
@@ -38,7 +39,8 @@ const Figure = ({ label, value, href, strong = false }: { label: string; value: 
 
 // The month at a glance, in the order Flatdesk is sold: what the flat rate
 // covers this month, then the AI macros waiting, then everything else.
-export default async function OverviewPage() {
+export default async function OverviewPage({ searchParams }: { searchParams: Promise<{ review?: string }> }) {
+  const { review } = await searchParams;
   const s = await requireOpenPage();
   const [org, ai, found, drifted, [{ aiMacros }], [{ seats }], counts] = await Promise.all([
     db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) }),
@@ -94,6 +96,36 @@ export default async function OverviewPage() {
           </p>
         </div>
       </section>
+
+      {plan.state === "trial" && s.role === "admin" && (org?.reviewedAt ? (
+        review === "thanks" && <p className="rounded-[8px] border border-line bg-surface px-4 py-3 text-sm">Thank you. {PLAN.trialReviewBonus} more AI answers were added to your trial.</p>
+      ) : (
+        <section id="review" className="grid gap-4 rounded-[8px] border border-line bg-surface p-5">
+          <div className="grid gap-1">
+            <h2 className="text-lg font-semibold">Tell us how the trial is going, get {PLAN.trialReviewBonus} more AI answers</h2>
+            <p className="max-w-2xl text-sm text-muted">Say what works and what doesn&apos;t, in a few sentences. Any rating earns the extra answers, so be honest. One review per team.</p>
+          </div>
+          {review === "invalid" && <p className="text-sm text-warn" role="alert">Pick a rating and write at least 40 characters.</p>}
+          <form action={trialReviewAction} className="grid max-w-2xl gap-3">
+            <label className="grid gap-1 text-sm font-medium">
+              Rating
+              <select name="rating" required defaultValue="" className="field w-40">
+                <option value="" disabled>Choose</option>
+                {[5, 4, 3, 2, 1].map((n) => <option key={n} value={n}>{n} of 5</option>)}
+              </select>
+            </label>
+            <label className="grid gap-1 text-sm font-medium">
+              Your review
+              <textarea name="review" required minLength={40} maxLength={1000} rows={4} className="field" />
+            </label>
+            <label className="flex items-start gap-2 text-sm text-muted">
+              <input type="checkbox" name="public" className="mt-1" />
+              Flatdesk may quote this review with my name and company. Leave it unchecked to keep it private.
+            </label>
+            <button className="btn btn-primary w-fit">Send review</button>
+          </form>
+        </section>
+      ))}
 
       <Section title="AI answers" href={aiOn ? "/app/receipts" : "/app/settings#ai"} cta={aiOn ? "See each answer" : "Turn on AI answers"}>
         <p className="-mt-2 max-w-2xl text-sm text-muted">
