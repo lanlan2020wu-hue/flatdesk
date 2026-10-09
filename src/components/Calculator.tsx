@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import {
   COMPETITORS,
@@ -14,38 +13,13 @@ import {
   seatPriceFor,
   usd,
 } from "@/lib/pricing";
+import type { CalculatorStart } from "@/lib/calculator-query";
 
-type Props = {
-  initialTool: string;
-  initialAgents: number;
-  initialResolutions: number;
-  initialInterval: Interval;
-};
+type Props = CalculatorStart;
 
 const clamp = (n: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, Number.isFinite(n) ? n : lo));
 
 const MAX_AGENTS = 500;
-
-export const CALCULATOR_DEFAULTS: Props = { initialTool: "fin-advanced", initialAgents: 10, initialResolutions: 1500, initialInterval: "year" };
-
-const num = (v: string | null, fallback: number) => {
-  const n = v === null ? NaN : Number(v);
-  return Number.isFinite(n) && n >= 0 ? n : fallback;
-};
-
-// Reads shared numbers from the query string on the client, so the page itself
-// can be prerendered. Render inside <Suspense>.
-export function CalculatorFromQuery() {
-  const sp = useSearchParams();
-  const d = CALCULATOR_DEFAULTS;
-  return (
-    <Calculator
-      initialTool={sp.get("tool") ?? d.initialTool} initialAgents={num(sp.get("agents"), d.initialAgents)}
-      initialResolutions={num(sp.get("resolutions"), d.initialResolutions)}
-      initialInterval={sp.get("billing") === "monthly" ? "month" : d.initialInterval}
-    />
-  );
-}
 
 export default function Calculator({ initialTool, initialAgents, initialResolutions, initialInterval }: Props) {
   const [toolId, setToolId] = useState(competitorById(initialTool).id);
