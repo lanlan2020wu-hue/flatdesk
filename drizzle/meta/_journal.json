@@ -414,6 +414,13 @@
       "when": 1791587281339,
       "tag": "0058_customer_notes_vip",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1791587614422,
+      "tag": "0059_ticket_followers",
+      "breakpoints": true
     }
   ]
 }

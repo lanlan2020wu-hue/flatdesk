@@ -23,6 +23,7 @@ import type { RewriteStyle } from "@/lib/copilot-config";
 import { deliverReply } from "@/lib/email";
 import { isUuid } from "@/lib/ids";
 import { recordMacroUses } from "@/lib/macro-drift";
+import { notifyFollowers, setFollowing } from "@/lib/followers";
 import { notifyMentions } from "@/lib/mentions";
 import { mergeTickets } from "@/lib/merge";
 import { parseCcList } from "@/lib/cc";
@@ -95,6 +96,11 @@ export async function replyAction(form: FormData) {
   });
   if (messageId && files.length) await saveAttachments(s.orgId, ticketId, messageId, files);
   if (messageId) await deliverReply(s.orgId, messageId);
+  // Replying follows the ticket; the people already following it hear about the reply or note.
+  if (messageId) {
+    await setFollowing(s.orgId, ticketId, s.userId, true);
+    await notifyFollowers(s.orgId, ticket, { kind: form.get("internal") === "on" ? "note" : "reply", actor: s.name, excerpt: body }, s.userId);
+  }
   // "@sam" in a note emails Sam a link to the ticket.
   if (messageId && form.get("internal") === "on") await notifyMentions(s.orgId, ticket, body, actor(s));
   // A person on the team answered, so the AI didn't finish this conversation
@@ -321,6 +327,13 @@ export async function saveCcAction(form: FormData) {
   if ("error" in cc) redirect(`/app/tickets/${number}?cc=${encodeURIComponent(cc.error)}`);
   await db.update(schema.tickets).set({ cc }).where(and(eq(schema.tickets.orgId, s.orgId), eq(schema.tickets.id, ticketId)));
   revalidatePath(`/app/tickets/${number}`);
+}
+
+// Follow or stop following a ticket (lib/followers.ts).
+export async function followTicketAction(form: FormData) {
+  const s = await requireOpenSession();
+  await setFollowing(s.orgId, idOf(form, "ticketId"), s.userId, form.get("on") === "1");
+  revalidatePath(`/app/tickets/${str(form, "number")}`);
 }
 
 // Your own reply signature.
