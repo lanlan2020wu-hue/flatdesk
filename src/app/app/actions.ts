@@ -443,9 +443,10 @@ export async function saveAiSettingsAction(form: FormData) {
     aiOverageEnabled: form.get("aiOverageEnabled") === "on",
     aiOverageMonthlyLimit: parseOverageLimit(str(form, "aiOverageMonthlyLimit")),
     aiAutoLearn: form.get("aiAutoLearn") === "on",
+    aiTriage: form.get("aiTriage") === "on",
   };
   await db.update(schema.orgs).set(next).where(eq(schema.orgs.id, s.orgId));
-  const detail = changes(before ?? {}, next, { aiEnabled: "AI answers", aiInstructions: "What the AI should know", aiOverageEnabled: "Overage", aiOverageMonthlyLimit: "Overage limit", aiAutoLearn: "Learn from solved tickets" });
+  const detail = changes(before ?? {}, next, { aiEnabled: "AI answers", aiInstructions: "What the AI should know", aiOverageEnabled: "Overage", aiOverageMonthlyLimit: "Overage limit", aiAutoLearn: "Learn from solved tickets", aiTriage: "Sort new tickets" });
   if (detail) await audit(s.orgId, actor(s), "settings.ai", detail);
   revalidatePath("/app/settings");
 }

@@ -1,5 +1,6 @@
 import { after } from "next/server";
 import { answerNewTicket } from "@/lib/ai";
+import { triageTicket } from "@/lib/triage";
 import { alertNewTicket } from "@/lib/alerts";
 import { isBot, orgByWidgetKey, readChatRequest, startConversation, validStart } from "@/lib/chat";
 import { hit, ipKey, LIMITS, tooMany } from "@/lib/rate-limit";
@@ -28,7 +29,7 @@ export async function POST(request: Request, ctx: RouteContext<"/api/chat/[key]"
 
   const { ticket, token } = await startConversation(org.id, v, body.files, org.chatSecret);
   after(async () => {
-    await answerNewTicket(org.id, ticket.id);
+    await Promise.all([triageTicket(org.id, ticket.id), answerNewTicket(org.id, ticket.id)]);
     await shareTicketQuietly(org.id, ticket.id);
     await alertNewTicket(org.id, ticket.id);
   });
