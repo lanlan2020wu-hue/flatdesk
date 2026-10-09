@@ -268,6 +268,7 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
           suggestedMacroId={suggestedMacro?.id ?? null}
           copilot={copilotOn}
           customerLanguage={foreignCustomer ? { code: foreignCustomer, label: languageLabel(foreignCustomer) } : null}
+          draftKey={`${s.userId}:${ticket.id}`}
         />
         )}
       </div>

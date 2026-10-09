@@ -242,7 +242,8 @@ export default async function InboxPage({ searchParams }: PageProps<"/app/inbox"
                   {/* Mail-client rows: who wrote, then the subject and the latest words. */}
                   <Link
                     href={`/app/tickets/${t.number}`}
-                    className={`group grid min-w-0 flex-1 grid-cols-[2.25rem_minmax(0,1fr)_auto] gap-x-3 gap-y-1.5 px-4 py-3.5 transition-colors hover:bg-surface-2/50 lg:items-center lg:gap-x-4 ${cols}`}
+                    data-ticket-row
+                    className={`group grid min-w-0 flex-1 grid-cols-[2.25rem_minmax(0,1fr)_auto] gap-x-3 gap-y-1.5 px-4 py-3.5 transition-colors hover:bg-surface-2/50 data-current:bg-surface-2 data-current:shadow-[inset_3px_0_0_var(--color-accent)] lg:items-center lg:gap-x-4 ${cols}`}
                   >
                     <Avatar name={who} className="row-span-2 size-9 self-start text-xs lg:row-span-1 lg:self-center" />
                     <div className="min-w-0">

@@ -21,6 +21,7 @@ import { TRASH_DAYS } from "@/lib/trash";
 import { listSources, WEB } from "@/lib/web-knowledge";
 import { FIELD_KINDS, FIELD_LIMITS, listFields, type TicketField } from "@/lib/ticket-fields";
 import { currentUser } from "@clerk/nextjs/server";
+import { BrowserAlertsToggle } from "@/components/BrowserAlerts";
 import { clerkEnabled } from "@/lib/auth-config";
 import {
   openBillingPortalAction,
@@ -98,6 +99,18 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
             <textarea name="signature" rows={3} maxLength={1000} defaultValue={team.find((a) => a.userId === s.userId)?.signature ?? ""} placeholder={"Sam\nAcme support"} className="field text-sm" aria-label="Your signature" />
             <button className="btn btn-secondary btn-sm w-max">Save signature</button>
           </form>
+        </section>
+      )}
+      {!s.viewer && (
+        <section id="browser-alerts" className="grid scroll-mt-6 gap-3 border-t border-line pt-6">
+          <h2 className="text-lg font-semibold">Browser alerts</h2>
+          <p className="text-muted">
+            A desktop notification when a new ticket needs a person (not ones the AI answered) or a ticket is assigned to you, while Flatdesk is open in a
+            tab you aren&apos;t looking at. New-ticket alerts cover unassigned tickets with no group or one of your groups. Each person turns them on in
+            their own browser.
+          </p>
+          <BrowserAlertsToggle />
+          <p className="text-sm text-muted">Press <kbd className="rounded border border-line bg-surface-2 px-1.5 py-0.5 font-mono text-xs">?</kbd> anywhere in Flatdesk to see the keyboard shortcuts.</p>
         </section>
       )}
       {org && (

@@ -6,6 +6,7 @@ import { isIP, type LookupFunction } from "node:net";
 import { and, desc, eq, notLike } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { unseal } from "@/lib/import/crypto";
+import { markNeedsTeam } from "@/lib/browser-alerts";
 import { alertBlocks, slackAppConfigured } from "@/lib/integrations/slack";
 import { SITE } from "@/lib/site";
 import { TRIGGER_NOTE_PREFIX } from "@/lib/triggers";
@@ -305,6 +306,7 @@ async function latestNote(ticketId: string) {
 // Called once the AI has had its turn on a new ticket.
 export async function alertNewTicket(orgId: string, ticketId: string) {
   try {
+    await markNeedsTeam(orgId, ticketId);
     const org = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, orgId) });
     if (!org?.alertWebhookUrl) return;
     const found = await ticketPayload(orgId, ticketId);
@@ -330,6 +332,7 @@ export async function alertNewTicket(orgId: string, ticketId: string) {
 // for a person, or rated the answer badly).
 export async function alertHandedBack(orgId: string, ticketId: string, reason: string | null) {
   try {
+    await markNeedsTeam(orgId, ticketId, true);
     const org = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, orgId) });
     if (!org?.alertWebhookUrl) return;
     const found = await ticketPayload(orgId, ticketId);
