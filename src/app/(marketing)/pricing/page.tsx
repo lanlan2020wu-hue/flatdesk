@@ -31,7 +31,7 @@ const INCLUDED = [
 export default function PricingPage() {
   return (
     <div className="mx-auto grid max-w-5xl gap-16 px-4 pt-14 sm:px-6 sm:pt-20">
-      <PhotoHero photo={pricingReview} alt="A support lead smiling at her laptop">
+      <PhotoHero photo={pricingReview} alt="A support lead smiling at her laptop" layout="left">
         <div className="enter grid max-w-2xl gap-3">
           <h1 className="font-display text-[2.6rem] sm:text-6xl">One plan. Every price is on this page.</h1>
           <p className="text-lg text-muted">No tiers, no add-ons and no sales call.</p>

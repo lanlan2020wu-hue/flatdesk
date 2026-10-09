@@ -28,7 +28,7 @@ export default function FreeToolsPage() {
           },
         ]}
       />
-      <PhotoHero photo={whiteboard} alt="A support lead planning on a whiteboard of sticky notes with her team">
+      <PhotoHero photo={whiteboard} alt="A support lead planning on a whiteboard of sticky notes with her team" layout="left">
         <header className="grid max-w-3xl gap-4">
           <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-[2.6rem] sm:text-6xl">Free tools for customer support teams</h1>
           <p style={{ "--d": 2 } as React.CSSProperties} className="enter text-lg text-muted">

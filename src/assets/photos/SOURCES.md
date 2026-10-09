@@ -13,6 +13,4 @@ Free stock photos, used under the Unsplash and Pexels licenses (commercial use a
 | `team-meeting.webp` | /compare | https://www.pexels.com/photo/3184291/ |
 | `desk-screens.webp` | /integrations | https://unsplash.com/photos/photo-1580894894513-541e068a3e2b |
 | `agent-phone.webp` | /faq | https://unsplash.com/photos/photo-1598257006458-087169a1f08d |
-| `laptop-notes.webp` | /calculator | https://www.pexels.com/photo/4065876/ |
 | `whiteboard.webp` | /free-tools | https://unsplash.com/photos/photo-1552664730-d307ca884978 |
-| `quiet-desk.webp` | /security | https://unsplash.com/photos/photo-1587560699334-cc4ff634909a |

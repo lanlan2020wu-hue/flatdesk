@@ -40,7 +40,7 @@ export default function FeaturesPage() {
   return (
     <div className="mx-auto grid max-w-6xl gap-20 px-4 pt-14 sm:px-6 sm:pt-20">
       <JsonLd data={[software(), breadcrumbs([{ name: "Product", path: "/features" }])]} />
-      <PhotoHero photo={agentMonitor} alt="A support agent with a headset answering a customer at his desk">
+      <PhotoHero photo={agentMonitor} alt="A support agent with a headset answering a customer at his desk" layout="banner">
         <div className="grid max-w-2xl gap-3">
           <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-[2.6rem] sm:text-6xl">A flat rate first. AI macros second. Everything else included.</h1>
           <p style={{ "--d": 2 } as React.CSSProperties} className="enter text-lg text-muted">

@@ -59,6 +59,7 @@ export default function SmallTeamsPage() {
         <Image
           src={agentsAtLaptops}
           alt="Four support agents with headsets answering customers at their laptops"
+          unoptimized
           placeholder="blur"
           priority
           sizes="(min-width: 1024px) 460px, 100vw"

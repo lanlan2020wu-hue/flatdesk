@@ -18,7 +18,7 @@ export default function ComparePage() {
   return (
     <div className="mx-auto grid max-w-6xl gap-16 px-4 pt-14 sm:px-6 sm:pt-20">
       <JsonLd data={[breadcrumbs([{ name: "Compare", path: "/compare" }])]} />
-      <PhotoHero photo={teamMeeting} alt="A small team shaking hands across a meeting table">
+      <PhotoHero photo={teamMeeting} alt="A small team shaking hands across a meeting table" layout="left">
         <div className="grid max-w-2xl gap-3">
           <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-[2.6rem] sm:text-6xl">How Flatdesk compares, including where it doesn&apos;t win.</h1>
           <p style={{ "--d": 2 } as React.CSSProperties} className="enter text-lg text-muted">

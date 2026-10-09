@@ -33,6 +33,7 @@ export default function AboutPage() {
         <Image
           src={smallTeam}
           alt="A small team talking over coffee at a shared table"
+          unoptimized
           placeholder="blur"
           priority
           sizes="(min-width: 672px) 624px, 100vw"
