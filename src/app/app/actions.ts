@@ -23,6 +23,7 @@ import type { RewriteStyle } from "@/lib/copilot-config";
 import { deliverReply } from "@/lib/email";
 import { isUuid } from "@/lib/ids";
 import { recordMacroUses } from "@/lib/macro-drift";
+import { cleanAfterHoursMessage } from "@/lib/after-hours";
 import { notifyFollowers, setFollowing } from "@/lib/followers";
 import { notifyMentions } from "@/lib/mentions";
 import { mergeTickets } from "@/lib/merge";
@@ -599,9 +600,10 @@ export async function saveServiceSettingsAction(form: FormData) {
     const resolveFor = resolve(str(form, `policyResolve${i}`));
     if (tag && TARGET_CHOICES.some((c) => c.minutes === minutes) && !slaPolicies.some((p) => p.tag === tag)) slaPolicies.push({ tag, minutes, ...(resolveFor ? { resolveMinutes: resolveFor } : {}) });
   }
-  const next = { csatEnabled: form.get("csatEnabled") === "on", firstResponseMinutes, nextReplyMinutes, resolveMinutes, pauseWhilePending, businessHours, escalateTo, slaPolicies };
+  const afterHoursMessage = cleanAfterHoursMessage(form.get("afterHoursMessage"));
+  const next = { csatEnabled: form.get("csatEnabled") === "on", afterHoursMessage, firstResponseMinutes, nextReplyMinutes, resolveMinutes, pauseWhilePending, businessHours, escalateTo, slaPolicies };
   await db.update(schema.orgs).set(next).where(eq(schema.orgs.id, s.orgId));
-  const detail = changes(before ?? {}, next, { csatEnabled: "Ratings", firstResponseMinutes: "First-reply target (minutes)", nextReplyMinutes: "Next-reply target (minutes)", pauseWhilePending: "Pause resolution clock while pending", resolveMinutes: "Resolution target (minutes)", businessHours: "Business hours", escalateTo: "Escalate to", slaPolicies: "Targets by tag" });
+  const detail = changes(before ?? {}, next, { csatEnabled: "Ratings", afterHoursMessage: "After-hours reply", firstResponseMinutes: "First-reply target (minutes)", nextReplyMinutes: "Next-reply target (minutes)", pauseWhilePending: "Pause resolution clock while pending", resolveMinutes: "Resolution target (minutes)", businessHours: "Business hours", escalateTo: "Escalate to", slaPolicies: "Targets by tag" });
   if (detail) await audit(s.orgId, actor(s), "settings.service", detail);
   revalidatePath("/app/settings");
   revalidatePath("/app/inbox");

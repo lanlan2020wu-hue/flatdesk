@@ -58,6 +58,13 @@ function localClock(d: Date, tz: string): { day: number; minute: number } {
   return { day: WEEKDAY[parts.weekday], minute: Number(parts.hour) * 60 + Number(parts.minute) + d.getUTCSeconds() / 60 };
 }
 
+// True when `d` falls inside the team's business hours (always, with none set).
+export function isOpenNow(hours: BusinessHours | null, d = new Date()): boolean {
+  if (!hours || !sensibleHours(hours)) return true;
+  const { day, minute } = localClock(d, hours.tz);
+  return hours.days.includes(day) && minute >= hours.start && minute < hours.end;
+}
+
 const MIN = 60_000;
 
 // When a first reply is due: `minutes` after `from`, skipping time outside

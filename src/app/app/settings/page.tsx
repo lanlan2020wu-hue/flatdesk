@@ -1,3 +1,4 @@
+import { AFTER_HOURS_MAX } from "@/lib/after-hours";
 import Link from "next/link";
 import { and, asc, eq, isNull } from "drizzle-orm";
 import { headers } from "next/headers";
@@ -753,6 +754,20 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
                   ))}
                 </fieldset>
               </div>
+              <label className="grid max-w-xl gap-1">
+                <span className="label">Reply outside business hours</span>
+                <textarea
+                  name="afterHoursMessage"
+                  rows={3}
+                  maxLength={AFTER_HOURS_MAX}
+                  defaultValue={org.afterHoursMessage}
+                  placeholder="Thanks for writing. We're offline until 9am Eastern and will reply first thing."
+                  className="field"
+                />
+                <span className="text-sm text-muted">
+                  Emailed once to a new email ticket that arrives when you&apos;re closed, if the AI didn&apos;t answer it. Needs business hours above. Leave empty to send nothing.
+                </span>
+              </label>
               <label className="flex items-start gap-2.5">
                 <input type="checkbox" name="csatEnabled" defaultChecked={org.csatEnabled} className="mt-1 size-4 accent-[var(--accent)]" />
                 <span>
