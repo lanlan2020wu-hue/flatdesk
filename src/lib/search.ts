@@ -55,6 +55,7 @@ export async function searchTickets(orgId: string, raw: string) {
       assigneeName: agents.name,
       customerName: customers.name,
       customerEmail: customers.email,
+      customerVip: customers.vip,
       // The first message that matched, so the row shows why it's here.
       preview: sql<string | null>`coalesce(
         (select left(${messages.body}, 200) from ${messages} where ${messages.ticketId} = ${tickets.id} and to_tsvector('simple', ${messages.body}) @@ ${words} order by ${messages.createdAt} desc limit 1),

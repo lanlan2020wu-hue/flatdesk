@@ -87,6 +87,7 @@ export function selectTickets(where: SQL[], order: SQL[] = [priorityRank, asc(ti
       groupName: sql<string | null>`(select ${schema.groups.name} from ${schema.groups} where ${schema.groups.id} = ${tickets.groupId})`,
       customerName: customers.name,
       customerEmail: customers.email,
+      customerVip: customers.vip,
       // A reply someone scheduled to send later (lib/scheduled-replies.ts).
       replyScheduled: sql<boolean>`exists(select 1 from ${schema.scheduledReplies} where ${schema.scheduledReplies.ticketId} = ${tickets.id} and ${schema.scheduledReplies.status} = 'scheduled')`,
       // The latest message the customer can see, for the row's one-line preview.
