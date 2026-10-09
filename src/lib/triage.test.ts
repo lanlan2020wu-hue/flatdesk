@@ -76,7 +76,8 @@ if (process.env.DATABASE_URL) {
     assert.deepEqual(applied, { priority: "high", tags: ["billing"], groupId: billing.id });
     const ticket = await db.query.tickets.findFirst({ where: eq(schema.tickets.id, t.id) });
     assert.equal(ticket?.priority, "high");
-    assert.deepEqual(ticket?.tags, ["billing"]);
+    // Other test files' jobs (the overdue sweep) can tag it meanwhile, so only these two matter.
+    assert.ok(ticket?.tags.includes("billing") && !ticket.tags.includes("invented"));
     assert.equal(ticket?.groupId, billing.id);
     const notes = await db.select().from(schema.messages).where(eq(schema.messages.ticketId, t.id));
     assert.ok(notes.some((m) => m.authorType === "system" && m.internal && m.body.startsWith("AI triage: priority High; tagged billing; put in Billing.")));
