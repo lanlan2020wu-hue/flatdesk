@@ -121,6 +121,8 @@ export const orgs = pgTable("orgs", {
   // Email from these senders goes straight to the trash: whole addresses, or
   // "@domain.com" for everyone at a domain. Lowercase. See lib/trash.ts.
   blockedSenders: text("blocked_senders").array().notNull().default(sql`'{}'::text[]`),
+  // The AI sets priority, tags and group on each new ticket (lib/triage.ts).
+  aiTriage: boolean("ai_triage").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
@@ -1025,4 +1027,25 @@ export const insights = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [index("insights_org_created").on(t.orgId, t.createdAt)],
+);
+
+// AI triage of a new ticket (lib/triage.ts): one row per ticket, so a ticket
+// is never triaged twice. `applied` is what was changed, for the note and reports.
+export type TriageApplied = { priority?: "low" | "normal" | "high" | "urgent"; tags?: string[]; groupId?: string };
+export const aiTriage = pgTable(
+  "ai_triage",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
+    ticketId: uuid("ticket_id").notNull().references(() => tickets.id, { onDelete: "cascade" }),
+    month: text("month").notNull(), // "2026-10", in UTC
+    applied: jsonb("applied").$type<TriageApplied>(),
+    reason: text("reason"),
+    model: text("model").notNull(),
+    inputTokens: integer("input_tokens").notNull().default(0),
+    outputTokens: integer("output_tokens").notNull().default(0),
+    costUsd: numeric("cost_usd", { precision: 10, scale: 5 }).notNull().default("0"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("ai_triage_ticket").on(t.ticketId), index("ai_triage_org_month").on(t.orgId, t.month)],
 );

@@ -1,5 +1,6 @@
 import { after } from "next/server";
 import { answerNewTicket } from "@/lib/ai";
+import { triageTicket } from "@/lib/triage";
 import { alertNewTicket } from "@/lib/alerts";
 import { bool, email, findTicket, json, listTicketsJson, readBody, tagArray, text, ticketJson, withKey, ApiError } from "@/lib/api";
 import { INPUT } from "@/lib/app-input";
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
         tags,
       });
       after(async () => {
-        if (aiAnswer) await answerNewTicket(caller.orgId, ticket.id);
+        await Promise.all([triageTicket(caller.orgId, ticket.id), aiAnswer ? answerNewTicket(caller.orgId, ticket.id) : null]);
         await shareTicketQuietly(caller.orgId, ticket.id);
         await alertNewTicket(caller.orgId, ticket.id);
       });

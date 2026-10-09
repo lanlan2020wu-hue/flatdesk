@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { after } from "next/server";
 import { answerNewTicket } from "@/lib/ai";
+import { triageTicket } from "@/lib/triage";
 import { alertNewTicket } from "@/lib/alerts";
 import { requireAdmin, requireOpen } from "@/lib/auth";
 import { hit, LIMITS } from "@/lib/rate-limit";
@@ -31,7 +32,7 @@ export async function createTestTicketAction(form: FormData) {
     const ticket = await createTestTicket(s.orgId, input, String(form.get("scenario") ?? "") || undefined);
     // The same steps the email and chat routes run after a new ticket.
     after(async () => {
-      await answerNewTicket(s.orgId, ticket.id);
+      await Promise.all([triageTicket(s.orgId, ticket.id), answerNewTicket(s.orgId, ticket.id)]);
       await shareTicketQuietly(s.orgId, ticket.id);
       await alertNewTicket(s.orgId, ticket.id);
     });

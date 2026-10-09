@@ -435,6 +435,15 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
                 </span>
               </label>
               <label className="flex items-start gap-2.5">
+                <input type="checkbox" name="aiTriage" defaultChecked={org.aiTriage} className="mt-1 size-4 accent-[var(--accent)]" />
+                <span>
+                  Let the AI sort new tickets
+                  <span className="block text-sm text-muted">
+                    It reads each new ticket and sets its priority, adds tags your team already uses and puts it in a group, before anyone opens it. It only fills in what nobody set, and a note on the ticket says what it changed and why. Included in your plan; it never uses your AI answers.
+                  </span>
+                </span>
+              </label>
+              <label className="flex items-start gap-2.5">
                 <input type="checkbox" name="aiOverageEnabled" defaultChecked={org.aiOverageEnabled} className="mt-1 size-4 accent-[var(--accent)]" />
                 <span>
                   Keep answering after the allowance is used, at {usd(PLAN.overageRate, true)} per answer

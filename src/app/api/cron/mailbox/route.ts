@@ -1,4 +1,5 @@
 import { answerNewTicket } from "@/lib/ai";
+import { triageTicket } from "@/lib/triage";
 import { alertNewTicket } from "@/lib/alerts";
 import { cronAuthorized } from "@/lib/cron";
 import { pollMailboxes } from "@/lib/mailbox";
@@ -14,7 +15,8 @@ export async function GET(request: Request) {
   for (const r of found) {
     try {
       // Mail whose From failed DMARC is never answered by the AI.
-      if (!r.unverified) await answerNewTicket(r.orgId, r.ticketId);
+      // Triage runs beside the answer, and before the ticket is shared in turn, so its group counts.
+      if (!r.unverified) await Promise.all([r.action === "created" ? triageTicket(r.orgId, r.ticketId) : null, answerNewTicket(r.orgId, r.ticketId)]);
       if (r.action === "created") {
         await shareTicketQuietly(r.orgId, r.ticketId);
         await alertNewTicket(r.orgId, r.ticketId);

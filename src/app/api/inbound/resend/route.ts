@@ -1,5 +1,6 @@
 import { after } from "next/server";
 import { answerNewTicket } from "@/lib/ai";
+import { triageTicket } from "@/lib/triage";
 import { alertNewTicket } from "@/lib/alerts";
 import { emailConfig, htmlToText, resend } from "@/lib/email";
 import { downloadInbound } from "@/lib/attachments";
@@ -65,7 +66,8 @@ export async function POST(request: Request) {
       for (const r of done) {
         // Mail whose From failed the sender's own DMARC check is never answered by
         // the AI: someone may be pretending to be a customer to get their details.
-        if (!r.unverified) await answerNewTicket(r.orgId!, r.ticketId!);
+        // Triage runs beside the answer, and before the ticket is shared in turn, so its group counts.
+        if (!r.unverified) await Promise.all([r.action === "created" ? triageTicket(r.orgId!, r.ticketId!) : null, answerNewTicket(r.orgId!, r.ticketId!)]);
         if (r.action === "created") {
           await shareTicketQuietly(r.orgId!, r.ticketId!);
           await alertNewTicket(r.orgId!, r.ticketId!);
