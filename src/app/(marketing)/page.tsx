@@ -34,7 +34,8 @@ const TERMS = [
   { title: "Export your data", body: "Everything in one .zip, attachments and help articles included." },
 ];
 
-// Smaller things in the seat, one line each, after the tour.
+// Smaller things in the seat, one line each, after the tour. Sixteen, so the
+// grid closes evenly; the rest are on /features.
 const MORE = [
   { title: "Live chat widget", body: "One script tag. Chats become tickets. While a visitor types, it suggests help articles that may answer them first.", href: "/features#all" },
   { title: "Help center", body: "Articles customers search and the AI links to, in up to 10 more languages. Team-only articles stay private and show on matching tickets.", href: "/features#all" },
@@ -44,18 +45,13 @@ const MORE = [
   { title: "AI sorts new tickets", body: "Each new ticket arrives with its priority, your tags and the right group already set, with a note saying why. In Zendesk it comes with the Copilot add-on, $50 per agent.", href: "/features#all" },
   { title: "AI reads your website", body: "Paste your site or docs address. The AI answers from those pages on day one and links customers to them.", href: "/features#all" },
   { title: "Auto-translate", body: "Customer messages in Spanish, Japanese and 20 more show in your language. Your reply goes back in theirs.", href: "/features#all" },
-  { title: "Who's on this ticket", body: "See when a teammate is already replying, so a customer never gets two answers.", href: "/features#all" },
   { title: "Custom ticket fields", body: "Plan, order number, refund issued: text, number, dropdown or checkbox, searchable, and required before closing if you want.", href: "/features#all" },
   { title: "Saved views", body: "Urgent billing, unassigned. My chats. Save the filters you use every day as inbox tabs, with a count on each.", href: "/features#all" },
   { title: "Faster replying", body: "Drafts that survive a closed tab, keyboard shortcuts, and a desktop alert when a ticket needs you.", href: "/features#all" },
-  { title: "Merge, CC, mentions", body: "Fold a duplicate into another ticket, keep everyone copied, and @name a teammate in a note.", href: "/features#all" },
   { title: "What customers ask about", body: "The AI groups recent tickets into topics, shows where it handed off and why, and suggests one fix for each.", href: "/features#all" },
   { title: "Groups and routing", body: "Billing, Tier 2, your call. Tickets go round in turn, skipping anyone away. Ones the AI answers never land in a queue.", href: "/features#all" },
   { title: "Triggers and auto-close", body: "Run on a new ticket, a customer reply, or hours with no update. One click closes quiet pending tickets.", href: "/features#all" },
-  { title: "Help center search report", body: "See what customers search your help center for, and which searches found nothing, with one click to write that article.", href: "/features#all" },
   { title: "GDPR requests", body: "Download everything you hold on one customer, or erase them and all their tickets, from any of their tickets.", href: "/features#all" },
-  { title: "Snooze", body: "Put a ticket away until tomorrow morning or next week. It comes back to Open on time, or as soon as the customer writes.", href: "/features#all" },
-  { title: "Block senders, trash", body: "Block an address or a whole domain and its email skips your inbox. Deleted tickets wait 30 days in the trash in case you need them back.", href: "/features#all" },
   { title: "Reply and resolve targets", body: "Next reply within 15 minutes to 24 hours, resolved within 4 hours to 7 days. The clock can pause while you wait on the customer. Late tickets are escalated.", href: "/features#all" },
 ];
 
@@ -85,8 +81,11 @@ function Rate({ label, children }: { label: string; children: React.ReactNode })
 function ChapterHead({ tab, title, children, id }: { tab: string; title: string; children?: React.ReactNode; id: string }) {
   return (
     <header data-play="" suppressHydrationWarning className="grid gap-5">
-      <a href={`#${id}`} className="w-max rounded-t-[5px] border-x border-t border-ink/80 px-3 pt-1.5 pb-1 text-sm font-semibold">{tab}</a>
-      <div className="grid gap-5 border-t-2 border-ink pt-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-16">
+      <a href={`#${id}`} className="flex w-max items-center gap-2.5 text-xs font-semibold uppercase tracking-[0.1em] text-accent">
+        <span className="h-px w-6 bg-accent" aria-hidden="true" />
+        {tab}
+      </a>
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-16">
         <h2 className="ink font-display text-4xl sm:text-[3.4rem]">{title}</h2>
         {children && <p className="max-w-[56ch] self-end text-lg text-muted">{children}</p>}
       </div>
@@ -171,10 +170,9 @@ export default function Home() {
       </div>
 
       <section id="flat-rate" className="mx-auto grid w-full max-w-6xl scroll-mt-20 gap-14 px-4 pt-24 sm:px-6 sm:pt-32">
-        <ChapterHead id="flat-rate" tab="Flat rate" title="Many help desks charge for AI answers one by one. Flatdesk charges per agent.">
-          An AI answer is a reply the AI sends a customer by itself, by email or in your chat, with nobody on your team involved. When you pay per answer, a
-          launch or a holiday rush shows up on your invoice. Here the bill depends only on how many agents you have, and the AI
-          stops at its limit unless an admin says otherwise.
+        <ChapterHead id="flat-rate" tab="Flat rate" title="Priced per agent, not per AI answer.">
+          An AI answer is a reply the AI sends a customer on its own. Pay per answer, and a launch or a holiday rush shows up on your invoice. On
+          Flatdesk the bill depends only on how many agents you have, and the AI pauses at its limit unless an admin says otherwise.
         </ChapterHead>
         <div className="grid gap-10 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-16">
           <figure className="grid content-start gap-3">
@@ -223,7 +221,7 @@ export default function Home() {
 
       <section id="everything-else" className="mt-24 scroll-mt-20 border-y border-line bg-surface py-24 sm:mt-32 sm:py-32">
         <div className="mx-auto grid w-full max-w-6xl gap-14 px-4 sm:px-6">
-          <ChapterHead id="everything-else" tab="In every seat" title="AI answers, AI macros and the whole help desk, in one seat.">
+          <ChapterHead id="everything-else" tab="In every seat" title="Every feature, in every seat.">
             There&apos;s one plan, and every agent gets every feature. Short animations show what each part does, with sample data.
           </ChapterHead>
           <ProductTour />
@@ -242,7 +240,7 @@ export default function Home() {
             <Link href="/features#all" className="link w-max text-sm font-medium text-accent">See every feature</Link>
           </div>
           <div data-play="" suppressHydrationWarning className="grid gap-6 border-t border-line pt-14">
-            <h3 className="ink font-display text-3xl">Elsewhere, AI help with macros costs extra or needs a higher plan. Flatdesk includes it.</h3>
+            <h3 className="ink font-display text-3xl">AI macros are included. Elsewhere they cost extra.</h3>
             <AddOnTable />
           </div>
           {/* The first ask after the product, so nobody has to scroll to the close to act on it. */}
@@ -259,7 +257,7 @@ export default function Home() {
       {/* Who it's for, and who it isn't. Saying so plainly is part of the case. */}
       <section id="fit" className="mx-auto grid w-full max-w-6xl scroll-mt-20 gap-10 px-4 pt-24 sm:px-6 sm:pt-32">
         <div className="grid grid-cols-1 items-end gap-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
-          <h2 data-play="" suppressHydrationWarning className="ink max-w-3xl font-display text-[2.6rem] sm:text-6xl">Built for small support teams. Here&apos;s what it doesn&apos;t do.</h2>
+          <h2 data-play="" suppressHydrationWarning className="ink max-w-3xl font-display text-[2.6rem] sm:text-6xl">Made for small support teams, and clear about the rest.</h2>
           <Image
             src={supportTeamTable}
             alt="A small support team working at one long table, one agent wearing a headset"
@@ -300,7 +298,7 @@ export default function Home() {
 
       <section id="switch" className="mx-auto grid w-full max-w-6xl scroll-mt-20 gap-12 px-4 pt-24 sm:px-6 sm:pt-32">
         <div data-play="" suppressHydrationWarning className="grid gap-4 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-16">
-          <h2 className="ink font-display text-[2.6rem] sm:text-6xl">How to switch from Zendesk or Intercom.</h2>
+          <h2 className="ink font-display text-[2.6rem] sm:text-6xl">Switch from Zendesk or Intercom in four steps.</h2>
           <p className="max-w-[52ch] self-end text-lg text-muted">One admin can do all four steps. The AI can&apos;t reply to a customer until you forward your email or add the chat widget, and you can switch it off before that.</p>
         </div>
         <ol data-play="" suppressHydrationWarning className="relative grid gap-8 md:grid-cols-4 md:gap-6">

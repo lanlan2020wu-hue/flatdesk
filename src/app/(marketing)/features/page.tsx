@@ -42,7 +42,7 @@ export default function FeaturesPage() {
       <JsonLd data={[software(), breadcrumbs([{ name: "Product", path: "/features" }])]} />
       <PhotoHero photo={agentMonitor} alt="A support agent with a headset answering a customer at his desk" layout="banner">
         <div className="grid max-w-2xl gap-3">
-          <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-[2.6rem] sm:text-6xl">A flat rate first. AI macros second. Everything else included.</h1>
+          <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-[2.6rem] sm:text-6xl">Everything a small support team needs, at one flat price.</h1>
           <p style={{ "--d": 2 } as React.CSSProperties} className="enter text-lg text-muted">
             Flatdesk is a help desk for email and chat. Every seat gets every feature below, for one price per agent.
           </p>

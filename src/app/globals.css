@@ -120,6 +120,18 @@ p {
   font-variant-numeric: tabular-nums;
 }
 
+/* On the marketing site figures stay in the body face; the grotesk's
+   tabular punctuation spaces out "$0.40", so its default figures are used.
+   Mono is kept for the app and receipts. */
+.site .num {
+  font-family: var(--font-sans);
+  font-variant-numeric: normal;
+}
+.site :where(.app-frame, .receipt) .num {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
 :focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;

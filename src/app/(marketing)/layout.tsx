@@ -6,13 +6,53 @@ import { SITE } from "@/lib/site";
 
 // Same order as the site: the flat rate first, then AI macros, then the rest.
 const NAV = [
-  { href: "/pricing", label: "Flat rate" },
+  { href: "/pricing", label: "Pricing" },
   { href: "/features/ai-macros", label: "AI macros" },
-  { href: "/features", label: "All features" },
+  { href: "/features", label: "Features" },
   { href: "/compare", label: "Compare" },
-  { href: "/calculator", label: "Bill calculator" },
+  { href: "/calculator", label: "Calculator" },
 ];
-const FOOTER = [...NAV, { href: "/help-desk-for-small-teams", label: "For small teams" }, { href: "/enterprise", label: "Done-for-you AI setup" }, { href: "/ai-billing-changes-2026", label: "2026 AI billing changes" }, { href: "/free-tools", label: "Free tools for support teams" }, { href: "/faq", label: "FAQ" }];
+
+// The footer sorts every marketing page into the columns a buyer scans for.
+const FOOTER = [
+  {
+    title: "Product",
+    links: [
+      { href: "/pricing", label: "Pricing" },
+      { href: "/features", label: "Features" },
+      { href: "/features/ai-macros", label: "AI macros" },
+      { href: "/integrations", label: "Integrations" },
+      { href: "/developers", label: "Developers" },
+      { href: "/enterprise", label: "Done-for-you AI setup" },
+    ],
+  },
+  {
+    title: "Compare",
+    links: [
+      { href: "/compare", label: "Help desk comparisons" },
+      { href: "/calculator", label: "Bill calculator" },
+      { href: "/help-desk-for-small-teams", label: "For small teams" },
+      { href: "/ai-billing-changes-2026", label: "2026 AI billing changes" },
+    ],
+  },
+  {
+    title: "Resources",
+    links: [
+      { href: "/free-tools", label: "Free tools" },
+      { href: "/faq", label: "FAQ" },
+      { href: "/about", label: "About" },
+      { href: "/security", label: "Security" },
+    ],
+  },
+  {
+    title: "Legal",
+    links: [
+      { href: "/terms", label: "Terms" },
+      { href: "/privacy", label: "Privacy" },
+      { href: "/dpa", label: "DPA" },
+    ],
+  },
+];
 
 // The same observer MotionObserver sets up, but inline, so [data-play] blocks
 // (the calculator, the hero receipt) show before React hydrates, or if a
@@ -46,35 +86,33 @@ export default function MarketingLayout({ children }: LayoutProps<"/">) {
         </nav>
       </header>
       {/* Decorations (the receipt stamp) may poke past the edge; never let them cause sideways scrolling. */}
-      <main id="main" className="relative flex-1 overflow-x-clip">{children}</main>
+      <main id="main" className="site relative flex-1 overflow-x-clip">{children}</main>
       <script dangerouslySetInnerHTML={{ __html: PLAY_EARLY }} />
       <MotionObserver />
-      <footer className="mt-24 bg-field text-field-ink">
-        <div className="mx-auto grid max-w-6xl gap-8 border-t border-field-line px-4 py-12 sm:grid-cols-[1.4fr_1fr] sm:px-6">
+      <footer className="site mt-24 bg-field text-field-ink">
+        <div className="mx-auto grid max-w-6xl gap-10 border-t border-field-line px-4 py-14 sm:px-6 lg:grid-cols-[1.3fr_repeat(4,1fr)] lg:gap-8">
           <div className="grid content-start gap-3">
             <Logo onField />
-            <p className="max-w-xs text-sm text-field-muted">A help desk for small support teams, at one flat price per agent.</p>
+            <p className="max-w-[30ch] text-sm text-field-muted">The help desk for small support teams, at one flat price per agent.</p>
+            <a href={`mailto:${SITE.contactEmail}`} className="w-max text-sm text-field-muted transition-colors hover:text-field-ink">Contact us</a>
           </div>
-          <div className="grid content-start gap-2 text-sm">
-            {FOOTER.map((n) => (
-              <Link key={n.href} href={n.href} className="w-max text-field-muted transition-colors hover:text-field-ink">
-                {n.label}
-              </Link>
+          <div className="grid grid-cols-2 gap-8 sm:grid-cols-4 lg:contents">
+            {FOOTER.map((col) => (
+              <div key={col.title} className="grid content-start gap-2.5 text-sm">
+                <p className="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-field-ink">{col.title}</p>
+                {col.links.map((n) => (
+                  <Link key={n.href} href={n.href} className="w-max text-field-muted transition-colors hover:text-field-ink">
+                    {n.label}
+                  </Link>
+                ))}
+              </div>
             ))}
           </div>
         </div>
         <div className="border-t border-field-line">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-4 text-xs text-field-muted sm:px-6">
-            <p className="num">Competitor prices last checked {CHECKED_ON}.</p>
-            <p className="flex flex-wrap gap-x-4 gap-y-1">
-              <Link href="/sign-in" className="transition-colors hover:text-field-ink">Sign in</Link>
-              <Link href="/about" className="transition-colors hover:text-field-ink">About</Link>
-              <Link href="/security" className="transition-colors hover:text-field-ink">Security</Link>
-              <Link href="/terms" className="transition-colors hover:text-field-ink">Terms</Link>
-              <Link href="/dpa" className="transition-colors hover:text-field-ink">DPA</Link>
-              <Link href="/privacy" className="transition-colors hover:text-field-ink">Privacy</Link>
-              <a href={`mailto:${SITE.contactEmail}`} className="transition-colors hover:text-field-ink">{SITE.contactEmail}</a>
-            </p>
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-5 text-xs text-field-muted sm:px-6">
+            <p>© {new Date().getFullYear()} {SITE.legalName}. All rights reserved.</p>
+            <p>Competitor prices last checked {CHECKED_ON}.</p>
           </div>
         </div>
       </footer>
