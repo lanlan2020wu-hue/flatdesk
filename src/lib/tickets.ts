@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNotNull, isNull, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, isNull, sql, type SQL } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { noNul } from "@/lib/ids";
 import { maskCards } from "@/lib/redact";
@@ -56,7 +56,11 @@ export async function listTickets(orgId: string, userId: string, view: View) {
   if (view === "unassigned") where.push(isNull(tickets.assigneeId), eq(tickets.status, "open"));
   if (view === "groups") where.push(inMyGroups(orgId, userId), eq(tickets.status, "open"));
   if (view === "open" || view === "pending" || view === "closed") where.push(eq(tickets.status, view));
+  return selectTickets(where, view === "closed" || view === "trash" ? [desc(tickets.updatedAt)] : view === "snoozed" ? [asc(tickets.snoozedUntil)] : [priorityRank, asc(tickets.updatedAt)]);
+}
 
+// The inbox rows for any filter: the built-in views above and saved views (lib/saved-views.ts).
+export function selectTickets(where: SQL[], order: SQL[] = [priorityRank, asc(tickets.updatedAt)]) {
   return db
     .select({
       id: tickets.id,
@@ -89,11 +93,11 @@ export async function listTickets(orgId: string, userId: string, view: View) {
     .innerJoin(customers, eq(customers.id, tickets.customerId))
     .leftJoin(agents, and(eq(agents.orgId, tickets.orgId), eq(agents.userId, tickets.assigneeId)))
     .where(and(...where))
-    .orderBy(...(view === "closed" || view === "trash" ? [desc(tickets.updatedAt)] : view === "snoozed" ? [asc(tickets.snoozedUntil)] : [priorityRank, asc(tickets.updatedAt)]))
+    .orderBy(...order)
     .limit(200);
 }
 
-const inMyGroups = (orgId: string, userId: string) =>
+export const inMyGroups = (orgId: string, userId: string) =>
   sql`${tickets.groupId} in (select ${schema.groupMembers.groupId} from ${schema.groupMembers} where ${schema.groupMembers.orgId} = ${orgId} and ${schema.groupMembers.userId} = ${userId})`;
 
 export async function viewCounts(orgId: string, userId: string) {

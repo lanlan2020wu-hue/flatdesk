@@ -1101,3 +1101,28 @@ export const ticketFields = pgTable(
   },
   (t) => [uniqueIndex("ticket_fields_org_name").on(t.orgId, t.name)],
 );
+
+// Saved inbox views (lib/saved-views.ts): a person's own, or shared with the
+// team when ownerId is null.
+export type ViewFilters = {
+  status?: "open" | "pending" | "closed" | "active"; // active: open or pending
+  assignee?: string; // "me", "unassigned", or an agents.user_id
+  groupId?: string; // a groups.id, or "mine" for the person's groups
+  priorities?: ("urgent" | "high" | "normal" | "low")[];
+  tags?: string[]; // any of
+  channel?: "email" | "chat";
+  field?: { name: string; value: string };
+};
+export const savedViews = pgTable(
+  "saved_views",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
+    ownerId: text("owner_id"), // agents.user_id; null = shared with the team
+    createdBy: text("created_by").notNull(),
+    name: text("name").notNull(),
+    filters: jsonb("filters").$type<ViewFilters>().notNull().default({}),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [index("saved_views_org").on(t.orgId)],
+);
