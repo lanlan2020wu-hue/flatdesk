@@ -3,9 +3,10 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { after } from "next/server";
-import { bySection, excerpt, helpUrl, localize, publishedArticles, searchArticles, searchTranslations, translationsFor } from "@/lib/help";
+import { excerpt, helpUrl, localize, publishedArticles, searchArticles, searchTranslations, translationsFor } from "@/lib/help";
 import { helpWords } from "@/lib/help-i18n";
 import { logHelpSearch } from "@/lib/help-searches";
+import { CATEGORY, categoryOrder, categorySlug, groupByCategory } from "@/lib/help-sections";
 import { ipKey } from "@/lib/rate-limit";
 import { helpCenter, helpHref, visitLanguage } from "./data";
 import HelpFrame from "./HelpFrame";
@@ -40,6 +41,21 @@ export default async function HelpHome({ params, searchParams }: PageProps<"/hel
   }
   const list = translated ? localize(found, await translationsFor(org.id, lang, found.map((a) => a.id))) : found;
   if (!q && translated) list.sort((a, b) => a.title.localeCompare(b.title, lang));
+  // Categories in the team's order. Translated articles carry their category's
+  // translated name, so the order and descriptions go by the original's.
+  const { order, descriptions } = await categoryOrder(org.id);
+  const originalSection = new Map(found.map((a) => [a.id, a.section?.trim() || null]));
+  const groups = groupByCategory(
+    list.map((a) => ({ ...a, label: a.section, section: originalSection.get(a.id) ?? null })),
+    order,
+  ).map((g) => ({
+    ...g,
+    slug: g.section ? categorySlug(g.section) : null,
+    label: g.articles[0]?.label?.trim() || g.section,
+    description: translated ? "" : (g.section && descriptions.get(g.section)) || "",
+  }));
+  const c = typeof sp.c === "string" && !q ? groups.find((g) => g.slug === sp.c) : undefined;
+  const shown = q ? [{ section: null, slug: null, label: null, description: "", articles: list }] : c ? [c] : groups;
   if (q) {
     const ip = ipKey(new Request("http://x", { headers: await headers() }));
     after(() => logHelpSearch(org.id, q, list.length, ip));
@@ -54,23 +70,43 @@ export default async function HelpHome({ params, searchParams }: PageProps<"/hel
         </div>
         <section className="grid gap-3" aria-live="polite">
           {q && <h2 className="eyebrow">{`${w.results} “${q}” (${list.length})`}</h2>}
+          {c && (
+            <div className="grid gap-1">
+              <Link href={helpHref(org, "", lang)} className="link w-max text-sm text-muted">{w.all}</Link>
+              <h2 className="font-display text-2xl">{c.label}</h2>
+              {c.description && <p className="text-muted">{c.description}</p>}
+            </div>
+          )}
           {list.length > 0 ? (
-            (q ? [{ section: null, articles: list }] : bySection(list)).map((g, i, groups) => (
-              <div key={g.section ?? ""} className="grid gap-3">
-                {!q && <h2 className="eyebrow">{g.section ?? (groups.length > 1 ? w.more : w.all)}</h2>}
-                <ul className="card divide-y divide-line overflow-hidden">
-                  {g.articles.map((a) => (
-                    <li key={a.id}>
-                      <Link href={helpHref(org, `/${a.slug}`, lang)} className="grid gap-1 px-5 py-4 transition-colors hover:bg-surface-2/60">
-                        <span className="font-medium">{a.title}</span>
-                        <span className="text-sm text-muted">{excerpt(a.body)}</span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-                {i < groups.length - 1 && <span aria-hidden="true" className="h-2" />}
-              </div>
-            ))
+            shown.map((g, i) => {
+              const cut = !q && !c && shown.length > 1 && g.articles.length > CATEGORY.preview;
+              return (
+                <div key={g.section ?? ""} className="grid gap-3">
+                  {!q && !c && (
+                    <div className="grid gap-0.5">
+                      <h2 className="eyebrow">
+                        {g.slug ? <Link href={helpHref(org, "", lang, { c: g.slug })} className="hover:text-ink">{g.label}</Link> : shown.length > 1 ? w.more : w.all}
+                      </h2>
+                      {g.description && <p className="text-sm text-muted">{g.description}</p>}
+                    </div>
+                  )}
+                  <ul className="card divide-y divide-line overflow-hidden">
+                    {(cut ? g.articles.slice(0, CATEGORY.preview) : g.articles).map((a) => (
+                      <li key={a.id}>
+                        <Link href={helpHref(org, `/${a.slug}`, lang)} className="grid gap-1 px-5 py-4 transition-colors hover:bg-surface-2/60">
+                          <span className="font-medium">{a.title}</span>
+                          <span className="text-sm text-muted">{excerpt(a.body)}</span>
+                        </Link>
+                      </li>
+                    ))}
+                  </ul>
+                  {cut && g.slug && (
+                    <Link href={helpHref(org, "", lang, { c: g.slug })} className="link w-max text-sm text-accent">{`${w.seeAll} (${g.articles.length})`}</Link>
+                  )}
+                  {i < shown.length - 1 && <span aria-hidden="true" className="h-2" />}
+                </div>
+              );
+            })
           ) : (
             <p className="card px-5 py-4 text-sm text-muted">
               {q ? w.nothing : w.empty},{" "}
