@@ -14,6 +14,7 @@ import { LOCKED_MESSAGE, requireAdmin, requireEditor, requireOpen, type Session 
 import { filesFromForm, saveAttachments } from "@/lib/attachments";
 import { checkWebhookUrl, sendTestAlert } from "@/lib/alerts";
 import { addField, blockedFromClosing, deleteField, FieldError, missingMessage, parseFieldInput, setTicketValues, updateField } from "@/lib/ticket-fields";
+import { createView, deleteView, parseViewForm, ViewError } from "@/lib/saved-views";
 import { addSource, markReading, readSource, removeSource, WebSourceError } from "@/lib/web-knowledge";
 import { handBackToTeam } from "@/lib/ai";
 import { checkoutUrl, portalUrl, switchToAnnual, syncSeats } from "@/lib/billing";
@@ -763,4 +764,33 @@ export async function deleteFieldDefinitionAction(form: FormData) {
   if (removed) await audit(s.orgId, actor(s), "settings.fields", `Deleted ${removed.name}`);
   revalidatePath("/app/settings");
   fieldsBack();
+}
+
+// ---- Saved inbox views (lib/saved-views.ts) ----
+
+export async function createViewAction(form: FormData) {
+  const s = await requireOpenSession();
+  let target = "/app/inbox";
+  try {
+    const input = parseViewForm((k) => str(form, k), (k) => form.getAll(k).map(String));
+    const view = await createView(s.orgId, s.userId, s.role === "admin", input);
+    target = `/app/inbox?sv=${view.id}`;
+  } catch (err) {
+    if (!(err instanceof ViewError)) throw err;
+    target = `/app/inbox?newview=${encodeURIComponent(err.message)}`;
+  }
+  revalidatePath("/app/inbox");
+  redirect(target);
+}
+
+export async function deleteViewAction(form: FormData) {
+  const s = await requireOpenSession();
+  try {
+    await deleteView(s.orgId, s.userId, s.role === "admin", str(form, "id"));
+  } catch (err) {
+    if (!(err instanceof ViewError)) throw err;
+    redirect(`/app/inbox?sv=${encodeURIComponent(str(form, "id"))}&notice=${encodeURIComponent(err.message)}`);
+  }
+  revalidatePath("/app/inbox");
+  redirect("/app/inbox");
 }

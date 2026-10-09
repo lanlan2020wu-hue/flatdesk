@@ -11,7 +11,10 @@ import { STATUS_STYLE, timeAgo } from "@/lib/format";
 import { nextReplyState, resolveState, slaState } from "@/lib/sla";
 import { cleanQuery, searchTickets, SEARCH_LIMIT } from "@/lib/search";
 import { listGroups } from "@/lib/routing";
-import { VIEWS, isView, listAgents, listTickets, viewCounts } from "@/lib/tickets";
+import { VIEWS, isView, listAgents, listTickets, orgTags, PRIORITIES, viewCounts } from "@/lib/tickets";
+import { describeView, findView, viewCount, viewsFor, viewTickets } from "@/lib/saved-views";
+import { listFields } from "@/lib/ticket-fields";
+import { createViewAction, deleteViewAction } from "../actions";
 
 export const metadata = { title: "Inbox" };
 
@@ -20,19 +23,27 @@ export default async function InboxPage({ searchParams }: PageProps<"/app/inbox"
   const sp = await searchParams;
   const view = isView(sp.view) ? sp.view : "open";
   const q = typeof sp.q === "string" ? cleanQuery(sp.q) : "";
-  const [tickets, org, counts, team, groups] = await Promise.all([
-    q ? searchTickets(s.orgId, q) : listTickets(s.orgId, s.userId, view),
+  // A saved view (lib/saved-views.ts), when one is picked.
+  const saved = !q && typeof sp.sv === "string" ? await findView(s.orgId, s.userId, sp.sv) : null;
+  const newViewError = typeof sp.newview === "string" ? sp.newview.slice(0, 300) : null;
+  const myViews = await viewsFor(s.orgId, s.userId);
+  const [tickets, org, counts, team, groups, viewCounts_, tagList, fieldDefs] = await Promise.all([
+    q ? searchTickets(s.orgId, q) : saved ? viewTickets(s.orgId, s.userId, saved.filters) : listTickets(s.orgId, s.userId, view),
     db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) }),
     viewCounts(s.orgId, s.userId),
     listAgents(s.orgId),
     listGroups(s.orgId),
+    Promise.all(myViews.map((v) => viewCount(s.orgId, s.userId, v.filters))),
+    orgTags(s.orgId, 50),
+    listFields(s.orgId),
   ]);
-  const back = q ? `/app/inbox?q=${encodeURIComponent(q)}` : `/app/inbox?view=${view}`;
+  const back = q ? `/app/inbox?q=${encodeURIComponent(q)}` : saved ? `/app/inbox?sv=${saved.id}` : `/app/inbox?view=${view}`;
+  const canDeleteView = saved && !s.viewer && (saved.ownerId !== null || s.role === "admin");
   const now = new Date();
   const rows = tickets.map((t) => ({ ...t, sla: org ? slaState(t, org, now) : null, next: org ? nextReplyState(t, org, now) : null, resolution: org ? resolveState(t, org, now) : null }));
   const overdue = rows.filter((t) => t.sla?.kind === "overdue").length;
   // Views that hold one status don't need a status on every row.
-  const showStatus = Boolean(q) || view === "mine" || view === "unassigned";
+  const showStatus = Boolean(q) || Boolean(saved && saved.filters.status !== "open" && saved.filters.status !== "pending" && saved.filters.status !== "closed") || (!saved && (view === "mine" || view === "unassigned"));
   const cols = showStatus
     ? "lg:grid-cols-[2.25rem_minmax(0,1fr)_6rem_9.5rem_8rem_4.5rem]"
     : "lg:grid-cols-[2.25rem_minmax(0,1fr)_9.5rem_8rem_4.5rem]";
@@ -62,19 +73,126 @@ export default async function InboxPage({ searchParams }: PageProps<"/app/inbox"
             <Link
               key={v.id}
               href={`/app/inbox?view=${v.id}`}
-              aria-current={v.id === view && !q ? "page" : undefined}
-              className={`-mb-px flex items-baseline gap-1.5 whitespace-nowrap border-b-2 px-2 pt-1 pb-2 transition-colors ${v.id === view && !q ? "border-ink font-semibold text-ink" : "border-transparent text-muted hover:text-ink"}`}
+              aria-current={v.id === view && !q && !saved ? "page" : undefined}
+              className={`-mb-px flex items-baseline gap-1.5 whitespace-nowrap border-b-2 px-2 pt-1 pb-2 transition-colors ${v.id === view && !q && !saved ? "border-ink font-semibold text-ink" : "border-transparent text-muted hover:text-ink"}`}
             >
               {v.label}
               {counts[v.id] !== null && <span className="num text-xs font-normal text-muted">{counts[v.id]}</span>}
             </Link>
           ))}
+          {myViews.map((v, i) => (
+            <Link
+              key={v.id}
+              href={`/app/inbox?sv=${v.id}`}
+              aria-current={saved?.id === v.id ? "page" : undefined}
+              title={v.ownerId ? "Your view" : "Shared with the team"}
+              className={`-mb-px flex items-baseline gap-1.5 whitespace-nowrap border-b-2 px-2 pt-1 pb-2 transition-colors ${saved?.id === v.id ? "border-ink font-semibold text-ink" : "border-transparent text-muted hover:text-ink"} ${i === 0 ? "ml-2 border-l-0" : ""}`}
+            >
+              {v.name}
+              <span className="num text-xs font-normal text-muted">{viewCounts_[i]}</span>
+            </Link>
+          ))}
         </nav>
+        {!s.viewer && (
+          <details open={Boolean(newViewError)} className="text-sm">
+            <summary className="link w-max cursor-pointer font-medium text-accent">New view</summary>
+            <form action={createViewAction} className="mt-3 grid max-w-2xl gap-3 rounded-[8px] border border-line bg-surface p-4">
+              {newViewError && <p role="alert" className="text-warn">{newViewError}</p>}
+              <label className="grid gap-1">
+                <span className="label">Name</span>
+                <input name="name" required maxLength={40} placeholder="Urgent billing" className="field" />
+              </label>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <label className="grid gap-1">
+                  <span className="label">Status</span>
+                  <select name="status" defaultValue="active" className="field">
+                    <option value="active">Open and pending</option>
+                    <option value="open">Open</option>
+                    <option value="pending">Pending</option>
+                    <option value="closed">Closed</option>
+                  </select>
+                </label>
+                <label className="grid gap-1">
+                  <span className="label">Assignee</span>
+                  <select name="assignee" defaultValue="" className="field">
+                    <option value="">Anyone</option>
+                    <option value="me">Me</option>
+                    <option value="unassigned">Unassigned</option>
+                    {team.filter((a) => !a.viewer && a.userId !== s.userId).map((a) => <option key={a.userId} value={a.userId}>{a.name}</option>)}
+                  </select>
+                </label>
+                <label className="grid gap-1">
+                  <span className="label">Group</span>
+                  <select name="groupId" defaultValue="" className="field">
+                    <option value="">Any</option>
+                    <option value="mine">My groups</option>
+                    {groups.map((g) => <option key={g.id} value={g.id}>{g.name}</option>)}
+                  </select>
+                </label>
+                <label className="grid gap-1">
+                  <span className="label">Channel</span>
+                  <select name="channel" defaultValue="" className="field">
+                    <option value="">Email and chat</option>
+                    <option value="email">Email</option>
+                    <option value="chat">Chat</option>
+                  </select>
+                </label>
+                <label className="grid gap-1 sm:col-span-2">
+                  <span className="label">Tags (any of, separated by commas)</span>
+                  <input name="tags" list="view-tags" placeholder="billing, refund" className="field" />
+                  <datalist id="view-tags">{tagList.map((t) => <option key={t} value={t} />)}</datalist>
+                </label>
+              </div>
+              <fieldset className="flex flex-wrap items-center gap-x-4 gap-y-1">
+                <legend className="label mb-1">Priority (none ticked means any)</legend>
+                {PRIORITIES.map((p) => (
+                  <label key={p.id} className="flex items-center gap-1.5">
+                    <input type="checkbox" name="priority" value={p.id} />
+                    {p.label}
+                  </label>
+                ))}
+              </fieldset>
+              {fieldDefs.length > 0 && (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="grid gap-1">
+                    <span className="label">Field</span>
+                    <select name="fieldName" defaultValue="" className="field">
+                      <option value="">Any</option>
+                      {fieldDefs.map((f) => <option key={f.id} value={f.name}>{f.name}</option>)}
+                    </select>
+                  </label>
+                  <label className="grid gap-1">
+                    <span className="label">Is</span>
+                    <input name="fieldValue" placeholder="Business" className="field" />
+                  </label>
+                </div>
+              )}
+              {s.role === "admin" && (
+                <label className="flex items-center gap-2">
+                  <input type="checkbox" name="shared" />
+                  Share with the whole team
+                </label>
+              )}
+              <button className="btn btn-primary w-max">Save view</button>
+            </form>
+          </details>
+        )}
         <p className="text-sm text-muted">
           {q ? (
             <>
               {tickets.length === SEARCH_LIMIT ? `The ${SEARCH_LIMIT} most recent tickets` : `${tickets.length} ${tickets.length === 1 ? "ticket" : "tickets"}`} matching &quot;{q}&quot;, in any status.{" "}
               <Link href="/app/inbox" className="link text-accent">Clear search</Link>
+            </>
+          ) : saved ? (
+            <>
+              {describeView(saved.filters, { agent: (id) => team.find((a) => a.userId === id)?.name ?? "a removed agent", group: (id) => groups.find((g) => g.id === id)?.name ?? "a deleted group" })}{" "}
+              {saved.ownerId ? "Only you see this view." : "Shared with the team."}{" "}
+              {canDeleteView && (
+                <form action={deleteViewAction} className="inline">
+                  <input type="hidden" name="id" value={saved.id} />
+                  <button className="link text-accent">Delete view</button>
+                </form>
+              )}
             </>
           ) : (
             VIEWS.find((v) => v.id === view)?.hint
@@ -98,11 +216,11 @@ export default async function InboxPage({ searchParams }: PageProps<"/app/inbox"
       {rows.length === 0 ? (
         <div className="grid place-items-center gap-1 px-4 py-16 text-center">
           <p className="font-medium">{q ? "Nothing matches that." : "No tickets here."}</p>
-          <p className="text-sm text-muted">{q ? "Search looks at subjects, customers, tags and every message. Try fewer words." : view === "trash" ? "Deleted tickets wait here for 30 days." : view === "snoozed" ? "Nothing is snoozed. Snooze a ticket from its page to put it away until later." : "New email and chat conversations land in All open."}</p>
+          <p className="text-sm text-muted">{q ? "Search looks at subjects, customers, tags and every message. Try fewer words." : saved ? "Nothing matches this view right now. Snoozed tickets show up here when they wake." : view === "trash" ? "Deleted tickets wait here for 30 days." : view === "snoozed" ? "Nothing is snoozed. Snooze a ticket from its page to put it away until later." : "New email and chat conversations land in All open."}</p>
         </div>
       ) : (
         <>
-        {!s.viewer && <BulkBar agents={team.filter((a) => !a.viewer).map((a) => ({ userId: a.userId, name: a.name }))} groups={groups.map((g) => ({ id: g.id, name: g.name }))} back={back} total={rows.length} trash={view === "trash" && !q} />}
+        {!s.viewer && <BulkBar agents={team.filter((a) => !a.viewer).map((a) => ({ userId: a.userId, name: a.name }))} groups={groups.map((g) => ({ id: g.id, name: g.name }))} back={back} total={rows.length} trash={view === "trash" && !q && !saved} />}
         <div className="overflow-hidden rounded-[8px] border border-line bg-surface shadow-sm">
           <div className={`hidden gap-4 border-b border-line px-4 py-2.5 text-xs font-medium text-muted lg:grid ${cols}`} aria-hidden="true">
             <span className="col-span-2">Conversation</span>
@@ -136,7 +254,7 @@ export default async function InboxPage({ searchParams }: PageProps<"/app/inbox"
                           <span className={`chip shrink-0 capitalize ${t.priority === "urgent" ? "border-warn/50 bg-warn-soft font-semibold text-warn" : "border-warn/30 text-warn"}`}>{t.priority}</span>
                         )}
                         {"groupName" in t && typeof t.groupName === "string" && <span className="chip shrink-0 text-muted" title="Group">{t.groupName}</span>}
-                        {view === "snoozed" && !q && "snoozedUntil" in t && t.snoozedUntil instanceof Date && (
+                        {view === "snoozed" && !q && !saved && "snoozedUntil" in t && t.snoozedUntil instanceof Date && (
                           <span className="chip shrink-0 text-muted" title="Comes back to Open then">
                             <span>
                               Until <LocalTime at={t.snoozedUntil.toISOString()} />
