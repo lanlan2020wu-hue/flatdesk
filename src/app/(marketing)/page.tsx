@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import AddOnTable from "@/components/AddOnTable";
 import JsonLd from "@/components/JsonLd";
@@ -11,6 +12,8 @@ import { TRIAL_DAYS } from "@/lib/billing";
 import { organization, pageMeta, software, website } from "@/lib/seo";
 import { PLAN, PRICE_PHRASE, usd } from "@/lib/pricing";
 import { LEFT_OUT } from "@/lib/why-flat";
+import agentHeadset from "@/assets/photos/agent-headset.webp";
+import supportTeamTable from "@/assets/photos/support-team-table.webp";
 
 // One story, told top to bottom: the month gets busier and the bill doesn't.
 // The hero shows it happening in the real inbox, the flat-rate chapter shows
@@ -227,7 +230,16 @@ export default function Home() {
 
       {/* Who it's for, and who it isn't. Saying so plainly is part of the case. */}
       <section id="fit" className="mx-auto grid w-full max-w-6xl scroll-mt-20 gap-10 px-4 pt-24 sm:px-6 sm:pt-32">
-        <h2 data-play="" suppressHydrationWarning className="ink max-w-3xl font-display text-[2.6rem] sm:text-6xl">Built for small support teams. Here&apos;s what it doesn&apos;t do.</h2>
+        <div className="grid grid-cols-1 items-end gap-8 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-16">
+          <h2 data-play="" suppressHydrationWarning className="ink max-w-3xl font-display text-[2.6rem] sm:text-6xl">Built for small support teams. Here&apos;s what it doesn&apos;t do.</h2>
+          <Image
+            src={supportTeamTable}
+            alt="A small support team working at one long table, one agent wearing a headset"
+            placeholder="blur"
+            sizes="(min-width: 1024px) 460px, 100vw"
+            className="aspect-[3/2] w-full rounded-[8px] object-cover"
+          />
+        </div>
         <div className="grid gap-10 md:grid-cols-2 md:gap-0">
           <div data-play="" suppressHydrationWarning className="grid content-start gap-4 border-t-2 border-accent pt-5 md:pr-10">
             <p className="text-lg font-semibold">A good fit if you</p>
@@ -309,23 +321,32 @@ export default function Home() {
               <Link href="/calculator" className="btn btn-ghost-field">Compare your bill in detail</Link>
             </div>
           </div>
-          {/* The trial is the one ask; the design-partner program stays one click away for the few teams it suits. */}
-          <details data-play="" suppressHydrationWarning className="group self-start rounded-[8px] bg-surface p-6 text-ink sm:p-8">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-4 [&::-webkit-details-marker]:hidden">
-              <span className="grid gap-1">
-                <span className="font-display text-2xl">Moving a small team off Zendesk or Freshdesk?</span>
-                <span className="text-muted">Apply to be a design partner. You get half off, and we run the import for you.</span>
-              </span>
-              <span aria-hidden="true" className="text-2xl text-muted transition-transform group-open:rotate-45">+</span>
-            </summary>
-            <div className="mt-5 grid gap-5">
-              <p className="text-muted">
-                A few teams get <span className="hl text-ink">50% off monthly billing for 12 months</span> ({usd(PLAN.seatPrice / 2, true)} per agent), and we run
-                the import for them. The discount replaces the yearly price. It doesn&apos;t stack with it.
-              </p>
-              <WaitlistForm stacked />
-            </div>
-          </details>
+          <div className="grid min-w-0 content-start gap-6">
+            <Image
+              src={agentHeadset}
+              alt="A support agent with a headset smiling at her desk"
+              placeholder="blur"
+              sizes="(min-width: 1024px) 560px, 100vw"
+              className="aspect-[16/9] w-full rounded-[8px] object-cover object-[center_30%]"
+            />
+            {/* The trial is the one ask; the design-partner program stays one click away for the few teams it suits. */}
+            <details data-play="" suppressHydrationWarning className="group rounded-[8px] bg-surface p-6 text-ink sm:p-8">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-4 [&::-webkit-details-marker]:hidden">
+                <span className="grid gap-1">
+                  <span className="font-display text-2xl">Moving a small team off Zendesk or Freshdesk?</span>
+                  <span className="text-muted">Apply to be a design partner. You get half off, and we run the import for you.</span>
+                </span>
+                <span aria-hidden="true" className="text-2xl text-muted transition-transform group-open:rotate-45">+</span>
+              </summary>
+              <div className="mt-5 grid gap-5">
+                <p className="text-muted">
+                  A few teams get <span className="hl text-ink">50% off monthly billing for 12 months</span> ({usd(PLAN.seatPrice / 2, true)} per agent), and we run
+                  the import for them. The discount replaces the yearly price. It doesn&apos;t stack with it.
+                </p>
+                <WaitlistForm stacked />
+              </div>
+            </details>
+          </div>
         </div>
       </section>
     </div>

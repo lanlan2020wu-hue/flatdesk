@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import Faq from "@/components/Faq";
 import JsonLd from "@/components/JsonLd";
@@ -6,6 +7,7 @@ import { PLAN, PRICE_PHRASE, flatdeskMonthly, usd } from "@/lib/pricing";
 import { breadcrumbs, faqPage, pageMeta, software } from "@/lib/seo";
 import { SELLING_POINTS } from "@/lib/selling-points";
 import { LEFT_OUT } from "@/lib/why-flat";
+import agentsAtLaptops from "@/assets/photos/agents-at-laptops.webp";
 
 // For people searching "help desk for small teams" and similar: who Flatdesk is
 // for, what it costs at small team sizes, and what it leaves out. Every figure
@@ -40,18 +42,29 @@ const FAQ = [
 
 export default function SmallTeamsPage() {
   return (
-    <div className="mx-auto grid max-w-6xl gap-20 px-4 pt-14 sm:px-6 sm:pt-20">
+    <div className="mx-auto grid max-w-6xl grid-cols-1 gap-20 px-4 pt-14 sm:px-6 sm:pt-20">
       <JsonLd data={[software(), breadcrumbs([{ name: "Help desk for small teams", path: "/help-desk-for-small-teams" }]), faqPage(FAQ)]} />
 
-      <section className="grid max-w-3xl gap-5">
-        <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-[2.6rem] sm:text-6xl">A help desk for small support teams</h1>
-        <p style={{ "--d": 2 } as React.CSSProperties} className="enter text-lg text-muted">
-          Flatdesk is for teams of about 3 to 15 agents who answer customers by email and website chat. One plan at {PRICE_PHRASE}, with {PLAN.includedPerAgent} AI answers per agent included. The AI pauses at the cap, so the bill is the same every month.
-        </p>
-        <div style={{ "--d": 3 } as React.CSSProperties} className="enter flex flex-wrap gap-3">
-          <Link href="/sign-up" className="btn btn-primary">Start your free trial</Link>
-          <Link href="/calculator" className="btn btn-secondary">Compare your current bill</Link>
+      <section className="grid grid-cols-1 items-center gap-10 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-14">
+        <div className="grid max-w-3xl gap-5">
+          <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-[2.6rem] sm:text-6xl">A help desk for small support teams</h1>
+          <p style={{ "--d": 2 } as React.CSSProperties} className="enter text-lg text-muted">
+            Flatdesk is for teams of about 3 to 15 agents who answer customers by email and website chat. One plan at {PRICE_PHRASE}, with {PLAN.includedPerAgent} AI answers per agent included. The AI pauses at the cap, so the bill is the same every month.
+          </p>
+          <div style={{ "--d": 3 } as React.CSSProperties} className="enter flex flex-wrap gap-3">
+            <Link href="/sign-up" className="btn btn-primary">Start your free trial</Link>
+            <Link href="/calculator" className="btn btn-secondary">Compare your current bill</Link>
+          </div>
         </div>
+        <Image
+          src={agentsAtLaptops}
+          alt="Four support agents with headsets answering customers at their laptops"
+          placeholder="blur"
+          priority
+          sizes="(min-width: 1024px) 460px, 100vw"
+          style={{ "--d": 3 } as React.CSSProperties}
+          className="enter aspect-[4/3] w-full rounded-[8px] object-cover"
+        />
       </section>
 
       <section data-play="" suppressHydrationWarning aria-labelledby="cost" className="grid gap-6">
