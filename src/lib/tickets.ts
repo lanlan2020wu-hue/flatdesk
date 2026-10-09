@@ -1,6 +1,7 @@
 import { and, asc, desc, eq, inArray, isNotNull, isNull, sql, type SQL } from "drizzle-orm";
 import { cache } from "react";
 import { db, schema } from "@/db";
+import { notifyFollowers } from "@/lib/followers";
 import { noNul } from "@/lib/ids";
 import { maskCards } from "@/lib/redact";
 import { awake, snoozed } from "@/lib/snooze";
@@ -87,6 +88,7 @@ export function selectTickets(where: SQL[], order: SQL[] = [priorityRank, asc(ti
       groupName: sql<string | null>`(select ${schema.groups.name} from ${schema.groups} where ${schema.groups.id} = ${tickets.groupId})`,
       customerName: customers.name,
       customerEmail: customers.email,
+      customerVip: customers.vip,
       // A reply someone scheduled to send later (lib/scheduled-replies.ts).
       replyScheduled: sql<boolean>`exists(select 1 from ${schema.scheduledReplies} where ${schema.scheduledReplies.ticketId} = ${tickets.id} and ${schema.scheduledReplies.status} = 'scheduled')`,
       // The latest message the customer can see, for the row's one-line preview.
@@ -372,6 +374,13 @@ export async function addSystemNote(orgId: string, ticketId: string, body: strin
 // and run the team's "customer writes back" triggers (which see the status it
 // had, so "status is closed" catches replies to closed tickets).
 export async function addCustomerMessage(opts: { orgId: string; ticketId: string; customerId: string; body: string; emailMessageId?: string | null }) {
+  const id = await addCustomerMessageTx(opts);
+  const [t] = await db.select({ id: tickets.id, number: tickets.number, subject: tickets.subject }).from(tickets).where(eq(tickets.id, opts.ticketId));
+  if (t) await notifyFollowers(opts.orgId, t, { kind: "customer", excerpt: opts.body });
+  return id;
+}
+
+async function addCustomerMessageTx(opts: { orgId: string; ticketId: string; customerId: string; body: string; emailMessageId?: string | null }) {
   return db.transaction(async (tx) => {
     const body = maskCards(noNul(opts.body));
     const [message] = await tx.insert(messages).values({

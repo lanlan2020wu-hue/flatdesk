@@ -7,6 +7,8 @@ import AutoSubmitSelect from "@/components/AutoSubmitSelect";
 import Avatar from "@/components/Avatar";
 import Composer from "@/components/Composer";
 import CopilotSummary from "@/components/CopilotSummary";
+import { followersOf } from "@/lib/followers";
+import { CustomerProfile } from "@/components/CustomerProfile";
 import { CompanyPanel, HubSpotPanel, JiraPanel, OtherTickets, RelatedArticles, ShopifyOrders, StripeCustomer } from "@/components/CustomerContext";
 import LocalTime from "@/components/LocalTime";
 import SlaBadge from "@/components/SlaBadge";
@@ -37,7 +39,7 @@ import AutoTranslate from "@/components/AutoTranslate";
 import { getTicket, listAgents, orgTags, parseTicketNumber, PRIORITIES } from "@/lib/tickets";
 import { TRASH_DAYS } from "@/lib/trash";
 import { CHECKED, listFields } from "@/lib/ticket-fields";
-import { eraseCustomerAction, mergeTicketAction, replyAction, saveCcAction, saveTicketFieldsAction, ticketSnoozeAction, ticketTrashAction, updateTicketAction } from "../../actions";
+import { eraseCustomerAction, followTicketAction, mergeTicketAction, replyAction, saveCcAction, saveTicketFieldsAction, ticketSnoozeAction, ticketTrashAction, updateTicketAction } from "../../actions";
 
 export async function generateMetadata({ params }: PageProps<"/app/tickets/[number]">) {
   return { title: `#${(await params).number}` };
@@ -74,8 +76,10 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
   const mergeError = typeof sp.merge === "string" ? sp.merge.slice(0, 200) : null;
   const eraseMismatch = sp.erase === "mismatch";
   const ccError = typeof sp.cc === "string" ? sp.cc.slice(0, 200) : null;
+  const customerError = typeof sp.customer === "string" ? sp.customer.slice(0, 200) : null;
   const sideError = typeof sp.side === "string" ? sp.side.slice(0, 200) : null;
   const fieldsNotice = typeof sp.fields === "string" ? sp.fields.slice(0, 300) : null;
+  const following = await followersOf(s.orgId, ticket.id);
   const [agents, macros, [aiEvent], repeat, files, ratings, org, summary, tagList, runs, waiting, sides] = await Promise.all([
     listAgents(s.orgId),
     db.select().from(schema.macros).where(and(eq(schema.macros.orgId, s.orgId))).orderBy(asc(schema.macros.name)),
@@ -308,7 +312,10 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
           <div className="flex items-center gap-3">
             <Avatar name={customer.name || customer.email} className="size-10 text-sm" />
             <div className="min-w-0">
-              <p className="truncate font-medium">{customer.name || customer.email}</p>
+              <p className="flex min-w-0 items-center gap-2">
+                <span className="truncate font-medium">{customer.name || customer.email}</span>
+                {customer.vip && <span className="chip shrink-0 border-accent/40 bg-accent-soft font-semibold text-accent">VIP</span>}
+              </p>
               {customer.name && <p className="break-all text-muted">{customer.email}</p>}
             </div>
           </div>
@@ -322,7 +329,20 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
               ))}
             </dl>
           )}
+          <CustomerProfile customerId={customer.id} number={ticket.number} notes={customer.notes} vip={customer.vip} canEdit={!s.viewer} error={customerError} />
         </section>
+
+        {!s.viewer && !ticket.deletedAt && (
+          <form action={followTicketAction} className="flex flex-wrap items-center gap-x-3 gap-y-1">
+            <input type="hidden" name="ticketId" value={ticket.id} />
+            <input type="hidden" name="number" value={ticket.number} />
+            <input type="hidden" name="on" value={following.some((f) => f.userId === s.userId) ? "0" : "1"} />
+            <button className="btn btn-secondary btn-sm" title="Get an email when the customer writes back or a teammate replies">
+              {following.some((f) => f.userId === s.userId) ? "Following" : "Follow"}
+            </button>
+            {following.length > 0 && <span className="min-w-0 truncate text-xs text-muted">Followed by {following.map((f) => (f.userId === s.userId ? "you" : f.name)).join(", ")}</span>}
+          </form>
+        )}
 
         <fieldset disabled={s.viewer} className="contents">
         <div className="grid grid-cols-2 gap-3 border-t border-line pt-4">

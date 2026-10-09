@@ -591,7 +591,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
               Alerts in Slack or anywhere else
             </h2>
             <p className="text-muted">
-              Post to Slack, Discord, Google Chat or any webhook when a new ticket needs your team, or a customer writes back to an AI answer. Nobody has to watch the inbox.
+              Post to Slack, Discord, Google Chat or any webhook when a new ticket needs your team, or a customer replies after the AI has answered. Nobody has to watch the inbox.
             </p>
           </div>
           {alertsNotice === "sent" && <p className="rounded-lg border border-accent/30 bg-accent-soft px-3 py-2 text-sm" role="status">Test alert sent. Check your channel.</p>}

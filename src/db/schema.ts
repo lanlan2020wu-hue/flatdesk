@@ -239,6 +239,10 @@ export const customers = pgTable(
     fields: jsonb("fields").$type<Record<string, string>>().notNull().default({}),
     // The part after the @, so customers group into companies (lib/companies.ts).
     domain: text("domain").generatedAlwaysAs(sql`lower(split_part(email, '@', 2))`),
+    // What the team knows about this person (lib/customer-profile.ts): shown
+    // beside every ticket from them. vip puts a badge on their tickets.
+    notes: text("notes").notNull().default(""),
+    vip: boolean("vip").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("customers_org_email").on(t.orgId, t.email), index("customers_org_domain").on(t.orgId, t.domain)],
@@ -1084,6 +1088,19 @@ export const ticketPresence = pgTable(
     seenAt: timestamp("seen_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("ticket_presence_ticket_user").on(t.ticketId, t.userId)],
+);
+
+// Teammates following a ticket (lib/followers.ts): they're emailed when the
+// customer writes back or someone else replies, without being the assignee.
+export const ticketFollowers = pgTable(
+  "ticket_followers",
+  {
+    ticketId: uuid("ticket_id").notNull().references(() => tickets.id, { onDelete: "cascade" }),
+    orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(), // agents.user_id within the same org
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.ticketId, t.userId] }), index("ticket_followers_org_user").on(t.orgId, t.userId)],
 );
 
 // Groups of agents (Billing, Tier 2...). A ticket can belong to one; with

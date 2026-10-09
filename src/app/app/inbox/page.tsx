@@ -250,6 +250,7 @@ export default async function InboxPage({ searchParams }: PageProps<"/app/inbox"
                       <p className="flex min-w-0 items-baseline gap-2 text-sm">
                         <span className="truncate font-semibold">{who}</span>
                         <span className="num shrink-0 text-xs text-muted">#{t.number}</span>
+                        {t.customerVip && <span className="chip shrink-0 border-accent/40 bg-accent-soft font-semibold text-accent" title="VIP customer">VIP</span>}
                         {t.test && <span className="chip shrink-0 border-warn/40 bg-warn-soft text-warn" title="Made from Test tickets. Left out of reports and the AI allowance.">Test</span>}
                         {(t.priority === "urgent" || t.priority === "high") && (
                           <span className={`chip shrink-0 capitalize ${t.priority === "urgent" ? "border-warn/50 bg-warn-soft font-semibold text-warn" : "border-warn/30 text-warn"}`}>{t.priority}</span>

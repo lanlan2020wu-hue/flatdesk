@@ -1,6 +1,6 @@
 {
-  "id": "c8f59661-ec4b-46f8-81d4-7dd48bef564f",
-  "prevId": "941818dd-65fd-4e46-a60b-288d1649c8fb",
+  "id": "66cffedd-6c1c-4f34-8912-0222f43b86b9",
+  "prevId": "c8f59661-ec4b-46f8-81d4-7dd48bef564f",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -5503,6 +5503,101 @@
         }
       },
       "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.ticket_followers": {
+      "name": "ticket_followers",
+      "schema": "",
+      "columns": {
+        "ticket_id": {
+          "name": "ticket_id",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "org_id": {
+          "name": "org_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "ticket_followers_org_user": {
+          "name": "ticket_followers_org_user",
+          "columns": [
+            {
+              "expression": "org_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "user_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "ticket_followers_ticket_id_tickets_id_fk": {
+          "name": "ticket_followers_ticket_id_tickets_id_fk",
+          "tableFrom": "ticket_followers",
+          "tableTo": "tickets",
+          "columnsFrom": [
+            "ticket_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "ticket_followers_org_id_orgs_id_fk": {
+          "name": "ticket_followers_org_id_orgs_id_fk",
+          "tableFrom": "ticket_followers",
+          "tableTo": "orgs",
+          "columnsFrom": [
+            "org_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "ticket_followers_ticket_id_user_id_pk": {
+          "name": "ticket_followers_ticket_id_user_id_pk",
+          "columns": [
+            "ticket_id",
+            "user_id"
+          ]
+        }
+      },
       "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},

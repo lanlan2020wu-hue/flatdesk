@@ -30,7 +30,7 @@ export const WHY_CHEAPER = [
 export const LEFT_OUT = [
   "Phone, SMS, WhatsApp and social channels",
   "An app marketplace",
-  "Next-reply SLA timers, or pausing the clock while a ticket is pending (first-reply and resolution targets only)",
+  "Periodic-update SLA timers (first-reply, next-reply and resolution targets are built in)",
   "A help center in several languages or on your own domain",
   "Editing Shopify orders, or refunding orders that already shipped (the AI cancels and refunds unshipped ones)",
   "Replying to customers from inside Slack",
