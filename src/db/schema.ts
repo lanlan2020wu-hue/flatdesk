@@ -231,9 +231,27 @@ export const customers = pgTable(
     // Original fields from an imported help desk (phone, company, custom
     // fields), as label -> value. The full record is kept in import_records.
     fields: jsonb("fields").$type<Record<string, string>>().notNull().default({}),
+    // The part after the @, so customers group into companies (lib/companies.ts).
+    domain: text("domain").generatedAlwaysAs(sql`lower(split_part(email, '@', 2))`),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex("customers_org_email").on(t.orgId, t.email)],
+  (t) => [uniqueIndex("customers_org_email").on(t.orgId, t.email), index("customers_org_domain").on(t.orgId, t.domain)],
+);
+
+// What the team knows about a company: customers are grouped by their email
+// domain without a row here; one is saved once someone names it or adds notes.
+export const companies = pgTable(
+  "companies",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
+    domain: text("domain").notNull(),
+    name: text("name"),
+    notes: text("notes").notNull().default(""),
+    updatedBy: text("updated_by"), // agents.name
+    updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("companies_org_domain").on(t.orgId, t.domain)],
 );
 
 export const ticketStatus = pgEnum("ticket_status", ["open", "pending", "closed"]);

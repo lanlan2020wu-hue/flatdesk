@@ -3,6 +3,7 @@ import { and, desc, eq, isNull, ne } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { timeAgo } from "@/lib/format";
 import { articlesForTicket } from "@/lib/help";
+import { companyDomain, companyTickets, getCompany } from "@/lib/companies";
 import { hubspotForCustomer, jiraForTicket, shopifyForCustomer, stripeForCustomer } from "@/lib/integrations";
 import { EscalateForm, HubSpotLogButton } from "@/components/IntegrationForms";
 
@@ -35,6 +36,46 @@ export async function OtherTickets({ orgId, customerId, ticketId }: { orgId: str
           </li>
         ))}
       </ul>
+    </section>
+  );
+}
+
+// The customer's company (their email domain): its notes, and what other
+// people there have asked about. Quiet for personal mailboxes, and for a
+// company nobody else from has written in unless the team saved notes on it.
+export async function CompanyPanel({ orgId, email, customerId }: { orgId: string; email: string; customerId: string }) {
+  const domain = companyDomain(email);
+  if (!domain) return null;
+  const [company, others] = await Promise.all([getCompany(orgId, domain), companyTickets(orgId, domain, { exceptCustomer: customerId, limit: 5 })]);
+  if (!company) return null;
+  const people = company.people.length;
+  if (people < 2 && !company.notes && !company.named) return null;
+  const open = company.people.reduce((n, p) => n + p.open, 0);
+  return (
+    <section className="grid gap-2 border-t border-line pt-4">
+      <h2 className={heading}>Company</h2>
+      <div className="grid gap-0.5">
+        <Link href={`/app/companies/${domain}`} className="link font-medium">{company.name}</Link>
+        <span className="text-xs text-muted">
+          {domain} · {people} {people === 1 ? "person" : "people"} · {open} open {open === 1 ? "ticket" : "tickets"}
+        </span>
+      </div>
+      {company.notes && <p className="line-clamp-4 whitespace-pre-line break-words text-muted">{company.notes}</p>}
+      {others.length > 0 && (
+        <>
+          <h3 className="pt-1 text-xs font-medium text-muted">Others at {company.name}</h3>
+          <ul className="grid gap-1.5">
+            {others.map((t) => (
+              <li key={t.number} className="grid">
+                <Link href={`/app/tickets/${t.number}`} className="link truncate">{t.subject}</Link>
+                <span className="truncate text-xs text-muted">
+                  <span className="num">#{t.number}</span> · <span className="capitalize">{t.status}</span> · {t.customerName || t.customerEmail} · {timeAgo(t.updatedAt)}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
     </section>
   );
 }
