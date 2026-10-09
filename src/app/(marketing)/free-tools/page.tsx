@@ -3,6 +3,8 @@ import JsonLd from "@/components/JsonLd";
 import { FREE_TOOLS, freeToolPath } from "@/lib/free-tools";
 import { breadcrumbs, pageMeta } from "@/lib/seo";
 import { SITE } from "@/lib/site";
+import PhotoHero from "@/components/PhotoHero";
+import whiteboard from "@/assets/photos/whiteboard.webp";
 
 export const metadata = pageMeta({
   title: "Free tools for customer support teams",
@@ -26,12 +28,14 @@ export default function FreeToolsPage() {
           },
         ]}
       />
-      <header className="grid max-w-3xl gap-4">
-        <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-[2.6rem] sm:text-6xl">Free tools for customer support teams</h1>
-        <p style={{ "--d": 2 } as React.CSSProperties} className="enter text-lg text-muted">
-          Calculators and references for the questions support leads answer every week: how many people to schedule, when a ticket is due, and whether a change in CSAT is real. No signup, nothing to install, and every formula is shown.
-        </p>
-      </header>
+      <PhotoHero photo={whiteboard} alt="A support lead planning on a whiteboard of sticky notes with her team" layout="left">
+        <header className="grid max-w-3xl gap-4">
+          <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-[2.6rem] sm:text-6xl">Free tools for customer support teams</h1>
+          <p style={{ "--d": 2 } as React.CSSProperties} className="enter text-lg text-muted">
+            Calculators and references for the questions support leads answer every week: how many people to schedule, when a ticket is due, and whether a change in CSAT is real. No signup, nothing to install, and every formula is shown.
+          </p>
+        </header>
+      </PhotoHero>
       <ul className="grid gap-4 md:grid-cols-2">
         {FREE_TOOLS.map((t, i) => (
           <li key={t.slug} style={{ "--d": 3 + i } as React.CSSProperties} className="enter">

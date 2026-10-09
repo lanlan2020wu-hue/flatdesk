@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import LegalPage, { Section } from "@/components/LegalPage";
 import { pageMeta } from "@/lib/seo";
 import { LAUNCHED, SITE, TRUST_UPDATED } from "@/lib/site";
+import smallTeam from "@/assets/photos/small-team.webp";
 
 export const metadata: Metadata = pageMeta({
   title: "Who runs Flatdesk",
@@ -27,6 +29,19 @@ export default function AboutPage() {
         </p>
       }
     >
+      <figure className="grid gap-2">
+        <Image
+          src={smallTeam}
+          alt="A small team talking over coffee at a shared table"
+          unoptimized
+          placeholder="blur"
+          priority
+          sizes="(min-width: 672px) 624px, 100vw"
+          className="aspect-[16/9] w-full rounded-[8px] object-cover"
+        />
+        <figcaption className="text-sm text-muted">A stock photo, not the people who run Flatdesk.</figcaption>
+      </figure>
+
       <Section title="How new it is">
         <p>
           Very. There are no customer logos or reviews on this site because we&apos;d rather show none than make them up. If you need references from
