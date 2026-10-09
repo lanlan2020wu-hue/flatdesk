@@ -1084,6 +1084,19 @@ export const ticketPresence = pgTable(
   (t) => [uniqueIndex("ticket_presence_ticket_user").on(t.ticketId, t.userId)],
 );
 
+// Teammates following a ticket (lib/followers.ts): they're emailed when the
+// customer writes back or someone else replies, without being the assignee.
+export const ticketFollowers = pgTable(
+  "ticket_followers",
+  {
+    ticketId: uuid("ticket_id").notNull().references(() => tickets.id, { onDelete: "cascade" }),
+    orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(), // agents.user_id within the same org
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [primaryKey({ columns: [t.ticketId, t.userId] }), index("ticket_followers_org_user").on(t.orgId, t.userId)],
+);
+
 // Groups of agents (Billing, Tier 2...). A ticket can belong to one; with
 // shareInTurn its tickets go to the members in turn (lib/routing.ts).
 export const groups = pgTable(
