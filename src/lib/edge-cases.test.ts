@@ -30,8 +30,8 @@ test("ticket numbers too big for Postgres, or not numbers at all, are no ticket 
   }
 
   const { matchRecipient } = await import("./email");
-  assert.deepEqual(matchRecipient(["edgestest1+99999999999@in.flatdesk.test"]), { key: "edgestest1", number: null });
-  assert.deepEqual(matchRecipient(["edgestest1+12@in.flatdesk.test"]), { key: "edgestest1", number: 12 });
+  assert.deepEqual(matchRecipient(["edgestest1+99999999999@in.flatdesk.test"]), { key: "edgestest1", number: null, side: null });
+  assert.deepEqual(matchRecipient(["edgestest1+12@in.flatdesk.test"]), { key: "edgestest1", number: 12, side: null });
 
   await freshOrg();
   const { ticketForVisitor } = await import("./chat");

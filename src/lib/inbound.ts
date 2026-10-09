@@ -1,11 +1,12 @@
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { emailConfig, isAutoReply, matchRecipients, parseAddress, senderCheck, stripQuoted, ticketFromHeaders } from "@/lib/email";
+import { emailConfig, isAutoReply, matchRecipients, parseAddress, senderCheck, stripQuoted, ticketFromHeaders, type InboundTarget } from "@/lib/email";
 import { milestone } from "@/lib/funnel";
 import { TEST_TAG, updateOnboarding } from "@/lib/onboarding";
 import { saveAttachments, type NewFile } from "@/lib/attachments";
 import { ccFromEmail, mergeCc } from "@/lib/cc";
 import { resolveMerged } from "@/lib/merge";
+import { addSideReply, sideForInbound } from "@/lib/side-conversations";
 import { isBlocked, trashTickets } from "@/lib/trash";
 import { addCustomerMessage, addSystemNote, createTicket, NO_AI_SETUP_NOTE } from "@/lib/tickets";
 
@@ -82,10 +83,10 @@ export async function handleInboundEmailAll(mail: Inbound): Promise<InboundResul
 
 // Mail read from a team's own connected mailbox: it's for that team whatever the To says.
 export function handleMailboxEmail(mail: Inbound & { mailbox: string }, inboundKey: string): Promise<InboundResult> {
-  return handleFor(mail, { key: inboundKey, number: null });
+  return handleFor(mail, { key: inboundKey, number: null, side: null });
 }
 
-async function handleFor(mail: Inbound, target: { key: string; number: number | null }): Promise<InboundResult> {
+async function handleFor(mail: Inbound, target: InboundTarget): Promise<InboundResult> {
   const org = await db.query.orgs.findFirst({ where: eq(schema.orgs.inboundKey, target.key) });
   if (!org) return { ignored: "unknown inbox" };
 
@@ -146,6 +147,17 @@ async function handleFor(mail: Inbound, target: { key: string; number: number | 
   }
 
   const body = stripQuoted(mail.text) || "(empty message)";
+
+  // An answer to a side conversation (lib/side-conversations.ts) goes onto its
+  // ticket as an internal note, never to the customer or the AI.
+  const side = await sideForInbound(org.id, target.side, mail.headers);
+  if (side) {
+    const added = await addSideReply({ orgId: org.id, side, from: sender, body, emailMessageId: mail.messageId }).catch(duplicate);
+    if (!added) return { ignored: "duplicate" };
+    await storeFiles(mail, org.id, side.ticketId, added.messageId);
+    const t = await db.query.tickets.findFirst({ where: eq(schema.tickets.id, side.ticketId), columns: { number: true } });
+    return { ticket: t?.number, action: "appended" };
+  }
 
   // Blocked senders: kept in the trash in case the block was a mistake, but no
   // AI answer, alert, routing or reply, and never added to a live conversation.
