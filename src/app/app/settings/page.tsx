@@ -18,11 +18,15 @@ import { DEFAULT_HOURS, RESOLVE_CHOICES, TARGET_CHOICES } from "@/lib/sla";
 import { timeAgo } from "@/lib/format";
 import { LANGUAGES } from "@/lib/language";
 import { TRASH_DAYS } from "@/lib/trash";
+import { listSources, WEB } from "@/lib/web-knowledge";
 import { currentUser } from "@clerk/nextjs/server";
 import { clerkEnabled } from "@/lib/auth-config";
 import {
   openBillingPortalAction,
   saveAiSettingsAction,
+  addWebSourceAction,
+  readWebSourceAction,
+  removeWebSourceAction,
   saveAlertsAction,
   saveSendAddressAction,
   disconnectMailboxAction,
@@ -53,7 +57,7 @@ const STATUS_TEXT: Record<string, string> = {
 
 export default async function SettingsPage({ searchParams }: PageProps<"/app/settings">) {
   const s = await requireSession();
-  const { billing, alerts: alertsNotice, service: serviceNotice, security: securityNotice, send: sendNotice, blocked: blockedNotice, mailbox: mailboxNotice } = await searchParams;
+  const { billing, alerts: alertsNotice, service: serviceNotice, security: securityNotice, send: sendNotice, blocked: blockedNotice, mailbox: mailboxNotice, web: webNotice } = await searchParams;
   // A team's own sending address waiting on DNS: look again on each visit, so the page is current.
   const pendingSend = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId), columns: { sendDomainId: true, sendDomainVerifiedAt: true } });
   if (pendingSend?.sendDomainId && !pendingSend.sendDomainVerifiedAt && !sendNotice) await checkSendDomain(s.orgId);
@@ -70,6 +74,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
   const address = org ? inboundAddress(org.inboundKey) : null;
   const mailbox = await mailboxFor(s.orgId);
   const usage = await aiUsage(s.orgId);
+  const sites = await listSources(s.orgId);
   const pct = Math.min(100, Math.round((usage.used / usage.included) * 100));
   const isAdmin = s.role === "admin";
   const yearly = subscribed && org?.billingInterval === "year";
@@ -469,6 +474,52 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
             {!isAdmin && <p className="text-sm text-muted">Only admins can change these.</p>}
           </form>
         )}
+
+        <div id="websites" className="grid scroll-mt-6 gap-3 rounded-lg border border-line px-4 py-4 text-sm">
+          <div className="grid gap-1">
+            <h3 className="font-semibold">Websites the AI reads</h3>
+            <p className="text-muted">
+              Add your website or docs address and the AI answers from those pages too, beside your macros and help articles, and links customers to them. Flatdesk reads up to {WEB.maxPages} public pages under each address and reads them again every week. No AI answers are used to read them.
+            </p>
+          </div>
+          {typeof webNotice === "string" && <p className="rounded-lg border border-warn/40 bg-surface-2/60 px-3 py-2" role="alert">{webNotice.slice(0, 300)}</p>}
+          {sites.length > 0 && (
+            <ul className="grid divide-y divide-line border-y border-line">
+              {sites.map((w) => (
+                <li key={w.id} className="flex flex-wrap items-center justify-between gap-3 py-2.5">
+                  <span className="grid min-w-0 gap-0.5">
+                    <a href={w.url} target="_blank" rel="noreferrer" className="link truncate font-medium">{w.url.replace(/^https?:\/\//, "")}</a>
+                    <span className={w.status === "failed" ? "text-warn" : "text-muted"}>
+                      {w.status === "reading"
+                        ? "Reading the pages now. Refresh in a minute."
+                        : w.status === "failed"
+                          ? (w.error ?? "Couldn't be read.")
+                          : `${w.pageCount} page${w.pageCount === 1 ? "" : "s"}${w.readAt ? `, read ${timeAgo(w.readAt)}` : ""}`}
+                    </span>
+                  </span>
+                  {isAdmin && (
+                    <span className="flex gap-2">
+                      <form action={readWebSourceAction}>
+                        <input type="hidden" name="id" value={w.id} />
+                        <button className="btn btn-secondary btn-sm" disabled={w.status === "reading"}>Read again</button>
+                      </form>
+                      <form action={removeWebSourceAction}>
+                        <input type="hidden" name="id" value={w.id} />
+                        <button className="btn btn-secondary btn-sm">Remove</button>
+                      </form>
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+          {isAdmin && sites.length < WEB.maxSources && (
+            <form action={addWebSourceAction} className="flex flex-wrap gap-2">
+              <input name="url" required maxLength={2000} placeholder="yourcompany.com/docs" aria-label="Website address" className="field min-w-0 flex-1" />
+              <button className="btn btn-secondary">Add website</button>
+            </form>
+          )}
+        </div>
       </section>
       {org && (
         <section id="alerts" className="grid scroll-mt-6 gap-4 border-t border-line pt-6">

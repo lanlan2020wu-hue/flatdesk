@@ -36,6 +36,7 @@ const MORE = [
   { title: "Slack alerts and ratings", body: "A ping when a ticket needs a person, reply time targets, and ratings.", href: "/features#all" },
   { title: "Search, priority, bulk", body: "Find any ticket by its words, customer, tag or #number. Urgent sits on top. Change many at once.", href: "/features#all" },
   { title: "AI sorts new tickets", body: "Each new ticket arrives with its priority, your tags and the right group already set, with a note saying why. In Zendesk it comes with the Copilot add-on, $50 per agent.", href: "/features#all" },
+  { title: "AI reads your website", body: "Paste your site or docs address. The AI answers from those pages on day one and links customers to them.", href: "/features#all" },
   { title: "Auto-translate", body: "Customer messages in Spanish, Japanese and 20 more show in your language. Your reply goes back in theirs.", href: "/features#all" },
   { title: "Who's on this ticket", body: "See when a teammate is already replying, so a customer never gets two answers.", href: "/features#all" },
   { title: "Merge, CC, mentions", body: "Fold a duplicate into another ticket, keep everyone copied, and @name a teammate in a note.", href: "/features#all" },

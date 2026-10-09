@@ -36,7 +36,8 @@ export type AuditAction =
   | "settings.routing"
   | "settings.help_domain"
   | "settings.send_address"
-  | "settings.blocklist";
+  | "settings.blocklist"
+  | "settings.website";
 
 export const AUDIT_LABELS: Record<AuditAction, string> = {
   "settings.ai": "Changed AI answer settings",
@@ -66,6 +67,7 @@ export const AUDIT_LABELS: Record<AuditAction, string> = {
   "settings.help_domain": "Changed the help center's own address",
   "settings.send_address": "Changed the address replies are sent from",
   "settings.blocklist": "Changed blocked senders",
+  "settings.website": "Changed websites the AI reads",
   "apikey.revoke": "Revoked an API key",
   "action.change": "Changed an AI action",
   "action.decide": "Approved or declined an AI action",

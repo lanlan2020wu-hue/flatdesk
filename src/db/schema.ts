@@ -1049,3 +1049,35 @@ export const aiTriage = pgTable(
   },
   (t) => [uniqueIndex("ai_triage_ticket").on(t.ticketId), index("ai_triage_org_month").on(t.orgId, t.month)],
 );
+
+// Websites the AI reads (lib/web-knowledge.ts): a team adds its site or docs
+// address, Flatdesk reads up to WEB.maxPages pages under it, and the AI answers
+// from them like saved answers. Read again weekly.
+export const webSourceStatus = pgEnum("web_source_status", ["reading", "ready", "failed"]);
+export const webSources = pgTable(
+  "web_sources",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
+    url: text("url").notNull(),
+    status: webSourceStatus("status").notNull().default("reading"),
+    error: text("error"),
+    pageCount: integer("page_count").notNull().default(0),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("web_sources_org_url").on(t.orgId, t.url)],
+);
+export const webPages = pgTable(
+  "web_pages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
+    sourceId: uuid("source_id").notNull().references(() => webSources.id, { onDelete: "cascade" }),
+    url: text("url").notNull(),
+    title: text("title").notNull(),
+    text: text("text").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("web_pages_source_url").on(t.sourceId, t.url), index("web_pages_org").on(t.orgId)],
+);
