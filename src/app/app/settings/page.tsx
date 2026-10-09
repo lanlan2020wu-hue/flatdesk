@@ -19,11 +19,14 @@ import { timeAgo } from "@/lib/format";
 import { LANGUAGES } from "@/lib/language";
 import { TRASH_DAYS } from "@/lib/trash";
 import { listSources, WEB } from "@/lib/web-knowledge";
+import { FIELD_KINDS, FIELD_LIMITS, listFields, type TicketField } from "@/lib/ticket-fields";
 import { currentUser } from "@clerk/nextjs/server";
 import { clerkEnabled } from "@/lib/auth-config";
 import {
   openBillingPortalAction,
   saveAiSettingsAction,
+  saveFieldDefinitionAction,
+  deleteFieldDefinitionAction,
   addWebSourceAction,
   readWebSourceAction,
   removeWebSourceAction,
@@ -57,7 +60,7 @@ const STATUS_TEXT: Record<string, string> = {
 
 export default async function SettingsPage({ searchParams }: PageProps<"/app/settings">) {
   const s = await requireSession();
-  const { billing, alerts: alertsNotice, service: serviceNotice, security: securityNotice, send: sendNotice, blocked: blockedNotice, mailbox: mailboxNotice, web: webNotice } = await searchParams;
+  const { billing, alerts: alertsNotice, service: serviceNotice, security: securityNotice, send: sendNotice, blocked: blockedNotice, mailbox: mailboxNotice, web: webNotice, fields: fieldsNotice } = await searchParams;
   // A team's own sending address waiting on DNS: look again on each visit, so the page is current.
   const pendingSend = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId), columns: { sendDomainId: true, sendDomainVerifiedAt: true } });
   if (pendingSend?.sendDomainId && !pendingSend.sendDomainVerifiedAt && !sendNotice) await checkSendDomain(s.orgId);
@@ -74,7 +77,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
   const address = org ? inboundAddress(org.inboundKey) : null;
   const mailbox = await mailboxFor(s.orgId);
   const usage = await aiUsage(s.orgId);
-  const sites = await listSources(s.orgId);
+  const [sites, ticketFieldList] = await Promise.all([listSources(s.orgId), listFields(s.orgId)]);
   const pct = Math.min(100, Math.round((usage.used / usage.included) * 100));
   const isAdmin = s.role === "admin";
   const yearly = subscribed && org?.billingInterval === "year";
@@ -277,6 +280,53 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
             <Link href="/app/inbox?view=trash" className="link text-accent">Trash</Link>
             <span className="text-muted">: blocked email and deleted tickets, kept {TRASH_DAYS} days in case you need them back.</span>
           </p>
+        </section>
+      )}
+
+      {org && !s.viewer && (
+        <section id="fields" className="grid scroll-mt-6 gap-4 border-t border-line pt-6">
+          <div className="grid gap-1">
+            <h2 className="text-lg font-semibold">Ticket fields</h2>
+            <p className="text-muted">
+              Fields every ticket has in its side panel, like Plan, Order number or Refund issued. Mark one required and the team has to fill it in before closing a ticket. Search finds tickets by their field values. A field with the same name as one you imported picks up the imported values.
+            </p>
+          </div>
+          {typeof fieldsNotice === "string" && <p className="rounded-lg border border-warn/40 bg-surface-2/60 px-3 py-2 text-sm" role="alert">{fieldsNotice.slice(0, 300)}</p>}
+          {ticketFieldList.length > 0 && (
+            <ul className="grid divide-y divide-line border-y border-line">
+              {ticketFieldList.map((f) => (
+                <li key={f.id} className="py-2.5">
+                  <details>
+                    <summary className="flex cursor-pointer list-none flex-wrap items-center justify-between gap-2">
+                      <span className="font-medium">{f.name}</span>
+                      <span className="text-sm text-muted">
+                        {FIELD_KINDS.find((k) => k.id === f.kind)?.label}
+                        {f.kind === "dropdown" && `: ${f.options.join(", ")}`}
+                        {f.requiredToClose && " · required to close"}
+                      </span>
+                    </summary>
+                    {isAdmin && (
+                      <div className="mt-3 grid gap-3">
+                        <FieldForm field={f} />
+                        <form action={deleteFieldDefinitionAction}>
+                          <input type="hidden" name="id" value={f.id} />
+                          <button className="btn btn-secondary btn-sm text-warn">Delete field</button>
+                          <span className="ml-2 text-xs text-muted">Values already on tickets stay, read only.</span>
+                        </form>
+                      </div>
+                    )}
+                  </details>
+                </li>
+              ))}
+            </ul>
+          )}
+          {isAdmin && ticketFieldList.length < FIELD_LIMITS.max && (
+            <details open={ticketFieldList.length === 0} className="grid gap-3">
+              <summary className="link w-max cursor-pointer text-sm font-medium text-accent">Add a field</summary>
+              <div className="mt-3"><FieldForm /></div>
+            </details>
+          )}
+          {!isAdmin && <p className="text-sm text-muted">Only admins can change ticket fields.</p>}
         </section>
       )}
 
@@ -832,5 +882,35 @@ function Mailbox({ row, isAdmin, notice }: { row: Awaited<ReturnType<typeof mail
         <p className="text-muted">Only admins can change it.</p>
       )}
     </div>
+  );
+}
+
+// Adds a ticket field, or edits one.
+function FieldForm({ field }: { field?: TicketField }) {
+  return (
+    <form action={saveFieldDefinitionAction} className="grid gap-3 text-sm">
+      {field && <input type="hidden" name="id" value={field.id} />}
+      <div className="flex flex-wrap gap-3">
+        <label className="grid min-w-0 flex-1 gap-1">
+          <span className="label">Name</span>
+          <input name="name" required maxLength={FIELD_LIMITS.nameChars} defaultValue={field?.name} placeholder="Plan" className="field" />
+        </label>
+        <label className="grid gap-1">
+          <span className="label">Kind</span>
+          <select name="kind" defaultValue={field?.kind ?? "text"} className="field">
+            {FIELD_KINDS.map((k) => <option key={k.id} value={k.id}>{k.label}</option>)}
+          </select>
+        </label>
+      </div>
+      <label className="grid gap-1">
+        <span className="label">Dropdown choices, separated by commas</span>
+        <input name="options" defaultValue={field?.options.join(", ")} placeholder="Free, Pro, Business" className="field" />
+      </label>
+      <label className="flex items-center gap-2">
+        <input type="checkbox" name="requiredToClose" defaultChecked={field?.requiredToClose} className="size-4 accent-[var(--accent)]" />
+        Required before closing a ticket
+      </label>
+      <button className="btn btn-primary w-max">{field ? "Save field" : "Add field"}</button>
+    </form>
   );
 }

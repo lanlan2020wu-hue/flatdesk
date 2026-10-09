@@ -32,7 +32,8 @@ import { guessLanguage, isForeign, languageLabel } from "@/lib/language";
 import AutoTranslate from "@/components/AutoTranslate";
 import { getTicket, listAgents, orgTags, parseTicketNumber, PRIORITIES } from "@/lib/tickets";
 import { TRASH_DAYS } from "@/lib/trash";
-import { eraseCustomerAction, mergeTicketAction, replyAction, saveCcAction, ticketSnoozeAction, ticketTrashAction, updateTicketAction } from "../../actions";
+import { CHECKED, listFields } from "@/lib/ticket-fields";
+import { eraseCustomerAction, mergeTicketAction, replyAction, saveCcAction, saveTicketFieldsAction, ticketSnoozeAction, ticketTrashAction, updateTicketAction } from "../../actions";
 
 export async function generateMetadata({ params }: PageProps<"/app/tickets/[number]">) {
   return { title: `#${(await params).number}` };
@@ -48,8 +49,14 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
   const data = await getTicket(s.orgId, number);
   if (!data) notFound();
   const { ticket, customer, thread } = data;
+  // The team's own fields are edited in the rail; any other values (kept from
+  // an import, or a field since deleted) are listed under them, read only.
+  const defined = await listFields(s.orgId);
+  const definedNames = new Set(defined.map((f) => f.name));
   // "Imported from" first; Postgres returns jsonb keys in its own order.
-  const fieldEntries = Object.entries(ticket.fields).sort(([a], [b]) => Number(b === "Imported from") - Number(a === "Imported from"));
+  const fieldEntries = Object.entries(ticket.fields)
+    .filter(([k]) => !definedNames.has(k))
+    .sort(([a], [b]) => Number(b === "Imported from") - Number(a === "Imported from"));
   const customerFields = Object.entries(customer.fields);
   // Right after this agent replies with an answer they keep sending, offer to save it as a macro.
   const last = thread.at(-1);
@@ -59,6 +66,7 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
   const mergeError = typeof sp.merge === "string" ? sp.merge.slice(0, 200) : null;
   const eraseMismatch = sp.erase === "mismatch";
   const ccError = typeof sp.cc === "string" ? sp.cc.slice(0, 200) : null;
+  const fieldsNotice = typeof sp.fields === "string" ? sp.fields.slice(0, 300) : null;
   const mergedInto = ticket.mergedIntoId ? await db.query.tickets.findFirst({ where: and(eq(schema.tickets.orgId, s.orgId), eq(schema.tickets.id, ticket.mergedIntoId)), columns: { number: true } }) : null;
   const groups = await listGroups(s.orgId);
   const [agents, macros, [aiEvent], repeat, files, ratings, org, summary, tagList, runs] = await Promise.all([
@@ -417,10 +425,55 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
         )}
         </fieldset>
 
+        {defined.length > 0 && (
+          <form id="fields" key={`fields-${JSON.stringify(ticket.fields)}`} action={saveTicketFieldsAction} className="grid scroll-mt-6 gap-2.5 border-t border-line pt-4">
+            <input type="hidden" name="ticketId" value={ticket.id} />
+            <input type="hidden" name="number" value={ticket.number} />
+            <p className={heading}>Fields</p>
+            {fieldsNotice && <p role="alert" className="text-xs text-warn">{fieldsNotice}</p>}
+            <fieldset disabled={s.viewer} className="grid gap-2.5">
+              {defined.map((f) => {
+                const id = `field-${f.id}`;
+                const value = ticket.fields[f.name] ?? "";
+                const label = (
+                  <>
+                    {f.name}
+                    {f.requiredToClose && <span className="text-muted" title="Needed before the ticket can be closed"> *</span>}
+                  </>
+                );
+                if (f.kind === "checkbox") {
+                  return (
+                    <label key={f.id} className="flex items-center gap-2 text-sm">
+                      <input type="checkbox" name={`f:${f.name}`} defaultChecked={value === CHECKED} className="size-4 accent-[var(--accent)]" />
+                      {label}
+                    </label>
+                  );
+                }
+                return (
+                  <label key={f.id} htmlFor={id} className="grid gap-1">
+                    <span className="text-xs text-muted">{label}</span>
+                    {f.kind === "dropdown" ? (
+                      <select id={id} name={`f:${f.name}`} defaultValue={value} className={field}>
+                        <option value="">Not set</option>
+                        {/* A value from before the choices changed stays visible until someone picks another. */}
+                        {value && !f.options.includes(value) && <option value={value} disabled>{value}</option>}
+                        {f.options.map((o) => <option key={o} value={o}>{o}</option>)}
+                      </select>
+                    ) : (
+                      <input id={id} name={`f:${f.name}`} defaultValue={value} inputMode={f.kind === "number" ? "decimal" : undefined} autoComplete="off" maxLength={500} className={field} />
+                    )}
+                  </label>
+                );
+              })}
+              {!s.viewer && <button className="btn btn-secondary btn-sm w-fit">Save fields</button>}
+            </fieldset>
+          </form>
+        )}
+
         {fieldEntries.length > 0 && (
           <details className="group grid gap-2 border-t border-line pt-4">
             <summary className={`${heading} flex cursor-pointer list-none items-center justify-between`}>
-              {ticket.source ? "Original fields" : "Fields"}
+              {ticket.source ? "Original fields" : "Other fields"}
               <span className="num text-xs text-muted group-open:hidden">{fieldEntries.length}</span>
             </summary>
             <dl className="mt-2 grid gap-2">

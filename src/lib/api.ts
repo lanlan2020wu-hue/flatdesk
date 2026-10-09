@@ -116,6 +116,7 @@ export function ticketJson({ ticket: t, customer: c, assigneeName, assigneeEmail
     priority: t.priority,
     channel: t.channel,
     tags: t.tags,
+    fields: t.fields,
     cc: t.cc,
     customer: { email: c.email, name: c.name },
     assignee: t.assigneeId ? { name: assigneeName, email: assigneeEmail } : null,

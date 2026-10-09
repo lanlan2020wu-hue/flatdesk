@@ -3,7 +3,7 @@ import { db, schema } from "@/db";
 import { parseTicketNumber } from "@/lib/tickets";
 
 // Ticket search from the inbox: a ticket number ("1042" or "#1042"), or words
-// matched against the subject, the customer's name and email, tags and every
+// matched against the subject, the customer's name and email, tags, field values and every
 // message, internal notes included. All statuses, newest change first.
 
 const { tickets, customers, messages, agents } = schema;
@@ -28,6 +28,7 @@ export async function searchTickets(orgId: string, raw: string) {
     or ${customers.email} ilike ${like}
     or ${customers.name} ilike ${like}
     or exists (select 1 from unnest(${tickets.tags}) tag where tag ilike ${like})
+    or exists (select 1 from jsonb_each_text(${tickets.fields}) f where f.value ilike ${like})
     or exists (
       select 1 from ${messages}
       where ${messages.ticketId} = ${tickets.id}

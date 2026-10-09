@@ -13,6 +13,7 @@ import { INPUT, parseOverageLimit } from "@/lib/app-input";
 import { LOCKED_MESSAGE, requireAdmin, requireEditor, requireOpen, type Session } from "@/lib/auth";
 import { filesFromForm, saveAttachments } from "@/lib/attachments";
 import { checkWebhookUrl, sendTestAlert } from "@/lib/alerts";
+import { addField, blockedFromClosing, deleteField, FieldError, missingMessage, parseFieldInput, setTicketValues, updateField } from "@/lib/ticket-fields";
 import { addSource, markReading, readSource, removeSource, WebSourceError } from "@/lib/web-knowledge";
 import { handBackToTeam } from "@/lib/ai";
 import { checkoutUrl, portalUrl, switchToAnnual, syncSeats } from "@/lib/billing";
@@ -73,6 +74,10 @@ export async function replyAction(form: FormData) {
   // Set when the agent translated their reply into the customer's language in
   // the composer: what they wrote, shown to the team beside what was sent.
   const original = form.get("internal") === "on" ? null : str(form, "original").slice(0, 8000) || null;
+  // "Send and close" with a required field empty: the reply goes, the ticket waits as pending.
+  let replyStatus = status(str(form, "status"));
+  const missing = replyStatus === "closed" ? (await blockedFromClosing(s.orgId, [ticketId])).get(ticketId) : undefined;
+  if (missing) replyStatus = "pending";
   const { messageId, ticket } = await addReply({
     orgId: s.orgId,
     ticketId,
@@ -80,7 +85,7 @@ export async function replyAction(form: FormData) {
     body,
     original,
     internal: form.get("internal") === "on",
-    status: status(str(form, "status")),
+    status: replyStatus,
     addTags: tagList(str(form, "addTags")),
     assignTo: assignee?.userId ?? null,
     hasFiles: files.length > 0,
@@ -98,6 +103,7 @@ export async function replyAction(form: FormData) {
   if (messageId && form.get("internal") !== "on") await recordMacroUses(s.orgId, messageId, str(form, "macroIds").split(",").filter(isUuid).slice(0, 20));
   revalidatePath(`/app/tickets/${number}`);
   revalidatePath("/app/inbox");
+  if (missing) redirect(`/app/tickets/${number}?fields=${encodeURIComponent(`Sent, and left pending. ${missingMessage(missing)}`)}#fields`);
 }
 
 // The answer the AI was missing, written under its handoff note. It becomes a
@@ -139,6 +145,10 @@ export async function updateTicketAction(form: FormData) {
     const groupId = str(form, "groupId");
     if (groupId && !(await findGroup(s.orgId, groupId))) throw new Error("That group was deleted.");
     patch.groupId = groupId || null;
+  }
+  if (patch.status === "closed") {
+    const missing = (await blockedFromClosing(s.orgId, [ticketId])).get(ticketId);
+    if (missing) redirect(`/app/tickets/${str(form, "number")}?fields=${encodeURIComponent(missingMessage(missing))}#fields`);
   }
   await updateTicket(s.orgId, ticketId, patch);
   // Sent to a group that shares tickets in turn, with nobody on it yet.
@@ -306,11 +316,19 @@ export async function bulkUpdateAction(form: FormData) {
     .select({ id: schema.tickets.id, tags: schema.tickets.tags })
     .from(schema.tickets)
     .where(and(eq(schema.tickets.orgId, s.orgId), inArray(schema.tickets.id, ids)));
+  // Closing skips tickets with a required field empty; the rest of the change still applies to them.
+  const blocked = patch.status === "closed" ? await blockedFromClosing(s.orgId, rows.map((r) => r.id)) : new Map<string, string[]>();
   for (const t of rows) {
-    await updateTicket(s.orgId, t.id, addTags.length ? { ...patch, tags: [...t.tags, ...addTags] } : patch);
+    const own = blocked.has(t.id) ? { ...patch, status: undefined } : patch;
+    await updateTicket(s.orgId, t.id, addTags.length ? { ...own, tags: [...t.tags, ...addTags] } : own);
     if (patch.groupId) await shareTicketQuietly(s.orgId, t.id);
   }
   revalidatePath("/app/inbox");
+  if (blocked.size) {
+    const names = [...new Set([...blocked.values()].flat())];
+    const msg = `${blocked.size} ticket${blocked.size === 1 ? " wasn't" : "s weren't"} closed: fill in ${names.join(", ")} first.`;
+    redirect(`${back}${back.includes("?") ? "&" : "?"}notice=${encodeURIComponent(msg)}`);
+  }
   redirect(back);
 }
 
@@ -697,4 +715,52 @@ export async function removeWebSourceAction(form: FormData) {
   if (removed) await audit(s.orgId, actor(s), "settings.website", `Removed ${removed.url}`);
   revalidatePath("/app/settings");
   webBack();
+}
+
+// ---- Custom ticket fields (lib/ticket-fields.ts) ----
+
+const fieldsBack = (msg?: string) => redirect(`/app/settings${msg ? `?fields=${encodeURIComponent(msg)}` : ""}#fields`);
+
+export async function saveTicketFieldsAction(form: FormData) {
+  const s = await requireOpenSession();
+  const ticketId = idOf(form, "ticketId");
+  const number = str(form, "number");
+  let error: string | undefined;
+  try {
+    await setTicketValues(s.orgId, ticketId, (name) => (form.has(`f:${name}`) ? str(form, `f:${name}`) : null));
+  } catch (err) {
+    if (!(err instanceof FieldError)) throw err;
+    error = err.message;
+  }
+  revalidatePath(`/app/tickets/${number}`);
+  if (error) redirect(`/app/tickets/${number}?fields=${encodeURIComponent(error)}#fields`);
+}
+
+export async function saveFieldDefinitionAction(form: FormData) {
+  const s = await requireOpenAdmin();
+  const id = str(form, "id");
+  let error: string | undefined;
+  try {
+    const input = parseFieldInput((k) => str(form, k));
+    if (id) {
+      const { before, row } = await updateField(s.orgId, idOf(form, "id"), input);
+      await audit(s.orgId, actor(s), "settings.fields", before.name === row.name ? `Changed ${row.name}` : `Renamed ${before.name} to ${row.name}`);
+    } else {
+      const row = await addField(s.orgId, input);
+      await audit(s.orgId, actor(s), "settings.fields", `Added ${row.name}`);
+    }
+  } catch (err) {
+    if (!(err instanceof FieldError)) throw err;
+    error = err.message;
+  }
+  revalidatePath("/app/settings");
+  fieldsBack(error);
+}
+
+export async function deleteFieldDefinitionAction(form: FormData) {
+  const s = await requireOpenAdmin();
+  const removed = await deleteField(s.orgId, idOf(form, "id"));
+  if (removed) await audit(s.orgId, actor(s), "settings.fields", `Deleted ${removed.name}`);
+  revalidatePath("/app/settings");
+  fieldsBack();
 }
