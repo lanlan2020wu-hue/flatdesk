@@ -233,6 +233,10 @@ export const customers = pgTable(
     fields: jsonb("fields").$type<Record<string, string>>().notNull().default({}),
     // The part after the @, so customers group into companies (lib/companies.ts).
     domain: text("domain").generatedAlwaysAs(sql`lower(split_part(email, '@', 2))`),
+    // What the team knows about this person (lib/customer-profile.ts): shown
+    // beside every ticket from them. vip puts a badge on their tickets.
+    notes: text("notes").notNull().default(""),
+    vip: boolean("vip").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [uniqueIndex("customers_org_email").on(t.orgId, t.email), index("customers_org_domain").on(t.orgId, t.domain)],
