@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Logo from "@/components/Logo";
 import MotionObserver from "@/components/MotionObserver";
+import Spotlight from "@/components/Spotlight";
 import { CHECKED_ON } from "@/lib/pricing";
 import { SITE } from "@/lib/site";
 
@@ -70,7 +71,7 @@ export default function MarketingLayout({ children }: LayoutProps<"/">) {
           <Logo />
           <div className="nav-scroll col-span-3 row-start-2 -mx-1 flex min-w-0 gap-x-1 overflow-x-auto text-sm md:col-span-1 md:col-start-2 md:row-start-1">
             {NAV.map((n) => (
-              <Link key={n.href} href={n.href} className="whitespace-nowrap rounded-md px-2.5 py-1.5 text-muted transition-colors hover:bg-surface-2 hover:text-ink">
+              <Link key={n.href} href={n.href} className="nav-item whitespace-nowrap rounded-md px-2.5 py-1.5 text-muted transition-colors hover:text-ink">
                 {n.label}
               </Link>
             ))}
@@ -89,6 +90,7 @@ export default function MarketingLayout({ children }: LayoutProps<"/">) {
       <main id="main" className="site relative flex-1 overflow-x-clip">{children}</main>
       <script dangerouslySetInnerHTML={{ __html: PLAY_EARLY }} />
       <MotionObserver />
+      <Spotlight />
       <footer className="site mt-24 bg-field text-field-ink">
         <div className="mx-auto grid max-w-6xl gap-10 border-t border-field-line px-4 py-14 sm:px-6 lg:grid-cols-[1.3fr_repeat(4,1fr)] lg:gap-8">
           <div className="grid content-start gap-3">
@@ -101,7 +103,7 @@ export default function MarketingLayout({ children }: LayoutProps<"/">) {
               <div key={col.title} className="grid content-start gap-2.5 text-sm">
                 <p className="mb-1 text-xs font-semibold uppercase tracking-[0.08em] text-field-ink">{col.title}</p>
                 {col.links.map((n) => (
-                  <Link key={n.href} href={n.href} className="w-max text-field-muted transition-colors hover:text-field-ink">
+                  <Link key={n.href} href={n.href} className="foot-link w-max text-field-muted transition-colors hover:text-field-ink">
                     {n.label}
                   </Link>
                 ))}
