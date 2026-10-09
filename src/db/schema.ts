@@ -339,6 +339,19 @@ export const tickets = pgTable(
     index("tickets_snoozed_until").on(t.snoozedUntil).where(sql`${t.snoozedUntil} is not null`),
     // Makes imports safe to re-run: a ticket already imported is skipped.
     uniqueIndex("tickets_org_external").on(t.orgId, t.externalId),
+    // Reports, insights and the HubSpot sync filter by when tickets arrived or closed.
+    index("tickets_org_created").on(t.orgId, t.createdAt),
+    index("tickets_org_closed_at").on(t.orgId, t.closedAt).where(sql`${t.status} = 'closed'`),
+    // "Their other tickets" on every ticket view, and customer export.
+    index("tickets_customer_created").on(t.customerId, t.createdAt),
+    // Timed triggers look for tickets untouched for a while.
+    index("tickets_org_updated").on(t.orgId, t.updatedAt).where(sql`${t.deletedAt} is null`),
+    // The SLA job (lib/escalation.ts) runs every five minutes across every team.
+    index("tickets_first_reply_due")
+      .on(t.createdAt)
+      .where(sql`${t.status} = 'open' and ${t.firstResponseAt} is null and ${t.escalatedAt} is null and ${t.source} is null`),
+    index("tickets_resolve_due").on(t.createdAt).where(sql`${t.status} <> 'closed' and ${t.resolveEscalatedAt} is null and ${t.source} is null`),
+    index("tickets_next_reply_due").on(t.awaitingSince).where(sql`${t.status} = 'open' and ${t.firstResponseAt} is not null and ${t.source} is null`),
   ],
 );
 
@@ -375,6 +388,9 @@ export const messages = pgTable(
     index("messages_ticket_external").on(t.ticketId, t.externalId),
     // Ticket search (lib/search.ts) matches words in any message.
     index("messages_body_search").using("gin", sql`to_tsvector('simple', ${t.body})`),
+    // Agent replies: per-agent counts in Reports, and the repeated-reply finder for AI macros.
+    index("messages_agent_replies").on(t.orgId, t.authorId, t.createdAt).where(sql`${t.authorType} = 'agent' and not ${t.internal}`),
+    index("messages_org_agent_created").on(t.orgId, t.createdAt.desc()).where(sql`${t.authorType} = 'agent' and not ${t.internal}`),
   ],
 );
 
@@ -417,7 +433,7 @@ export const csatRatings = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [uniqueIndex("csat_ratings_message").on(t.messageId), index("csat_ratings_org_created").on(t.orgId, t.createdAt)],
+  (t) => [uniqueIndex("csat_ratings_message").on(t.messageId), index("csat_ratings_org_created").on(t.orgId, t.createdAt), index("csat_ratings_ticket").on(t.ticketId)],
 );
 
 export const macros = pgTable("macros", {
@@ -582,7 +598,7 @@ export const aiEvents = pgTable(
     test: boolean("test").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
-  (t) => [index("ai_events_org_month").on(t.orgId, t.month, t.kind)],
+  (t) => [index("ai_events_org_month").on(t.orgId, t.month, t.kind), index("ai_events_ticket").on(t.ticketId, t.kind, t.createdAt)],
 );
 
 // AI macros: the macro the AI wrote for one group of repeated replies, keyed

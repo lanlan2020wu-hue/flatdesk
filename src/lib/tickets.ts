@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, inArray, isNotNull, isNull, sql, type SQL } from "drizzle-orm";
+import { cache } from "react";
 import { db, schema } from "@/db";
 import { noNul } from "@/lib/ids";
 import { maskCards } from "@/lib/redact";
@@ -102,7 +103,9 @@ export function selectTickets(where: SQL[], order: SQL[] = [priorityRank, asc(ti
 export const inMyGroups = (orgId: string, userId: string) =>
   sql`${tickets.groupId} in (select ${schema.groupMembers.groupId} from ${schema.groupMembers} where ${schema.groupMembers.orgId} = ${orgId} and ${schema.groupMembers.userId} = ${userId})`;
 
-export async function viewCounts(orgId: string, userId: string) {
+// The app layout and the inbox or overview both ask on one page load; cache()
+// makes that one query per request.
+export const viewCounts = cache(async (orgId: string, userId: string) => {
   const [row] = await db
     .select({
       mine: sql<number>`count(*) filter (where ${tickets.assigneeId} = ${userId} and ${tickets.status} in ('open','pending') and ${awake})`,
@@ -127,7 +130,7 @@ export async function viewCounts(orgId: string, userId: string) {
     closed: null,
     trash: null,
   } satisfies Record<View, number | null>;
-}
+});
 
 export async function getTicket(orgId: string, number: number) {
   const [row] = await db

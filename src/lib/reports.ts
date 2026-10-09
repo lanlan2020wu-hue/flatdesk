@@ -15,7 +15,9 @@ const num = (v: unknown) => (v === null || v === undefined ? null : Number(v));
 export async function teamReport(orgId: string, days: ReportRange) {
   const since = new Date(Date.now() - days * 86_400_000);
 
-  const [volume] = await rows(sql`
+  // Independent queries, run together.
+  const [[volume], [ai], agents, csat, target] = await Promise.all([
+    rows(sql`
     select
       count(*) as created,
       count(*) filter (where channel = 'email') as email,
@@ -26,17 +28,17 @@ export async function teamReport(orgId: string, days: ReportRange) {
         filter (where first_response_at is not null) as median_first_response,
       percentile_cont(0.5) within group (order by extract(epoch from closed_at - created_at))
         filter (where closed_at is not null) as median_resolution
-    from tickets where org_id = ${orgId} and created_at >= ${since} and not test and deleted_at is null`);
+    from tickets where org_id = ${orgId} and created_at >= ${since} and not test and deleted_at is null`),
 
-  // Share of this window's tickets the AI answered and the customer didn't reopen.
-  const [ai] = await rows(sql`
+    // Share of this window's tickets the AI answered and the customer didn't reopen.
+    rows(sql`
     select
       count(*) filter (where t.resolved_by_ai) as resolved,
       count(*) filter (where not t.resolved_by_ai and exists (
         select 1 from ai_events e where e.ticket_id = t.id and e.kind = 'handoff')) as handed_off
-    from tickets t where t.org_id = ${orgId} and t.created_at >= ${since} and not t.test and t.deleted_at is null`);
+    from tickets t where t.org_id = ${orgId} and t.created_at >= ${since} and not t.test and t.deleted_at is null`),
 
-  const agents = await rows(sql`
+    rows(sql`
     select a.user_id, a.name,
       (select count(*) from messages m
         where m.org_id = a.org_id and m.author_type = 'agent' and m.author_id = a.user_id
@@ -47,9 +49,11 @@ export async function teamReport(orgId: string, days: ReportRange) {
       (select count(*) from tickets t
         where t.org_id = a.org_id and t.assignee_id = a.user_id and t.status <> 'closed' and not t.test and t.deleted_at is null) as open_now
     from agents a where a.org_id = ${orgId}
-    order by replies desc, a.name`);
+    order by replies desc, a.name`),
 
-  const [csat, target] = await Promise.all([csatReport(orgId, since), targetReport(orgId, since)]);
+    csatReport(orgId, since),
+    targetReport(orgId, since),
+  ]);
   const created = Number(volume.created);
   const resolved = Number(ai.resolved);
   return {

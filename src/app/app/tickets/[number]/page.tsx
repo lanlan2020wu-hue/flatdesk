@@ -53,7 +53,11 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
   const { ticket, customer, thread } = data;
   // The team's own fields are edited in the rail; any other values (kept from
   // an import, or a field since deleted) are listed under them, read only.
-  const defined = await listFields(s.orgId);
+  const [defined, groups, mergedInto] = await Promise.all([
+    listFields(s.orgId),
+    listGroups(s.orgId),
+    ticket.mergedIntoId ? db.query.tickets.findFirst({ where: and(eq(schema.tickets.orgId, s.orgId), eq(schema.tickets.id, ticket.mergedIntoId)), columns: { number: true } }) : null,
+  ]);
   const definedNames = new Set(defined.map((f) => f.name));
   // "Imported from" first; Postgres returns jsonb keys in its own order.
   const fieldEntries = Object.entries(ticket.fields)
@@ -69,8 +73,6 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
   const eraseMismatch = sp.erase === "mismatch";
   const ccError = typeof sp.cc === "string" ? sp.cc.slice(0, 200) : null;
   const fieldsNotice = typeof sp.fields === "string" ? sp.fields.slice(0, 300) : null;
-  const mergedInto = ticket.mergedIntoId ? await db.query.tickets.findFirst({ where: and(eq(schema.tickets.orgId, s.orgId), eq(schema.tickets.id, ticket.mergedIntoId)), columns: { number: true } }) : null;
-  const groups = await listGroups(s.orgId);
   const [agents, macros, [aiEvent], repeat, files, ratings, org, summary, tagList, runs, waiting] = await Promise.all([
     listAgents(s.orgId),
     db.select().from(schema.macros).where(and(eq(schema.macros.orgId, s.orgId))).orderBy(asc(schema.macros.name)),

@@ -19,29 +19,35 @@ export async function getOnboarding(orgId: string) {
   const ob = org.onboarding;
   const skipped = new Set(ob.skipped ?? []);
 
-  const [[agents], [inbound], [testEmails], [chats], [imports], aiAnswers, aiDrafts, testTicket] = await Promise.all([
+  // Only whether each thing happened matters, so these stop at the first row
+  // instead of counting a busy team's whole history on every page load.
+  const one = sql<number>`1`;
+  const [[agents], [inbound], [testEmail], [chat], [imports], [aiAnswer], [aiDraft], testTicket] = await Promise.all([
     db.select({ n: sql<number>`count(*)::int` }).from(schema.agents).where(eq(schema.agents.orgId, orgId)),
     // A real email reached the team's inbox (not the test email).
     db
-      .select({ n: sql<number>`count(*)::int` })
+      .select({ n: one })
       .from(schema.messages)
       .innerJoin(schema.tickets, eq(schema.tickets.id, schema.messages.ticketId))
-      .where(and(eq(schema.messages.orgId, orgId), isNotNull(schema.messages.emailMessageId), sql`not (${TEST_TAG} = any(${schema.tickets.tags}))`, eq(schema.tickets.test, false))),
+      .where(and(eq(schema.messages.orgId, orgId), isNotNull(schema.messages.emailMessageId), sql`not (${TEST_TAG} = any(${schema.tickets.tags}))`, eq(schema.tickets.test, false)))
+      .limit(1),
     // The end-to-end test email came back through forwarding.
     db
-      .select({ n: sql<number>`count(*)::int` })
+      .select({ n: one })
       .from(schema.messages)
       .innerJoin(schema.tickets, eq(schema.tickets.id, schema.messages.ticketId))
-      .where(and(eq(schema.messages.orgId, orgId), isNotNull(schema.messages.emailMessageId), sql`${TEST_TAG} = any(${schema.tickets.tags})`)),
+      .where(and(eq(schema.messages.orgId, orgId), isNotNull(schema.messages.emailMessageId), sql`${TEST_TAG} = any(${schema.tickets.tags})`))
+      .limit(1),
     // Someone wrote in through the chat widget (the admin trying it counts).
     db
-      .select({ n: sql<number>`count(*)::int` })
+      .select({ n: one })
       .from(schema.tickets)
-      .where(and(eq(schema.tickets.orgId, orgId), eq(schema.tickets.channel, "chat"), sql`not (${TEST_TAG} = any(${schema.tickets.tags}))`, eq(schema.tickets.test, false))),
+      .where(and(eq(schema.tickets.orgId, orgId), eq(schema.tickets.channel, "chat"), sql`not (${TEST_TAG} = any(${schema.tickets.tags}))`, eq(schema.tickets.test, false)))
+      .limit(1),
     db.select({ n: sql<number>`count(*)::int` }).from(schema.imports).where(and(eq(schema.imports.orgId, orgId), inArray(schema.imports.status, ["running", "done"]))),
     // The AI answered a real ticket, or drafted an answer in the test drive.
-    db.$count(schema.aiEvents, and(eq(schema.aiEvents.orgId, orgId), eq(schema.aiEvents.kind, "resolution"))),
-    db.$count(schema.testDriveDrafts, and(eq(schema.testDriveDrafts.orgId, orgId), eq(schema.testDriveDrafts.status, "done"))),
+    db.select({ n: one }).from(schema.aiEvents).where(and(eq(schema.aiEvents.orgId, orgId), eq(schema.aiEvents.kind, "resolution"))).limit(1),
+    db.select({ n: one }).from(schema.testDriveDrafts).where(and(eq(schema.testDriveDrafts.orgId, orgId), eq(schema.testDriveDrafts.status, "done"))).limit(1),
     db.query.tickets.findFirst({
       columns: { number: true, createdAt: true, channel: true },
       where: and(eq(schema.tickets.orgId, orgId), sql`${TEST_TAG} = any(${schema.tickets.tags})`),
@@ -49,13 +55,13 @@ export async function getOnboarding(orgId: string) {
     }),
   ]);
 
-  const testEmailArrived = testEmails.n > 0;
-  const chatSeen = chats.n > 0;
+  const testEmailArrived = Boolean(testEmail);
+  const chatSeen = Boolean(chat);
   const invited = (ob.invited?.length ?? 0) > 0 || agents.n > 1;
-  const aiSeen = Boolean(ob.aiAnswered) || aiAnswers > 0 || aiDrafts > 0;
-  const connected = inbound.n > 0 || testEmailArrived || chatSeen || Boolean(ob.forwardingConfirmed) || Boolean(ob.widgetAdded);
+  const aiSeen = Boolean(ob.aiAnswered || aiAnswer || aiDraft);
+  const connected = Boolean(inbound) || testEmailArrived || chatSeen || Boolean(ob.forwardingConfirmed) || Boolean(ob.widgetAdded);
   // A real message has to come through. A sample ticket is for a look around and doesn't count.
-  const proven = inbound.n > 0 || testEmailArrived || chatSeen;
+  const proven = Boolean(inbound) || testEmailArrived || chatSeen;
   const step = (id: StepId, title: string, done: boolean): Step => ({ id, title, done: done || (id !== "team" && skipped.has(id)), skipped: !done && id !== "team" && skipped.has(id) });
   // Seeing the AI answer comes right after the team: it's what Flatdesk is for, and it needs nothing set up.
   const steps: Step[] = [
@@ -77,7 +83,7 @@ export async function getOnboarding(orgId: string) {
     visible: !ob.dismissed && doneCount < steps.length,
     testTicket: testTicket ?? null,
     testEmailArrived,
-    inboundSeen: inbound.n > 0,
+    inboundSeen: Boolean(inbound),
     chatSeen,
   };
 }
