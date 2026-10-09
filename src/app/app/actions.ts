@@ -17,7 +17,7 @@ import { addField, blockedFromClosing, deleteField, FieldError, missingMessage, 
 import { createView, deleteView, parseViewForm, ViewError } from "@/lib/saved-views";
 import { addSource, markReading, readSource, removeSource, WebSourceError } from "@/lib/web-knowledge";
 import { handBackToTeam } from "@/lib/ai";
-import { checkoutUrl, portalUrl, switchToAnnual, syncSeats } from "@/lib/billing";
+import { access, checkoutUrl, portalUrl, switchToAnnual, syncSeats } from "@/lib/billing";
 import { CopilotError, draftReply, rewriteText, summarizeTicket, translateReply, translateTicket, type TicketSummary } from "@/lib/copilot";
 import type { RewriteStyle } from "@/lib/copilot-config";
 import { deliverReply } from "@/lib/email";
@@ -342,6 +342,25 @@ export async function saveSignatureAction(form: FormData) {
   const signature = String(form.get("signature") ?? "").replace(/\0/g, "").trim().slice(0, 1000);
   await db.update(schema.agents).set({ signature }).where(and(eq(schema.agents.orgId, s.orgId), eq(schema.agents.userId, s.userId)));
   revalidatePath("/app/settings");
+}
+
+// A trial admin's honest review earns the team PLAN.trialReviewBonus extra AI
+// answers, once. Any rating counts, so the bonus never rewards praise.
+export async function trialReviewAction(form: FormData) {
+  const s = await requireOpenAdmin();
+  const rating = Number(str(form, "rating"));
+  const text = String(form.get("review") ?? "").replace(/\0/g, "").trim().slice(0, 1000);
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5 || text.length < 40) redirect("/app/overview?review=invalid#review");
+  const org = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId) });
+  if (!org || org.reviewedAt || access(org).state !== "trial") redirect("/app/overview");
+  const [saved] = await db
+    .update(schema.orgs)
+    .set({ reviewedAt: new Date(), reviewRating: rating, reviewText: text, reviewPublic: str(form, "public") === "on" })
+    .where(and(eq(schema.orgs.id, s.orgId), isNull(schema.orgs.reviewedAt)))
+    .returning({ id: schema.orgs.id });
+  if (saved) await audit(s.orgId, actor(s), "trial.review", `${rating} of 5`);
+  revalidatePath("/app", "layout");
+  redirect("/app/overview?review=thanks");
 }
 
 // Inbox bulk actions: the same changes as the ticket rail, on up to 200

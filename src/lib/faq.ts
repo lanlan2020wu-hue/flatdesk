@@ -47,7 +47,7 @@ export const GENERAL_FAQ: QA[] = [
 export const BILLING_FAQ: QA[] = [
   {
     q: "Is there a free trial?",
-    a: `Yes, ${TRIAL_DAYS} days with every feature and no card, including ${PLAN.trialPerAgent} AI answers per agent for the trial (up to ${PLAN.trialPerAgent * PLAN.trialAgentCap} for the team). Add a card any time to get the full ${PLAN.includedPerAgent} per agent a month. The first charge is when the trial ends, or 2 days after you add the card if that's later.`,
+    a: `Yes, ${TRIAL_DAYS} days with every feature and no card, including ${PLAN.trialPerAgent} AI answers per agent for the trial (up to ${PLAN.trialPerAgent * PLAN.trialAgentCap} for the team). Leave an honest review during the trial, any rating, and the team gets ${PLAN.trialReviewBonus} more. Add a card any time to get the full ${PLAN.includedPerAgent} per agent a month. The first charge is when the trial ends, or 2 days after you add the card if that's later.`,
   },
   {
     q: "Can viewers see tickets without paying for a seat?",

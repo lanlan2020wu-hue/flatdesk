@@ -35,6 +35,12 @@ export const orgs = pgTable("orgs", {
   // Highest usage warning (80 or 100, percent of the included allowance)
   // already emailed to admins for aiNoticeMonth, so each goes out once.
   aiNoticeMonth: text("ai_notice_month"),
+  // The trial review an admin left in exchange for PLAN.trialReviewBonus extra AI
+  // answers. Any rating earns it. reviewPublic says Flatdesk may quote it by name.
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  reviewRating: integer("review_rating"),
+  reviewText: text("review_text"),
+  reviewPublic: boolean("review_public").notNull().default(false),
   aiNoticeLevel: integer("ai_notice_level").notNull().default(0),
   // Stripe billing. One subscription per org, quantity = seats (Clerk members).
   stripeCustomerId: text("stripe_customer_id"),
