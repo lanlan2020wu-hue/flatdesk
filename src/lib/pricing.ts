@@ -31,8 +31,8 @@ export type Competitor = {
 const ZENDESK_SOURCES = [
   { label: "Zendesk pricing", url: "https://www.zendesk.com/pricing/" },
   {
-    label: "Zendesk: automated overage billing from Jan 1, 2026",
-    url: "https://support.zendesk.com/hc/en-us/articles/9908811576858",
+    label: "Zendesk: what happens past your automated resolutions limit",
+    url: "https://support.zendesk.com/hc/en-us/articles/9751536041754",
   },
   {
     label: "Richpanel: Zendesk AI resolution rates (third party)",

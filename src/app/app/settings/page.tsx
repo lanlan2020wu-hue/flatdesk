@@ -520,7 +520,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
                   </span>
                 </span>
               </label>
-              <label className="grid w-max gap-1">
+              <label className="grid w-max max-w-full gap-1">
                 <span className="label">Monthly overage limit (AI answers, blank for none)</span>
                 <input
                   type="number"
@@ -668,14 +668,14 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
           {serviceNotice && <p className="rounded-lg border border-warn/40 bg-warn-soft px-3 py-2 text-sm text-warn" role="alert">{serviceNotice}</p>}
           <form action={saveServiceSettingsAction} className="grid gap-4">
             <fieldset disabled={!isAdmin} className="grid gap-4">
-              <label className="grid w-max gap-1">
+              <label className="grid w-max max-w-full gap-1">
                 <span className="label">First reply within</span>
                 <select name="firstResponseMinutes" defaultValue={String(org.firstResponseMinutes ?? "")} className="field">
                   <option value="">No target</option>
                   {TARGET_CHOICES.map((c) => <option key={c.minutes} value={c.minutes}>{c.label}</option>)}
                 </select>
               </label>
-              <label className="grid w-max gap-1">
+              <label className="grid w-max max-w-full gap-1">
                 <span className="label">Next reply within</span>
                 <select name="nextReplyMinutes" defaultValue={String(org.nextReplyMinutes ?? "")} className="field">
                   <option value="">No target</option>
@@ -683,7 +683,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
                 </select>
                 <span className="text-sm text-muted">After your first reply, each time the customer writes back, counted from their message.</span>
               </label>
-              <label className="grid w-max gap-1">
+              <label className="grid w-max max-w-full gap-1">
                 <span className="label">Resolved (closed) within</span>
                 <select name="resolveMinutes" defaultValue={String(org.resolveMinutes ?? "")} className="field">
                   <option value="">No target</option>
@@ -714,7 +714,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
                   </div>
                 ))}
               </fieldset>
-              <label className="grid w-max gap-1">
+              <label className="grid w-max max-w-full gap-1">
                 <span className="label">When a ticket misses it</span>
                 <select name="escalateTo" defaultValue={org.escalateTo ?? ""} className="field">
                   <option value="">Tag it overdue and alert, leave it where it is</option>

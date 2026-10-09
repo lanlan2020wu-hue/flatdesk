@@ -99,25 +99,27 @@ export default function HeroDemo() {
 
       {/* The month so far: tickets and AI answers climb, the bill stays put. */}
       <div className="relative mt-4 sm:absolute sm:bottom-[-2.5rem] sm:left-[-1.5rem] sm:mt-0 sm:w-[21rem]">
-        <dl className="grid gap-2 rounded-[8px] border border-line bg-surface p-4 text-sm text-ink shadow-lg">
-          <div className="flex items-baseline justify-between gap-3">
-            <dt className="text-muted">Tickets this month</dt>
-            <dd key={tickets} className="num tick font-medium">{tickets.toLocaleString("en-US")}</dd>
-          </div>
-          <div className="flex items-baseline justify-between gap-3">
-            <dt className="text-muted">AI answers</dt>
-            <dd className="num">
-              <span key={answered} className="tick inline-block">{answered}</span> of {INCLUDED}
-            </dd>
-          </div>
-          <div className="mt-1 flex items-baseline justify-between gap-3 border-t border-line pt-3">
-            <dt className="font-semibold">Your bill</dt>
-            <dd className="num font-display text-2xl">{usd(AGENTS * PLAN.seatPrice)}</dd>
-          </div>
+        <div className="grid gap-2 rounded-[8px] border border-line bg-surface p-4 text-sm text-ink shadow-lg">
+          <dl className="contents">
+            <div className="flex items-baseline justify-between gap-3">
+              <dt className="text-muted">Tickets this month</dt>
+              <dd key={tickets} className="num tick font-medium">{tickets.toLocaleString("en-US")}</dd>
+            </div>
+            <div className="flex items-baseline justify-between gap-3">
+              <dt className="text-muted">AI answers</dt>
+              <dd className="num">
+                <span key={answered} className="tick inline-block">{answered}</span> of {INCLUDED}
+              </dd>
+            </div>
+            <div className="mt-1 flex items-baseline justify-between gap-3 border-t border-line pt-3">
+              <dt className="font-semibold">Your bill</dt>
+              <dd className="num font-display text-2xl">{usd(AGENTS * PLAN.seatPrice)}</dd>
+            </div>
+          </dl>
           <p className="text-xs text-muted">
             {AGENTS} agents × {usd(PLAN.seatPrice)}. Same amount however busy the month gets.
           </p>
-        </dl>
+        </div>
       </div>
     </div>
   );

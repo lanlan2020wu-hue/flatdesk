@@ -46,7 +46,7 @@ const TIMELINE: Event[] = [
     text: "Automatic overage billing for automated resolutions began for customers on Agent Months (including Seasonal and Supplemental), Multi-Year and ELA subscriptions.",
     source: {
       label: "Zendesk help center",
-      url: "https://support.zendesk.com/hc/en-us/articles/9908811576858",
+      url: "https://support.zendesk.com/hc/en-us/articles/9751536041754",
     },
   },
   {
@@ -55,7 +55,7 @@ const TIMELINE: Event[] = [
     text: "Zendesk said annual automated resolution allowances would be visible in Admin Center by this date.",
     source: {
       label: "Zendesk help center",
-      url: "https://support.zendesk.com/hc/en-us/articles/9908811576858",
+      url: "https://support.zendesk.com/hc/en-us/articles/9751536041754",
     },
   },
   {
@@ -64,7 +64,7 @@ const TIMELINE: Event[] = [
     text: "Zendesk announced both changes above to affected customers.",
     source: {
       label: "Zendesk help center",
-      url: "https://support.zendesk.com/hc/en-us/articles/9908811576858",
+      url: "https://support.zendesk.com/hc/en-us/articles/9751536041754",
     },
   },
 ];
