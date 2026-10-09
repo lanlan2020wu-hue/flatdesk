@@ -31,7 +31,7 @@ const ITEMS = [
   },
   {
     name: "Slack, Discord and Google Chat",
-    body: "A post in your channel when a new ticket needs a person, or a customer writes back to an AI answer, with a link to the ticket.",
+    body: "A post in your channel when a new ticket needs a person, or a customer replies after the AI has answered, with a link to the ticket.",
   },
   {
     name: "Zapier, Make and n8n",
