@@ -1081,3 +1081,23 @@ export const webPages = pgTable(
   },
   (t) => [uniqueIndex("web_pages_source_url").on(t.sourceId, t.url), index("web_pages_org").on(t.orgId)],
 );
+
+// Custom ticket fields a team defines (lib/ticket-fields.ts). Values live in
+// tickets.fields under the field's name, beside fields kept from an import,
+// so an imported "Plan" fills a "Plan" field defined later.
+export const ticketFieldKind = pgEnum("ticket_field_kind", ["text", "number", "dropdown", "checkbox"]);
+export const ticketFields = pgTable(
+  "ticket_fields",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    kind: ticketFieldKind("kind").notNull().default("text"),
+    options: text("options").array().notNull().default(sql`'{}'::text[]`), // dropdown choices
+    // A ticket can't be closed by someone on the team until this is filled in.
+    requiredToClose: boolean("required_to_close").notNull().default(false),
+    position: integer("position").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("ticket_fields_org_name").on(t.orgId, t.name)],
+);
