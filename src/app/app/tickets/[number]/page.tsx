@@ -13,6 +13,7 @@ import SlaBadge from "@/components/SlaBadge";
 import SnoozeMenu from "@/components/SnoozeMenu";
 import TagInput from "@/components/TagInput";
 import TeachAi from "@/components/TeachAi";
+import ScheduledReplies from "@/components/ScheduledReplies";
 import TicketPresence from "@/components/TicketPresence";
 import { RepeatPrompt } from "@/components/MacroSuggestion";
 import { db, schema } from "@/db";
@@ -25,6 +26,7 @@ import { ticketRuns } from "@/lib/ai-actions";
 import { cachedSummary } from "@/lib/copilot";
 import { identifyMacro, repeatPrompt } from "@/lib/macro-suggestions";
 import { STATUS_LABEL } from "@/lib/receipts";
+import { waitingOn } from "@/lib/scheduled-replies";
 import { teachSpot } from "@/lib/teach";
 import { formatDue, nextReplyState, resolveState, shortDuration, slaState, targetLabel } from "@/lib/sla";
 import { listGroups } from "@/lib/routing";
@@ -69,7 +71,7 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
   const fieldsNotice = typeof sp.fields === "string" ? sp.fields.slice(0, 300) : null;
   const mergedInto = ticket.mergedIntoId ? await db.query.tickets.findFirst({ where: and(eq(schema.tickets.orgId, s.orgId), eq(schema.tickets.id, ticket.mergedIntoId)), columns: { number: true } }) : null;
   const groups = await listGroups(s.orgId);
-  const [agents, macros, [aiEvent], repeat, files, ratings, org, summary, tagList, runs] = await Promise.all([
+  const [agents, macros, [aiEvent], repeat, files, ratings, org, summary, tagList, runs, waiting] = await Promise.all([
     listAgents(s.orgId),
     db.select().from(schema.macros).where(and(eq(schema.macros.orgId, s.orgId))).orderBy(asc(schema.macros.name)),
     db
@@ -85,6 +87,7 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
     cachedSummary(s.orgId, ticket.id, last?.id),
     orgTags(s.orgId),
     ticketRuns(s.orgId, ticket.id),
+    waitingOn(s.orgId, ticket.id),
   ]);
   const copilotOn = aiConfigured() && Boolean(org?.aiProcessing);
   // The customer's language, from their latest message that says clearly, when it isn't the team's.
@@ -256,6 +259,18 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
         ) : s.viewer ? (
           <p className="card p-4 text-sm text-muted">You have a viewer seat, so you can read this ticket but not reply. An admin can make you an agent in Settings.</p>
         ) : (
+        <>
+        <ScheduledReplies
+          number={ticket.number}
+          rows={waiting.map((w) => ({
+            id: w.id,
+            body: w.body,
+            sendAt: w.sendAt.toISOString(),
+            by: agents.find((a) => a.userId === w.userId)?.name ?? "a former teammate",
+            status: w.status === "held" ? "held" : "scheduled",
+            heldReason: w.heldReason,
+          }))}
+        />
         <Composer
           key={thread.length}
           action={replyAction}
@@ -270,6 +285,7 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
           customerLanguage={foreignCustomer ? { code: foreignCustomer, label: languageLabel(foreignCustomer) } : null}
           draftKey={`${s.userId}:${ticket.id}`}
         />
+        </>
         )}
       </div>
 
