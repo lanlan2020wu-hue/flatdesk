@@ -113,6 +113,18 @@ export default function Composer({
   const [assignTo, setAssignTo] = useState("");
   const [actions, setActions] = useState<string[]>([]);
   const textRef = useRef<HTMLTextAreaElement>(null);
+  const [dragging, setDragging] = useState(false);
+
+  // From the Attach button, a pasted screenshot, or files dropped on the reply box.
+  function addFiles(added: File[]) {
+    if (!added.length) return;
+    const picked = [...files, ...added];
+    const total = picked.reduce((n, f) => n + f.size, 0);
+    if (picked.length > MAX_FILES) return setError(`Attach up to ${MAX_FILES} files per reply.`);
+    if (total > UPLOAD_LIMIT) return setError("Attachments on one reply can add up to 4 MB. Share bigger files as a link.");
+    setError(null);
+    setFiles(picked);
+  }
   const [restored, setRestored] = useState(false);
   const draftReady = useRef(false);
 
@@ -250,7 +262,21 @@ export default function Composer({
         setAssignTo("");
         setActions([]);
       }}
-      className={`grid gap-3 rounded-[8px] border p-3 shadow-sm transition-colors focus-within:ring-2 focus-within:ring-accent/25 ${internal ? "border-warn/50 bg-warn-soft" : "border-line bg-surface"}`}
+      onDragOver={(e) => {
+        if (!e.dataTransfer.types.includes("Files")) return;
+        e.preventDefault();
+        setDragging(true);
+      }}
+      onDragLeave={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setDragging(false);
+      }}
+      onDrop={(e) => {
+        if (!e.dataTransfer.files.length) return;
+        e.preventDefault();
+        setDragging(false);
+        addFiles(Array.from(e.dataTransfer.files));
+      }}
+      className={`grid gap-3 rounded-[8px] border p-3 shadow-sm transition-colors focus-within:ring-2 focus-within:ring-accent/25 ${internal ? "border-warn/50 bg-warn-soft" : "border-line bg-surface"} ${dragging ? "ring-2 ring-accent/50" : ""}`}
     >
       <input type="hidden" name="ticketId" value={ticketId} />
       <input type="hidden" name="number" value={number} />
@@ -335,11 +361,19 @@ export default function Composer({
         value={body}
         readOnly={thinking}
         onChange={(e) => setBody(e.target.value)}
+        onPaste={(e) => {
+          // A screenshot on the clipboard becomes an attachment; text pastes as usual.
+          const images = Array.from(e.clipboardData.files).filter((f) => f.type.startsWith("image/"));
+          if (!images.length) return;
+          e.preventDefault();
+          const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+          addFiles(images.map((f, i) => (f.name && f.name !== "image.png" ? f : new File([f], `screenshot-${stamp}${i ? `-${i + 1}` : ""}.${f.type.split("/")[1] || "png"}`, { type: f.type }))));
+        }}
         onKeyDown={(e) => {
           if ((e.metaKey || e.ctrlKey) && e.key === "Enter") formRef.current?.requestSubmit();
           if (e.key === "Escape") e.currentTarget.blur();
         }}
-        placeholder={internal ? "Only your team sees this. Type @ and a name to email a teammate." : "Write your reply…"}
+        placeholder={internal ? "Only your team sees this. Type @ and a name to email a teammate." : "Write your reply… Paste a screenshot or drop files here to attach them."}
         className="w-full resize-y rounded-lg bg-transparent px-2 py-1 focus:outline-none"
       />
       {files.length > 0 && (
@@ -366,13 +400,8 @@ export default function Composer({
               multiple
               className="sr-only"
               onChange={(e) => {
-                const picked = [...files, ...Array.from(e.target.files ?? [])];
+                addFiles(Array.from(e.target.files ?? []));
                 e.target.value = "";
-                const total = picked.reduce((n, f) => n + f.size, 0);
-                if (picked.length > MAX_FILES) return setError(`Attach up to ${MAX_FILES} files per reply.`);
-                if (total > UPLOAD_LIMIT) return setError("Attachments on one reply can add up to 4 MB. Share bigger files as a link.");
-                setError(null);
-                setFiles(picked);
               }}
             />
           </label>
