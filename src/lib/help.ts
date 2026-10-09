@@ -189,6 +189,16 @@ export function publishedArticles(orgId: string) {
     .orderBy(articles.title);
 }
 
+// Other published articles in a category, for "more in this category".
+export function articlesInSection(orgId: string, section: string, exceptId: string, limit = 5) {
+  return db
+    .select()
+    .from(articles)
+    .where(and(eq(articles.orgId, orgId), isPublic, eq(articles.section, section), ne(articles.id, exceptId)))
+    .orderBy(articles.title)
+    .limit(limit);
+}
+
 export async function publishedArticle(orgId: string, slug: string) {
   if (hasNul(slug)) return undefined;
   return db.query.articles.findFirst({ where: and(eq(articles.orgId, orgId), eq(articles.slug, slug), isPublic) });
@@ -393,18 +403,6 @@ export function htmlToArticle(html: string): string {
     .replace(/\*\*\s*\*\*/g, "")
     .replace(/\n{3,}/g, "\n\n")
     .trim();
-}
-
-// Articles grouped by section, sections in name order, unsectioned ones last.
-export function bySection<T extends { section: string | null }>(list: T[]): { section: string | null; articles: T[] }[] {
-  const groups = new Map<string | null, T[]>();
-  for (const a of list) {
-    const key = a.section?.trim() || null;
-    groups.set(key, [...(groups.get(key) ?? []), a]);
-  }
-  return [...groups.entries()]
-    .sort(([a], [b]) => (a === null ? 1 : b === null ? -1 : a.localeCompare(b)))
-    .map(([section, articles]) => ({ section, articles }));
 }
 
 export const MAX_SECTION = 80;

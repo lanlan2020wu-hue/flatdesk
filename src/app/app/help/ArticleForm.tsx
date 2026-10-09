@@ -21,12 +21,12 @@ export default function ArticleForm({ article, sections = [], suggestedTitle }: 
         <input id="title" name="title" required maxLength={MAX_TITLE} defaultValue={article?.title ?? suggestedTitle} placeholder="How do I reset my password?" className="field font-normal" />
       </label>
       <label className="grid gap-1.5 font-medium" htmlFor="section">
-        Section <span className="font-normal text-muted">(optional)</span>
+        Category <span className="font-normal text-muted">(optional)</span>
         <input id="section" name="section" maxLength={MAX_SECTION} list="help-sections" defaultValue={article?.section ?? ""} placeholder="Billing" className="field font-normal" />
         <datalist id="help-sections">
           {sections.map((s) => <option key={s} value={s} />)}
         </datalist>
-        <span className="text-xs font-normal text-muted">Articles with the same section are listed together on your help center.</span>
+        <span className="text-xs font-normal text-muted">Articles in the same category are listed together on your help center. Set the order of categories on the Help center page.</span>
       </label>
       <fieldset className="grid gap-1.5">
         <legend className="mb-1.5 font-medium">Who reads it</legend>

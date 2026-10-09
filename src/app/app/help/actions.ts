@@ -8,6 +8,7 @@ import { requireAdmin, requireEditor, requireOpen } from "@/lib/auth";
 import { CopilotError, translateArticle } from "@/lib/copilot";
 import { addDomain, DOMAIN_RULE, DomainError, domainsConfigured, domainStatus, normalizeDomain, removeDomain } from "@/lib/domains";
 import { MAX_BODY, MAX_HELP_LANGUAGES, MAX_SECTION, MAX_TITLE, uniqueArticleSlug, validHelpSlug } from "@/lib/help";
+import { CategoryError, moveCategory, saveCategory } from "@/lib/help-sections";
 import { isUuid } from "@/lib/ids";
 import { isLanguage } from "@/lib/language";
 import { audit } from "@/lib/security";
@@ -226,4 +227,25 @@ export async function aiTranslateArticleAction(form: FormData) {
   }
   revalidate(org?.helpSlug);
   toArticle(article.id, { translated: String(done) });
+}
+
+// Help center categories (lib/help-sections.ts): description, name and order.
+export async function saveCategoryAction(form: FormData) {
+  const s = await requireOpenEditor();
+  let error = "";
+  try {
+    await saveCategory(s.orgId, { name: str(form, "name"), newName: str(form, "newName"), description: str(form, "description") });
+  } catch (err) {
+    if (!(err instanceof CategoryError)) throw err;
+    error = err.message;
+  }
+  revalidate(await helpSlugOf(s.orgId));
+  back(error ? { categoryError: error } : { saved: "category" }, "#categories");
+}
+
+export async function moveCategoryAction(form: FormData) {
+  const s = await requireOpenEditor();
+  await moveCategory(s.orgId, str(form, "name"), str(form, "dir") === "up" ? "up" : "down");
+  revalidate(await helpSlugOf(s.orgId));
+  back({}, "#categories");
 }

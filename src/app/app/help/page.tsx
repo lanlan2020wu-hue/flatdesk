@@ -5,10 +5,11 @@ import { requireOpenPage } from "@/lib/auth";
 import { domainsConfigured, domainStatus, dnsRecord } from "@/lib/domains";
 import { ensureHelpSlug, excerpt, HELP_SLUG_RULE, helpUrl, MAX_HELP_LANGUAGES, verifiedDomain } from "@/lib/help";
 import { HELP_SEARCH_DAYS, helpSearchReport, REPORT_DAYS } from "@/lib/help-searches";
+import { CATEGORY, listCategories } from "@/lib/help-sections";
 import { LANGUAGES, languageLabel } from "@/lib/language";
 import DnsTable from "@/components/DnsTable";
 import { SITE } from "@/lib/site";
-import { checkHelpDomainAction, saveHelpDomainAction, saveHelpLanguagesAction, saveHelpSlugAction } from "./actions";
+import { checkHelpDomainAction, moveCategoryAction, saveCategoryAction, saveHelpDomainAction, saveHelpLanguagesAction, saveHelpSlugAction } from "./actions";
 
 export const metadata = { title: "Help center" };
 
@@ -16,7 +17,7 @@ const host = SITE.url.replace(/^https?:\/\//, "");
 
 export default async function HelpCenterAdmin({ searchParams }: PageProps<"/app/help">) {
   const s = await requireOpenPage();
-  const { error, saved, domainError } = await searchParams;
+  const { error, saved, domainError, categoryError } = await searchParams;
   const [helpSlug, list, org] = await Promise.all([
     ensureHelpSlug(s.orgId),
     db.select().from(schema.articles).where(eq(schema.articles.orgId, s.orgId)).orderBy(desc(schema.articles.published), desc(schema.articles.updatedAt)),
@@ -39,7 +40,7 @@ export default async function HelpCenterAdmin({ searchParams }: PageProps<"/app/
     .from(schema.articles)
     .where(and(eq(schema.articles.orgId, s.orgId), eq(schema.articles.published, true), eq(schema.articles.internal, false)));
   const url = helpUrl(helpSlug, domain);
-  const searches = await helpSearchReport(s.orgId);
+  const [searches, categories] = await Promise.all([helpSearchReport(s.orgId), listCategories(s.orgId)]);
 
   return (
     <div className="grid max-w-3xl gap-12 px-4 py-6 md:px-8 md:py-8">
@@ -89,6 +90,41 @@ export default async function HelpCenterAdmin({ searchParams }: PageProps<"/app/
           </div>
         )}
       </section>
+
+      {categories.length > 0 && (
+        <section id="categories" className="grid gap-4 border-t border-line pt-6 text-sm">
+          <div className="grid gap-1">
+            <h2 className="text-lg font-semibold">Categories</h2>
+            <p className="max-w-xl text-muted">
+              Your help center lists articles by category, in this order. Pick an article&apos;s category when you edit it. A short description helps customers find the right one. Renaming a category renames it on all its articles.
+            </p>
+          </div>
+          {typeof categoryError === "string" && <p role="alert" className="text-warn">{categoryError.slice(0, 200)}</p>}
+          {saved === "category" && <p role="status" className="text-accent">Category saved.</p>}
+          <ol className="card divide-y divide-line">
+            {categories.map((c, i) => (
+              <li key={c.name} className="grid gap-2 px-4 py-3 sm:grid-cols-[1fr_auto] sm:items-start">
+                <form action={saveCategoryAction} className="grid gap-2">
+                  <input type="hidden" name="name" value={c.name} />
+                  <fieldset disabled={s.viewer} className="grid gap-2 sm:grid-cols-[12rem_1fr_auto] sm:items-center">
+                    <input name="newName" defaultValue={c.name} required maxLength={80} aria-label="Category name" className="field field-sm font-medium" />
+                    <input name="description" defaultValue={c.description} maxLength={CATEGORY.descriptionMax} placeholder="What's in it, in a few words" aria-label={`Description of ${c.name}`} className="field field-sm" />
+                    {!s.viewer && <button className="btn btn-secondary btn-sm">Save</button>}
+                  </fieldset>
+                  <span className="text-xs text-muted">{c.articles} {c.articles === 1 ? "article" : "articles"}</span>
+                </form>
+                {!s.viewer && categories.length > 1 && (
+                  <form action={moveCategoryAction} className="flex gap-1">
+                    <input type="hidden" name="name" value={c.name} />
+                    <button name="dir" value="up" disabled={i === 0} aria-label={`Move ${c.name} up`} className="btn btn-secondary btn-sm">↑</button>
+                    <button name="dir" value="down" disabled={i === categories.length - 1} aria-label={`Move ${c.name} down`} className="btn btn-secondary btn-sm">↓</button>
+                  </form>
+                )}
+              </li>
+            ))}
+          </ol>
+        </section>
+      )}
 
       <section id="searches" className="grid gap-4 border-t border-line pt-6 text-sm">
         <div className="grid gap-1">

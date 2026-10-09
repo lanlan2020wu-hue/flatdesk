@@ -116,8 +116,3 @@ test("imported article HTML keeps headings, lists, bold and safe links", async (
   assert.deepEqual(parseArticle(out).map((b) => b.type), ["heading", "list", "paragraph"]);
 });
 
-test("articles are grouped by section, unsectioned ones last", async () => {
-  const { bySection } = await import("./help");
-  const groups = bySection([{ section: "Billing", t: 1 }, { section: null, t: 2 }, { section: "Account", t: 3 }, { section: "Billing ", t: 4 }]);
-  assert.deepEqual(groups.map((g) => [g.section, g.articles.map((a) => a.t)]), [["Account", [3]], ["Billing", [1, 4]], [null, [2]]]);
-});

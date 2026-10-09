@@ -531,6 +531,21 @@ export const articles = pgTable(
   ],
 );
 
+// A help center category (articles.section, matched by name): its place in
+// the order and a line about it. Sections without a row sort by name after
+// the ordered ones (lib/help-sections.ts).
+export const helpSections = pgTable(
+  "help_sections",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    description: text("description").notNull().default(""),
+    position: integer("position").notNull().default(0),
+  },
+  (t) => [uniqueIndex("help_sections_org_name").on(t.orgId, t.name)],
+);
+
 // An article in one of the help center's other languages (orgs.helpLanguages).
 // auto: written by the AI and not edited since. Out of date when the article
 // changed after sourceUpdatedAt.
