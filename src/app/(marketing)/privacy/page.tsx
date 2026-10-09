@@ -90,7 +90,7 @@ export default function PrivacyPage() {
         <p>
           We keep your data while your team has an account, including after a trial ends or a plan is cancelled, so you can export it or come
           back. Ask us to delete it and we&apos;ll do so within 30 days, apart from records the law requires us to keep, such as invoices.
-          People who joined the waitlist can ask to be removed at any time.
+          People who joined the waitlist or asked about an AI setup can ask to be removed at any time.
         </p>
       </Section>
 
@@ -109,7 +109,7 @@ export default function PrivacyPage() {
         <p>
           Data is encrypted in transit and at rest by our hosting and database providers. Attachments can be downloaded only by your team, and
           by the chat visitor they were sent to. API keys for importing from another help desk are encrypted while an import runs and erased
-          when it ends. To stop spam, the chat widget, satisfaction ratings and waitlist count requests by a one-way hash of the sender&apos;s IP address.
+          when it ends. To stop spam, the chat widget, satisfaction ratings, waitlist and AI setup form count requests by a one-way hash of the sender&apos;s IP address.
           We store the hash, not the address.
         </p>
       </Section>

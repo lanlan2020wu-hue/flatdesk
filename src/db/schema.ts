@@ -720,6 +720,22 @@ export const waitlist = pgTable("waitlist", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
 
+// Requests for the done-for-you AI setup, from the /enterprise page. Someone
+// at Flatdesk reads each one and writes back; nothing here is automated.
+export const aiSetupRequests = pgTable("ai_setup_requests", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  email: text("email").notNull(),
+  name: text("name"),
+  company: text("company"),
+  agents: integer("agents"),
+  monthlyTickets: integer("monthly_tickets"),
+  currentTool: text("current_tool"),
+  message: text("message"),
+  source: text("source"),
+  referrer: text("referrer"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
 // Counters for the public endpoints (chat widget, waitlist). One row per key
 // and window; rows past reset_at are reused or swept (see lib/rate-limit.ts).
 export const rateLimits = pgTable("rate_limits", {

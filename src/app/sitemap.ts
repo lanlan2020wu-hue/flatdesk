@@ -13,6 +13,7 @@ const PAGES = [
   "/compare",
   ...RIVALS.map((r) => `/compare/${r.slug}`),
   "/help-desk-for-small-teams",
+  "/enterprise",
   "/integrations",
   "/developers",
   "/faq",

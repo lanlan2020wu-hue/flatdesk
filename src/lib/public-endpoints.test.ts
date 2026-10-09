@@ -115,3 +115,29 @@ test("the waitlist takes a few sign-ups per visitor and quietly drops bots", asy
   for (let i = 0; i < 5; i++) assert.equal((await join(`p${i}@wl-test.dev`)).status, 200);
   assert.equal((await join("p9@wl-test.dev")).status, 429);
 });
+
+test("the AI setup form keeps a request, takes a few per visitor and quietly drops bots", async () => {
+  await freshOrg();
+  const { db, schema } = await import("@/db");
+  const { POST } = await import("@/app/api/ai-setup/route");
+  const ask = (email: string, extra: Record<string, unknown> = {}) =>
+    POST(
+      new Request("http://x/api/ai-setup", {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-forwarded-for": "192.0.2.10" },
+        body: JSON.stringify({ email, ...extra }),
+      }),
+    );
+  await db.delete(schema.aiSetupRequests).where(like(schema.aiSetupRequests.email, "%@as-test.dev"));
+  assert.equal((await ask("not-an-email")).status, 400);
+  assert.equal((await ask("bot@as-test.dev", { website: "x" })).status, 200);
+  assert.equal(await db.query.aiSetupRequests.findFirst({ where: eq(schema.aiSetupRequests.email, "bot@as-test.dev") }), undefined);
+  const ok = await ask("Lead@as-test.dev", { company: "Acme\u0000", agents: 40, monthlyTickets: -1, message: "Refunds and shipping" });
+  assert.equal(ok.status, 200);
+  const row = await db.query.aiSetupRequests.findFirst({ where: eq(schema.aiSetupRequests.email, "lead@as-test.dev") });
+  assert.equal(row?.company, "Acme");
+  assert.equal(row?.agents, 40);
+  assert.equal(row?.monthlyTickets, null, "a negative count is dropped");
+  for (let i = 0; i < 4; i++) assert.equal((await ask(`p${i}@as-test.dev`)).status, 200);
+  assert.equal((await ask("p9@as-test.dev")).status, 429);
+});

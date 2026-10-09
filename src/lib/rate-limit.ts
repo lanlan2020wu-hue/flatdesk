@@ -84,6 +84,7 @@ export const LIMITS = {
   // Satisfaction ratings from the links in reply emails.
   rate: (ip: string): Limit[] => [{ key: `rate:ip:${ip}`, max: 30, windowSec: 10 * MIN }],
   waitlist: (ip: string): Limit[] => [{ key: `waitlist:ip:${ip}`, max: 5, windowSec: HOUR }],
+  aiSetup: (ip: string): Limit[] => [{ key: `ai-setup:ip:${ip}`, max: 5, windowSec: HOUR }],
   // New chats naming one email address: stops the widget being used to make a
   // team's AI email someone over and over.
   chatTarget: (orgId: string, email: string): Limit[] => [{ key: `chat-start:to:${orgId}:${createHash("sha256").update(email).digest("hex").slice(0, 32)}`, max: 5, windowSec: DAY }],
