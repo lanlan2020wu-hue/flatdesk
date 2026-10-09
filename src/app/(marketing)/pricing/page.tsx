@@ -5,6 +5,8 @@ import AddOnTable from "@/components/AddOnTable";
 import WhyFlat from "@/components/WhyFlat";
 import { BILLING_FAQ } from "@/lib/faq";
 import { PLAN, PRICE_PHRASE, annualSavingsPct, usd } from "@/lib/pricing";
+import PhotoHero from "@/components/PhotoHero";
+import pricingReview from "@/assets/photos/pricing-review.webp";
 
 export const metadata: Metadata = pageMeta({
   title: `Help desk pricing: ${usd(PLAN.seatPrice)} per agent, AI included`,
@@ -29,10 +31,12 @@ const INCLUDED = [
 export default function PricingPage() {
   return (
     <div className="mx-auto grid max-w-5xl gap-16 px-4 pt-14 sm:px-6 sm:pt-20">
-      <div className="enter grid max-w-2xl gap-3">
-        <h1 className="font-display text-[2.6rem] sm:text-6xl">One plan. Every price is on this page.</h1>
-        <p className="text-lg text-muted">No tiers, no add-ons and no sales call.</p>
-      </div>
+      <PhotoHero photo={pricingReview} alt="A support lead smiling at her laptop">
+        <div className="enter grid max-w-2xl gap-3">
+          <h1 className="font-display text-[2.6rem] sm:text-6xl">One plan. Every price is on this page.</h1>
+          <p className="text-lg text-muted">No tiers, no add-ons and no sales call.</p>
+        </div>
+      </PhotoHero>
 
       <section style={{ "--d": 2 } as React.CSSProperties} className="enter card grid overflow-hidden md:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         <div className="grid content-start gap-6 p-6 sm:p-8">

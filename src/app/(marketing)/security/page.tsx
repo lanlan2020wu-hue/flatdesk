@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
+import Image from "next/image";
 import Link from "next/link";
 import LegalPage, { Section } from "@/components/LegalPage";
 import { pageMeta } from "@/lib/seo";
 import { SITE, TRUST_UPDATED } from "@/lib/site";
+import quietDesk from "@/assets/photos/quiet-desk.webp";
 
 export const metadata: Metadata = pageMeta({
   title: "Security",
@@ -37,6 +39,15 @@ export default function SecurityPage() {
         </p>
       }
     >
+      <Image
+        src={quietDesk}
+        alt="A laptop and a desk phone on a quiet office desk"
+        placeholder="blur"
+        priority
+        sizes="(min-width: 672px) 624px, 100vw"
+        className="aspect-[16/9] w-full rounded-[8px] object-cover"
+      />
+
       <Section title="What Flatdesk doesn't have yet">
         <p>Read this first, so nothing below reads as more than it is.</p>
         <ul className="grid list-disc gap-2 pl-5">

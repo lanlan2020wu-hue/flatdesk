@@ -3,6 +3,8 @@ import CostTable from "@/components/CostTable";
 import JsonLd from "@/components/JsonLd";
 import { COMPARED_ON, RIVALS, costRows } from "@/lib/compare";
 import { breadcrumbs, pageMeta } from "@/lib/seo";
+import PhotoHero from "@/components/PhotoHero";
+import teamMeeting from "@/assets/photos/team-meeting.webp";
 
 export const metadata = pageMeta({
   title: "Zendesk, Intercom, Help Scout and Freshdesk alternatives compared",
@@ -16,12 +18,14 @@ export default function ComparePage() {
   return (
     <div className="mx-auto grid max-w-6xl gap-16 px-4 pt-14 sm:px-6 sm:pt-20">
       <JsonLd data={[breadcrumbs([{ name: "Compare", path: "/compare" }])]} />
-      <div className="grid max-w-2xl gap-3">
-        <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-[2.6rem] sm:text-6xl">How Flatdesk compares, including where it doesn&apos;t win.</h1>
-        <p style={{ "--d": 2 } as React.CSSProperties} className="enter text-lg text-muted">
-          Flatdesk isn&apos;t the cheapest seat. Its AI bill just can&apos;t jump: AI answers come with every seat and the AI pauses at the cap. Here&apos;s what the same teams pay elsewhere.
-        </p>
-      </div>
+      <PhotoHero photo={teamMeeting} alt="A small team shaking hands across a meeting table">
+        <div className="grid max-w-2xl gap-3">
+          <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-[2.6rem] sm:text-6xl">How Flatdesk compares, including where it doesn&apos;t win.</h1>
+          <p style={{ "--d": 2 } as React.CSSProperties} className="enter text-lg text-muted">
+            Flatdesk isn&apos;t the cheapest seat. Its AI bill just can&apos;t jump: AI answers come with every seat and the AI pauses at the cap. Here&apos;s what the same teams pay elsewhere.
+          </p>
+        </div>
+      </PhotoHero>
 
       <section data-play="" suppressHydrationWarning aria-label="Comparisons" className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {RIVALS.map((r, i) => (

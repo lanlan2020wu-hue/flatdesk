@@ -2,6 +2,8 @@ import Link from "next/link";
 import JsonLd from "@/components/JsonLd";
 import { TRIAL_DAYS } from "@/lib/billing";
 import { breadcrumbs, pageMeta } from "@/lib/seo";
+import PhotoHero from "@/components/PhotoHero";
+import deskScreens from "@/assets/photos/desk-screens.webp";
 
 export const metadata = pageMeta({
   title: "Integrations: Shopify, Stripe, HubSpot, Jira, Slack, Zapier and the API",
@@ -53,12 +55,14 @@ export default function IntegrationsPage() {
   return (
     <div className="mx-auto grid max-w-6xl gap-14 px-4 pt-14 sm:px-6 sm:pt-20">
       <JsonLd data={[breadcrumbs([{ name: "Integrations", path: "/integrations" }])]} />
-      <section className="grid max-w-3xl gap-5">
-        <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-[2.6rem] sm:text-6xl">Integrations</h1>
-        <p style={{ "--d": 2 } as React.CSSProperties} className="enter text-lg text-muted">
-          The customer&apos;s orders, payments and CRM record next to their ticket, bugs sent to Jira, alerts where your team already talks, and an API for the rest. Included in every seat, like everything else.
-        </p>
-      </section>
+      <PhotoHero photo={deskScreens} alt="A desk seen from above with a laptop and two monitors">
+        <section className="grid max-w-3xl gap-5">
+          <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-[2.6rem] sm:text-6xl">Integrations</h1>
+          <p style={{ "--d": 2 } as React.CSSProperties} className="enter text-lg text-muted">
+            The customer&apos;s orders, payments and CRM record next to their ticket, bugs sent to Jira, alerts where your team already talks, and an API for the rest. Included in every seat, like everything else.
+          </p>
+        </section>
+      </PhotoHero>
 
       <ul data-play="" suppressHydrationWarning className="grid gap-x-10 gap-y-8 md:grid-cols-2">
         {ITEMS.map((it, i) => (
