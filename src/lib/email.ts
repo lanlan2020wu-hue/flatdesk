@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, inArray, isNotNull } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNotNull, isNull } from "drizzle-orm";
 import { Resend } from "resend";
 import { db, schema } from "@/db";
 import { emailAttachments } from "@/lib/attachments";
@@ -78,25 +78,29 @@ export function senderCheck(headers: Record<string, string> | null): "fail" | "o
   return results.some((r) => /\bdmarc=fail\b/.test(r)) ? "fail" : "ok";
 }
 
+// The team an inbound email is for, and the ticket number or side conversation
+// token after the "+" when it answers one of our emails.
+export type InboundTarget = { key: string; number: number | null; side: string | null };
+
 // Finds our org key (and ticket number, if the customer replied to one of our
 // emails) among the recipients.
-export function matchRecipient(addresses: string[]): { key: string; number: number | null } | null {
+export function matchRecipient(addresses: string[]): InboundTarget | null {
   return matchRecipients(addresses)[0] ?? null;
 }
 
 // Every org the email is addressed to, once each, in the order given. Callers
 // list the envelope recipients first: a header To can name another team's
 // address (a reply-all) when this copy was really delivered for this team.
-export function matchRecipients(addresses: string[]): { key: string; number: number | null }[] {
+export function matchRecipients(addresses: string[]): InboundTarget[] {
   const domain = emailConfig.inboundDomain;
   if (!domain) return [];
-  const out: { key: string; number: number | null }[] = [];
+  const out: InboundTarget[] = [];
   for (const raw of addresses) {
     const { email } = parseAddress(raw);
     const [local, host] = email.split("@");
     if (host !== domain || !local) continue;
     const [key, num] = local.split("+");
-    if (key && !out.some((t) => t.key === key)) out.push({ key, number: parseTicketNumber(num) });
+    if (key && !out.some((t) => t.key === key)) out.push({ key, number: parseTicketNumber(num), side: /^s([0-9a-f]{20})$/.exec(num ?? "")?.[1] ?? null });
   }
   return out;
 }
@@ -169,7 +173,8 @@ export async function deliverReply(orgId: string, messageId: string): Promise<vo
   const earlier = await db
     .select({ id: schema.messages.emailMessageId })
     .from(schema.messages)
-    .where(and(eq(schema.messages.ticketId, row.ticket.id), isNotNull(schema.messages.emailMessageId)))
+    // Not side conversations': the customer's thread never names a supplier's emails.
+    .where(and(eq(schema.messages.ticketId, row.ticket.id), isNotNull(schema.messages.emailMessageId), isNull(schema.messages.sideId)))
     .orderBy(asc(schema.messages.createdAt));
   const refs = earlier.map((e) => e.id!).filter((id) => id !== row.message.emailMessageId);
 
@@ -247,7 +252,7 @@ export async function ticketFromHeaders(orgId: string, headers: Record<string, s
   const [hit] = await db
     .select({ ticketId: schema.messages.ticketId })
     .from(schema.messages)
-    .where(and(eq(schema.messages.orgId, orgId), inArray(schema.messages.emailMessageId, ids)))
+    .where(and(eq(schema.messages.orgId, orgId), inArray(schema.messages.emailMessageId, ids), isNull(schema.messages.sideId)))
     .orderBy(desc(schema.messages.createdAt))
     .limit(1);
   return hit?.ticketId ?? null;

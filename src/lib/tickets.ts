@@ -151,6 +151,7 @@ export async function getTicket(orgId: string, number: number) {
       translation: messages.translation,
       translatedFrom: messages.translatedFrom,
       original: messages.original,
+      sideId: messages.sideId,
       createdAt: messages.createdAt,
       agentName: agents.name,
     })

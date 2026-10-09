@@ -357,6 +357,28 @@ export const tickets = pgTable(
 
 export const authorType = pgEnum("author_type", ["customer", "agent", "ai", "system"]);
 
+// Side conversations: a supplier, courier or another team emailed from a
+// ticket. Their messages are internal notes on the ticket (messages.side_id),
+// so the customer never sees them; replies find their way back by the token in
+// the Reply-To or by the email's In-Reply-To (lib/side-conversations.ts).
+export const sideConversations = pgTable(
+  "side_conversations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    orgId: text("org_id").notNull().references(() => orgs.id, { onDelete: "cascade" }),
+    ticketId: uuid("ticket_id").notNull().references(() => tickets.id, { onDelete: "cascade" }),
+    token: text("token").notNull(),
+    toEmail: text("to_email").notNull(),
+    toName: text("to_name"),
+    subject: text("subject").notNull(),
+    createdBy: text("created_by").notNull(), // agents.user_id
+    closedAt: timestamp("closed_at", { withTimezone: true }),
+    lastMessageAt: timestamp("last_message_at", { withTimezone: true }).notNull().defaultNow(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (t) => [uniqueIndex("side_conversations_token").on(t.token), index("side_conversations_ticket").on(t.ticketId)],
+);
+
 export const messages = pgTable(
   "messages",
   {
@@ -379,6 +401,8 @@ export const messages = pgTable(
     translatedFrom: text("translated_from"),
     // A reply sent in the customer's language: what the agent wrote.
     original: text("original"),
+    // Part of a side conversation (always internal).
+    sideId: uuid("side_id").references(() => sideConversations.id, { onDelete: "cascade" }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

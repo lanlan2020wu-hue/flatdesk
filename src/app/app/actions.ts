@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -37,6 +37,7 @@ import { audit, changes } from "@/lib/security";
 import type { SlaPolicy } from "@/db/schema";
 import { RESOLVE_CHOICES, TARGET_CHOICES, validHours } from "@/lib/sla";
 import { cancelScheduled, parseSendAt, scheduleReply, ScheduleError, sendScheduled } from "@/lib/scheduled-replies";
+import { closeSide, replySide, SideError, startSide } from "@/lib/side-conversations";
 import { addReply, isPriority, normalizeTags, parseTicketNumber, updateTicket, type TicketPriority, type TicketStatus } from "@/lib/tickets";
 import { findGroup, shareTicketQuietly } from "@/lib/routing";
 import { isLanguage } from "@/lib/language";
@@ -843,4 +844,51 @@ export async function deleteViewAction(form: FormData) {
   }
   revalidatePath("/app/inbox");
   redirect("/app/inbox");
+}
+
+// Side conversations (lib/side-conversations.ts): email someone outside the ticket.
+export async function startSideAction(form: FormData) {
+  const s = await requireOpenSession();
+  const number = str(form, "number");
+  let error = "";
+  try {
+    const quote = form.get("quote") === "on" ? await lastCustomerMessage(s.orgId, idOf(form, "ticketId")) : null;
+    const body = quote ? `${str(form, "body").trim()}\n\n---\nFrom the customer:\n${quote}` : str(form, "body");
+    await startSide({ orgId: s.orgId, ticketId: idOf(form, "ticketId"), userId: s.userId, to: str(form, "to"), subject: str(form, "subject"), body });
+  } catch (err) {
+    if (!(err instanceof SideError)) throw err;
+    error = err.message;
+  }
+  if (error) redirect(`/app/tickets/${number}?side=${encodeURIComponent(error)}#side-conversations`);
+  revalidatePath(`/app/tickets/${number}`);
+}
+
+export async function replySideAction(form: FormData) {
+  const s = await requireOpenSession();
+  const number = str(form, "number");
+  let error = "";
+  try {
+    await replySide({ orgId: s.orgId, sideId: idOf(form, "sideId"), userId: s.userId, body: str(form, "body") });
+  } catch (err) {
+    if (!(err instanceof SideError)) throw err;
+    error = err.message;
+  }
+  if (error) redirect(`/app/tickets/${number}?side=${encodeURIComponent(error)}#side-conversations`);
+  revalidatePath(`/app/tickets/${number}`);
+}
+
+export async function closeSideAction(form: FormData) {
+  const s = await requireOpenSession();
+  await closeSide(s.orgId, idOf(form, "sideId"), form.get("op") !== "reopen");
+  revalidatePath(`/app/tickets/${str(form, "number")}`);
+}
+
+async function lastCustomerMessage(orgId: string, ticketId: string) {
+  const [m] = await db
+    .select({ body: schema.messages.body })
+    .from(schema.messages)
+    .where(and(eq(schema.messages.orgId, orgId), eq(schema.messages.ticketId, ticketId), eq(schema.messages.authorType, "customer"), eq(schema.messages.internal, false)))
+    .orderBy(desc(schema.messages.createdAt))
+    .limit(1);
+  return m?.body.slice(0, 5000) ?? null;
 }

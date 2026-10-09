@@ -56,7 +56,7 @@ test("matchRecipients lists each team once, in the order given", async () => {
   const { matchRecipients } = await import("./email");
   assert.deepEqual(
     matchRecipients(["auditb0001@in.flatdesk.test", "Team A <audita0001+7@in.flatdesk.test>", "auditb0001+3@in.flatdesk.test", "x@other.test"]),
-    [{ key: "auditb0001", number: null }, { key: "audita0001", number: 7 }],
+    [{ key: "auditb0001", number: null, side: null }, { key: "audita0001", number: 7, side: null }],
   );
 });
 

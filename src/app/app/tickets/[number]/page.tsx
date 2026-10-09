@@ -27,6 +27,8 @@ import { cachedSummary } from "@/lib/copilot";
 import { identifyMacro, repeatPrompt } from "@/lib/macro-suggestions";
 import { STATUS_LABEL } from "@/lib/receipts";
 import { waitingOn } from "@/lib/scheduled-replies";
+import { sidesFor } from "@/lib/side-conversations";
+import SideConversations from "@/components/SideConversations";
 import { teachSpot } from "@/lib/teach";
 import { formatDue, nextReplyState, resolveState, shortDuration, slaState, targetLabel } from "@/lib/sla";
 import { listGroups } from "@/lib/routing";
@@ -72,8 +74,9 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
   const mergeError = typeof sp.merge === "string" ? sp.merge.slice(0, 200) : null;
   const eraseMismatch = sp.erase === "mismatch";
   const ccError = typeof sp.cc === "string" ? sp.cc.slice(0, 200) : null;
+  const sideError = typeof sp.side === "string" ? sp.side.slice(0, 200) : null;
   const fieldsNotice = typeof sp.fields === "string" ? sp.fields.slice(0, 300) : null;
-  const [agents, macros, [aiEvent], repeat, files, ratings, org, summary, tagList, runs, waiting] = await Promise.all([
+  const [agents, macros, [aiEvent], repeat, files, ratings, org, summary, tagList, runs, waiting, sides] = await Promise.all([
     listAgents(s.orgId),
     db.select().from(schema.macros).where(and(eq(schema.macros.orgId, s.orgId))).orderBy(asc(schema.macros.name)),
     db
@@ -90,7 +93,9 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
     orgTags(s.orgId),
     ticketRuns(s.orgId, ticket.id),
     waitingOn(s.orgId, ticket.id),
+    sidesFor(s.orgId, ticket.id),
   ]);
+  const sideById = new Map(sides.map((x) => [x.id, x]));
   const copilotOn = aiConfigured() && Boolean(org?.aiProcessing);
   // The customer's language, from their latest message that says clearly, when it isn't the team's.
   const team = org?.language ?? "en";
@@ -202,7 +207,13 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
                     <span className="flex items-center gap-2.5 font-semibold">
                       <Avatar name={who} className="size-7 text-[10px]" />
                       {who}
-                      {m.internal && m.authorType !== "system" && <span className="pill bg-warn/15 text-warn">Internal note</span>}
+                      {m.sideId ? (
+                        <span className="pill bg-surface-2 font-normal text-muted">
+                          {m.authorType === "system" ? "Answer" : `To ${sideById.get(m.sideId)?.toName || sideById.get(m.sideId)?.toEmail}`} · {sideById.get(m.sideId)?.subject}
+                        </span>
+                      ) : (
+                        m.internal && m.authorType !== "system" && <span className="pill bg-warn/15 text-warn">Internal note</span>
+                      )}
                     </span>
                     <time className="text-xs text-muted" dateTime={m.createdAt.toISOString()} title={m.createdAt.toLocaleString("en-US")}>{timeAgo(m.createdAt)}</time>
                   </p>
@@ -518,6 +529,9 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
         <Suspense fallback={null}>
           <CompanyPanel orgId={s.orgId} email={customer.email} customerId={customer.id} />
         </Suspense>
+        {(sides.length > 0 || (!s.viewer && !ticket.deletedAt && !ticket.mergedIntoId)) && (
+          <SideConversations ticketId={ticket.id} number={ticket.number} subject={ticket.subject} sides={sides} canWrite={!s.viewer && !ticket.deletedAt && !ticket.mergedIntoId} error={sideError} />
+        )}
         <Suspense fallback={null}>
           <ShopifyOrders orgId={s.orgId} email={customer.email} unverified={ticket.channel === "chat"} />
         </Suspense>

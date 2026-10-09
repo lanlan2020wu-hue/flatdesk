@@ -29,6 +29,7 @@ export async function mergeTickets(orgId: string, fromId: string, intoNumber: nu
 
     await tx.update(messages).set({ ticketId: into.id }).where(and(eq(messages.orgId, orgId), eq(messages.ticketId, from.id)));
     await tx.update(attachments).set({ ticketId: into.id }).where(and(eq(attachments.orgId, orgId), eq(attachments.ticketId, from.id)));
+    await tx.update(schema.sideConversations).set({ ticketId: into.id }).where(and(eq(schema.sideConversations.orgId, orgId), eq(schema.sideConversations.ticketId, from.id)));
     const now = new Date();
     await tx
       .update(tickets)
