@@ -5,6 +5,7 @@ import { expireIdleImports } from "@/lib/import/engine";
 import { learnForAll } from "@/lib/learn";
 import { purgeHelpSearches } from "@/lib/help-searches";
 import { purgeTrash } from "@/lib/trash";
+import { refreshSources } from "@/lib/web-knowledge";
 
 // Called once a day by Vercel Cron (vercel.json).
 export const maxDuration = 300;
@@ -20,6 +21,8 @@ export async function GET(request: Request) {
   const teams = await reconcileTeams({ budgetMs: 45_000 });
   const billing = await dailyBilling();
   // The AI learns from yesterday's solved tickets with what time is left.
-  const learning = await learnForAll({ budgetMs: 150_000 });
-  return Response.json({ teams, billing, expiredImports, learning, purged, searchesPurged });
+  const learning = await learnForAll({ budgetMs: 130_000 });
+  // Websites the AI reads are read again weekly.
+  const websites = await refreshSources({ budgetMs: 60_000 });
+  return Response.json({ teams, billing, expiredImports, learning, purged, searchesPurged, websites });
 }

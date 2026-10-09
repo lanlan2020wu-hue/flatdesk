@@ -4,6 +4,7 @@ import { and, eq, inArray, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { currentUser } from "@clerk/nextjs/server";
 import { clerkEnabled } from "@/lib/auth-config";
 import { db, schema } from "@/db";
@@ -12,6 +13,7 @@ import { INPUT, parseOverageLimit } from "@/lib/app-input";
 import { LOCKED_MESSAGE, requireAdmin, requireEditor, requireOpen, type Session } from "@/lib/auth";
 import { filesFromForm, saveAttachments } from "@/lib/attachments";
 import { checkWebhookUrl, sendTestAlert } from "@/lib/alerts";
+import { addSource, markReading, readSource, removeSource, WebSourceError } from "@/lib/web-knowledge";
 import { handBackToTeam } from "@/lib/ai";
 import { checkoutUrl, portalUrl, switchToAnnual, syncSeats } from "@/lib/billing";
 import { CopilotError, draftReply, rewriteText, summarizeTicket, translateReply, translateTicket, type TicketSummary } from "@/lib/copilot";
@@ -659,4 +661,40 @@ export async function disconnectMailboxAction() {
     await audit(s.orgId, actor(s), "integration.disconnect", `${MAILBOX_NAMES[row.kind as MailboxKind]}: ${row.account}`);
   }
   redirect("/app/settings?mailbox=disconnected#mailbox");
+}
+
+// ---- Websites the AI reads (lib/web-knowledge.ts) ----
+
+const webBack = (msg?: string) => redirect(`/app/settings${msg ? `?web=${encodeURIComponent(msg)}` : ""}#websites`);
+
+export async function addWebSourceAction(form: FormData) {
+  const s = await requireOpenAdmin();
+  let error: string | undefined;
+  try {
+    const source = await addSource(s.orgId, str(form, "url").slice(0, 2000));
+    await audit(s.orgId, actor(s), "settings.website", `Added ${source.url}`);
+    after(() => readSource(s.orgId, source.id));
+  } catch (err) {
+    if (!(err instanceof WebSourceError)) throw err;
+    error = err.message;
+  }
+  revalidatePath("/app/settings");
+  webBack(error);
+}
+
+export async function readWebSourceAction(form: FormData) {
+  const s = await requireOpenAdmin();
+  const id = idOf(form, "id");
+  if (!(await markReading(s.orgId, id))) webBack("That address was read a few minutes ago. Try again shortly.");
+  after(() => readSource(s.orgId, id));
+  revalidatePath("/app/settings");
+  webBack();
+}
+
+export async function removeWebSourceAction(form: FormData) {
+  const s = await requireOpenAdmin();
+  const removed = await removeSource(s.orgId, idOf(form, "id"));
+  if (removed) await audit(s.orgId, actor(s), "settings.website", `Removed ${removed.url}`);
+  revalidatePath("/app/settings");
+  webBack();
 }
