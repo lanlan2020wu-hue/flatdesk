@@ -14,3 +14,6 @@ Free stock photos, used under the Unsplash and Pexels licenses (commercial use a
 | `desk-screens.webp` | /integrations | https://unsplash.com/photos/photo-1580894894513-541e068a3e2b |
 | `agent-phone.webp` | /faq | https://unsplash.com/photos/photo-1598257006458-087169a1f08d |
 | `whiteboard.webp` | /free-tools | https://unsplash.com/photos/photo-1552664730-d307ca884978 |
+| `team-headsets-smiling.webp` | Home, photo row under the hero | https://www.pexels.com/photo/8867482/ |
+| `agents-on-calls.webp` | Home, photo row under the hero | https://www.pexels.com/photo/8867263/ |
+| `agent-closeup.webp` | Home, photo row under the hero | https://www.pexels.com/photo/7709262/ |

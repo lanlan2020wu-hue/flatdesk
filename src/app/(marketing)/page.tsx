@@ -14,6 +14,9 @@ import { PLAN, PRICE_PHRASE, usd } from "@/lib/pricing";
 import { LEFT_OUT } from "@/lib/why-flat";
 import agentHeadset from "@/assets/photos/agent-headset.webp";
 import supportTeamTable from "@/assets/photos/support-team-table.webp";
+import agentCloseup from "@/assets/photos/agent-closeup.webp";
+import agentsOnCalls from "@/assets/photos/agents-on-calls.webp";
+import teamHeadsetsSmiling from "@/assets/photos/team-headsets-smiling.webp";
 
 // One story, told top to bottom: the month gets busier and the bill doesn't.
 // The hero shows it happening in the real inbox, the flat-rate chapter shows
@@ -145,6 +148,26 @@ export default function Home() {
             </li>
           ))}
         </ul>
+      </div>
+
+      {/* Right under the terms: the kind of team Flatdesk is for, before the numbers start. */}
+      <div className="mx-auto grid w-full max-w-6xl grid-cols-3 gap-2 px-4 pt-10 sm:gap-4 sm:px-6 sm:pt-14">
+        {[
+          { src: teamHeadsetsSmiling, alt: "A small support team with headsets, smiling together" },
+          { src: agentsOnCalls, alt: "Support agents with headsets answering customers at their desks" },
+          { src: agentCloseup, alt: "A support agent with a headset, focused on a reply" },
+        ].map((p, i) => (
+          <Image
+            key={p.alt}
+            src={p.src}
+            alt={p.alt}
+            unoptimized
+            placeholder="blur"
+            sizes="(min-width: 1152px) 360px, 33vw"
+            style={{ "--d": i } as React.CSSProperties}
+            className="enter aspect-[4/5] w-full rounded-[8px] object-cover sm:aspect-[4/3]"
+          />
+        ))}
       </div>
 
       <section id="flat-rate" className="mx-auto grid w-full max-w-6xl scroll-mt-20 gap-14 px-4 pt-24 sm:px-6 sm:pt-32">
