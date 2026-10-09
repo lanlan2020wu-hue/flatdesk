@@ -93,6 +93,9 @@ export const orgs = pgTable("orgs", {
   // translated into it, and replies can go out in the customer's (lib/translate.ts).
   language: text("language").notNull().default("en"),
   businessHours: jsonb("business_hours").$type<BusinessHours>(),
+  // Emailed once to a new ticket that arrives outside business hours and that
+  // the AI didn't answer (lib/after-hours.ts). Empty = off.
+  afterHoursMessage: text("after_hours_message").notNull().default(""),
   slaPolicies: jsonb("sla_policies").$type<SlaPolicy[]>().notNull().default([]),
   // Signs who is signed in on the team's own site, so chat can trust the visitor's email (lib/chat-identity.ts).
   chatSecret: text("chat_secret").notNull().default(sql`replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', '')`),

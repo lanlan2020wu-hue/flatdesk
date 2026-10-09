@@ -1,0 +1,1 @@
+ALTER TABLE "orgs" ADD COLUMN "after_hours_message" text DEFAULT '' NOT NULL;

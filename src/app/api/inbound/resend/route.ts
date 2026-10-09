@@ -5,6 +5,7 @@ import { alertNewTicket } from "@/lib/alerts";
 import { emailConfig, htmlToText, resend } from "@/lib/email";
 import { downloadInbound } from "@/lib/attachments";
 import { handleInboundEmailAll } from "@/lib/inbound";
+import { sendAfterHoursReply } from "@/lib/after-hours";
 import { shareTicketQuietly } from "@/lib/routing";
 
 // Resend calls this for every email sent to INBOUND_DOMAIN (event
@@ -69,6 +70,7 @@ export async function POST(request: Request) {
         // Triage runs beside the answer, and before the ticket is shared in turn, so its group counts.
         if (!r.unverified) await Promise.all([r.action === "created" ? triageTicket(r.orgId!, r.ticketId!) : null, answerNewTicket(r.orgId!, r.ticketId!)]);
         if (r.action === "created") {
+          if (!r.unverified) await sendAfterHoursReply(r.orgId!, r.ticketId!);
           await shareTicketQuietly(r.orgId!, r.ticketId!);
           await alertNewTicket(r.orgId!, r.ticketId!);
         }
