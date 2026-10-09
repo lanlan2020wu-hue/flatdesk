@@ -107,41 +107,45 @@ export default function SwitchBill({ initialTool = "zendesk-team", initialAgents
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 sm:gap-0">
-          <dl className="grid content-start gap-1.5 border-t-2 border-ink pt-3 text-[13px] sm:pr-5">
+          <div className="grid content-start gap-1.5 border-t-2 border-ink pt-3 text-[13px] sm:pr-5">
             <p className="mb-1 font-medium">
               {short(tool.vendor)} {tool.plan}
             </p>
-            <Line label={<span className="text-muted">{agents} × {usd(tool.seatPrice)} seats</span>} value={usd(today.seats)} />
-            {billed > 0 && today.included > 0 && (
-              <Line label={<span className="text-muted">{today.included.toLocaleString("en-US")} AI included</span>} value="$0" />
-            )}
-            <Line
-              label={<span className="text-muted">{billed ? `${billed.toLocaleString("en-US")} AI × ${usd(tool.aiRate, true)}` : "AI answers"}</span>}
-              value={usd(today.ai)}
-            />
-            <Line label="A month" value={usd(today.total)} className="mt-auto border-t border-line pt-2 text-base font-medium" />
-          </dl>
-          <dl className="relative grid content-start gap-1.5 border-t-2 border-accent pt-3 text-[13px] sm:border-l sm:border-l-line sm:pl-5">
-            <p className="mb-1 font-medium text-accent">Flatdesk</p>
-            <Line label={<span className="text-muted">{agents} × {usd(PLAN.annualSeatPrice)} seats</span>} value={usd(ours.seats)} />
-            <Line
-              label={<span className="text-muted">{ours.extra ? `${ours.included.toLocaleString("en-US")} AI included` : `AI, ${ai.toLocaleString("en-US")} of ${ours.included.toLocaleString("en-US")}`}</span>}
-              value="$0"
-            />
-            {ours.extra > 0 && (
+            <dl className="contents">
+              <Line label={<span className="text-muted">{agents} × {usd(tool.seatPrice)} seats</span>} value={usd(today.seats)} />
+              {billed > 0 && today.included > 0 && (
+                <Line label={<span className="text-muted">{today.included.toLocaleString("en-US")} AI included</span>} value="$0" />
+              )}
               <Line
-                label={<span className="text-muted">{ours.extra.toLocaleString("en-US")} more × {usd(PLAN.overageRate, true)}</span>}
-                value={usd(ours.withOverage - ours.seats)}
+                label={<span className="text-muted">{billed ? `${billed.toLocaleString("en-US")} AI × ${usd(tool.aiRate, true)}` : "AI answers"}</span>}
+                value={usd(today.ai)}
               />
-            )}
-            <Line label="A month" value={usd(ours.withOverage)} className="mt-auto border-t border-line pt-2 text-base font-medium" />
+              <Line label="A month" value={usd(today.total)} className="mt-auto border-t border-line pt-2 text-base font-medium" />
+            </dl>
+          </div>
+          <div className="relative grid content-start gap-1.5 border-t-2 border-accent pt-3 text-[13px] sm:border-l sm:border-l-line sm:pl-5">
+            <p className="mb-1 font-medium text-accent">Flatdesk</p>
+            <dl className="contents">
+              <Line label={<span className="text-muted">{agents} × {usd(PLAN.annualSeatPrice)} seats</span>} value={usd(ours.seats)} />
+              <Line
+                label={<span className="text-muted">{ours.extra ? `${ours.included.toLocaleString("en-US")} AI included` : `AI, ${ai.toLocaleString("en-US")} of ${ours.included.toLocaleString("en-US")}`}</span>}
+                value="$0"
+              />
+              {ours.extra > 0 && (
+                <Line
+                  label={<span className="text-muted">{ours.extra.toLocaleString("en-US")} more × {usd(PLAN.overageRate, true)}</span>}
+                  value={usd(ours.withOverage - ours.seats)}
+                />
+              )}
+              <Line label="A month" value={usd(ours.withOverage)} className="mt-auto border-t border-line pt-2 text-base font-medium" />
+            </dl>
             <span
               aria-hidden="true"
               className="stamp absolute -top-4 right-0 rotate-6 rounded-[4px] border-2 border-accent bg-surface px-1.5 py-0.5 font-mono text-[10px] font-semibold tracking-[0.2em] text-accent uppercase"
             >
               Flat
             </span>
-          </dl>
+          </div>
         </div>
 
         <div className="grid gap-1.5 rounded-[6px] bg-accent-soft px-4 py-3" aria-live="polite">
