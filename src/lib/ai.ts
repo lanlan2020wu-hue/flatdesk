@@ -767,7 +767,7 @@ export async function sendUsageNotice(orgId: string) {
     return;
   }
   const after = claimed.aiOverageEnabled
-    ? `Overage is on, so the AI keeps answering at $${PLAN.overageRate.toFixed(2)} per resolution${claimed.aiOverageMonthlyLimit != null ? `, up to ${claimed.aiOverageMonthlyLimit} more this month` : ""}.`
+    ? `Overage is on, so the AI keeps answering at $${PLAN.overageRate.toFixed(2)} per answer${claimed.aiOverageMonthlyLimit != null ? `, up to ${claimed.aiOverageMonthlyLimit} more this month` : ""}.`
     : "Overage is off, so once the allowance is used up the AI pauses and new tickets go to your team. Nothing extra is charged.";
   const body =
     level === 100
