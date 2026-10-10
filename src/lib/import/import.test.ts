@@ -322,3 +322,42 @@ describe("Help Scout", () => {
     assert.equal(customer?.fields["Other emails"], "kim@work.dev");
   });
 });
+
+describe("Gorgias", () => {
+  const ORG = "org_test_gorgias";
+  const G = "https://acme.gorgias.com/api/";
+  const routes = FIXTURES.gorgias.routes;
+
+  test("imports tickets with notes, macros, customers and keeps rules for reference", async () => {
+    await newOrg(ORG);
+    const api = fakeApi(G, routes);
+    const job = await runToEnd(ORG, "gorgias", FIXTURES.gorgias.creds, api);
+    assert.equal(job.status, "done", job.error ?? "");
+    assert.ok(api.authed.length > 0 && api.authed.length === api.calls.length, "every call carries the credentials");
+    const t = await ticketByNumber(ORG, 901);
+    assert.ok(t);
+    assert.equal(t.status, "closed");
+    assert.deepEqual(t.tags, ["refund"]);
+    assert.equal(t.fields.Priority, "high");
+    assert.equal(t.fields.Team, "Orders");
+    const msgs = await messagesOf(t.id);
+    assert.deepEqual(msgs.map((m) => [m.body, m.internal]), [["Where is my parcel?", false], ["It ships today.", false], ["Checked with the warehouse.", true]]);
+    assert.equal(await ticketByNumber(ORG, 902), undefined, "spam stays in the archive");
+    const macro = await db.query.macros.findFirst({ where: eq(schema.macros.orgId, ORG) });
+    assert.equal(macro?.name, "Where is my order");
+    assert.deepEqual(macro?.addTags, ["shipping", "order"]);
+    const kept = await db.query.importedRules.findMany({ where: eq(schema.importedRules.orgId, ORG) });
+    assert.equal(kept[0]?.name, "Tag refunds");
+    const customer = await db.query.customers.findFirst({ where: and(eq(schema.customers.orgId, ORG), eq(schema.customers.email, "dana@fox.co")) });
+    assert.equal(customer?.fields["Other emails"], "dana@work.co");
+    assert.equal(customer?.fields.Phone, "+15550100");
+  });
+
+  test("a wrong domain or missing key is refused before any request", async () => {
+    const { gorgias } = await import("./sources/gorgias");
+    assert.equal(gorgias.account({ domain: "https://Acme.gorgias.com/", email: "a@b.co", apiKey: "k" }), "acme.gorgias.com");
+    assert.throws(() => gorgias.account({ domain: "bad domain", email: "a@b.co", apiKey: "k" }));
+    assert.throws(() => gorgias.account({ domain: "acme", email: "nope", apiKey: "k" }));
+    await assert.rejects(() => gorgias.connect({ domain: "acme", email: "a@b.co", apiKey: "" }));
+  });
+});

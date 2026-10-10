@@ -12,6 +12,7 @@ const WHAT: Record<string, string> = {
   intercom: "Conversations with every reply and note, macros, tags, contacts, companies and teammates",
   freshdesk: "Tickets with conversations, canned responses, scenarios, automation rules, contacts, companies and agents",
   helpscout: "Conversations with every thread, saved replies, workflows, tags, custom fields, customers and users",
+  gorgias: "Tickets with every message and note, macros, rules (for reference), tags, customers, users and teams",
 };
 
 export default async function ImportPage() {

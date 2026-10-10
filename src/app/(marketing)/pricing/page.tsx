@@ -22,7 +22,7 @@ const INCLUDED = [
   "AI answers, capped by default",
   "AI receipts and refunds",
   "Reporting",
-  "Lossless import from Zendesk, Intercom, Freshdesk or Help Scout",
+  "Lossless import from Zendesk, Intercom, Freshdesk, Help Scout or Gorgias",
   "Data export",
 ];
 

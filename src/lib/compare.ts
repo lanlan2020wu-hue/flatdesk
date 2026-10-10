@@ -190,7 +190,7 @@ export const RIVALS: Rival[] = [
       "AI included in the seat, with a cap on by default",
       "AI receipts with one-click refunds",
       "AI macros written from your replies, with updates suggested from your team's edits. They can also assign, tag and close tickets",
-      "Lossless import from Zendesk, Intercom, Freshdesk and Help Scout",
+      "Lossless import from Zendesk, Intercom, Freshdesk, Help Scout and Gorgias",
     ],
     theyWin: [
       "Cheaper entry seat and cheaper AI per conversation",
@@ -205,7 +205,7 @@ export const RIVALS: Rival[] = [
       { label: "Front Professional", costs: [203, 690], approx: true, aiBilling: "From $0.05 per conversation." },
     ],
     faq: [
-      { q: "Can Flatdesk import from Front?", a: "Not yet. Flatdesk imports from Zendesk, Intercom, Freshdesk and Help Scout today." },
+      { q: "Can Flatdesk import from Front?", a: "Not yet. Flatdesk imports from Zendesk, Intercom, Freshdesk, Help Scout and Gorgias today." },
     ],
     sources: [{ label: "Front pricing", url: "https://front.com/pricing" }],
   },
@@ -232,7 +232,7 @@ export const RIVALS: Rival[] = [
       { label: "Gorgias Basic / Pro", costs: [210, 1160], approx: true, aiBilling: "Monthly-billing plan prices ($60 and $360); yearly is a little less. About $1 per AI interaction plus the ticket fee (third-party figures). Assumes 300 and 2,000 tickets." },
     ],
     faq: [
-      { q: "Can Flatdesk import from Gorgias?", a: "Not yet. Flatdesk imports from Zendesk, Intercom, Freshdesk and Help Scout today." },
+      { q: "Can Flatdesk import from Gorgias?", a: importAnswer("Gorgias") },
     ],
     sources: [
       { label: "Gorgias pricing", url: "https://www.gorgias.com/pricing" },

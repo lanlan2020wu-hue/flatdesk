@@ -327,9 +327,67 @@ const helpscoutRoutes: Routes = {
   "attachments/70/data": { data: Buffer.from("segfault!").toString("base64") },
 };
 
+const gorgiasRoutes: Routes = {
+  account: { domain: "acme.gorgias.com" },
+  "users?limit=100": { data: [{ id: 1, name: "Ana", email: "ana@acme.com", role: { name: "admin" }, active: true }], meta: { next_cursor: null } },
+  "teams?limit=100": { data: [{ id: 2, name: "Orders" }], meta: { next_cursor: null } },
+  "tags?limit=100": { data: [{ id: 3, name: "refund" }], meta: { next_cursor: null } },
+  "macros?limit=100": {
+    data: [
+      {
+        id: 4,
+        name: "Where is my order",
+        actions: [
+          { name: "setResponseText", arguments: { body_text: "Hi {{ticket.customer.firstname}}, it ships tomorrow." } },
+          { name: "addTags", arguments: { tags: "shipping, order" } },
+          { name: "setStatus", arguments: { status: "closed" } },
+          { name: "applyMacro", title: "Something else" },
+        ],
+      },
+    ],
+    meta: { next_cursor: null },
+  },
+  "rules?limit=100": { data: [{ id: 5, name: "Tag refunds", code: "if (containsAny(message.body_text, ['refund']))\n  addTags('refund')" }], meta: { next_cursor: null } },
+  "customers?limit=100": {
+    data: [{ id: 6, name: "Dana Fox", email: "dana@fox.co", channels: [{ type: "email", address: "dana@fox.co" }, { type: "email", address: "dana@work.co" }, { type: "phone", address: "+15550100" }], data: { vip: "yes" } }],
+    meta: { next_cursor: null },
+  },
+  "tickets?order_by=created_datetime:asc&limit=100": {
+    data: [
+      {
+        id: 901,
+        subject: "Where is my parcel?",
+        status: "closed",
+        channel: "email",
+        priority: "high",
+        customer: { id: 6, name: "Dana Fox", email: "dana@fox.co" },
+        assignee_user: { id: 1, name: "Ana" },
+        assignee_team: { id: 2, name: "Orders" },
+        tags: [{ id: 3, name: "refund" }],
+        created_datetime: "2025-04-01T08:00:00Z",
+        updated_datetime: "2025-04-02T08:00:00Z",
+        closed_datetime: "2025-04-02T08:00:00Z",
+        excerpt: "Where is it?",
+      },
+      { id: 902, subject: "Buy now!!!", status: "open", channel: "email", spam: true, customer: { id: 7, email: "spam@x.co" }, created_datetime: "2025-04-03T08:00:00Z", updated_datetime: "2025-04-03T08:00:00Z" },
+    ],
+    meta: { next_cursor: null },
+  },
+  "messages?ticket_id=901&order_by=created_datetime:asc&limit=100": {
+    data: [
+      { id: 9011, from_agent: false, public: true, sender: { id: 6, name: "Dana Fox", email: "dana@fox.co" }, body_text: "Where is my parcel?", created_datetime: "2025-04-01T08:00:00Z", attachments: [] },
+      { id: 9012, from_agent: true, public: true, sender: { id: 1, name: "Ana", email: "ana@acme.com" }, body_html: "<p>It ships <b>today</b>.</p>", created_datetime: "2025-04-01T09:00:00Z", attachments: [] },
+      { id: 9013, from_agent: true, public: false, sender: { id: 1, name: "Ana", email: "ana@acme.com" }, body_text: "Checked with the warehouse.", created_datetime: "2025-04-01T09:05:00Z", attachments: [] },
+    ],
+    meta: { next_cursor: null },
+  },
+  "messages?ticket_id=902&order_by=created_datetime:asc&limit=100": { data: [], meta: { next_cursor: null } },
+};
+
 export const FIXTURES: Record<SourceId, { base: string; creds: Record<string, string>; routes: Routes }> = {
   zendesk: { base: "https://acme.zendesk.com/api/v2/", creds: { subdomain: "acme", email: "ana@acme.com", token: "t" }, routes: zendeskRoutes },
   intercom: { base: "https://api.intercom.io/", creds: { token: "tok" }, routes: intercomRoutes },
   freshdesk: { base: "https://acme.freshdesk.com/api/v2/", creds: { domain: "acme", apiKey: "k" }, routes: freshdeskRoutes },
   helpscout: { base: "https://api.helpscout.net/v2/", creds: { appId: "a", appSecret: "b" }, routes: helpscoutRoutes },
+  gorgias: { base: "https://acme.gorgias.com/api/", creds: { domain: "acme", email: "ana@acme.com", apiKey: "k" }, routes: gorgiasRoutes },
 };
