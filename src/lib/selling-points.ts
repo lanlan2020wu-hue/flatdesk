@@ -249,6 +249,10 @@ export const SELLING_POINTS: SellingPoint[] = [
         a: "Agents, tags, macros, rules, customers and tickets with their messages and attachments. Intercom's API doesn't share rules. Help Scout workflows come over by name only, since its API doesn't share their conditions. A report lists anything that didn't fit, and every original record is kept.",
       },
       {
+        q: "Do custom fields, satisfaction ratings and saved views come across?",
+        a: "Custom ticket and contact fields come across as ticket and customer fields, along with status, priority, type, group, organization, due date and assignee from your old help desk. From Zendesk, the satisfaction score comes over as a field too. Saved views aren't imported, because Flatdesk's inbox filters work differently; the original records are in the archive and anything that didn't fit is in the report.",
+      },
+      {
         q: "Can we run the import again?",
         a: "Yes. Records are matched by their original ID, so running it again updates them instead of making duplicates.",
       },
