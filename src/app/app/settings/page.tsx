@@ -17,7 +17,7 @@ import { MAILBOX_NAMES, mailboxFor, type MailboxKind } from "@/lib/mailbox";
 import { gmailConfigured } from "@/lib/mailbox/gmail";
 import { microsoftConfigured } from "@/lib/mailbox/microsoft";
 import { PLAN, annualSavingsPct, usd } from "@/lib/pricing";
-import { webhookKind, webhookLabel } from "@/lib/alerts";
+import { OPTIONAL_EVENTS, webhookKind, webhookLabel } from "@/lib/alerts";
 import { DEFAULT_HOURS, RESOLVE_CHOICES, TARGET_CHOICES } from "@/lib/sla";
 import { timeAgo } from "@/lib/format";
 import { LANGUAGES } from "@/lib/language";
@@ -703,6 +703,19 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
                     <span className="block text-sm text-muted">Each one says whether the AI answered it.</span>
                   </span>
                 </label>
+              </div>
+              <div className="grid gap-2">
+                <span className="label">Also post when</span>
+                {OPTIONAL_EVENTS.map((e) => (
+                  <label key={e.id} className="flex items-start gap-2.5">
+                    <input type="checkbox" name="alertEvents" value={e.id} defaultChecked={org.alertEvents.includes(e.id)} className="mt-1 size-4 accent-[var(--accent)]" />
+                    <span>
+                      {e.label}
+                      <span className="block text-sm text-muted">{e.hint}</span>
+                    </span>
+                  </label>
+                ))}
+                <p className="text-sm text-muted">Tickets set to &ldquo;update the customer every&hellip;&rdquo; always post when an update is due.</p>
               </div>
               {isAdmin && <button className="btn btn-primary w-max">Save alerts</button>}
             </fieldset>

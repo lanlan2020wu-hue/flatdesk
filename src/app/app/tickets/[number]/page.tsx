@@ -37,9 +37,10 @@ import { listGroups } from "@/lib/routing";
 import { guessLanguage, isForeign, languageLabel } from "@/lib/language";
 import AutoTranslate from "@/components/AutoTranslate";
 import { getTicket, listAgents, orgTags, parseTicketNumber, PRIORITIES } from "@/lib/tickets";
+import { UPDATE_CHOICES } from "@/lib/update-timer";
 import { TRASH_DAYS } from "@/lib/trash";
 import { CHECKED, listFields } from "@/lib/ticket-fields";
-import { eraseCustomerAction, followTicketAction, mergeCustomersAction, mergeTicketAction, splitTicketAction, replyAction, saveCcAction, saveTicketFieldsAction, ticketSnoozeAction, ticketTrashAction, updateTicketAction } from "../../actions";
+import { eraseCustomerAction, followTicketAction, mergeCustomersAction, mergeTicketAction, splitTicketAction, replyAction, saveCcAction, saveTicketFieldsAction, setUpdateEveryAction, ticketSnoozeAction, ticketTrashAction, updateTicketAction } from "../../actions";
 
 export async function generateMetadata({ params }: PageProps<"/app/tickets/[number]">) {
   return { title: `#${(await params).number}` };
@@ -445,6 +446,22 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
               {mergeError && <p role="alert" className="text-xs text-warn">{mergeError}</p>}
             </form>
           </details>
+        )}
+
+        {!ticket.deletedAt && !ticket.mergedIntoId && ticket.status !== "closed" && (
+          <form action={setUpdateEveryAction} className="grid gap-1.5">
+            <input type="hidden" name="ticketId" value={ticket.id} />
+            <input type="hidden" name="number" value={ticket.number} />
+            <label htmlFor="update-every" className={heading}>Update the customer every</label>
+            <div className="flex gap-2">
+              <select id="update-every" name="every" defaultValue={ticket.updateEveryHours ?? ""} className={`${field} min-w-0 flex-1`}>
+                <option value="">Don&apos;t remind me</option>
+                {UPDATE_CHOICES.map((c) => <option key={c.hours} value={c.hours}>{c.label}</option>)}
+              </select>
+              <button className="btn btn-secondary btn-sm">Save</button>
+            </div>
+            {ticket.updateDueAt && <p className="text-xs text-muted">Next update due {formatDue(ticket.updateDueAt, null)}. A reply to the customer starts the clock again.</p>}
+          </form>
         )}
 
         {!ticket.deletedAt && !ticket.mergedIntoId && ticket.status !== "closed" && <SnoozeMenu ticketId={ticket.id} number={ticket.number} />}

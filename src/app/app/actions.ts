@@ -12,7 +12,8 @@ import { findAssignable } from "@/lib/agents";
 import { INPUT, parseOverageLimit } from "@/lib/app-input";
 import { LOCKED_MESSAGE, requireAdmin, requireEditor, requireOpen, type Session } from "@/lib/auth";
 import { filesFromForm, saveAttachments } from "@/lib/attachments";
-import { checkWebhookUrl, sendTestAlert } from "@/lib/alerts";
+import { alertEvent, checkWebhookUrl, isOptionalEvent, sendTestAlert } from "@/lib/alerts";
+import { parseUpdateEvery, setUpdateEvery } from "@/lib/update-timer";
 import { addField, blockedFromClosing, deleteField, FieldError, missingMessage, parseFieldInput, setTicketValues, updateField } from "@/lib/ticket-fields";
 import { createView, deleteView, parseViewForm, ViewError } from "@/lib/saved-views";
 import { addSource, markReading, readSource, removeSource, WebSourceError } from "@/lib/web-knowledge";
@@ -100,6 +101,9 @@ export async function replyAction(form: FormData) {
   });
   if (messageId && files.length) await saveAttachments(s.orgId, ticketId, messageId, files);
   if (messageId) await deliverReply(s.orgId, messageId);
+  // Webhook events, for teams that turned them on.
+  if (messageId && form.get("internal") !== "on") after(() => alertEvent(s.orgId, ticketId, "ticket.replied", s.name));
+  if (replyStatus === "closed" && ticket.status !== "closed") after(() => alertEvent(s.orgId, ticketId, "ticket.closed", `Closed by ${s.name}.`));
   // Replying follows the ticket; the people already following it hear about the reply or note.
   if (messageId) {
     await setFollowing(s.orgId, ticketId, s.userId, true);
@@ -212,7 +216,13 @@ export async function updateTicketAction(form: FormData) {
     const missing = (await blockedFromClosing(s.orgId, [ticketId])).get(ticketId);
     if (missing) redirect(`/app/tickets/${str(form, "number")}?fields=${encodeURIComponent(missingMessage(missing))}#fields`);
   }
+  const before = await db.query.tickets.findFirst({ where: and(eq(schema.tickets.orgId, s.orgId), eq(schema.tickets.id, ticketId)), columns: { status: true, assigneeId: true } });
   await updateTicket(s.orgId, ticketId, patch);
+  if (patch.status === "closed" && before?.status !== "closed") after(() => alertEvent(s.orgId, ticketId, "ticket.closed", `Closed by ${s.name}.`));
+  if (patch.assigneeId !== undefined && patch.assigneeId !== before?.assigneeId) {
+    const to = patch.assigneeId ? (await findAssignable(s.orgId, patch.assigneeId))?.name : null;
+    after(() => alertEvent(s.orgId, ticketId, "ticket.assigned", to ? `Assigned to ${to}` : "Unassigned"));
+  }
   // Sent to a group that shares tickets in turn, with nobody on it yet.
   if (patch.groupId) await shareTicketQuietly(s.orgId, ticketId);
   revalidatePath(`/app/tickets/${str(form, "number")}`);
@@ -659,10 +669,19 @@ export async function saveAlertsAction(form: FormData) {
     .set({
       alertWebhookUrl: checked.url,
       alertOn,
+      alertEvents: form.getAll("alertEvents").map(String).filter(isOptionalEvent),
       ...(changed ? { alertLastAt: null, alertLastError: null } : {}),
     })
     .where(eq(schema.orgs.id, s.orgId));
   revalidatePath("/app/settings");
+}
+
+// Set how often the customer is promised an update on this ticket (blank turns it off).
+export async function setUpdateEveryAction(form: FormData) {
+  const s = await requireOpenSession();
+  const ticketId = idOf(form, "ticketId");
+  await setUpdateEvery(s.orgId, ticketId, parseUpdateEvery(str(form, "every")));
+  revalidatePath(`/app/tickets/${str(form, "number")}`);
 }
 
 export async function sendTestAlertAction() {

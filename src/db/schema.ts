@@ -69,6 +69,8 @@ export const orgs = pgTable("orgs", {
   // Alerts to Slack (or any webhook) when a ticket needs a person. See lib/alerts.ts.
   alertWebhookUrl: text("alert_webhook_url"),
   alertOn: text("alert_on").$type<AlertOn>().notNull().default("team"),
+  // Extra webhook events the team asked for, beyond new, handed-back and overdue tickets (lib/alerts.ts).
+  alertEvents: text("alert_events").array().notNull().default(sql`'{}'::text[]`),
   // Signs generic webhook payloads (X-Flatdesk-Signature) so receivers can check them.
   alertSecret: text("alert_secret").notNull().default(sql`replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', '')`),
   alertLastAt: timestamp("alert_last_at", { withTimezone: true }),
@@ -317,6 +319,9 @@ export const tickets = pgTable(
     nextEscalatedAt: timestamp("next_escalated_at", { withTimezone: true }),
     pendingSince: timestamp("pending_since", { withTimezone: true }),
     pausedSeconds: integer("paused_seconds").notNull().default(0),
+    // "Update the customer every N hours" (lib/update-timer.ts): a public reply restarts the clock.
+    updateEveryHours: integer("update_every_hours"),
+    updateDueAt: timestamp("update_due_at", { withTimezone: true }),
     // When the ticket was last logged to the customer's CRM record (HubSpot write-back).
     crmLoggedAt: timestamp("crm_logged_at", { withTimezone: true }),
     // Timed triggers (lib/triggers.ts): the ones that ran since the customer or
@@ -367,6 +372,7 @@ export const tickets = pgTable(
       .where(sql`${t.status} = 'open' and ${t.firstResponseAt} is null and ${t.escalatedAt} is null and ${t.source} is null`),
     index("tickets_resolve_due").on(t.createdAt).where(sql`${t.status} <> 'closed' and ${t.resolveEscalatedAt} is null and ${t.source} is null`),
     index("tickets_next_reply_due").on(t.awaitingSince).where(sql`${t.status} = 'open' and ${t.firstResponseAt} is not null and ${t.source} is null`),
+    index("tickets_update_due").on(t.updateDueAt).where(sql`${t.updateDueAt} is not null`),
   ],
 );
 

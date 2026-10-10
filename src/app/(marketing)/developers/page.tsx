@@ -67,7 +67,7 @@ export default function DevelopersPage() {
         <h2 id="webhooks" className="font-display text-2xl">Webhooks</h2>
         <p className="text-muted">
           Set a webhook address under Settings, Alerts, and choose which tickets to send: only the ones that need a person, or every new one. Slack, Discord and Google Chat
-          addresses get a message in their own format. Any other address gets JSON like this, with event ticket.created or ticket.handed_back (a customer wrote back to an AI answer):
+          addresses get a message in their own format. Any other address gets JSON like this, with event ticket.created, ticket.handed_back (a customer wrote back to an AI answer) or ticket.overdue. Tick more under Alerts to also get ticket.replied, ticket.customer_replied, ticket.closed and ticket.assigned. A ticket set to &ldquo;update the customer every&hellip;&rdquo; sends ticket.update_due when the update is late:
         </p>
         <pre className={code}>{WEBHOOK_EXAMPLE}</pre>
         <p className="text-sm text-muted">

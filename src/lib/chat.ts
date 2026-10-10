@@ -1,4 +1,5 @@
 import { randomBytes, timingSafeEqual } from "node:crypto";
+import { alertEvent } from "@/lib/alerts";
 import { and, asc, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { attachmentsByMessage, filesFromForm, saveAttachments, type AttachmentInfo, type NewFile } from "@/lib/attachments";
@@ -128,4 +129,5 @@ export async function visitorThread(ticketId: string, link?: { orgId: string; ke
 export async function visitorReply(orgId: string, ticket: { id: string; customerId: string }, message: string, files: NewFile[] = []) {
   const messageId = await addCustomerMessage({ orgId, ticketId: ticket.id, customerId: ticket.customerId, body: message.slice(0, MAX_MESSAGE) });
   await saveAttachments(orgId, ticket.id, messageId, files);
+  await alertEvent(orgId, ticket.id, "ticket.customer_replied");
 }

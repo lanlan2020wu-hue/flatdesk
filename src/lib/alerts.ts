@@ -20,7 +20,18 @@ import { TRIGGER_NOTE_PREFIX } from "@/lib/triggers";
 // else gets JSON (see AlertPayload), signed with the org's alert secret:
 // X-Flatdesk-Signature: sha256=<hex HMAC of the raw body>.
 
-export type AlertEvent = "ticket.created" | "ticket.handed_back" | "ticket.overdue" | "test";
+export type AlertEvent = "ticket.created" | "ticket.handed_back" | "ticket.overdue" | "ticket.replied" | "ticket.customer_replied" | "ticket.closed" | "ticket.assigned" | "ticket.update_due" | "test";
+
+// Events a team can switch on beyond the three that always post. update_due
+// posts whenever a ticket has an update timer, since setting one is the opt-in.
+export const OPTIONAL_EVENTS = [
+  { id: "ticket.replied", label: "Your team replies", hint: "A public reply goes to the customer." },
+  { id: "ticket.customer_replied", label: "A customer writes back", hint: "On any ticket, including ones the AI answered." },
+  { id: "ticket.closed", label: "A ticket is closed", hint: "By a person, from a ticket page or a reply." },
+  { id: "ticket.assigned", label: "A ticket is assigned", hint: "To someone, or to nobody." },
+] as const;
+export type OptionalEvent = (typeof OPTIONAL_EVENTS)[number]["id"];
+export const isOptionalEvent = (v: string): v is OptionalEvent => OPTIONAL_EVENTS.some((e) => e.id === v);
 
 export type AlertPayload = {
   event: AlertEvent;
@@ -233,6 +244,11 @@ export function alertText(event: AlertEvent, t: NonNullable<AlertPayload["ticket
   const ref = `${t.test ? "test ticket " : ""}#${t.number} ${t.subject}`;
   if (event === "ticket.handed_back") return `Back with the team: ${ref} from ${who}.${reason ? ` ${reason}` : ""}`;
   if (event === "ticket.overdue") return `Missed the ${target === "resolve" ? "resolution" : target === "next" ? "next-reply" : "first-reply"} target: ${ref} from ${who}.${reason ? ` ${reason}` : ""}`;
+  if (event === "ticket.replied") return `${reason || "Your team"} replied on ${ref} to ${who}.`;
+  if (event === "ticket.customer_replied") return `${who} wrote back on ${ref}.`;
+  if (event === "ticket.closed") return `Closed: ${ref} from ${who}.${reason ? ` ${reason}` : ""}`;
+  if (event === "ticket.assigned") return `${reason || "Assigned"}: ${ref} from ${who}.`;
+  if (event === "ticket.update_due") return `Time to update the customer: ${ref} from ${who}.${reason ? ` ${reason}` : ""}`;
   const head = needsTeam ? `New ticket for the team: ${ref} from ${who} by ${t.channel}.` : `New ticket answered by the AI: ${ref} from ${who} by ${t.channel}.`;
   return reason && needsTeam ? `${head} ${reason}` : head;
 }
@@ -367,6 +383,28 @@ export async function alertOverdue(orgId: string, ticketId: string, reason: stri
     }, ticketId);
   } catch (err) {
     console.error("overdue alert failed", err);
+  }
+}
+
+// One of the optional events (or an update-timer reminder). Does nothing unless
+// the team has a webhook and asked for this event. Never throws.
+export async function alertEvent(orgId: string, ticketId: string, event: Exclude<AlertEvent, "ticket.created" | "ticket.handed_back" | "ticket.overdue" | "test">, reason: string | null = null) {
+  try {
+    const org = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, orgId), columns: { id: true, alertWebhookUrl: true, alertSecret: true, alertEvents: true } });
+    if (!org?.alertWebhookUrl) return;
+    if (event !== "ticket.update_due" && !org.alertEvents.includes(event)) return;
+    const found = await ticketPayload(orgId, ticketId);
+    if (!found || found.ticket.test) return;
+    await deliver(org, {
+      event,
+      text: alertText(event, found.payload, event === "ticket.update_due", reason),
+      needsTeam: event === "ticket.update_due" || event === "ticket.customer_replied",
+      reason,
+      ticket: found.payload,
+      sentAt: new Date().toISOString(),
+    }, ticketId);
+  } catch (err) {
+    console.error("alert failed", event, err);
   }
 }
 
