@@ -41,7 +41,10 @@ export type AuditAction =
   | "settings.website"
   | "settings.fields"
   | "backup.save"
-  | "backup.remove";
+  | "backup.remove"
+  | "ticket.split"
+  | "customer.merge"
+  | "tags.change";
 
 export const AUDIT_LABELS: Record<AuditAction, string> = {
   "settings.ai": "Changed AI answer settings",
@@ -76,6 +79,9 @@ export const AUDIT_LABELS: Record<AuditAction, string> = {
   "settings.fields": "Changed ticket fields",
   "backup.save": "Changed backups to their own storage",
   "backup.remove": "Turned off backups to their own storage",
+  "ticket.split": "Split a ticket",
+  "customer.merge": "Merged two customers",
+  "tags.change": "Renamed or removed a tag",
   "apikey.revoke": "Revoked an API key",
   "action.change": "Changed an AI action",
   "action.decide": "Approved or declined an AI action",

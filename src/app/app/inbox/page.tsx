@@ -93,6 +93,7 @@ export default async function InboxPage({ searchParams }: PageProps<"/app/inbox"
             </Link>
           ))}
         </nav>
+        {!s.viewer && <Link href="/app/tickets/compose" className="link w-max text-sm font-medium text-accent">Email a customer</Link>}
         {!s.viewer && (
           <details open={Boolean(newViewError)} className="text-sm">
             <summary className="link w-max cursor-pointer font-medium text-accent">New view</summary>

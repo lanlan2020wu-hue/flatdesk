@@ -39,7 +39,7 @@ import AutoTranslate from "@/components/AutoTranslate";
 import { getTicket, listAgents, orgTags, parseTicketNumber, PRIORITIES } from "@/lib/tickets";
 import { TRASH_DAYS } from "@/lib/trash";
 import { CHECKED, listFields } from "@/lib/ticket-fields";
-import { eraseCustomerAction, followTicketAction, mergeTicketAction, replyAction, saveCcAction, saveTicketFieldsAction, ticketSnoozeAction, ticketTrashAction, updateTicketAction } from "../../actions";
+import { eraseCustomerAction, followTicketAction, mergeCustomersAction, mergeTicketAction, splitTicketAction, replyAction, saveCcAction, saveTicketFieldsAction, ticketSnoozeAction, ticketTrashAction, updateTicketAction } from "../../actions";
 
 export async function generateMetadata({ params }: PageProps<"/app/tickets/[number]">) {
   return { title: `#${(await params).number}` };
@@ -75,6 +75,8 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
   const actionMessage = typeof sp.action === "string" ? sp.action.slice(0, 300) : null;
   const mergeError = typeof sp.merge === "string" ? sp.merge.slice(0, 200) : null;
   const eraseMismatch = sp.erase === "mismatch";
+  const splitError = typeof sp.split === "string" ? sp.split.slice(0, 200) : null;
+  const customersError = typeof sp.customers === "string" ? sp.customers.slice(0, 200) : null;
   const ccError = typeof sp.cc === "string" ? sp.cc.slice(0, 200) : null;
   const customerError = typeof sp.customer === "string" ? sp.customer.slice(0, 200) : null;
   const sideError = typeof sp.side === "string" ? sp.side.slice(0, 200) : null;
@@ -114,6 +116,10 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
   const nextReply = org ? nextReplyState(ticket, org) : null;
   // Under the AI's latest handoff note, a box to write the answer it was missing.
   const teachAt = s.viewer ? -1 : teachSpot(thread);
+  // Any customer message after the first can become a ticket of its own.
+  const firstCustomerId = thread.find((m) => m.authorType === "customer" && !m.internal && !m.sideId)?.id;
+  const canSplit = (m: (typeof thread)[number]) =>
+    !s.viewer && !ticket.deletedAt && !ticket.mergedIntoId && m.authorType === "customer" && !m.internal && !m.sideId && m.id !== firstCustomerId;
   // The receipt line for this ticket's AI answer, shown under that answer.
   const receipt =
     aiEvent && aiEvent.kind !== "draft"
@@ -187,6 +193,7 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
         {needsTranslation && <AutoTranslate ticketId={ticket.id} label={languageLabel(team)} />}
         {copilotOn && thread.length > 0 && <CopilotSummary ticketId={ticket.id} initial={summary?.summary ?? null} stale={summary?.stale ?? false} disabled={s.viewer} />}
 
+        {splitError && <p role="alert" className="text-sm text-warn">{splitError}</p>}
         <ol className="grid gap-4">
           {thread.map((m, i) => {
             // Imported messages can come from people who aren't the customer or on the team (a CC, a former agent).
@@ -246,6 +253,13 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
                         </li>
                       ))}
                     </ul>
+                  )}
+                  {canSplit(m) && (
+                    <form action={splitTicketAction} className="justify-self-end">
+                      <input type="hidden" name="messageId" value={m.id} />
+                      <input type="hidden" name="number" value={ticket.number} />
+                      <button className="link text-xs text-muted" title="Move this message into a ticket of its own">Split into a new ticket</button>
+                    </form>
                   )}
                   {ratings.get(m.id) && (
                     <p className="grid gap-0.5 border-t border-accent/20 pt-2 text-sm">
@@ -452,8 +466,8 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
         )}
 
         {s.role === "admin" && (
-          <details id="erase" className="grid gap-2" open={eraseMismatch}>
-            <summary className={`${heading} cursor-pointer list-none`}>Customer data requests</summary>
+          <details id="erase" className="grid gap-2" open={eraseMismatch || Boolean(customersError)}>
+            <summary className={`${heading} cursor-pointer list-none`}>Customer data and records</summary>
             <div className="grid gap-3 pt-1">
               <p className="text-xs text-muted">
                 When {customer.name || customer.email} asks for a copy of their data or to be forgotten (GDPR, CCPA).
@@ -469,6 +483,18 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
                 {eraseMismatch && <p role="alert" className="text-xs text-warn">That doesn&apos;t match their email address, so nothing was erased.</p>}
                 <button className="btn btn-secondary btn-sm w-fit text-warn">Erase this customer</button>
                 <p className="text-xs text-muted">Copies already sent to connected tools, like HubSpot, have to be removed there.</p>
+              </form>
+              <form id="merge-customers" action={mergeCustomersAction} className="grid gap-1.5 border-t border-line pt-3">
+                <input type="hidden" name="customerId" value={customer.id} />
+                <input type="hidden" name="number" value={ticket.number} />
+                <label htmlFor="merge-into" className="text-xs text-muted">
+                  Same person under two addresses? Move all of {customer.email}&apos;s tickets to the address you type, then remove this record.
+                </label>
+                <div className="flex gap-2">
+                  <input id="merge-into" name="into" type="email" placeholder="Email to keep" autoComplete="off" className={`${field} min-w-0 flex-1`} />
+                  <button className="btn btn-secondary btn-sm">Merge</button>
+                </div>
+                {customersError && <p role="alert" className="text-xs text-warn">{customersError}</p>}
               </form>
             </div>
           </details>

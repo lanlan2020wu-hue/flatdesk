@@ -27,20 +27,23 @@ import { cleanAfterHoursMessage } from "@/lib/after-hours";
 import { notifyFollowers, setFollowing } from "@/lib/followers";
 import { notifyMentions } from "@/lib/mentions";
 import { mergeTickets } from "@/lib/merge";
+import { splitTicket } from "@/lib/split";
+import { CustomerMergeError, mergeCustomers } from "@/lib/customer-merge";
+import { deleteTag, renameTag, TagError } from "@/lib/tag-manager";
 import { parseCcList } from "@/lib/cc";
 import { dismissSuggestion, saveSuggestedMacro } from "@/lib/macro-suggestions";
 import { hit, LIMITS } from "@/lib/rate-limit";
 import { teachAi } from "@/lib/teach";
 import { eraseCustomer, maskEmail } from "@/lib/customer-data";
 import { parseSnoozeUntil, snoozeTicket, unsnoozeTicket } from "@/lib/snooze";
-import { blockSender, parseBlockList, restoreTickets, trashTickets } from "@/lib/trash";
+import { blockSender, isBlocked, parseBlockList, restoreTickets, trashTickets } from "@/lib/trash";
 import { addRule } from "@/lib/rules";
 import { audit, changes } from "@/lib/security";
 import type { SlaPolicy } from "@/db/schema";
 import { RESOLVE_CHOICES, TARGET_CHOICES, validHours } from "@/lib/sla";
 import { cancelScheduled, parseSendAt, scheduleReply, ScheduleError, sendScheduled } from "@/lib/scheduled-replies";
 import { closeSide, replySide, SideError, startSide } from "@/lib/side-conversations";
-import { addReply, isPriority, normalizeTags, parseTicketNumber, updateTicket, type TicketPriority, type TicketStatus } from "@/lib/tickets";
+import { addReply, createTicket, isPriority, normalizeTags, parseTicketNumber, updateTicket, type TicketPriority, type TicketStatus } from "@/lib/tickets";
 import { findGroup, shareTicketQuietly } from "@/lib/routing";
 import { isLanguage } from "@/lib/language";
 import { rememberRemoved } from "@/lib/learn";
@@ -232,6 +235,83 @@ export async function mergeTicketAction(form: FormData) {
   if ("error" in result) redirect(`/app/tickets/${number}?merge=${encodeURIComponent(result.error)}`);
   revalidatePath("/app/inbox");
   redirect(`/app/tickets/${result.number}`);
+}
+
+// The team starts the conversation: an email to a customer who hasn't written in.
+export async function composeTicketAction(form: FormData) {
+  const s = await requireOpenSession();
+  const to = str(form, "to").toLowerCase();
+  const name = str(form, "name") || null;
+  const subject = str(form, "subject").slice(0, 200);
+  const body = str(form, "body");
+  const fail = (m: string) => redirect(`/app/tickets/compose?${new URLSearchParams({ error: m, to, name: name ?? "", subject, body })}`);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to) || to.length > 254) fail("Enter a valid email address.");
+  if (!subject) fail("Add a subject.");
+  if (!body) fail("Write the message.");
+  if (!(await hit(LIMITS.outboundEmail(s.orgId, s.userId))).ok) fail("That's a lot of new emails. Try again in an hour.");
+  const org = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId), columns: { blockedSenders: true } });
+  if (org && isBlocked(org.blockedSenders, to)) fail("That address is on your blocked senders list.");
+  const files = await filesFromForm(form);
+  const ticket = await createTicket({ orgId: s.orgId, channel: "email", customerEmail: to, customerName: name, subject, body, authorType: "agent", authorId: s.userId, tags: tagList(str(form, "tags")) });
+  await db.update(schema.tickets).set({ status: "pending", assigneeId: ticket.assigneeId ?? s.userId }).where(eq(schema.tickets.id, ticket.id));
+  if (files.length) await saveAttachments(s.orgId, ticket.id, ticket.messageId, files);
+  await deliverReply(s.orgId, ticket.messageId);
+  await setFollowing(s.orgId, ticket.id, s.userId, true);
+  revalidatePath("/app/inbox");
+  redirect(`/app/tickets/${ticket.number}`);
+}
+
+// Pull one later message out of a ticket into a ticket of its own, for when a
+// customer raises a second problem in the middle of the first.
+export async function splitTicketAction(form: FormData) {
+  const s = await requireOpenSession();
+  const messageId = idOf(form, "messageId");
+  const number = str(form, "number");
+  const result = await splitTicket(s.orgId, messageId, s.name);
+  if ("error" in result) redirect(`/app/tickets/${number}?split=${encodeURIComponent(result.error)}`);
+  await audit(s.orgId, actor(s), "ticket.split", `Split into #${result.number} from #${number}`);
+  revalidatePath("/app/inbox");
+  redirect(`/app/tickets/${result.number}`);
+}
+
+// Two records for one person: everything moves to the one whose email is typed.
+export async function mergeCustomersAction(form: FormData) {
+  const s = await requireOpen(await requireAdmin());
+  const customerId = idOf(form, "customerId");
+  const number = str(form, "number");
+  let into: string;
+  try {
+    into = (await mergeCustomers(s.orgId, customerId, str(form, "into"))).email;
+  } catch (e) {
+    if (e instanceof CustomerMergeError) redirect(`/app/tickets/${number}?customers=${encodeURIComponent(e.message)}#merge-customers`);
+    throw e;
+  }
+  await audit(s.orgId, actor(s), "customer.merge", `Merged customer record into ${maskEmail(into)}`);
+  revalidatePath("/app/inbox");
+  redirect(`/app/tickets/${number}`);
+}
+
+export async function renameTagAction(form: FormData) {
+  const s = await requireOpenAdmin();
+  let msg: string;
+  try {
+    const n = await renameTag(s.orgId, str(form, "from"), str(form, "to"));
+    msg = `Renamed on ${n} ${n === 1 ? "ticket" : "tickets"}.`;
+    await audit(s.orgId, actor(s), "tags.change", `Renamed tag ${str(form, "from")} to ${str(form, "to")} on ${n} tickets`);
+  } catch (e) {
+    if (!(e instanceof TagError)) throw e;
+    msg = e.message;
+  }
+  revalidatePath("/app/settings/tags");
+  redirect(`/app/settings/tags?msg=${encodeURIComponent(msg)}`);
+}
+
+export async function deleteTagAction(form: FormData) {
+  const s = await requireOpenAdmin();
+  const n = await deleteTag(s.orgId, str(form, "tag"));
+  await audit(s.orgId, actor(s), "tags.change", `Removed tag ${str(form, "tag")} from ${n} tickets`);
+  revalidatePath("/app/settings/tags");
+  redirect(`/app/settings/tags?msg=${encodeURIComponent(`Removed from ${n} ${n === 1 ? "ticket" : "tickets"}.`)}`);
 }
 
 // Delete, restore, or delete and block the sender, from a ticket's rail.
