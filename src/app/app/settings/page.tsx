@@ -1,3 +1,6 @@
+import LocalTime from "@/components/LocalTime";
+import { getBackupTarget } from "@/lib/backups";
+import { backUpNowAction, removeBackupAction, saveBackupAction } from "./backup-actions";
 import { AFTER_HOURS_MAX } from "@/lib/after-hours";
 import Link from "next/link";
 import { and, asc, eq, isNull } from "drizzle-orm";
@@ -39,7 +42,7 @@ import {
   saveBlocklistAction,
   saveSecurityAction,
   saveLanguageAction,
-  saveSignatureAction,
+  saveSignatureAction, saveDigestAction,
   saveServiceSettingsAction,
   sendTestAlertAction,
   setViewerAction,
@@ -62,7 +65,7 @@ const STATUS_TEXT: Record<string, string> = {
 
 export default async function SettingsPage({ searchParams }: PageProps<"/app/settings">) {
   const s = await requireSession();
-  const { billing, alerts: alertsNotice, service: serviceNotice, security: securityNotice, send: sendNotice, blocked: blockedNotice, mailbox: mailboxNotice, web: webNotice, fields: fieldsNotice } = await searchParams;
+  const { billing, alerts: alertsNotice, service: serviceNotice, security: securityNotice, send: sendNotice, blocked: blockedNotice, mailbox: mailboxNotice, web: webNotice, fields: fieldsNotice, backup: backupNotice } = await searchParams;
   // A team's own sending address waiting on DNS: look again on each visit, so the page is current.
   const pendingSend = await db.query.orgs.findFirst({ where: eq(schema.orgs.id, s.orgId), columns: { sendDomainId: true, sendDomainVerifiedAt: true } });
   if (pendingSend?.sendDomainId && !pendingSend.sendDomainVerifiedAt && !sendNotice) await checkSendDomain(s.orgId);
@@ -79,7 +82,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
   const address = org ? inboundAddress(org.inboundKey) : null;
   const mailbox = await mailboxFor(s.orgId);
   const usage = await aiUsage(s.orgId);
-  const [sites, ticketFieldList] = await Promise.all([listSources(s.orgId), listFields(s.orgId)]);
+  const [sites, ticketFieldList, backupTarget] = await Promise.all([listSources(s.orgId), listFields(s.orgId), getBackupTarget(s.orgId)]);
   const pct = Math.min(100, Math.round((usage.used / usage.included) * 100));
   const isAdmin = s.role === "admin";
   const yearly = subscribed && org?.billingInterval === "year";
@@ -102,6 +105,17 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
           </form>
         </section>
       )}
+      <section id="daily-summary" className="grid scroll-mt-6 gap-3 border-t border-line pt-6">
+        <h2 className="text-lg font-semibold">Daily summary</h2>
+        <p className="text-muted">One email a day with what&apos;s waiting on you: customers waiting for your reply, tickets assigned to you, open tickets nobody has, and overdue ones. Nothing is sent on days when there&apos;s nothing to do. Each person chooses for themselves.</p>
+        <form action={saveDigestAction} className="flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2.5">
+            <input type="checkbox" name="digest" defaultChecked={team.find((a) => a.userId === s.userId)?.digest ?? false} className="size-4 accent-[var(--accent)]" />
+            Email me the daily summary
+          </label>
+          <button className="btn btn-secondary btn-sm">Save</button>
+        </form>
+      </section>
       {!s.viewer && (
         <section id="browser-alerts" className="grid scroll-mt-6 gap-3 border-t border-line pt-6">
           <h2 className="text-lg font-semibold">Browser alerts</h2>
@@ -217,6 +231,61 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
             </li>
           ))}
         </ul>
+      </section>
+
+      <section id="backups" className="grid scroll-mt-6 gap-3 border-t border-line pt-6">
+        <h2 className="text-lg font-semibold">Daily backup to your own storage</h2>
+        <p className="text-muted">
+          Every day Flatdesk uploads the full export (tickets, messages, customers, macros, help center, audit log and attachments) to a bucket you own on Amazon S3 or anything S3-compatible, like Cloudflare R2 or Backblaze B2. Create a bucket and a key that can only write to it. Flatdesk never deletes from it, so set the bucket&apos;s own rule to expire old copies.
+        </p>
+        {backupNotice === "saved" && <p className="rounded-lg border border-accent/30 bg-accent-soft px-3 py-2 text-sm" role="status">Saved. A test file was written to your bucket.</p>}
+        {backupNotice === "ran" && <p className="rounded-lg border border-accent/30 bg-accent-soft px-3 py-2 text-sm" role="status">Backup uploaded.</p>}
+        {backupNotice === "removed" && <p className="rounded-lg border border-accent/30 bg-accent-soft px-3 py-2 text-sm" role="status">Backups are off.</p>}
+        {typeof backupNotice === "string" && !["saved", "ran", "removed"].includes(backupNotice) && <p className="rounded-lg border border-warn/40 bg-surface-2/60 px-3 py-2 text-sm" role="alert">{backupNotice}</p>}
+        {backupTarget && (
+          <p className="text-sm text-muted">
+            {backupTarget.enabled ? "On" : "Paused"} · {backupTarget.bucket}/{backupTarget.prefix}
+            {backupTarget.lastRunAt && (
+              <>
+                {" "}· last run <LocalTime at={backupTarget.lastRunAt.toISOString()} />:{" "}
+                {backupTarget.lastOk ? <span className="text-accent">uploaded {backupTarget.lastKey} ({Math.max(1, Math.round((backupTarget.lastBytes ?? 0) / 1024))} KB)</span> : <span className="text-warn">failed</span>}
+              </>
+            )}
+            {backupTarget.lastError && <span className="block text-warn">{backupTarget.lastError}</span>}
+          </p>
+        )}
+        {isAdmin ? (
+          <>
+            <form action={saveBackupAction} className="grid max-w-xl gap-3">
+              <div className="flex flex-wrap gap-3">
+                <label className="grid gap-1"><span className="label">Bucket</span><input name="bucket" required defaultValue={backupTarget?.bucket} placeholder="acme-flatdesk-backups" autoComplete="off" spellCheck={false} className="field field-sm" /></label>
+                <label className="grid gap-1"><span className="label">Region</span><input name="region" required defaultValue={backupTarget?.region} placeholder="us-east-1" autoComplete="off" spellCheck={false} className="field field-sm w-32" /></label>
+                <label className="grid gap-1"><span className="label">Folder</span><input name="prefix" defaultValue={backupTarget?.prefix ?? "flatdesk/"} autoComplete="off" spellCheck={false} className="field field-sm w-36" /></label>
+              </div>
+              <label className="grid gap-1">
+                <span className="label">Endpoint (only if not Amazon S3)</span>
+                <input name="endpoint" defaultValue={backupTarget?.endpoint ?? ""} placeholder="https://<account>.r2.cloudflarestorage.com" autoComplete="off" spellCheck={false} className="field field-sm" />
+              </label>
+              <div className="flex flex-wrap gap-3">
+                <label className="grid gap-1"><span className="label">Access key ID</span><input name="accessKeyId" placeholder={backupTarget ? "Saved. Leave empty to keep it." : "AKIA…"} autoComplete="off" spellCheck={false} className="field field-sm" /></label>
+                <label className="grid gap-1"><span className="label">Secret access key</span><input name="secretAccessKey" type="password" placeholder={backupTarget ? "Saved. Leave empty to keep it." : ""} autoComplete="new-password" className="field field-sm" /></label>
+              </div>
+              <label className="flex items-center gap-2.5"><input type="checkbox" name="includeFiles" defaultChecked={backupTarget?.includeFiles ?? true} className="size-4 accent-[var(--accent)]" />Include attachment files (left out automatically above 100 MB)</label>
+              <label className="flex items-center gap-2.5"><input type="checkbox" name="enabled" defaultChecked={backupTarget?.enabled ?? true} className="size-4 accent-[var(--accent)]" />Back up every day</label>
+              <div className="flex flex-wrap gap-2">
+                <button className="btn btn-sm">{backupTarget ? "Save and test" : "Connect and test"}</button>
+              </div>
+            </form>
+            {backupTarget && (
+              <div className="flex flex-wrap gap-2">
+                <form action={backUpNowAction}><button className="btn btn-secondary btn-sm">Back up now</button></form>
+                <form action={removeBackupAction}><button className="btn btn-secondary btn-sm">Turn off and forget the keys</button></form>
+              </div>
+            )}
+          </>
+        ) : (
+          <p className="text-sm text-muted">Only an admin can set this up.</p>
+        )}
       </section>
 
       {org && (

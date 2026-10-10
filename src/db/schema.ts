@@ -218,6 +218,8 @@ export const agents = pgTable(
     viewer: boolean("viewer").notNull().default(false),
     // Added under every reply this person sends (not notes or AI answers).
     signature: text("signature").notNull().default(""),
+    // A morning email with what's waiting on this person (lib/digest.ts).
+    digest: boolean("digest").notNull().default(false),
     // Away people are skipped when tickets are shared in turn.
     away: boolean("away").notNull().default(false),
     // When tickets were last shared to them in turn, so the next goes to whoever waited longest.
@@ -1092,6 +1094,27 @@ export const ticketPresence = pgTable(
   },
   (t) => [uniqueIndex("ticket_presence_ticket_user").on(t.ticketId, t.userId)],
 );
+
+// Where a team's daily backup goes: a bucket of their own on S3 or anything
+// S3-compatible (lib/backups.ts). One per team. The access keys are sealed
+// with lib/import/crypto.ts and only opened on the server.
+export const backupTargets = pgTable("backup_targets", {
+  orgId: text("org_id").primaryKey().references(() => orgs.id, { onDelete: "cascade" }),
+  bucket: text("bucket").notNull(),
+  region: text("region").notNull(),
+  endpoint: text("endpoint"), // null = AWS S3
+  prefix: text("prefix").notNull().default("flatdesk/"),
+  credentials: text("credentials").notNull(),
+  includeFiles: boolean("include_files").notNull().default(true),
+  enabled: boolean("enabled").notNull().default(true),
+  lastRunAt: timestamp("last_run_at", { withTimezone: true }),
+  lastOk: boolean("last_ok"),
+  lastKey: text("last_key"),
+  lastBytes: integer("last_bytes"),
+  lastError: text("last_error"),
+  createdBy: text("created_by").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
 
 // Teammates following a ticket (lib/followers.ts): they're emailed when the
 // customer writes back or someone else replies, without being the assignee.

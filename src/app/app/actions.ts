@@ -337,6 +337,13 @@ export async function followTicketAction(form: FormData) {
   revalidatePath(`/app/tickets/${str(form, "number")}`);
 }
 
+// Your own daily summary email (lib/digest.ts).
+export async function saveDigestAction(form: FormData) {
+  const s = await requireOpenSession();
+  await db.update(schema.agents).set({ digest: form.get("digest") === "on" }).where(and(eq(schema.agents.orgId, s.orgId), eq(schema.agents.userId, s.userId)));
+  revalidatePath("/app/settings");
+}
+
 // Your own reply signature.
 export async function saveSignatureAction(form: FormData) {
   const s = await requireOpenSession();

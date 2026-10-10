@@ -435,6 +435,20 @@
       "when": 1791588078768,
       "tag": "0061_after_hours_message",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1791605470145,
+      "tag": "0062_backup_targets",
+      "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1791605667290,
+      "tag": "0063_daily_digest",
+      "breakpoints": true
     }
   ]
 }
