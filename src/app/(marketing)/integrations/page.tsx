@@ -45,7 +45,7 @@ const ITEMS = [
   },
   {
     name: "Import from your help desk",
-    body: "Tickets, customers, macros, tags and rules from Zendesk, Intercom, Freshdesk or Help Scout, with every original record kept.",
+    body: "Tickets, customers, macros, tags and rules from Zendesk, Intercom, Freshdesk, Help Scout or Gorgias, with every original record kept.",
   },
 ];
 

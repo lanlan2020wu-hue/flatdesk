@@ -1,6 +1,6 @@
 // Shared shapes for importing from other help desks.
 //
-// Each source (Zendesk, Intercom, Freshdesk, Help Scout) is an Adapter: a list
+// Each source (Zendesk, Intercom, Freshdesk, Help Scout, Gorgias) is an Adapter: a list
 // of phases, each of which lists raw records from the source's API and maps
 // one raw record to a Flatdesk shape. The engine (engine.ts) stores every raw
 // record verbatim in import_records before mapping, so nothing is lost even
@@ -18,7 +18,7 @@ import type { FetchLike } from "./http";
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Raw = Record<string, any>;
 
-export type SourceId = "zendesk" | "intercom" | "freshdesk" | "helpscout";
+export type SourceId = "zendesk" | "intercom" | "freshdesk" | "helpscout" | "gorgias";
 export type Kind = "agent" | "group" | "field" | "tag" | "macro" | "rule" | "contact" | "company" | "ticket" | "section" | "article";
 export type Status = "open" | "pending" | "closed";
 

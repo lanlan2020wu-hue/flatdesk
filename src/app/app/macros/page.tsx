@@ -22,7 +22,7 @@ import { deleteTriggerAction, moveTriggerUpAction, saveTriggerAction, toggleTrig
 export const metadata = { title: "AI macros and rules" };
 
 const field = "field";
-const SOURCE_NAME: Record<string, string> = { zendesk: "Zendesk", intercom: "Intercom", freshdesk: "Freshdesk", helpscout: "Help Scout" };
+const SOURCE_NAME: Record<string, string> = { zendesk: "Zendesk", intercom: "Intercom", freshdesk: "Freshdesk", helpscout: "Help Scout", gorgias: "Gorgias" };
 
 export default async function MacrosPage({ searchParams }: { searchParams: Promise<{ trigger?: string }> }) {
   const s = await requireOpenPage();

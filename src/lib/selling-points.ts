@@ -186,7 +186,7 @@ export const SELLING_POINTS: SellingPoint[] = [
     example:
       `Say your team imports from Zendesk during the trial. The AI drafts replies to your last ${TEST_DRIVE.tickets} answered tickets and puts each one beside what your team sent. Your team marks each draft ready to send, needs edits, or wrong, and the scorecard adds them up. No customer sees any of it.`,
     steps: [
-      { title: "Import your history", body: "Connect Zendesk, Intercom, Freshdesk or Help Scout. The test drive starts from the tickets you bring." },
+      { title: "Import your history", body: "Connect Zendesk, Intercom, Freshdesk, Help Scout or Gorgias. The test drive starts from the tickets you bring." },
       { title: "The AI drafts answers", body: `It answers the ${TEST_DRIVE.tickets} most recent customer questions your team answered, with the same model and macros it would use live, or says it would hand the ticket to your team.` },
       { title: "Compare side by side", body: "Each draft sits beside the first reply your team sent, so you can see where it matches and where it misses." },
       { title: "Score it", body: "Mark each draft send, edit or wrong. The scorecard shows how many tickets the AI would have handled well." },
@@ -221,9 +221,9 @@ export const SELLING_POINTS: SellingPoint[] = [
     short: `Bring tickets, customers, macros and rules from ${IMPORT_SOURCES.join(", ").replace(/, ([^,]*)$/, " or $1")}. Every original record is kept, and anything that didn't fit is listed.`,
     headline: `Move from ${IMPORT_SOURCES.slice(0, 3).join(", ")} or Help Scout without losing a ticket`,
     answer: `Flatdesk imports tickets, messages, attachments, customers, tags, macros and rules (and, from Zendesk, help center articles) from ${IMPORT_SOURCES.join(", ").replace(/, ([^,]*)$/, " and $1")}. Every original record is kept in an archive you can download, and a report lists anything that didn't fit instead of dropping it. Zendesk triggers that check tags, subject, message or channel and tag, assign, set status or add a note keep running as Flatdesk triggers, and automations ("pending 72 hours: email the customer, then close") keep running as timed triggers. The report lists the rest (like triggers that run on any update, emails to anyone but the customer, or Zendesk placeholders) so you can rebuild them. Intercom's API doesn't share its rules at all, and Help Scout workflows come over by name only. You can export everything, attachments included, any time.`,
-    metaTitle: "Lossless help desk import from Zendesk, Intercom, Freshdesk and Help Scout",
+    metaTitle: "Lossless help desk import from Zendesk, Intercom, Freshdesk, Help Scout and Gorgias",
     metaDescription:
-      "Import tickets, attachments, customers, macros and rules from Zendesk, Intercom, Freshdesk or Help Scout. Every original record is kept and nothing is dropped.",
+      "Import tickets, attachments, customers, macros and rules from Zendesk, Intercom, Freshdesk, Help Scout or Gorgias. Every original record is kept and nothing is dropped.",
     example:
       "Say your team has three years of tickets in Zendesk. You paste an API token and Flatdesk copies the tickets, customers, macros and tags. A rule like \"if tagged billing, assign to Ana\" keeps working. A Zendesk trigger that checks the subject or message and tags or assigns the ticket keeps running too. So does an automation like \"pending for 3 days: email the customer, then close\", as a timed trigger. A rule Flatdesk can't run, like one that emails someone other than the customer or uses Zendesk placeholders, is listed in the report so you can rebuild it or drop it.",
     steps: [

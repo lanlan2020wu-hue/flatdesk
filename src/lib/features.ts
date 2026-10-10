@@ -116,7 +116,7 @@ export const FEATURE_GROUPS: FeatureGroup[] = [
     features: [
       { id: "help-categories", title: "Help center categories", body: "Sort articles into categories like Billing or Shipping, put them in the order you want and give each a short description. Customers browse a category, and every article links to others in it.", icon: I.book, isNew: true },
       { id: "help-center", title: "Help center", body: "A public help center with search, on your own address like help.yourcompany.com. Write an article once. Customers find it on their own and the AI links to it. Offer it in up to 10 more languages: the AI translates each article in one click, you can edit any translation, and visitors see their own language.", icon: I.book, isNew: true },
-      { id: "import", title: "Lossless import", body: "Tickets, customers, macros and rules from Zendesk, Intercom, Freshdesk or Help Scout. Every original record is kept.", icon: I.import },
+      { id: "import", title: "Lossless import", body: "Tickets, customers, macros and rules from Zendesk, Intercom, Freshdesk, Help Scout or Gorgias. Every original record is kept.", icon: I.import },
       { id: "export", title: "Export your data", body: "Everything in one .zip, attachments included, or each table as CSV or JSON. Any time, without asking us.", icon: I.export },
       { id: "reports", title: "Reports", body: "Volume, reply and close times, targets met, ratings, the AI's share, and each agent's load.", icon: I.report },
     ],

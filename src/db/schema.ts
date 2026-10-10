@@ -840,7 +840,7 @@ export const rateLimits = pgTable("rate_limits", {
 
 // ---- Import from other help desks ----------------------------------------
 
-export const importSource = pgEnum("import_source", ["zendesk", "intercom", "freshdesk", "helpscout"]);
+export const importSource = pgEnum("import_source", ["zendesk", "intercom", "freshdesk", "helpscout", "gorgias"]);
 export const importStatus = pgEnum("import_status", ["running", "done", "failed", "cancelled"]);
 
 export type ImportCounts = Record<string, { found: number; imported: number; kept: number }>;

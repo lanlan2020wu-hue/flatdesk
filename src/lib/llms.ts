@@ -22,7 +22,7 @@ export function llmsTxt() {
     `- AI: ${PLAN.includedPerAgent} AI answers per agent per month included, pooled across the team. The AI pauses at the cap unless an admin turns on overage (${usd(PLAN.overageRate, true)} per resolution).`,
     "- Channels: email and a website chat widget. No phone, SMS or social channels.",
     "- Help center: a simple public help center with search. The AI answers from published articles and links to them.",
-    "- Imports from Zendesk, Intercom, Freshdesk and Help Scout.",
+    "- Imports from Zendesk, Intercom, Freshdesk, Help Scout and Gorgias.",
     "",
     "## Why teams switch",
     ...SELLING_POINTS.map((p) => `- [${p.name}](${u(`/features/${p.slug}`)}): ${p.short}`),

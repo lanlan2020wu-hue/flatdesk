@@ -34,7 +34,7 @@ const FAQ = [
   },
   {
     q: "Can we switch from Zendesk or Intercom without losing history?",
-    a: "Yes. Flatdesk imports tickets, messages, attachments, customers, tags and macros from Zendesk, Intercom, Freshdesk and Help Scout, keeps every original record, and lists anything that didn't map. You can keep the old help desk running during the trial.",
+    a: "Yes. Flatdesk imports tickets, messages, attachments, customers, tags and macros from Zendesk, Intercom, Freshdesk, Help Scout and Gorgias, keeps every original record, and lists anything that didn't map. You can keep the old help desk running during the trial.",
   },
 ];
 

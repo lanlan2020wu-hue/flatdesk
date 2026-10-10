@@ -11,6 +11,7 @@ import { safeDownload, readCapped, type Budget } from "./download";
 import { ApiError, CredentialError, makeGetter, RateLimited, type FetchLike } from "./http";
 import { freshdesk } from "./sources/freshdesk";
 import { helpscout } from "./sources/helpscout";
+import { gorgias } from "./sources/gorgias";
 import { intercom } from "./sources/intercom";
 import { zendesk } from "./sources/zendesk";
 import { ATTACHMENTS_LINKED, cleanText, cut, type Adapter, type Attachment, type Ctx, type Kind, type Mapped, type Msg, type Phase, type Raw, type SourceId } from "./types";
@@ -22,7 +23,7 @@ import { isUuid } from "@/lib/ids";
 // records waiting for their details (a ticket's conversation), or lists the
 // next page of the current phase, or moves to the next phase.
 
-export const ADAPTERS: Record<SourceId, Adapter> = { zendesk, intercom, freshdesk, helpscout };
+export const ADAPTERS: Record<SourceId, Adapter> = { zendesk, intercom, freshdesk, helpscout, gorgias };
 
 const { imports, importRecords, externalAgents, importedRules } = schema;
 type Job = typeof imports.$inferSelect;
