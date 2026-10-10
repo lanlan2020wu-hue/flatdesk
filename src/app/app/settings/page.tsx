@@ -841,6 +841,11 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
                     </label>
                   ))}
                 </fieldset>
+                <label className="grid gap-1">
+                  <span className="label">Closed on these dates (optional)</span>
+                  <textarea name="holidays" rows={2} defaultValue={(hours.holidays ?? []).join("\n")} placeholder={"2026-12-25\n2027-01-01"} className="field field-sm num" />
+                  <span className="text-sm text-muted">One per line, as year-month-day in the time zone above. Targets skip these days, and the reply for when you&apos;re closed goes out.</span>
+                </label>
               </div>
               <label className="grid max-w-xl gap-1">
                 <span className="label">Reply outside business hours</span>
@@ -854,6 +859,20 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
                 />
                 <span className="text-sm text-muted">
                   Emailed once to a new email ticket that arrives when you&apos;re closed, if the AI didn&apos;t answer it. Needs business hours above. Leave empty to send nothing.
+                </span>
+              </label>
+              <label className="grid max-w-xl gap-1">
+                <span className="label">Acknowledge new emails</span>
+                <textarea
+                  name="ackMessage"
+                  rows={3}
+                  maxLength={AFTER_HOURS_MAX}
+                  defaultValue={org.ackMessage}
+                  placeholder="Thanks for writing. We've opened ticket #{{number}} and will reply soon."
+                  className="field"
+                />
+                <span className="text-sm text-muted">
+                  Emailed once to every new email ticket the AI didn&apos;t answer, so customers know it arrived. {"{{number}}"} becomes the ticket number. When you&apos;re closed, the reply above goes instead. Leave empty to send nothing.
                 </span>
               </label>
               <label className="flex items-start gap-2.5">

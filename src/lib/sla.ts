@@ -25,6 +25,7 @@ export const MIN_OPEN_MINUTES = 60;
 function sensibleHours(h: BusinessHours): boolean {
   return (
     Array.isArray(h.days) &&
+    (h.holidays === undefined || Array.isArray(h.holidays)) &&
     h.days.length > 0 &&
     h.days.every((d) => Number.isInteger(d) && d >= 0 && d <= 6) &&
     Number.isFinite(h.start) &&
@@ -33,6 +34,21 @@ function sensibleHours(h: BusinessHours): boolean {
     h.end <= 1440 &&
     h.end - h.start >= MIN_OPEN_MINUTES
   );
+}
+
+export const MAX_HOLIDAYS = 60;
+
+// "2026-12-25" dates from a pasted list: one per line, or separated by spaces or commas. Real calendar days only.
+export function parseHolidays(raw: string): { list: string[]; rejected: string[] } {
+  const list = new Set<string>();
+  const rejected: string[] = [];
+  for (const token of raw.split(/[\s,;]+/).filter(Boolean)) {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(token);
+    const d = m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])) : null;
+    if (m && d && d.getUTCFullYear() === +m[1] && d.getUTCMonth() === +m[2] - 1 && d.getUTCDate() === +m[3]) list.add(token);
+    else rejected.push(token.slice(0, 20));
+  }
+  return { list: [...list].sort().slice(0, MAX_HOLIDAYS), rejected };
 }
 
 export function validHours(h: BusinessHours): boolean {
@@ -48,21 +64,21 @@ const WEEKDAY: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4
 const formatters = new Map<string, Intl.DateTimeFormat>();
 
 // The weekday and minute of the day at `d` on the clock in time zone `tz`.
-function localClock(d: Date, tz: string): { day: number; minute: number } {
+function localClock(d: Date, tz: string): { day: number; minute: number; date: string } {
   let f = formatters.get(tz);
   if (!f) {
-    f = new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "short", hour: "numeric", minute: "numeric", hourCycle: "h23" });
+    f = new Intl.DateTimeFormat("en-US", { timeZone: tz, weekday: "short", year: "numeric", month: "2-digit", day: "2-digit", hour: "numeric", minute: "numeric", hourCycle: "h23" });
     formatters.set(tz, f);
   }
   const parts = Object.fromEntries(f.formatToParts(d).map((p) => [p.type, p.value]));
-  return { day: WEEKDAY[parts.weekday], minute: Number(parts.hour) * 60 + Number(parts.minute) + d.getUTCSeconds() / 60 };
+  return { day: WEEKDAY[parts.weekday], date: `${parts.year}-${parts.month}-${parts.day}`, minute: Number(parts.hour) * 60 + Number(parts.minute) + d.getUTCSeconds() / 60 };
 }
 
 // True when `d` falls inside the team's business hours (always, with none set).
 export function isOpenNow(hours: BusinessHours | null, d = new Date()): boolean {
   if (!hours || !sensibleHours(hours)) return true;
-  const { day, minute } = localClock(d, hours.tz);
-  return hours.days.includes(day) && minute >= hours.start && minute < hours.end;
+  const { day, minute, date } = localClock(d, hours.tz);
+  return hours.days.includes(day) && !hours.holidays?.includes(date) && minute >= hours.start && minute < hours.end;
 }
 
 const MIN = 60_000;
@@ -79,8 +95,8 @@ export function dueAt(from: Date, minutes: number, hours: BusinessHours | null):
   // Each pass crosses one open or closed stretch, so even a team open one hour
   // a week with a 24-hour target (about 350 passes) gets a true due time.
   for (let i = 0; i < 20_000; i++) {
-    const { day, minute } = localClock(new Date(t), hours.tz);
-    const open = hours.days.includes(day);
+    const { day, minute, date } = localClock(new Date(t), hours.tz);
+    const open = hours.days.includes(day) && !hours.holidays?.includes(date);
     if (open && minute < hours.start) {
       t += (hours.start - minute) * MIN;
     } else if (open && minute < hours.end) {

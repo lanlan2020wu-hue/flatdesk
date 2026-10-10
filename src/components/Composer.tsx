@@ -93,6 +93,7 @@ export default function Composer({
   number,
   status,
   macros,
+  articles = [],
   suggestedMacroId = null,
   copilot = true,
   customerName = null,
@@ -105,6 +106,8 @@ export default function Composer({
   number: number;
   status: string;
   macros: Macro[];
+  // Published help articles, to insert as "Title: link".
+  articles?: { id: string; title: string; url: string }[];
   // The macro Flatdesk identified as the answer to the customer's latest message.
   suggestedMacroId?: string | null;
   copilot?: boolean;
@@ -333,6 +336,13 @@ export default function Composer({
     });
   }
 
+  function applyArticle(id: string) {
+    const a = articles.find((x) => x.id === id);
+    if (!a) return;
+    const text = `${a.title}: ${a.url}`;
+    flushSync(() => setBody((b) => (b ? `${b}\n\n${text}` : text)));
+  }
+
   function applyMacro(id: string) {
     const m = macros.find((x) => x.id === id);
     if (!m) return;
@@ -398,6 +408,12 @@ export default function Composer({
           <select aria-label="Insert macro" className="field field-sm w-auto" value="" onChange={(e) => applyMacro(e.target.value)}>
             <option value="">Insert saved reply (macro)…</option>
             {macros.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+          </select>
+        )}
+        {articles.length > 0 && !internal && (
+          <select aria-label="Insert help article" className="field field-sm w-auto max-w-56" value="" onChange={(e) => applyArticle(e.target.value)}>
+            <option value="">Insert help article…</option>
+            {articles.map((a) => <option key={a.id} value={a.id}>{a.title}</option>)}
           </select>
         )}
         {/* One copilot control at a time: draft into an empty box, rewrite what's there. */}
