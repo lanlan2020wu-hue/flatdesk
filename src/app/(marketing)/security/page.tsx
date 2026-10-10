@@ -59,9 +59,10 @@ export default function SecurityPage() {
           <li>
             <strong className="font-medium">Card numbers masked on arrival.</strong> Customers paste card numbers into emails and chats whatever you
             tell them. Any number that looks like a card (13 to 19 digits that pass the card checksum) is replaced with &ldquo;[card number removed,
-            ending 4242]&rdquo; before the message is saved, so it never reaches your team, the AI or an export. This covers emails, chats, replies and
-            imported tickets. It can&apos;t catch a number split across lines or inside an attachment, and the original-record archive of an import
-            keeps what your old help desk had.
+            ending 4242]&rdquo; before the message is saved, so it never reaches your team or the AI, and the message exports (CSV and JSON) carry the masked text. This
+            covers emails, chats, replies and imported tickets. Two places keep what was sent: attachments are stored and exported as the original
+            files, and the original-record archive of an import holds what your old help desk returned. Neither is scanned. A number split across
+            lines isn&apos;t caught either.
           </li>
           <li>
             <strong className="font-medium">Verified chat for signed-in users.</strong> Your server signs the user&apos;s email with your team&apos;s
