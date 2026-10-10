@@ -47,7 +47,7 @@ export const SELLING_POINTS: SellingPoint[] = [
       { title: "Pick your seats", body: `Every agent seat is ${usd(PLAN.seatPrice)} a month, or ${usd(PLAN.annualSeatPrice)} a month billed yearly, with every feature. No tiers or add-ons.` },
       { title: "Share the AI allowance", body: `Each seat adds ${PLAN.includedPerAgent} AI answers a month to one team pool.` },
       { title: "Get warned before the cap", body: "Admins get an email at 80% and 100%. At 100% the AI pauses and your team answers as usual." },
-      { title: "Turn on more if you want", body: `An admin can turn on overage at ${usd(PLAN.overageRate, true)} per resolution, and turn it off any time.` },
+      { title: "Turn on more if you want", body: `An admin can turn on overage at ${usd(PLAN.overageRate, true)} per answer, and turn it off any time.` },
     ],
     facts: [
       `${usd(PLAN.seatPrice)} per agent a month with no contract, or ${usd(PLAN.annualSeatPrice)} billed yearly`,
