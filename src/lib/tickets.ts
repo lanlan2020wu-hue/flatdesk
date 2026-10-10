@@ -356,6 +356,8 @@ export async function addReply(opts: {
         closedAt: status === "closed" ? (ticket.closedAt ?? now) : null,
         // A reply starts the timed triggers over ("pending 72 hours" counts from here).
         ...(!opts.internal && hasContent ? { timedRan: [] } : {}),
+        // ...and the "update the customer every N hours" clock, if there is one. Closing ends it.
+        ...(status === "closed" ? { updateDueAt: null } : !opts.internal && hasContent && ticket.updateEveryHours ? { updateDueAt: new Date(now.getTime() + ticket.updateEveryHours * 3_600_000), tags: tags.filter((t) => t !== "update-due") } : {}),
       })
       .where(eq(tickets.id, ticket.id));
     return { ticket, messageId };

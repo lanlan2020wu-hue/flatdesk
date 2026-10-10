@@ -1,4 +1,5 @@
 import { and, eq } from "drizzle-orm";
+import { alertEvent } from "@/lib/alerts";
 import { db, schema } from "@/db";
 import { emailConfig, isAutoReply, matchRecipients, parseAddress, senderCheck, stripQuoted, ticketFromHeaders, type InboundTarget } from "@/lib/email";
 import { milestone } from "@/lib/funnel";
@@ -206,6 +207,7 @@ async function handleFor(mail: Inbound, target: InboundTarget): Promise<InboundR
         await db.update(schema.tickets).set({ visitorToken: null }).where(and(eq(schema.tickets.orgId, org.id), eq(schema.tickets.id, ticketId)));
       }
       await storeFiles(mail, org.id, ticketId, messageId);
+      await alertEvent(org.id, ticketId, "ticket.customer_replied");
       const cc = mergeCc(ticket.cc, ccFromEmail(mail.copied ?? [], { customer: sender.email, supportEmail: org.supportEmail ?? org.sendAddress, own: mail.mailbox }), customer.email);
       if (cc.join() !== ticket.cc.join()) await db.update(schema.tickets).set({ cc }).where(eq(schema.tickets.id, ticketId));
       // The route runs the AI next, which answers a follow-up or hands the ticket back.
