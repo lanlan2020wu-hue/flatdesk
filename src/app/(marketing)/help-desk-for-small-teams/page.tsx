@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import Faq from "@/components/Faq";
 import JsonLd from "@/components/JsonLd";
@@ -7,7 +6,6 @@ import { PLAN, PRICE_PHRASE, flatdeskMonthly, usd } from "@/lib/pricing";
 import { breadcrumbs, faqPage, pageMeta, software } from "@/lib/seo";
 import { SELLING_POINTS } from "@/lib/selling-points";
 import { LEFT_OUT } from "@/lib/why-flat";
-import agentsAtLaptops from "@/assets/photos/agents-at-laptops.webp";
 
 // For people searching "help desk for small teams" and similar: who Flatdesk is
 // for, what it costs at small team sizes, and what it leaves out. Every figure
@@ -56,16 +54,6 @@ export default function SmallTeamsPage() {
             <Link href="/calculator" className="btn btn-secondary">Compare your current bill</Link>
           </div>
         </div>
-        <Image
-          src={agentsAtLaptops}
-          alt="Four support agents with headsets answering customers at their laptops"
-          unoptimized
-          placeholder="blur"
-          priority
-          sizes="(min-width: 1024px) 460px, 100vw"
-          style={{ "--d": 3 } as React.CSSProperties}
-          className="enter aspect-[4/3] w-full rounded-[8px] object-cover"
-        />
       </section>
 
       <section data-play="" suppressHydrationWarning aria-labelledby="cost" className="grid gap-6">

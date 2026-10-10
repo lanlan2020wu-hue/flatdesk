@@ -4,8 +4,6 @@ import { FeatureIcon } from "@/components/ProductShots";
 import { FEATURE_GROUPS } from "@/lib/features";
 import { SELLING_POINTS } from "@/lib/selling-points";
 import { breadcrumbs, pageMeta, software } from "@/lib/seo";
-import PhotoHero from "@/components/PhotoHero";
-import agentMonitor from "@/assets/photos/agent-monitor.webp";
 
 export const metadata = pageMeta({
   title: "Help desk features",
@@ -40,14 +38,14 @@ export default function FeaturesPage() {
   return (
     <div className="mx-auto grid max-w-6xl gap-20 px-4 pt-14 sm:px-6 sm:pt-20">
       <JsonLd data={[software(), breadcrumbs([{ name: "Product", path: "/features" }])]} />
-      <PhotoHero photo={agentMonitor} alt="A support agent with a headset answering a customer at his desk" layout="banner">
+      <div>
         <div className="grid max-w-2xl gap-3">
           <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-[2.6rem] sm:text-6xl">Everything a small support team needs, at one flat price.</h1>
           <p style={{ "--d": 2 } as React.CSSProperties} className="enter text-lg text-muted">
             Flatdesk is a help desk for email and chat. Every seat gets every feature below, for one price per agent.
           </p>
         </div>
-      </PhotoHero>
+      </div>
 
       {CHAPTERS.map((c) => (
         <section key={c.n} data-play="" suppressHydrationWarning aria-labelledby={`ch-${c.n}`} className="grid gap-6">

@@ -4,8 +4,6 @@ import JsonLd from "@/components/JsonLd";
 import { BILLING_FAQ, GENERAL_FAQ } from "@/lib/faq";
 import { SELLING_POINTS } from "@/lib/selling-points";
 import { breadcrumbs, faqPage, pageMeta } from "@/lib/seo";
-import PhotoHero from "@/components/PhotoHero";
-import agentPhone from "@/assets/photos/agent-phone.webp";
 
 export const metadata = pageMeta({
   title: "Help desk questions, answered",
@@ -21,14 +19,14 @@ export default function FaqPage() {
   return (
     <div className="mx-auto grid max-w-5xl gap-16 px-4 pt-14 sm:px-6 sm:pt-20">
       <JsonLd data={[breadcrumbs([{ name: "FAQ", path: "/faq" }]), faqPage(unique)]} />
-      <PhotoHero photo={agentPhone} alt="A support lead on a phone call with her laptop open" layout="banner">
+      <div>
         <div className="grid max-w-2xl gap-3">
           <h1 style={{ "--d": 1 } as React.CSSProperties} className="enter font-display text-[2.6rem] sm:text-6xl">Questions, answered plainly.</h1>
           <p style={{ "--d": 2 } as React.CSSProperties} className="enter text-lg text-muted">
             Can&apos;t find yours? Compare Flatdesk with the tool you use today on the <Link href="/compare" className="link text-accent">comparison pages</Link>.
           </p>
         </div>
-      </PhotoHero>
+      </div>
       <Faq items={GENERAL_FAQ} title="About Flatdesk" id="about" />
       <Faq items={BILLING_FAQ} title="Pricing and billing" id="billing" />
       {SELLING_POINTS.map((p) => (
