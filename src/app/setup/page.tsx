@@ -12,7 +12,7 @@ export default function SetupPage() {
     <div className="mx-auto grid max-w-3xl gap-8 px-4 py-12">
       <div className="grid gap-3">
         <Logo />
-        <p className="eyebrow">Step 1 of 5</p>
+        <p className="eyebrow">Step 1 of 6</p>
         <h1 className="font-display text-4xl">Set up your support team</h1>
         <p className="text-muted">You&apos;ll invite teammates on the next screen. Each teammate you add is one seat. Viewers, who can read but not reply, aren&apos;t billed.</p>
       </div>
