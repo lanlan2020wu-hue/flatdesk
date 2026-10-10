@@ -331,6 +331,12 @@ export default async function SettingsPage({ searchParams }: PageProps<"/app/set
               <span className="text-muted">: who changed settings and seats, exported data, imported or refunded.</span>
             </p>
           )}
+          {isAdmin && (
+            <p className="text-sm">
+              <Link href="/app/settings/tags" className="link text-accent">Tags</Link>
+              <span className="text-muted">: rename, merge or remove tags across every ticket.</span>
+            </p>
+          )}
         </section>
       )}
 
