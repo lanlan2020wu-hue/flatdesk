@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import AddOnTable from "@/components/AddOnTable";
 import JsonLd from "@/components/JsonLd";
@@ -12,11 +11,6 @@ import { TRIAL_DAYS } from "@/lib/billing";
 import { organization, pageMeta, software, website } from "@/lib/seo";
 import { PLAN, PRICE_PHRASE, usd } from "@/lib/pricing";
 import { LEFT_OUT } from "@/lib/why-flat";
-import agentHeadset from "@/assets/photos/agent-headset.webp";
-import supportTeamTable from "@/assets/photos/support-team-table.webp";
-import agentCloseup from "@/assets/photos/agent-closeup.webp";
-import agentsOnCalls from "@/assets/photos/agents-on-calls.webp";
-import teamHeadsetsSmiling from "@/assets/photos/team-headsets-smiling.webp";
 
 // One story, told top to bottom: the month gets busier and the bill doesn't.
 // The hero shows it happening in the real inbox, the flat-rate chapter shows
@@ -149,26 +143,6 @@ export default function Home() {
         </ul>
       </div>
 
-      {/* Right under the terms: the kind of team Flatdesk is for, before the numbers start. */}
-      <div className="mx-auto grid w-full max-w-6xl grid-cols-3 gap-2 px-4 pt-10 sm:gap-4 sm:px-6 sm:pt-14">
-        {[
-          { src: teamHeadsetsSmiling, alt: "A small support team with headsets, smiling together" },
-          { src: agentsOnCalls, alt: "Support agents with headsets answering customers at their desks" },
-          { src: agentCloseup, alt: "A support agent with a headset, focused on a reply" },
-        ].map((p, i) => (
-          <Image
-            key={p.alt}
-            src={p.src}
-            alt={p.alt}
-            unoptimized
-            placeholder="blur"
-            sizes="(min-width: 1152px) 360px, 33vw"
-            style={{ "--d": i } as React.CSSProperties}
-            className="enter aspect-[4/5] w-full rounded-[8px] object-cover sm:aspect-[4/3]"
-          />
-        ))}
-      </div>
-
       <section id="flat-rate" className="mx-auto grid w-full max-w-6xl scroll-mt-20 gap-14 px-4 pt-24 sm:px-6 sm:pt-32">
         <ChapterHead id="flat-rate" tab="Flat rate" title="Priced per agent, not per AI answer.">
           An AI answer is a reply the AI sends a customer on its own. Pay per answer, and a launch or a holiday rush shows up on your invoice. On
@@ -258,14 +232,6 @@ export default function Home() {
       <section id="fit" className="mx-auto grid w-full max-w-6xl scroll-mt-20 gap-10 px-4 pt-24 sm:px-6 sm:pt-32">
         <div className="grid grid-cols-1 items-end gap-8 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-16">
           <h2 data-play="" suppressHydrationWarning className="ink max-w-3xl font-display text-[2.6rem] sm:text-6xl">Made for small support teams, and clear about the rest.</h2>
-          <Image
-            src={supportTeamTable}
-            alt="A small support team working at one long table, one agent wearing a headset"
-            unoptimized
-            placeholder="blur"
-            sizes="(min-width: 1024px) 460px, 100vw"
-            className="aspect-[3/2] w-full rounded-[8px] object-cover lg:order-first"
-          />
         </div>
         <div className="grid gap-10 md:grid-cols-2 md:gap-0">
           <div data-play="" suppressHydrationWarning className="grid content-start gap-4 border-t-2 border-accent pt-5 md:pr-10">
@@ -347,14 +313,6 @@ export default function Home() {
               <Link href="/sign-up" className="btn btn-on-field">Start your free trial</Link>
               <Link href="/calculator" className="btn btn-ghost-field">Compare your bill in detail</Link>
             </div>
-            <Image
-              src={agentHeadset}
-              alt="A support agent with a headset smiling at her desk"
-              unoptimized
-              placeholder="blur"
-              sizes="(min-width: 1024px) 480px, 100vw"
-              className="mt-4 aspect-[16/9] w-full rounded-[8px] object-cover object-[center_30%]"
-            />
           </div>
           {/* The trial is the one ask; the design-partner program stays one click away for the few teams it suits. */}
           <details data-play="" suppressHydrationWarning className="group self-start rounded-[8px] bg-surface p-6 text-ink sm:p-8">

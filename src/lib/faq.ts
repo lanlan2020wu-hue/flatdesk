@@ -2,6 +2,7 @@
 // their own. Selling-point questions live with each point in selling-points.ts.
 
 import { TRIAL_DAYS } from "@/lib/billing";
+import { SITE } from "@/lib/site";
 import { PLAN, PRICE_PHRASE, annualSavingsPct, usd } from "@/lib/pricing";
 import type { QA } from "@/lib/selling-points";
 
@@ -37,6 +38,22 @@ export const GENERAL_FAQ: QA[] = [
   {
     q: "How is this much included in one flat price? Is it a worse help desk?",
     a: `It costs less because of what Flatdesk leaves out, not because the parts you use are worse. AI answers are written by Claude Opus from Anthropic. One answer costs cents to run, so ${PLAN.includedPerAgent} per seat fit in the seat price, and the cap keeps it that way. There's no sales team and only one plan. The product is narrower too: email and chat only, with no phone, SMS, social channels or app marketplace. Before you pay, the AI test drive shows drafts for the last 50 tickets your team answered, beside its real replies, and the ${TRIAL_DAYS}-day trial has every feature.`,
+  },
+  {
+    q: "Who is behind Flatdesk, and how new is it?",
+    a: `Flatdesk is new. It opened to paying teams in October 2026, so there are no customer logos or reviews on this site, and we'd rather show none than invent them. There's no sales or support staff, so you reach the person who runs it and wrote the code at ${SITE.contactEmail}. The About page has the details.`,
+  },
+  {
+    q: "What happens to our data if Flatdesk shuts down?",
+    a: "The terms commit us to at least 90 days' notice by email to every admin, with the app and the full export (attachments included) working for all of that time and no new charges after the notice. Your data is then deleted, not sold. You can also export everything yourself, any time, from Settings.",
+  },
+  {
+    q: "What can't Flatdesk do yet?",
+    a: "No phone, SMS or social channels, no app marketplace, no SSO, no SOC 2 or ISO 27001 report, no independent penetration test, no uptime commitment and no choice of data region. The security page lists these first, on purpose.",
+  },
+  {
+    q: "Can we send a security questionnaire before we try it?",
+    a: `Yes. Email ${SITE.contactEmail} and we'll fill it in, and where the answer is no it says no. You can also try Flatdesk with the AI switched off and with test tickets instead of real data. Steps are on the security page.`,
   },
   {
     q: "Who is Flatdesk a good fit for?",

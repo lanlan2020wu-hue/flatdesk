@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import LegalPage, { Section } from "@/components/LegalPage";
 import { pageMeta } from "@/lib/seo";
 import { LAUNCHED, SITE, TRUST_UPDATED } from "@/lib/site";
-import smallTeam from "@/assets/photos/small-team.webp";
 
 export const metadata: Metadata = pageMeta({
   title: "Who runs Flatdesk",
@@ -15,6 +13,8 @@ export const metadata: Metadata = pageMeta({
 // Plain facts for the person deciding whether to trust a new vendor. No
 // customer names, logos, numbers or quotes go here until real ones exist and
 // the customer has agreed to be named.
+// TODO(founder): add a "Who builds it" section with the operator's real name,
+// background and photo once they are supplied. Nothing is invented meanwhile.
 export default function AboutPage() {
   const mail = <a href={`mailto:${SITE.contactEmail}`} className="link text-accent">{SITE.contactEmail}</a>;
   return (
@@ -29,19 +29,6 @@ export default function AboutPage() {
         </p>
       }
     >
-      <figure className="grid gap-2">
-        <Image
-          src={smallTeam}
-          alt="A small team talking over coffee at a shared table"
-          unoptimized
-          placeholder="blur"
-          priority
-          sizes="(min-width: 672px) 624px, 100vw"
-          className="aspect-[16/9] w-full rounded-[8px] object-cover"
-        />
-        <figcaption className="text-sm text-muted">A stock photo, not the people who run Flatdesk.</figcaption>
-      </figure>
-
       <Section title="How new it is">
         <p>
           Very. There are no customer logos or reviews on this site because we&apos;d rather show none than make them up. If you need references from
@@ -51,6 +38,27 @@ export default function AboutPage() {
           What you can check yourself: the <Link href="/features/ai-test-drive" className="link text-accent">AI test drive</Link> on your own tickets,
           a <Link href="/sign-up" className="link text-accent">free trial</Link> with no card, the <Link href="/security" className="link text-accent">security page</Link> (including what&apos;s
           missing), and the <Link href="/dpa" className="link text-accent">data processing addendum</Link>.
+        </p>
+      </Section>
+
+      <Section title="How it's built">
+        <p>
+          The app is a Next.js site on Vercel with a Postgres database on Neon. Sign-in is Clerk, payments are Stripe, outgoing email is Resend, and
+          the AI is Anthropic&apos;s Claude. Those are the same providers listed on the <Link href="/security" className="link text-accent">security page</Link>,
+          and nothing else touches your tickets.
+        </p>
+        <p>
+          Every change goes through a pull request and a preview deployment, and the automated tests run before it ships. That includes tests that
+          check one team can&apos;t read another team&apos;s tickets. The price is flat because each AI answer costs us cents and the AI stops at its
+          cap, which is explained on the <Link href="/pricing#why-less" className="link text-accent">pricing page</Link>.
+        </p>
+      </Section>
+
+      <Section title="Who it's not for">
+        <p>
+          Teams that need phone, SMS or social channels, an app marketplace, SSO, a SOC 2 report or an uptime commitment should pick something else
+          today. The <Link href="/#fit" className="link text-accent">full list</Link> and the <Link href="/security" className="link text-accent">security
+          gaps</Link> are written out, and so is <Link href="/compare" className="link text-accent">where other help desks are ahead</Link>.
         </p>
       </Section>
 
