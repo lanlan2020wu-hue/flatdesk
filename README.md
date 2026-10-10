@@ -50,6 +50,10 @@ npx tsx scripts/demo-import.ts zendesk   # optional: a sample import from record
 npm test                       # import and onboarding tests; point DATABASE_URL at a scratch database
 ```
 
+## Launch-day smoke test
+
+`node scripts/smoke.mjs [https://flatdesk.app]` checks `/api/health` (everything wired, Stripe live, sign-in live) and that the public pages load. Exit code 1 on any failure.
+
 ## Environment variables
 
 | Name | Needed for |
@@ -64,6 +68,7 @@ npm test                       # import and onboarding tests; point DATABASE_URL
 | `IMPORT_SECRET` | Required in production. Key for encrypting help desk API keys while an import runs (erased when it ends). Any long random string, for example from `openssl rand -base64 32`. Imports refuse to start without it. |
 | `STRIPE_SECRET_KEY` | Billing. Set by the Stripe integration on Vercel. |
 | `CRON_SECRET` | Authorizes Vercel Cron's call to `/api/cron/daily`. |
+| `ERROR_WEBHOOK_URL` | Optional. A Slack, Discord, Google Chat or Mattermost incoming-webhook URL; server errors are posted there (once per route and message every 10 minutes). Logs always have them. |
 | `NEXT_PUBLIC_SITE_URL` | The public address, e.g. `https://flatdesk.app`. Used for sitemap, robots and link previews. Defaults to Vercel's production URL. |
 | `LEGAL_NAME`, `CONTACT_EMAIL`, `GOVERNING_LAW` | Shown in the terms and privacy policy and the footer. Pages are static, so redeploy after changing them. |
 | `DEV_AUTH` | Local development only. `1` signs in as a demo admin when Clerk keys are missing. Ignored in production. |
