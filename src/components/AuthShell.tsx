@@ -40,7 +40,8 @@ export default function AuthShell({ title, children }: { title: string; children
           </p>
         </div>
       </section>
-      <section className="order-1 grid content-center justify-items-center gap-6 px-4 py-12 lg:order-2">
+      {/* Stays in view on desktop so the form is never below the long feature list. */}
+      <section className="order-1 grid content-center justify-items-center gap-6 px-4 py-12 lg:sticky lg:top-0 lg:order-2 lg:h-screen lg:self-start lg:overflow-y-auto">
         <div className="lg:hidden">
           <Logo />
         </div>

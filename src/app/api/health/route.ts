@@ -37,6 +37,11 @@ export async function GET() {
       ai: aiConfigured(),
       billing: stripeMode(),
       signInMode: clerkEnabled ? (process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.startsWith("pk_live_") ? "live" : "development") : null,
+      // Launch-day switches: set or not, never the values.
+      cron: Boolean(process.env.CRON_SECRET),
+      importKey: Boolean(process.env.IMPORT_SECRET),
+      inboundWebhook: Boolean(process.env.RESEND_WEBHOOK_SECRET),
+      errorAlerts: Boolean(process.env.ERROR_WEBHOOK_URL),
       site: SITE.url,
       commit: process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ?? null,
     },
