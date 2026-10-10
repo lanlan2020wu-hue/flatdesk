@@ -98,6 +98,8 @@ export const orgs = pgTable("orgs", {
   // Emailed once to a new ticket that arrives outside business hours and that
   // the AI didn't answer (lib/after-hours.ts). Empty = off.
   afterHoursMessage: text("after_hours_message").notNull().default(""),
+  // "Got it, ticket {{number}}": emailed to a new email ticket the AI didn't answer, during business hours (lib/after-hours.ts).
+  ackMessage: text("ack_message").notNull().default(""),
   slaPolicies: jsonb("sla_policies").$type<SlaPolicy[]>().notNull().default([]),
   // Signs who is signed in on the team's own site, so chat can trust the visitor's email (lib/chat-identity.ts).
   chatSecret: text("chat_secret").notNull().default(sql`replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', '')`),
@@ -203,6 +205,7 @@ export type BusinessHours = {
   days: number[]; // 0 = Sunday ... 6 = Saturday
   start: number; // minutes after local midnight
   end: number;
+  holidays?: string[]; // "2026-12-25": days (in that time zone) the team is closed
 };
 export type OnboardingStep = "ai" | "invite" | "inbox" | "import" | "test";
 

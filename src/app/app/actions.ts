@@ -41,7 +41,7 @@ import { blockSender, isBlocked, parseBlockList, restoreTickets, trashTickets } 
 import { addRule } from "@/lib/rules";
 import { audit, changes } from "@/lib/security";
 import type { SlaPolicy } from "@/db/schema";
-import { RESOLVE_CHOICES, TARGET_CHOICES, validHours } from "@/lib/sla";
+import { parseHolidays, RESOLVE_CHOICES, TARGET_CHOICES, validHours } from "@/lib/sla";
 import { cancelScheduled, parseSendAt, scheduleReply, ScheduleError, sendScheduled } from "@/lib/scheduled-replies";
 import { closeSide, replySide, SideError, startSide } from "@/lib/side-conversations";
 import { addReply, createTicket, isPriority, normalizeTags, parseTicketNumber, updateTicket, type TicketPriority, type TicketStatus } from "@/lib/tickets";
@@ -707,7 +707,9 @@ export async function saveServiceSettingsAction(form: FormData) {
   let businessHours = null;
   if (form.get("useBusinessHours") === "on") {
     const end = str(form, "end") === "24:00" ? 1440 : hhmm(str(form, "end"));
-    const hours = { tz: str(form, "tz"), days: form.getAll("days").map(Number), start: hhmm(str(form, "start")), end };
+    const holidays = parseHolidays(String(form.get("holidays") ?? ""));
+    if (holidays.rejected.length) redirect(`/app/settings?service=${encodeURIComponent(`Closed dates should look like 2026-12-25. Couldn't read: ${holidays.rejected.slice(0, 3).join(", ")}.`)}#service`);
+    const hours = { tz: str(form, "tz"), days: form.getAll("days").map(Number), start: hhmm(str(form, "start")), end, ...(holidays.list.length ? { holidays: holidays.list } : {}) };
     if (!validHours(hours)) redirect(`/app/settings?service=${encodeURIComponent("Pick a time zone, at least one day, and opening hours at least an hour long.")}#service`);
     businessHours = hours;
   }
@@ -726,9 +728,10 @@ export async function saveServiceSettingsAction(form: FormData) {
     if (tag && TARGET_CHOICES.some((c) => c.minutes === minutes) && !slaPolicies.some((p) => p.tag === tag)) slaPolicies.push({ tag, minutes, ...(resolveFor ? { resolveMinutes: resolveFor } : {}) });
   }
   const afterHoursMessage = cleanAfterHoursMessage(form.get("afterHoursMessage"));
-  const next = { csatEnabled: form.get("csatEnabled") === "on", afterHoursMessage, firstResponseMinutes, nextReplyMinutes, resolveMinutes, pauseWhilePending, businessHours, escalateTo, slaPolicies };
+  const ackMessage = cleanAfterHoursMessage(form.get("ackMessage"));
+  const next = { csatEnabled: form.get("csatEnabled") === "on", afterHoursMessage, ackMessage, firstResponseMinutes, nextReplyMinutes, resolveMinutes, pauseWhilePending, businessHours, escalateTo, slaPolicies };
   await db.update(schema.orgs).set(next).where(eq(schema.orgs.id, s.orgId));
-  const detail = changes(before ?? {}, next, { csatEnabled: "Ratings", afterHoursMessage: "After-hours reply", firstResponseMinutes: "First-reply target (minutes)", nextReplyMinutes: "Next-reply target (minutes)", pauseWhilePending: "Pause resolution clock while pending", resolveMinutes: "Resolution target (minutes)", businessHours: "Business hours", escalateTo: "Escalate to", slaPolicies: "Targets by tag" });
+  const detail = changes(before ?? {}, next, { csatEnabled: "Ratings", afterHoursMessage: "After-hours reply", ackMessage: "Acknowledgement email", firstResponseMinutes: "First-reply target (minutes)", nextReplyMinutes: "Next-reply target (minutes)", pauseWhilePending: "Pause resolution clock while pending", resolveMinutes: "Resolution target (minutes)", businessHours: "Business hours", escalateTo: "Escalate to", slaPolicies: "Targets by tag" });
   if (detail) await audit(s.orgId, actor(s), "settings.service", detail);
   revalidatePath("/app/settings");
   revalidatePath("/app/inbox");

@@ -1,0 +1,1 @@
+ALTER TABLE "orgs" ADD COLUMN "ack_message" text DEFAULT '' NOT NULL;

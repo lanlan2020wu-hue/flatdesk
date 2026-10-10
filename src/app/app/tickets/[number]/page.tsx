@@ -36,6 +36,7 @@ import { formatDue, nextReplyState, resolveState, shortDuration, slaState, targe
 import { listGroups } from "@/lib/routing";
 import { guessLanguage, isForeign, languageLabel } from "@/lib/language";
 import AutoTranslate from "@/components/AutoTranslate";
+import { articleUrl, publishedArticles, verifiedDomain } from "@/lib/help";
 import { getTicket, listAgents, orgTags, parseTicketNumber, PRIORITIES } from "@/lib/tickets";
 import { UPDATE_CHOICES } from "@/lib/update-timer";
 import { TRASH_DAYS } from "@/lib/trash";
@@ -106,6 +107,8 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
   const copilotOn = aiConfigured() && Boolean(org?.aiProcessing);
   // The customer's language, from their latest message that says clearly, when it isn't the team's.
   const team = org?.language ?? "en";
+  // Published help articles the agent can drop into a reply as a link.
+  const helpArticles = org?.helpSlug && !s.viewer ? (await publishedArticles(s.orgId)).slice(0, 200).map((a) => ({ id: a.id, title: a.title, url: articleUrl(org.helpSlug!, a.slug, verifiedDomain(org)) })) : [];
   const customerLanguage = [...thread].reverse().filter((m) => m.authorType === "customer").map((m) => guessLanguage(m.body)).find(Boolean) ?? null;
   const foreignCustomer = customerLanguage && customerLanguage !== team ? customerLanguage : null;
   const needsTranslation = copilotOn && !s.viewer && thread.some((m) => m.authorType === "customer" && !m.translation && isForeign(m.body, team));
@@ -309,6 +312,7 @@ export default async function TicketPage({ params, searchParams }: PageProps<"/a
           ticketId={ticket.id}
           number={ticket.number}
           status={ticket.status}
+          articles={helpArticles}
           macros={macros.map((m) => ({ id: m.id, name: m.name, body: m.body, addTags: m.addTags, setStatus: m.setStatus, assignTo: m.assignTo, sendNow: m.sendNow }))}
           customerName={customer.name}
           agents={agents.filter((a) => !a.viewer).map((a) => ({ userId: a.userId, name: a.name }))}
